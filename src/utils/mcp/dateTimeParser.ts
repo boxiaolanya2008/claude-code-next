@@ -7,25 +7,12 @@ export type DateTimeParseResult =
   | { success: true; value: string }
   | { success: false; error: string }
 
-/**
- * Parse natural language date/time input into ISO 8601 format using Haiku.
- *
- * Examples:
- * - "tomorrow at 3pm" → "2025-10-15T15:00:00-07:00"
- * - "next Monday" → "2025-10-20"
- * - "in 2 hours" → "2025-10-14T12:30:00-07:00"
- *
- * @param input The natural language date/time string from the user
- * @param format Whether to parse as 'date' (YYYY-MM-DD) or 'date-time' (full ISO 8601 with time)
- * @param signal AbortSignal for cancellation
- * @returns Parsed ISO 8601 string or error message
- */
 export async function parseNaturalLanguageDateTime(
   input: string,
   format: 'date' | 'date-time',
   signal: AbortSignal,
 ): Promise<DateTimeParseResult> {
-  // Get current datetime with timezone for context
+  
   const now = new Date()
   const currentDateTime = now.toISOString()
   const timezoneOffset = -now.getTimezoneOffset() 
@@ -90,7 +77,7 @@ Parse the user's input into ISO 8601 format. Return ONLY the formatted string, o
       }
     }
 
-    // Basic sanity check - should start with a digit (year)
+    
     if (!/^\d{4}/.test(parsedText)) {
       return {
         success: false,
@@ -100,7 +87,7 @@ Parse the user's input into ISO 8601 format. Return ONLY the formatted string, o
 
     return { success: true, value: parsedText }
   } catch (error) {
-    // Log error but don't expose details to user
+    
     logError(error)
     return {
       success: false,
@@ -110,12 +97,8 @@ Parse the user's input into ISO 8601 format. Return ONLY the formatted string, o
   }
 }
 
-/**
- * Check if a string looks like it might be an ISO 8601 date/time.
- * Used to decide whether to attempt NL parsing.
- */
 export function looksLikeISO8601(input: string): boolean {
-  // ISO 8601 date: YYYY-MM-DD
-  // ISO 8601 datetime: YYYY-MM-DDTHH:MM:SS...
+  
+  
   return /^\d{4}-\d{2}-\d{2}(T|$)/.test(input.trim())
 }

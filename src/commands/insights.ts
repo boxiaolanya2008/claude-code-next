@@ -41,20 +41,15 @@ function getAnalysisModel(): string {
   return getDefaultOpusModel()
 }
 
-// Model for narrative insights (Opus - best quality)
 function getInsightsModel(): string {
   return getDefaultOpusModel()
 }
-
-// ============================================================================
-// Homespace Data Collection
 
 type RemoteHostInfo = {
   name: string
   sessionCount: number
 }
 
-/* eslint-disable custom-rules/no-process-env-top-level */
 const getRunningRemoteHosts: () => Promise<string[]> =
   process.env.USER_TYPE === 'ant'
     ? async () => {
@@ -102,18 +97,18 @@ const collectFromRemoteHost: (
     ? async (homespace: string, destDir: string) => {
         const result = { copied: 0, skipped: 0 }
 
-        // Create temp directory
+        
         const tempDir = await mkdtemp(join(tmpdir(), 'claude-hs-'))
 
         try {
-          // SCP the projects folder
+          
           const scpResult = await execFileNoThrow(
             'scp',
             ['-rq', `${homespace}.coder:/root/.claude/projects/`, tempDir],
             { timeout: 300000 },
           )
           if (scpResult.code !== 0) {
-            // SCP failed
+            
             return result
           }
 
@@ -125,7 +120,7 @@ const collectFromRemoteHost: (
             return result
           }
 
-          // Merge into destination (parallel per project directory)
+          
           await Promise.all(
             projectDirents.map(async dirent => {
               const projectName = dirent.name
@@ -140,10 +135,10 @@ const collectFromRemoteHost: (
               try {
                 await mkdir(destProjectPath, { recursive: true })
               } catch {
-                // Directory may already exist
+                
               }
 
-              // Copy session files (skip existing)
+              
               let files: Awaited<ReturnType<typeof readdir>>
               try {
                 files = await readdir(projectPath, { withFileTypes: true })
@@ -162,7 +157,7 @@ const collectFromRemoteHost: (
                     await copyFile(srcFile, destFile, fsConstants.COPYFILE_EXCL)
                     result.copied++
                   } catch {
-                    // EEXIST from COPYFILE_EXCL means dest already exists
+                    
                     result.skipped++
                   }
                 }),
@@ -173,7 +168,7 @@ const collectFromRemoteHost: (
           try {
             await rm(tempDir, { recursive: true, force: true })
           } catch {
-            // Ignore cleanup errors
+            
           }
         }
 
@@ -217,8 +212,6 @@ const collectAllRemoteHostData: (destDir: string) => Promise<{
         return { hosts: result, totalCopied, totalSkipped }
       }
     : async () => ({ hosts: [], totalCopied: 0, totalSkipped: 0 })
-
-// Types
 
 type SessionMeta = {
   session_id: string
@@ -320,9 +313,6 @@ type AggregatedData = {
   }
 }
 
-// ============================================================================
-// Constants
-
 const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   '.ts': 'TypeScript',
   '.tsx': 'TypeScript',
@@ -342,9 +332,8 @@ const EXTENSION_TO_LANGUAGE: Record<string, string> = {
   '.html': 'HTML',
 }
 
-// Label map for cleaning up category names (matching Python reference)
 const LABEL_MAP: Record<string, string> = {
-  // Goal categories
+  
   debug_investigate: 'Debug/Investigate',
   implement_feature: 'Implement Feature',
   fix_bug: 'Fix Bug',
@@ -358,7 +347,7 @@ const LABEL_MAP: Record<string, string> = {
   write_docs: 'Write Docs',
   deploy_infra: 'Deploy/Infra',
   warmup_minimal: 'Cache Warmup',
-  // Success factors
+  
   fast_accurate_search: 'Fast/Accurate Search',
   correct_code_edits: 'Correct Code Edits',
   good_explanations: 'Good Explanations',
@@ -366,7 +355,7 @@ const LABEL_MAP: Record<string, string> = {
   multi_file_changes: 'Multi-file Changes',
   handled_complexity: 'Multi-file Changes',
   good_debugging: 'Good Debugging',
-  // Friction types
+  
   misunderstood_request: 'Misunderstood Request',
   wrong_approach: 'Wrong Approach',
   buggy_code: 'Buggy Code',
@@ -379,7 +368,7 @@ const LABEL_MAP: Record<string, string> = {
   tool_failed: 'Tool Failed',
   user_unclear: 'User Unclear',
   external_issue: 'External Issue',
-  // Satisfaction labels
+  
   frustrated: 'Frustrated',
   dissatisfied: 'Dissatisfied',
   likely_satisfied: 'Likely Satisfied',
@@ -388,27 +377,25 @@ const LABEL_MAP: Record<string, string> = {
   unsure: 'Unsure',
   neutral: 'Neutral',
   delighted: 'Delighted',
-  // Session types
+  
   single_task: 'Single Task',
   multi_task: 'Multi Task',
   iterative_refinement: 'Iterative Refinement',
   exploration: 'Exploration',
   quick_question: 'Quick Question',
-  // Outcomes
+  
   fully_achieved: 'Fully Achieved',
   mostly_achieved: 'Mostly Achieved',
   partially_achieved: 'Partially Achieved',
   not_achieved: 'Not Achieved',
   unclear_from_transcript: 'Unclear',
-  // Helpfulness
+  
   unhelpful: 'Unhelpful',
   slightly_helpful: 'Slightly Helpful',
   moderately_helpful: 'Moderately Helpful',
   very_helpful: 'Very Helpful',
   essential: 'Essential',
 }
-
-// Lazy getters: getClaudeConfigHomeDir() is memoized and reads process.env.
 
 function getDataDir(): string {
   return join(getClaudeConfigHomeDir(), 'usage-data')
@@ -420,7 +407,7 @@ function getSessionMetaDir(): string {
   return join(getDataDir(), 'session-meta')
 }
 
-const FACET_EXTRACTION_PROMPT = `Analyze this Claude Code session and extract structured facets.
+const FACET_EXTRACTION_PROMPT = `Analyze this Claude Code Next session and extract structured facets.
 
 CRITICAL GUIDELINES:
 
@@ -447,8 +434,6 @@ CRITICAL GUIDELINES:
 
 SESSION:
 `
-
-// Helper Functions
 
 function getLanguageFromPath(filePath: string): string | null {
   const ext = extname(filePath).toLowerCase()
@@ -504,11 +489,11 @@ function extractToolStats(log: LogOption): {
   let lastAssistantTimestamp: string | null = null
 
   for (const msg of log.messages) {
-    // Get message timestamp for response time calculation
+    
     const msgTimestamp = (msg as { timestamp?: string }).timestamp
 
     if (msg.type === 'assistant' && msg.message) {
-      // Track timestamp for response time calculation
+      
       if (msgTimestamp) {
         lastAssistantTimestamp = msgTimestamp
       }
@@ -549,7 +534,7 @@ function extractToolStats(log: LogOption): {
                 if (lang) {
                   languages[lang] = (languages[lang] || 0) + 1
                 }
-                // Track files modified by Edit/Write tools
+                
                 if (toolName === 'Edit' || toolName === 'Write') {
                   filesModified.add(filePath)
                 }
@@ -564,7 +549,7 @@ function extractToolStats(log: LogOption): {
                 }
               }
 
-              // Track lines from Write tool (all added)
+              
               if (toolName === 'Write') {
                 const writeContent = (input.content as string) || ''
                 if (writeContent) {
@@ -581,7 +566,7 @@ function extractToolStats(log: LogOption): {
       }
     }
 
-    // Check user messages
+    
     if (msg.type === 'user' && msg.message) {
       const content = msg.message.content
 
@@ -599,9 +584,9 @@ function extractToolStats(log: LogOption): {
         }
       }
 
-      // Only track message hours and response times for actual human messages
+      
       if (isHumanMessage) {
-        // Track message hour for time-of-day analysis and timestamp for multi-clauding
+        
         if (msgTimestamp) {
           try {
             const msgDate = new Date(msgTimestamp)
@@ -610,11 +595,11 @@ function extractToolStats(log: LogOption): {
             
             userMessageTimestamps.push(msgTimestamp)
           } catch {
-            // Skip invalid timestamps
+            
           }
         }
 
-        // Calculate response time (time from last assistant message to this user message)
+        
         
         if (lastAssistantTimestamp && msgTimestamp) {
           const assistantTime = new Date(lastAssistantTimestamp).getTime()
@@ -627,7 +612,7 @@ function extractToolStats(log: LogOption): {
         }
       }
 
-      // Process tool results (for error tracking)
+      
       if (Array.isArray(content)) {
         for (const block of content) {
           if (block.type === 'tool_result' && 'content' in block) {
@@ -673,7 +658,7 @@ function extractToolStats(log: LogOption): {
         }
       }
 
-      // Check for interruptions (matching Python reference)
+      
       if (typeof content === 'string') {
         if (content.includes('[Request interrupted by user')) {
           userInterruptions++
@@ -700,7 +685,7 @@ function extractToolStats(log: LogOption): {
     gitPushes,
     inputTokens,
     outputTokens,
-    // New stats
+    
     userInterruptions,
     userResponseTimes,
     toolErrors,
@@ -709,7 +694,7 @@ function extractToolStats(log: LogOption): {
     usesMcp,
     usesWebSearch,
     usesWebFetch,
-    // Additional stats
+    
     linesAdded,
     linesRemoved,
     filesModified,
@@ -773,7 +758,7 @@ function logToSessionMeta(log: LogOption): SessionMeta {
     output_tokens: stats.outputTokens,
     first_prompt: log.firstPrompt || '',
     summary: log.summary,
-    // New stats
+    
     user_interruptions: stats.userInterruptions,
     user_response_times: stats.userResponseTimes,
     tool_errors: stats.toolErrors,
@@ -782,7 +767,7 @@ function logToSessionMeta(log: LogOption): SessionMeta {
     uses_mcp: stats.usesMcp,
     uses_web_search: stats.usesWebSearch,
     uses_web_fetch: stats.usesWebFetch,
-    // Additional stats
+    
     lines_added: stats.linesAdded,
     lines_removed: stats.linesRemoved,
     files_modified: stats.filesModified.size,
@@ -791,15 +776,6 @@ function logToSessionMeta(log: LogOption): SessionMeta {
   }
 }
 
-/**
- * Deduplicate conversation branches within the same session.
- *
- * When a session file has multiple leaf messages (from retries or branching),
- * loadAllLogsFromSessionFile produces one LogOption per leaf. Each branch
- * shares the same root message, so its duration overlaps with sibling
- * branches. This keeps only the branch with the most user messages
- * (tie-break by longest duration) per session_id.
- */
 export function deduplicateSessionBranches(
   entries: Array<{ log: LogOption; meta: SessionMeta }>,
 ): Array<{ log: LogOption; meta: SessionMeta }> {
@@ -858,7 +834,7 @@ function formatTranscriptForFacets(log: LogOption): string {
   return lines.join('\n')
 }
 
-const SUMMARIZE_CHUNK_PROMPT = `Summarize this portion of a Claude Code session transcript. Focus on:
+const SUMMARIZE_CHUNK_PROMPT = `Summarize this portion of a Claude Code Next session transcript. Focus on:
 1. What the user asked for
 2. What Claude did (tools used, files modified)
 3. Any friction or issues
@@ -889,7 +865,7 @@ async function summarizeTranscriptChunk(chunk: string): Promise<string> {
     const text = extractTextContent(result.message.content)
     return text || chunk.slice(0, 2000)
   } catch {
-    // On error, just return truncated chunk
+    
     return chunk.slice(0, 2000)
   }
 }
@@ -904,7 +880,7 @@ async function formatTranscriptWithSummarization(
     return fullTranscript
   }
 
-  // For long transcripts, split into chunks and summarize in parallel
+  
   const CHUNK_SIZE = 25000
   const chunks: string[] = []
 
@@ -912,7 +888,7 @@ async function formatTranscriptWithSummarization(
     chunks.push(fullTranscript.slice(i, i + CHUNK_SIZE))
   }
 
-  // Summarize all chunks in parallel
+  
   const summaries = await Promise.all(chunks.map(summarizeTranscriptChunk))
 
   
@@ -937,11 +913,11 @@ async function loadCachedFacets(
     const content = await readFile(facetPath, { encoding: 'utf-8' })
     const parsed: unknown = jsonParse(content)
     if (!isValidSessionFacets(parsed)) {
-      // Delete corrupted cache file so it gets re-extracted next run
+      
       try {
         await unlink(facetPath)
       } catch {
-        // Ignore deletion errors
+        
       }
       return null
     }
@@ -955,7 +931,7 @@ async function saveFacets(facets: SessionFacets): Promise<void> {
   try {
     await mkdir(getFacetsDir(), { recursive: true })
   } catch {
-    // Directory may already exist
+    
   }
   const facetPath = join(getFacetsDir(), `${facets.session_id}.json`)
   await writeFile(facetPath, jsonStringify(facets, null, 2), {
@@ -980,7 +956,7 @@ async function saveSessionMeta(meta: SessionMeta): Promise<void> {
   try {
     await mkdir(getSessionMetaDir(), { recursive: true })
   } catch {
-    // Directory may already exist
+    
   }
   const metaPath = join(getSessionMetaDir(), `${meta.session_id}.json`)
   await writeFile(metaPath, jsonStringify(meta, null, 2), {
@@ -994,7 +970,7 @@ async function extractFacetsFromAPI(
   sessionId: string,
 ): Promise<SessionFacets | null> {
   try {
-    // Use summarization for long transcripts
+    
     const transcript = await formatTranscriptWithSummarization(log)
 
     
@@ -1045,11 +1021,6 @@ RESPOND WITH ONLY A VALID JSON OBJECT matching this schema:
   }
 }
 
-/**
- * Detects multi-clauding (using multiple Claude sessions concurrently).
- * Uses a sliding window to find the pattern: session1 -> session2 -> session1
- * within a 30-minute window.
- */
 export function detectMultiClauding(
   sessions: Array<{
     session_id: string
@@ -1069,7 +1040,7 @@ export function detectMultiClauding(
         const ts = new Date(timestamp).getTime()
         allSessionMessages.push({ ts, sessionId: session.session_id })
       } catch {
-        // Skip invalid timestamps
+        
       }
     }
   }
@@ -1086,7 +1057,7 @@ export function detectMultiClauding(
   for (let i = 0; i < allSessionMessages.length; i++) {
     const msg = allSessionMessages[i]!
 
-    // Shrink window from the left
+    
     while (
       windowStart < i &&
       msg.ts - allSessionMessages[windowStart]!.ts > OVERLAP_WINDOW_MS
@@ -1098,7 +1069,7 @@ export function detectMultiClauding(
       windowStart++
     }
 
-    // Check if this session appeared earlier in the window (pattern: s1 -> s2 -> s1)
+    
     const prevIndex = sessionLastIndex.get(msg.sessionId)
     if (prevIndex !== undefined) {
       for (let j = prevIndex + 1; j < i; j++) {
@@ -1158,7 +1129,7 @@ function aggregateData(
     friction: {},
     success: {},
     session_summaries: [],
-    // New stats
+    
     total_interruptions: 0,
     total_tool_errors: 0,
     tool_error_categories: {},
@@ -1169,14 +1140,14 @@ function aggregateData(
     sessions_using_mcp: 0,
     sessions_using_web_search: 0,
     sessions_using_web_fetch: 0,
-    // Additional stats
+    
     total_lines_added: 0,
     total_lines_removed: 0,
     total_files_modified: 0,
     days_active: 0,
     messages_per_day: 0,
     message_hours: [],
-    // Multi-clauding stats (matching Python reference)
+    
     multi_clauding: {
       overlap_events: 0,
       sessions_involved: 0,
@@ -1231,7 +1202,7 @@ function aggregateData(
 
     const sessionFacets = facets.get(session.session_id)
     if (sessionFacets) {
-      // Goal categories
+      
       for (const [cat, count] of safeEntries(sessionFacets.goal_categories)) {
         if (count > 0) {
           result.goal_categories[cat] =
@@ -1239,7 +1210,7 @@ function aggregateData(
         }
       }
 
-      // Outcomes
+      
       result.outcomes[sessionFacets.outcome] =
         (result.outcomes[sessionFacets.outcome] || 0) + 1
 
@@ -1252,7 +1223,7 @@ function aggregateData(
         }
       }
 
-      // Helpfulness
+      
       result.helpfulness[sessionFacets.claude_helpfulness] =
         (result.helpfulness[sessionFacets.claude_helpfulness] || 0) + 1
 
@@ -1267,7 +1238,7 @@ function aggregateData(
         }
       }
 
-      // Success factors
+      
       if (sessionFacets.primary_success !== 'none') {
         result.success[sessionFacets.primary_success] =
           (result.success[sessionFacets.primary_success] || 0) + 1
@@ -1297,7 +1268,7 @@ function aggregateData(
       allResponseTimes.reduce((a, b) => a + b, 0) / allResponseTimes.length
   }
 
-  // Calculate days active and messages per day
+  
   const uniqueDays = new Set(dates.map(d => d.split('T')[0]))
   result.days_active = uniqueDays.size
   result.messages_per_day =
@@ -1313,25 +1284,21 @@ function aggregateData(
   return result
 }
 
-// ============================================================================
-// Parallel Insights Generation (6 sections)
-
 type InsightSection = {
   name: string
   prompt: string
   maxTokens: number
 }
 
-// Sections that run in parallel first
 const INSIGHT_SECTIONS: InsightSection[] = [
   {
     name: 'project_areas',
-    prompt: `Analyze this Claude Code usage data and identify project areas.
+    prompt: `Analyze this Claude Code Next usage data and identify project areas.
 
 RESPOND WITH ONLY A VALID JSON OBJECT:
 {
   "areas": [
-    {"name": "Area name", "session_count": N, "description": "2-3 sentences about what was worked on and how Claude Code was used."}
+    {"name": "Area name", "session_count": N, "description": "2-3 sentences about what was worked on and how Claude Code Next was used."}
   ]
 }
 
@@ -1340,18 +1307,18 @@ Include 4-5 areas. Skip internal CC operations.`,
   },
   {
     name: 'interaction_style',
-    prompt: `Analyze this Claude Code usage data and describe the user's interaction style.
+    prompt: `Analyze this Claude Code Next usage data and describe the user's interaction style.
 
 RESPOND WITH ONLY A VALID JSON OBJECT:
 {
-  "narrative": "2-3 paragraphs analyzing HOW the user interacts with Claude Code. Use second person 'you'. Describe patterns: iterate quickly vs detailed upfront specs? Interrupt often or let Claude run? Include specific examples. Use **bold** for key insights.",
+  "narrative": "2-3 paragraphs analyzing HOW the user interacts with Claude Code Next. Use second person 'you'. Describe patterns: iterate quickly vs detailed upfront specs? Interrupt often or let Claude run? Include specific examples. Use **bold** for key insights.",
   "key_pattern": "One sentence summary of most distinctive interaction style"
 }`,
     maxTokens: 8192,
   },
   {
     name: 'what_works',
-    prompt: `Analyze this Claude Code usage data and identify what's working well for this user. Use second person ("you").
+    prompt: `Analyze this Claude Code Next usage data and identify what's working well for this user. Use second person ("you").
 
 RESPOND WITH ONLY A VALID JSON OBJECT:
 {
@@ -1366,7 +1333,7 @@ Include 3 impressive workflows.`,
   },
   {
     name: 'friction_analysis',
-    prompt: `Analyze this Claude Code usage data and identify friction points for this user. Use second person ("you").
+    prompt: `Analyze this Claude Code Next usage data and identify friction points for this user. Use second person ("you").
 
 RESPOND WITH ONLY A VALID JSON OBJECT:
 {
@@ -1381,7 +1348,7 @@ Include 3 friction categories with 2 examples each.`,
   },
   {
     name: 'suggestions',
-    prompt: `Analyze this Claude Code usage data and suggest improvements.
+    prompt: `Analyze this Claude Code Next usage data and suggest improvements.
 
 ## CC FEATURES REFERENCE (pick from these for features_to_try):
 1. **MCP Servers**: Connect Claude to external tools, databases, and APIs via Model Context Protocol.
@@ -1424,7 +1391,7 @@ IMPORTANT for features_to_try: Pick 2-3 from the CC FEATURES REFERENCE above. In
   },
   {
     name: 'on_the_horizon',
-    prompt: `Analyze this Claude Code usage data and identify future opportunities.
+    prompt: `Analyze this Claude Code Next usage data and identify future opportunities.
 
 RESPOND WITH ONLY A VALID JSON OBJECT:
 {
@@ -1441,7 +1408,7 @@ Include 3 opportunities. Think BIG - autonomous workflows, parallel agents, iter
     ? [
         {
           name: 'cc_team_improvements',
-          prompt: `Analyze this Claude Code usage data and suggest product improvements for the CC team.
+          prompt: `Analyze this Claude Code Next usage data and suggest product improvements for the CC team.
 
 RESPOND WITH ONLY A VALID JSON OBJECT:
 {
@@ -1455,7 +1422,7 @@ Include 2-3 improvements based on friction patterns observed.`,
         },
         {
           name: 'model_behavior_improvements',
-          prompt: `Analyze this Claude Code usage data and suggest model behavior improvements.
+          prompt: `Analyze this Claude Code Next usage data and suggest model behavior improvements.
 
 RESPOND WITH ONLY A VALID JSON OBJECT:
 {
@@ -1471,7 +1438,7 @@ Include 2-3 improvements based on friction patterns observed.`,
     : []),
   {
     name: 'fun_ending',
-    prompt: `Analyze this Claude Code usage data and find a memorable moment.
+    prompt: `Analyze this Claude Code Next usage data and find a memorable moment.
 
 RESPOND WITH ONLY A VALID JSON OBJECT:
 {
@@ -1582,7 +1549,7 @@ async function generateSectionInsight(
     const text = extractTextContent(result.message.content)
 
     if (text) {
-      // Parse JSON from response
+      
       const jsonMatch = text.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         try {
@@ -1603,7 +1570,7 @@ async function generateParallelInsights(
   data: AggregatedData,
   facets: Map<string, SessionFacets>,
 ): Promise<InsightResults> {
-  // Build data context string
+  
   const facetSummaries = Array.from(facets.values())
     .slice(0, 50)
     .map(f => `- ${f.brief_summary} (${f.outcome}, ${f.claude_helpfulness})`)
@@ -1669,7 +1636,7 @@ async function generateParallelInsights(
     }
   }
 
-  // Build rich context from generated sections for At a Glance
+  
   const projectAreasText =
     (
       insights.project_areas as {
@@ -1725,7 +1692,7 @@ async function generateParallelInsights(
       .join('\n') || ''
 
   
-  const atAGlancePrompt = `You're writing an "At a Glance" summary for a Claude Code usage insights report for Claude Code users. The goal is to help them understand their usage and improve how they can use Claude better, especially as models improve.
+  const atAGlancePrompt = `You're writing an "At a Glance" summary for a Claude Code Next usage insights report for Claude Code Next users. The goal is to help them understand their usage and improve how they can use Claude better, especially as models improve.
 
 Use this 4-part structure:
 
@@ -1733,7 +1700,7 @@ Use this 4-part structure:
 
 2. **What's hindering you** - Split into (a) Claude's fault (misunderstandings, wrong approaches, bugs) and (b) user-side friction (not providing enough context, environment issues -- ideally more general than just one project). Be honest but constructive.
 
-3. **Quick wins to try** - Specific Claude Code features they could try from the examples below, or a workflow technique if you think it's really compelling. (Avoid stuff like "Ask Claude to confirm before taking actions" or "Type out more context up front" which are less compelling.)
+3. **Quick wins to try** - Specific Claude Code Next features they could try from the examples below, or a workflow technique if you think it's really compelling. (Avoid stuff like "Ask Claude to confirm before taking actions" or "Type out more context up front" which are less compelling.)
 
 4. **Ambitious workflows for better models** - As we move to much more capable models over the next 3-6 months, what should they prepare for? What workflows that seem impossible now will become possible? Draw from the appropriate section below.
 
@@ -1787,13 +1754,11 @@ ${horizonText}`
   return insights
 }
 
-// Escape HTML but render **bold** as <strong>
 function escapeHtmlWithBold(text: string): string {
   const escaped = escapeHtml(text)
   return escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
 }
 
-// Fixed orderings for specific charts (matching Python reference)
 const SATISFACTION_ORDER = [
   'frustrated',
   'dissatisfied',
@@ -1820,12 +1785,12 @@ function generateBarChart(
   let entries: [string, number][]
 
   if (fixedOrder) {
-    // Use fixed order, only including items that exist in data
+    
     entries = fixedOrder
       .filter(key => key in data && (data[key] ?? 0) > 0)
       .map(key => [key, data[key] ?? 0] as [string, number])
   } else {
-    // Sort by count descending
+    
     entries = Object.entries(data)
       .sort((a, b) => b[1] - a[1])
       .slice(0, maxItems)
@@ -1952,7 +1917,7 @@ function generateHtmlReport(
       .join('\n')
   }
 
-  // Build At a Glance section (new 4-part format with links to sections)
+  
   const atAGlance = insights.at_a_glance
   const atAGlanceHtml = atAGlance
     ? `
@@ -1996,7 +1961,7 @@ function generateHtmlReport(
   const interactionStyle = insights.interaction_style
   const interactionHtml = interactionStyle?.narrative
     ? `
-    <h2 id="section-usage">How You Use Claude Code</h2>
+    <h2 id="section-usage">How You Use Claude Code Next</h2>
     <div class="narrative">
       ${markdownToHtml(interactionStyle.narrative)}
       ${interactionStyle.key_pattern ? `<div class="key-insight"><strong>Key pattern:</strong> ${escapeHtml(interactionStyle.key_pattern)}</div>` : ''}
@@ -2060,7 +2025,7 @@ function generateHtmlReport(
     <h2 id="section-features">Existing CC Features to Try</h2>
     <div class="claude-md-section">
       <h3>Suggested CLAUDE.md Additions</h3>
-      <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Just copy this into Claude Code to add it to your CLAUDE.md.</p>
+      <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Just copy this into Claude Code Next to add it to your CLAUDE.md.</p>
       <div class="claude-md-actions">
         <button class="copy-all-btn" onclick="copyAllCheckedClaudeMd()">Copy All Checked</button>
       </div>
@@ -2085,7 +2050,7 @@ function generateHtmlReport(
     ${
       suggestions.features_to_try && suggestions.features_to_try.length > 0
         ? `
-    <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Just copy this into Claude Code and it'll set it up for you.</p>
+    <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Just copy this into Claude Code Next and it'll set it up for you.</p>
     <div class="features-section">
       ${suggestions.features_to_try
         .map(
@@ -2119,8 +2084,8 @@ function generateHtmlReport(
     ${
       suggestions.usage_patterns && suggestions.usage_patterns.length > 0
         ? `
-    <h2 id="section-patterns">New Ways to Use Claude Code</h2>
-    <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Just copy this into Claude Code and it'll walk you through it.</p>
+    <h2 id="section-patterns">New Ways to Use Claude Code Next</h2>
+    <p style="font-size: 13px; color: #64748b; margin-bottom: 12px;">Just copy this into Claude Code Next and it'll walk you through it.</p>
     <div class="patterns-section">
       ${suggestions.usage_patterns
         .map(
@@ -2133,7 +2098,7 @@ function generateHtmlReport(
             pat.copyable_prompt
               ? `
           <div class="copyable-prompt-section">
-            <div class="prompt-label">Paste into Claude Code:</div>
+            <div class="prompt-label">Paste into Claude Code Next:</div>
             <div class="copyable-prompt-row">
               <code class="copyable-prompt">${escapeHtml(pat.copyable_prompt)}</code>
               <button class="copy-btn" onclick="copyText(this)">Copy</button>
@@ -2168,7 +2133,7 @@ function generateHtmlReport(
           <div class="horizon-title">${escapeHtml(opp.title || '')}</div>
           <div class="horizon-possible">${escapeHtml(opp.whats_possible || '')}</div>
           ${opp.how_to_try ? `<div class="horizon-tip"><strong>Getting started:</strong> ${escapeHtml(opp.how_to_try)}</div>` : ''}
-          ${opp.copyable_prompt ? `<div class="pattern-prompt"><div class="prompt-label">Paste into Claude Code:</div><code>${escapeHtml(opp.copyable_prompt)}</code><button class="copy-btn" onclick="copyText(this)">Copy</button></div>` : ''}
+          ${opp.copyable_prompt ? `<div class="pattern-prompt"><div class="prompt-label">Paste into Claude Code Next:</div><code>${escapeHtml(opp.copyable_prompt)}</code><button class="copy-btn" onclick="copyText(this)">Copy</button></div>` : ''}
         </div>
       `,
         )
@@ -2475,13 +2440,13 @@ function generateHtmlReport(
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Claude Code Insights</title>
+  <title>Claude Code Next Insights</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>${css}</style>
 </head>
 <body>
   <div class="container">
-    <h1>Claude Code Insights</h1>
+    <h1>Claude Code Next Insights</h1>
     <p class="subtitle">${data.total_messages.toLocaleString()} messages across ${data.total_sessions} sessions${data.total_sessions_scanned && data.total_sessions_scanned > data.total_sessions ? ` (${data.total_sessions_scanned.toLocaleString()} total)` : ''} | ${data.date_range.start} to ${data.date_range.end}</p>
 
     ${atAGlanceHtml}
@@ -2547,7 +2512,7 @@ function generateHtmlReport(
         data.multi_clauding.overlap_events === 0
           ? `
         <p style="font-size: 14px; color: #64748b; padding: 8px 0;">
-          No parallel session usage detected. You typically work with one Claude Code session at a time.
+          No parallel session usage detected. You typically work with one Claude Code Next session at a time.
         </p>
       `
           : `
@@ -2566,7 +2531,7 @@ function generateHtmlReport(
           </div>
         </div>
         <p style="font-size: 13px; color: #475569; margin-top: 12px;">
-          You run multiple Claude Code sessions simultaneously. Multi-clauding is detected when sessions
+          You run multiple Claude Code Next sessions simultaneously. Multi-clauding is detected when sessions
           overlap in time, suggesting parallel workflows.
         </p>
       `
@@ -2635,17 +2600,11 @@ function generateHtmlReport(
 </html>`
 }
 
-// ============================================================================
-// Export Types & Functions
-
-/**
- * Structured export format for claudescope consumption
- */
 export type InsightsExport = {
   metadata: {
     username: string
     generated_at: string
-    claude_code_version: string
+    claude_code_next_version: string
     date_range: { start: string; end: string }
     session_count: number
     remote_hosts_collected?: string[]
@@ -2661,10 +2620,6 @@ export type InsightsExport = {
   }
 }
 
-/**
- * Build export data from already-computed values.
- * Used by background upload to S3.
- */
 export function buildExportData(
   data: AggregatedData,
   insights: InsightResults,
@@ -2711,7 +2666,7 @@ export function buildExportData(
     metadata: {
       username: process.env.SAFEUSER || process.env.USER || 'unknown',
       generated_at: new Date().toISOString(),
-      claude_code_version: version,
+      claude_code_next_version: version,
       date_range: data.date_range,
       session_count: data.total_sessions,
       ...(remote_hosts_collected &&
@@ -2725,9 +2680,6 @@ export function buildExportData(
   }
 }
 
-// ============================================================================
-// Lite Session Scanning
-
 type LiteSessionInfo = {
   sessionId: string
   path: string
@@ -2735,11 +2687,6 @@ type LiteSessionInfo = {
   size: number
 }
 
-/**
- * Scans all project directories using filesystem metadata only (no JSONL parsing).
- * Returns a list of session file info sorted by mtime descending.
- * Yields to the event loop between project directories to keep the UI responsive.
- */
 async function scanAllSessions(): Promise<LiteSessionInfo[]> {
   const projectsDir = getProjectsDir()
 
@@ -2766,19 +2713,16 @@ async function scanAllSessions(): Promise<LiteSessionInfo[]> {
         size: fileInfo.size,
       })
     }
-    // Yield to event loop every 10 project directories
+    
     if (i % 10 === 9) {
       await new Promise<void>(resolve => setImmediate(resolve))
     }
   }
 
-  // Sort by mtime descending (most recent first)
+  
   allSessions.sort((a, b) => b.mtime - a.mtime)
   return allSessions
 }
-
-// ============================================================================
-// Main Function
 
 export async function generateUsageReport(options?: {
   collectRemote?: boolean
@@ -2798,7 +2742,7 @@ export async function generateUsageReport(options?: {
     remoteStats = { hosts, totalCopied }
   }
 
-  // Phase 1: Lite scan — filesystem metadata only (no JSONL parsing)
+  
   const allScannedSessions = await scanAllSessions()
   const totalSessionsScanned = allScannedSessions.length
 
@@ -2826,7 +2770,7 @@ export async function generateUsageReport(options?: {
     }
   }
 
-  // Load full message data only for uncached sessions and compute SessionMeta
+  
   const logsForFacets = new Map<string, LogOption>()
 
   
@@ -2847,7 +2791,7 @@ export async function generateUsageReport(options?: {
     return false
   }
 
-  // Load uncached sessions in batches to yield to event loop between batches
+  
   const LOAD_BATCH_SIZE = 10
   for (let i = 0; i < uncachedSessions.length; i += LOAD_BATCH_SIZE) {
     const batch = uncachedSessions.slice(i, i + LOAD_BATCH_SIZE)
@@ -2875,7 +2819,7 @@ export async function generateUsageReport(options?: {
     await Promise.all(metasToSave.map(meta => saveSessionMeta(meta)))
   }
 
-  // Deduplicate session branches (keep the one with most user messages per session_id)
+  
   
   const bestBySession = new Map<string, SessionMeta>()
   for (const meta of allMetas) {
@@ -2889,7 +2833,7 @@ export async function generateUsageReport(options?: {
       bestBySession.set(meta.session_id, meta)
     }
   }
-  // Replace allMetas with deduplicated list and remove unused logs from logsForFacets
+  
   const keptSessionIds = new Set(bestBySession.keys())
   allMetas = [...bestBySession.values()]
   for (const sessionId of logsForFacets.keys()) {
@@ -2898,13 +2842,13 @@ export async function generateUsageReport(options?: {
     }
   }
 
-  // Sort all metas by start_time descending (most recent first)
+  
   allMetas.sort((a, b) => b.start_time.localeCompare(a.start_time))
 
   
   
   const isSubstantiveSession = (meta: SessionMeta): boolean => {
-    // Skip sessions with very few user messages
+    
     if (meta.user_message_count < 2) return false
     
     if (meta.duration_minutes < 1) return false
@@ -2936,7 +2880,7 @@ export async function generateUsageReport(options?: {
     }
   }
 
-  // Extract facets for sessions that need them (50 concurrent)
+  
   const CONCURRENCY = 50
   for (let i = 0; i < toExtract.length; i += CONCURRENCY) {
     const batch = toExtract.slice(i, i + CONCURRENCY)
@@ -2957,8 +2901,8 @@ export async function generateUsageReport(options?: {
     await Promise.all(facetsToSave.map(f => saveFacets(f)))
   }
 
-  // Filter out warmup/minimal sessions (matching Python's is_minimal)
-  // A session is minimal if warmup_minimal is the ONLY goal category
+  
+  
   const isMinimalSession = (sessionId: string): boolean => {
     const sessionFacets = facets.get(sessionId)
     if (!sessionFacets) return false
@@ -2981,17 +2925,17 @@ export async function generateUsageReport(options?: {
   const aggregated = aggregateData(substantiveSessions, substantiveFacets)
   aggregated.total_sessions_scanned = totalSessionsScanned
 
-  // Generate parallel insights from Claude (6 sections)
+  
   const insights = await generateParallelInsights(aggregated, facets)
 
-  // Generate HTML report
+  
   const htmlReport = generateHtmlReport(aggregated, insights)
 
-  // Save reports
+  
   try {
     await mkdir(getDataDir(), { recursive: true })
   } catch {
-    // Directory may already exist
+    
   }
 
   const htmlPath = join(getDataDir(), 'report.html')
@@ -3019,15 +2963,11 @@ function safeKeys(obj: Record<string, unknown> | undefined | null): string[] {
   return obj ? Object.keys(obj) : []
 }
 
-// ============================================================================
-// Command Definition
-// ============================================================================
-
 const usageReport: Command = {
   type: 'prompt',
   name: 'insights',
-  description: 'Generate a report analyzing your Claude Code sessions',
-  contentLength: 0, // Dynamic content
+  description: 'Generate a report analyzing your Claude Code Next sessions',
+  contentLength: 0, 
   progressMessage: 'analyzing your sessions',
   source: 'builtin',
   async getPromptForCommand(args) {
@@ -3036,16 +2976,16 @@ const usageReport: Command = {
     let hasRemoteHosts = false
 
     if (process.env.USER_TYPE === 'ant') {
-      // Parse --homespaces flag
+      
       collectRemote = args?.includes('--homespaces') ?? false
 
-      // Check for available remote hosts
+      
       remoteHosts = await getRunningRemoteHosts()
       hasRemoteHosts = remoteHosts.length > 0
 
-      // Show collection message if collecting
+      
       if (collectRemote && hasRemoteHosts) {
-        // biome-ignore lint/suspicious/noConsole: intentional
+        
         console.error(
           `Collecting sessions from ${remoteHosts.length} homespace(s): ${remoteHosts.join(', ')}...`,
         )
@@ -3060,7 +3000,7 @@ const usageReport: Command = {
     let uploadHint = ''
 
     if (process.env.USER_TYPE === 'ant') {
-      // Try to upload to S3
+      
       const timestamp = new Date()
         .toISOString()
         .replace(/[-:]/g, '')
@@ -3075,10 +3015,10 @@ const usageReport: Command = {
       try {
         execFileSync('ff', ['cp', htmlPath, s3Path], {
           timeout: 60000,
-          stdio: 'pipe', // Suppress output
+          stdio: 'pipe', 
         })
       } catch {
-        // Upload failed - fall back to local file and show upload command
+        
         reportUrl = `file://${htmlPath}`
         uploadHint = `\nAutomatic upload failed. Are you on the boron namespace? Try \`use-bo\` and ensure you've run \`sso\`.
 To share, run: ff cp ${htmlPath} ${s3Path}
@@ -3086,7 +3026,7 @@ Then access at: ${s3Url}`
       }
     }
 
-    // Build header with stats
+    
     const sessionLabel =
       data.total_sessions_scanned &&
       data.total_sessions_scanned > data.total_sessions
@@ -3109,12 +3049,12 @@ Then access at: ${s3Url}`
           .join(', ')
         remoteInfo = `\n_Collected ${remoteStats.totalCopied} new sessions from: ${hsNames}_\n`
       } else if (!collectRemote && hasRemoteHosts) {
-        // Suggest using --homespaces if they have remote hosts but didn't use the flag
+        
         remoteInfo = `\n_Tip: Run \`/insights --homespaces\` to include sessions from your ${remoteHosts.length} running homespace(s)_\n`
       }
     }
 
-    // Build markdown summary from insights
+    
     const atAGlance = insights.at_a_glance
     const summaryText = atAGlance
       ? `## At a Glance
@@ -3128,7 +3068,7 @@ ${atAGlance.quick_wins ? `**Quick wins to try:** ${atAGlance.quick_wins} See _Fe
 ${atAGlance.ambitious_workflows ? `**Ambitious workflows:** ${atAGlance.ambitious_workflows} See _On the Horizon_.` : ''}`
       : '_No insights generated_'
 
-    const header = `# Claude Code Insights
+    const header = `# Claude Code Next Insights
 
 ${stats}
 ${data.date_range.start} to ${data.date_range.end}
@@ -3143,7 +3083,7 @@ Your full shareable insights report is ready: ${reportUrl}${uploadHint}`
     return [
       {
         type: 'text',
-        text: `The user just ran /insights to generate a usage report analyzing their Claude Code sessions.
+        text: `The user just ran /insights to generate a usage report analyzing their Claude Code Next sessions.
 
 Here is the full insights data:
 ${jsonStringify(insights, null, 2)}

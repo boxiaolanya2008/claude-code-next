@@ -47,7 +47,7 @@ function decodeFont(): Map<number, Uint8Array> {
 }
 
 export type AnsiToPngOptions = {
-  /** Integer zoom factor (nearest-neighbor). Default 1 — the font is already rasterized at output resolution. */
+  
   scale?: number
   
   paddingX?: number
@@ -59,10 +59,6 @@ export type AnsiToPngOptions = {
   background?: AnsiColor
 }
 
-/**
- * Render ANSI-escaped text directly to a PNG buffer.
- * Returns a Buffer containing a valid PNG (RGBA, 8-bit).
- */
 export function ansiToPng(
   ansiText: string,
   options: AnsiToPngOptions = {},
@@ -100,7 +96,7 @@ export function ansiToPng(
     roundCorners(px, width, height, borderRadius * scale)
   }
 
-  // Blit glyphs.
+  
   const padX = paddingX * scale
   const padY = paddingY * scale
   for (let row = 0; row < rows; row++) {
@@ -127,7 +123,6 @@ export function ansiToPng(
   return encodePng(px, width, height)
 }
 
-/** Terminal column width of a parsed line. */
 function lineWidthCells(line: ParsedLine): number {
   let w = 0
   for (const span of line) w += stringWidth(span.text)
@@ -143,14 +138,11 @@ function fillBackground(px: Uint8Array, bg: AnsiColor): void {
   }
 }
 
-// Modern terminals render shade chars (░▒▓█) as solid blocks with opacity,
-// not the classic VGA dither pattern. Alpha-blend toward background for the
-
 const SHADE_ALPHA: Record<number, number> = {
-  0x2591: 0.25, // ░
-  0x2592: 0.5, // ▒
-  0x2593: 0.75, // ▓
-  0x2588: 1.0, // █
+  0x2591: 0.25, 
+  0x2592: 0.5, 
+  0x2593: 0.75, 
+  0x2588: 1.0, 
 }
 
 function blitShade(
@@ -179,12 +171,6 @@ function blitShade(
   }
 }
 
-/**
- * Blit one glyph into the RGBA buffer at (x,y), scaled by `scale`
- * (nearest-neighbor). Alpha-composites over the existing background. Bold is
- * synthesized by boosting alpha toward opaque — a cheap approximation that
- * reads as heavier weight without needing a second font.
- */
 function blitGlyph(
   px: Uint8Array,
   width: number,
@@ -214,10 +200,6 @@ function blitGlyph(
   }
 }
 
-/**
- * Zero out the alpha channel in the four corner regions outside a
- * quarter-circle of radius `r`. Produces rounded-rect corners.
- */
 function roundCorners(
   px: Uint8Array,
   width: number,
@@ -238,8 +220,6 @@ function roundCorners(
     }
   }
 }
-
-// --- PNG encoding -----------------------------------------------------------
 
 const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 const CRC_TABLE = makeCrcTable()
@@ -275,12 +255,8 @@ function chunk(type: string, data: Uint8Array): Buffer {
   return out
 }
 
-/**
- * Encode an RGBA pixel buffer as PNG. Minimal encoder: 8-bit depth,
- * color type 6 (RGBA), filter 0 (none) on every scanline, single IDAT.
- */
 function encodePng(px: Uint8Array, width: number, height: number): Buffer {
-  // IHDR
+  
   const ihdr = Buffer.alloc(13)
   ihdr.writeUInt32BE(width, 0)
   ihdr.writeUInt32BE(height, 4)

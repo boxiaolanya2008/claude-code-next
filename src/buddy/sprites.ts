@@ -458,7 +458,7 @@ export function renderSprite(bones: CompanionBones, frame = 0): string[] {
   if (bones.hat !== 'none' && !lines[0]!.trim()) {
     lines[0] = HAT_LINES[bones.hat]
   }
-  // Drop blank hat slot — wastes a row in the Card and ambient sprite when
+  
   
   
   if (!lines[0]!.trim() && frames.every(f => !f[0]!.trim())) lines.shift()

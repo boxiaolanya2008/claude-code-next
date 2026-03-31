@@ -20,8 +20,6 @@ const DEFAULTS: ChicagoConfig = {
   coordinateMode: 'pixels',
 }
 
-// Spread over defaults so a partial JSON ({"enabled": true} alone) inherits the
-
 function readConfig(): ChicagoConfig {
   return {
     ...DEFAULTS,
@@ -32,8 +30,6 @@ function readConfig(): ChicagoConfig {
   }
 }
 
-// Max/Pro only for external rollout. Ant bypass so dogfooding continues
-
 function hasRequiredSubscription(): boolean {
   if (process.env.USER_TYPE === 'ant') return true
   const tier = getSubscriptionType()
@@ -41,7 +37,7 @@ function hasRequiredSubscription(): boolean {
 }
 
 export function getChicagoEnabled(): boolean {
-  // Disable for ants whose shell inherited monorepo dev config.
+  
   
   
   
@@ -59,8 +55,6 @@ export function getChicagoSubGates(): CuSubGates {
   const { enabled: _e, coordinateMode: _c, ...subGates } = readConfig()
   return subGates
 }
-
-// Frozen at first read — setup.ts builds tool descriptions and executor.ts
 
 let frozenCoordinateMode: CoordinateMode | undefined
 export function getChicagoCoordinateMode(): CoordinateMode {

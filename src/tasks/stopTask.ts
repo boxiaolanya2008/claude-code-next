@@ -27,13 +27,6 @@ type StopTaskResult = {
   command: string | undefined
 }
 
-/**
- * Look up a task by ID, validate it is running, kill it, and mark it as notified.
- *
- * Throws {@link StopTaskError} when the task cannot be stopped (not found,
- * not running, or unsupported type). Callers can inspect `error.code` to
- * distinguish the failure reason.
- */
 export async function stopTask(
   taskId: string,
   context: StopTaskContext,

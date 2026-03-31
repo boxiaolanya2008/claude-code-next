@@ -31,7 +31,6 @@ export type ModelCosts = {
   webSearchRequests: number
 }
 
-// Standard pricing tier for Sonnet models: $3 input / $15 output per Mtok
 export const COST_TIER_3_15 = {
   inputTokens: 3,
   outputTokens: 15,
@@ -89,8 +88,6 @@ export function getOpus46CostTier(fastMode: boolean): ModelCosts {
   return COST_TIER_5_25
 }
 
-// @[MODEL LAUNCH]: Add a pricing entry for the new model below.
-
 export const MODEL_COSTS: Record<ModelShortName, ModelCosts> = {
   [firstPartyNameToCanonical(CLAUDE_3_5_HAIKU_CONFIG.firstParty)]:
     COST_HAIKU_35,
@@ -115,9 +112,6 @@ export const MODEL_COSTS: Record<ModelShortName, ModelCosts> = {
     COST_TIER_5_25,
 }
 
-/**
- * Calculates the USD cost based on token usage and model cost configuration
- */
 function tokensToUSDCost(modelCosts: ModelCosts, usage: Usage): number {
   return (
     (usage.input_tokens / 1_000_000) * modelCosts.inputTokens +
@@ -162,17 +156,11 @@ function trackUnknownModelCost(model: string, shortName: ModelShortName): void {
   setHasUnknownModelCost()
 }
 
-// Calculate the cost of a query in US dollars.
-
 export function calculateUSDCost(resolvedModel: string, usage: Usage): number {
   const modelCosts = getModelCosts(resolvedModel, usage)
   return tokensToUSDCost(modelCosts, usage)
 }
 
-/**
- * Calculate cost from raw token counts without requiring a full BetaUsage object.
- * Useful for side queries (e.g. classifier) that track token counts independently.
- */
 export function calculateCostFromTokens(
   model: string,
   tokens: {
@@ -192,27 +180,18 @@ export function calculateCostFromTokens(
 }
 
 function formatPrice(price: number): string {
-  // Format price: integers without decimals, others with 2 decimal places
+  
   
   if (Number.isInteger(price)) {
-    return `$${price}`
+    return `${price}`
   }
-  return `$${price.toFixed(2)}`
+  return `${price.toFixed(2)}`
 }
 
-/**
- * Format model costs as a pricing string for display
- * e.g., "$3/$15 per Mtok"
- */
 export function formatModelPricing(costs: ModelCosts): string {
   return `${formatPrice(costs.inputTokens)}/${formatPrice(costs.outputTokens)} per Mtok`
 }
 
-/**
- * Get formatted pricing string for a model
- * Accepts either a short name or full model name
- * Returns undefined if model is not found
- */
 export function getModelPricingString(model: string): string | undefined {
   const shortName = getCanonicalName(model)
   const costs = MODEL_COSTS[shortName]

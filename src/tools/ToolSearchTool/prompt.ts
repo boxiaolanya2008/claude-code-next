@@ -43,7 +43,7 @@ Query forms:
 - "+slack send" — require "slack" in the name, rank by remaining terms`
 
 export function isDeferredTool(tool: Tool): boolean {
-  // Explicit opt-out via _meta['anthropic/alwaysLoad'] — tool appears in the
+  
   
   if (tool.alwaysLoad === true) return false
 
@@ -63,7 +63,7 @@ export function isDeferredTool(tool: Tool): boolean {
     if (m.isForkSubagentEnabled()) return false
   }
 
-  // Brief is the primary communication channel whenever the tool is present.
+  
   
   
   
@@ -76,7 +76,7 @@ export function isDeferredTool(tool: Tool): boolean {
     return false
   }
 
-  // SendUserFile is a file-delivery communication channel (sibling of Brief).
+  
   
   if (
     feature('KAIROS') &&
@@ -90,11 +90,6 @@ export function isDeferredTool(tool: Tool): boolean {
   return tool.shouldDefer === true
 }
 
-/**
- * Format one deferred-tool line for the <available-deferred-tools> user
- * message. Search hints (tool.searchHint) are not rendered — the
- * hints A/B (exp_xenhnnmn0smrx4, stopped Mar 21) showed no benefit.
- */
 export function formatDeferredToolLine(tool: Tool): string {
   return tool.name
 }

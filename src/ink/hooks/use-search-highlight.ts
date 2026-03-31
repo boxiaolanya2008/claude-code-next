@@ -6,10 +6,8 @@ import type { MatchPosition } from '../render-to-screen.js'
 
 export function useSearchHighlight(): {
   setQuery: (query: string) => void
-  /** Paint an existing DOM subtree (from the MAIN tree) to a fresh
-   *  Screen at its natural height, scan. Element-relative positions
-   *  (row 0 = element top). Zero context duplication — the element
-   *  IS the one built with all real providers. */
+  
+
   scanElement: (el: DOMElement) => MatchPosition[]
   
 

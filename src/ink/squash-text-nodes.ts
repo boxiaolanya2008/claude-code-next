@@ -7,10 +7,6 @@ export type StyledSegment = {
   hyperlink?: string
 }
 
-/**
- * Squash text nodes into styled segments, propagating styles down through the tree.
- * This allows structured styling without relying on ANSI string transforms.
- */
 export function squashTextNodesToSegments(
   node: DOMElement,
   inheritedStyles: TextStyles = {},
@@ -58,10 +54,6 @@ export function squashTextNodesToSegments(
   return out
 }
 
-/**
- * Squash text nodes into a plain string (without styles).
- * Used for text measurement in layout calculations.
- */
 function squashTextNodes(node: DOMElement): string {
   let text = ''
 

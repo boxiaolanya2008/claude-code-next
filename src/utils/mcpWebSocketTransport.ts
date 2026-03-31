@@ -71,7 +71,7 @@ export class WebSocketTransport implements Transport {
   onerror?: (error: Error) => void
   onmessage?: (message: JSONRPCMessage) => void
 
-  // Bun (native WebSocket) event handlers
+  
   private onBunMessage = (event: MessageEvent) => {
     try {
       const data =
@@ -92,7 +92,7 @@ export class WebSocketTransport implements Transport {
     this.handleCloseCleanup()
   }
 
-  // Node (ws package) event handlers
+  
   private onNodeMessage = (data: Buffer) => {
     try {
       const messageObj = jsonParse(data.toString('utf-8'))
@@ -111,13 +111,13 @@ export class WebSocketTransport implements Transport {
     this.handleCloseCleanup()
   }
 
-  // Shared error handler
+  
   private handleError(error: unknown): void {
     logForDiagnosticsNoPII('error', 'mcp_websocket_message_fail')
     this.onerror?.(toError(error))
   }
 
-  // Shared close handler with listener cleanup
+  
   private handleCloseCleanup(): void {
     this.onclose?.()
     
@@ -134,9 +134,8 @@ export class WebSocketTransport implements Transport {
     }
   }
 
-  /**
-   * Starts listening for messages on the WebSocket.
-   */
+  
+
   async start(): Promise<void> {
     if (this.started) {
       throw new Error('Start can only be called once per transport.')
@@ -151,9 +150,8 @@ export class WebSocketTransport implements Transport {
     
   }
 
-  /**
-   * Closes the WebSocket connection.
-   */
+  
+
   async close(): Promise<void> {
     if (
       this.ws.readyState === WS_OPEN ||
@@ -161,13 +159,12 @@ export class WebSocketTransport implements Transport {
     ) {
       this.ws.close()
     }
-    // Ensure listeners are removed even if close was called externally or connection was already closed
+    
     this.handleCloseCleanup()
   }
 
-  /**
-   * Sends a JSON-RPC message over the WebSocket connection.
-   */
+  
+
   async send(message: JSONRPCMessage): Promise<void> {
     if (this.ws.readyState !== WS_OPEN) {
       logForDiagnosticsNoPII('error', 'mcp_websocket_send_not_opened')
@@ -177,7 +174,7 @@ export class WebSocketTransport implements Transport {
 
     try {
       if (this.isBun) {
-        // Native WebSocket.send() is synchronous (no callback)
+        
         this.ws.send(json)
       } else {
         await new Promise<void>((resolve, reject) => {

@@ -1,7 +1,5 @@
 
 
-//   1. Time: hours since lastConsolidatedAt >= minHours (one stat)
-
 import type { REPLHookContext } from '../../utils/hooks/postSamplingHooks.js'
 import {
   createCacheSafeParams,
@@ -55,11 +53,6 @@ const DEFAULTS: AutoDreamConfig = {
   minSessions: 5,
 }
 
-/**
- * Thresholds from tengu_onyx_plover. The enabled gate lives in config.ts
- * (isAutoDreamEnabled); this returns only the scheduling knobs. Defensive
- * per-field validation since GB cache can return stale wrong-type values.
- */
 function getConfig(): AutoDreamConfig {
   const raw =
     getFeatureValue_CACHED_MAY_BE_STALE<Partial<AutoDreamConfig> | null>(
@@ -89,8 +82,6 @@ function isGateOpen(): boolean {
   return isAutoDreamEnabled()
 }
 
-// Ant-build-only test override. Bypasses enabled/time/session gates but NOT
-
 function isForced(): boolean {
   return false
 }
@@ -112,7 +103,7 @@ export function initAutoDream(): void {
     const force = isForced()
     if (!force && !isGateOpen()) return
 
-    // --- Time gate ---
+    
     let lastAt: number
     try {
       lastAt = await readLastConsolidatedAt()
@@ -125,7 +116,7 @@ export function initAutoDream(): void {
     const hoursSince = (Date.now() - lastAt) / 3_600_000
     if (!force && hoursSince < cfg.minHours) return
 
-    // --- Scan throttle ---
+    
     const sinceScanMs = Date.now() - lastSessionScanAt
     if (!force && sinceScanMs < SESSION_SCAN_INTERVAL_MS) {
       logForDebugging(
@@ -145,7 +136,7 @@ export function initAutoDream(): void {
       )
       return
     }
-    // Exclude the current session (its mtime is always recent).
+    
     const currentSession = getSessionId()
     sessionIds = sessionIds.filter(id => id !== currentSession)
     if (!force && sessionIds.length < cfg.minSessions) {
@@ -155,7 +146,7 @@ export function initAutoDream(): void {
       return
     }
 
-    // --- Lock ---
+    
     
     
     
@@ -241,7 +232,7 @@ ${sessionIds.map(id => `- ${id}`).join('\n')}`
         sessions_reviewed: sessionIds.length,
       })
     } catch (e: unknown) {
-      // If the user killed from the bg-tasks dialog, DreamTask.kill already
+      
       
       
       if (abortController.signal.aborted) {
@@ -257,12 +248,6 @@ ${sessionIds.map(id => `- ${id}`).join('\n')}`
   }
 }
 
-/**
- * Watch the forked agent's messages. For each assistant turn, extracts any
- * text blocks (the agent's reasoning/summary — what the user wants to see)
- * and collapses tool_use blocks to a count. Edit/Write file_paths are
- * collected for phase-flip + the inline completion message.
- */
 function makeDreamProgressWatcher(
   taskId: string,
   setAppState: import('../../Task.js').SetAppState,
@@ -297,10 +282,6 @@ function makeDreamProgressWatcher(
   }
 }
 
-/**
- * Entry point from stopHooks. No-op until initAutoDream() has been called.
- * Per-turn cost when enabled: one GB cache read + one stat.
- */
 export async function executeAutoDream(
   context: REPLHookContext,
   appendSystemMessage?: AppendSystemMessageFn,

@@ -43,7 +43,7 @@ export function findTokenBudgetPositions(
   }
   const endMatch = text.match(SHORTHAND_END_RE)
   if (endMatch) {
-    // Avoid double-counting when input is just "+500k"
+    
     const endStart = endMatch.index! + 1 
     const alreadyCovered = positions.some(
       p => endStart >= p.start && endStart < p.end,

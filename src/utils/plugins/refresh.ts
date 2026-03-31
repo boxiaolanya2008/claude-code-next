@@ -38,19 +38,6 @@ export type RefreshActivePluginsResult = {
   pluginCommands: Command[]
 }
 
-/**
- * Refresh all active plugin components: commands, agents, hooks, MCP-reconnect
- * trigger, AppState plugin arrays. Clears ALL plugin caches (unlike the old
- * needsRefresh path which only cleared loadAllPlugins and returned stale data
- * from downstream memoized loaders).
- *
- * Consumes plugins.needsRefresh (sets to false).
- * Increments mcp.pluginReconnectKey so useManageMCPConnections effects re-run
- * and pick up new plugin MCP servers.
- *
- * LSP: if plugins now contribute LSP servers, reinitializeLspServerManager()
- * re-reads config. Servers are lazy-started so this is just config parsing.
- */
 export async function refreshActivePlugins(
   setAppState: SetAppState,
 ): Promise<RefreshActivePluginsResult> {
@@ -172,12 +159,6 @@ export async function refreshActivePlugins(
   }
 }
 
-/**
- * Merge fresh plugin-load errors with existing errors, preserving LSP and
- * plugin-component errors that were recorded by other systems and
- * deduplicating. Same logic as refreshPlugins()/updatePluginState(), extracted
- * so refresh.ts doesn't leave those errors stranded.
- */
 function mergePluginErrors(
   existing: PluginError[],
   fresh: PluginError[],

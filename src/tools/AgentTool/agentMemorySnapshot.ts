@@ -88,9 +88,6 @@ async function saveSyncedMeta(
   }
 }
 
-/**
- * Check if a snapshot exists and whether it's newer than what we last synced.
- */
 export async function checkAgentMemorySnapshot(
   agentType: string,
   scope: AgentMemoryScope,
@@ -114,7 +111,7 @@ export async function checkAgentMemorySnapshot(
     const dirents = await readdir(localMemDir, { withFileTypes: true })
     hasLocalMemory = dirents.some(d => d.isFile() && d.name.endsWith('.md'))
   } catch {
-    // Directory doesn't exist
+    
   }
 
   if (!hasLocalMemory) {
@@ -139,9 +136,6 @@ export async function checkAgentMemorySnapshot(
   return { action: 'none' }
 }
 
-/**
- * Initialize local agent memory from a snapshot (first-time setup).
- */
 export async function initializeFromSnapshot(
   agentType: string,
   scope: AgentMemoryScope,
@@ -154,9 +148,6 @@ export async function initializeFromSnapshot(
   await saveSyncedMeta(agentType, scope, snapshotTimestamp)
 }
 
-/**
- * Replace local agent memory with the snapshot.
- */
 export async function replaceFromSnapshot(
   agentType: string,
   scope: AgentMemoryScope,
@@ -165,7 +156,7 @@ export async function replaceFromSnapshot(
   logForDebugging(
     `Replacing agent memory for ${agentType} with project snapshot`,
   )
-  // Remove existing .md files before copying to avoid orphans
+  
   const localMemDir = getAgentMemoryDir(agentType, scope)
   try {
     const existing = await readdir(localMemDir, { withFileTypes: true })
@@ -175,15 +166,12 @@ export async function replaceFromSnapshot(
       }
     }
   } catch {
-    // Directory may not exist yet
+    
   }
   await copySnapshotToLocal(agentType, scope)
   await saveSyncedMeta(agentType, scope, snapshotTimestamp)
 }
 
-/**
- * Mark the current snapshot as synced without changing local memory.
- */
 export async function markSnapshotSynced(
   agentType: string,
   scope: AgentMemoryScope,

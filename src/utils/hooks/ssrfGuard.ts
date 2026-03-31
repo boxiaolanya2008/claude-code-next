@@ -10,7 +10,7 @@ export function isBlockedAddress(address: string): boolean {
   if (v === 6) {
     return isBlockedV6(address)
   }
-  // Not a valid IP literal — let the real DNS path handle it (this function
+  
   
   return false
 }
@@ -27,7 +27,7 @@ function isBlockedV4(address: string): boolean {
     return false
   }
 
-  // Loopback explicitly allowed
+  
   if (a === 127) return false
 
   
@@ -58,7 +58,7 @@ function isBlockedV6(address: string): boolean {
   if (lower === '::') return true
 
   
-  // ::ffff:XXXX:YYYY, expanded, or partially expanded). Extract the embedded
+  
   
   
   const mappedV4 = extractMappedIPv4(lower)
@@ -66,12 +66,12 @@ function isBlockedV6(address: string): boolean {
     return isBlockedV4(mappedV4)
   }
 
-  // fc00::/7 — unique local addresses (fc00:: through fdff::)
+  
   if (lower.startsWith('fc') || lower.startsWith('fd')) {
     return true
   }
 
-  // fe80::/10 — link-local. The /10 means fe80 through febf, but the first
+  
   
   
   const firstHextet = lower.split(':')[0]
@@ -87,14 +87,8 @@ function isBlockedV6(address: string): boolean {
   return false
 }
 
-/**
- * Expand `::` and optional trailing dotted-decimal so an IPv6 address is
- * represented as exactly 8 hex groups. Returns null if expansion is not
- * well-formed (the caller has already validated with isIP, so this is
- * defensive).
- */
 function expandIPv6Groups(addr: string): number[] | null {
-  // Handle trailing dotted-decimal IPv4 (e.g. ::ffff:169.254.169.254).
+  
   
   let tailHextets: number[] = []
   if (addr.includes('.')) {
@@ -114,7 +108,7 @@ function expandIPv6Groups(addr: string): number[] | null {
     ]
   }
 
-  // Expand `::` (at most one) into the right number of zero groups.
+  
   const dbl = addr.indexOf('::')
   let head: string[]
   let tail: string[]
@@ -141,12 +135,6 @@ function expandIPv6Groups(addr: string): number[] | null {
   return nums.length === 8 ? nums : null
 }
 
-/**
- * Extract the embedded IPv4 address from an IPv4-mapped IPv6 address
- * (0:0:0:0:0:ffff:X:Y) in any valid representation — compressed, expanded,
- * hex groups, or trailing dotted-decimal. Returns null if the address is
- * not an IPv4-mapped IPv6 address.
- */
 function extractMappedIPv4(addr: string): string | null {
   const g = expandIPv6Groups(addr)
   if (!g) return null
@@ -166,16 +154,6 @@ function extractMappedIPv4(addr: string): string | null {
   return null
 }
 
-/**
- * A dns.lookup-compatible function that resolves a hostname and rejects
- * addresses in blocked ranges. Used as the `lookup` option in axios request
- * config so that the validated IP is the one the socket connects to — no
- * rebinding window between validation and connection.
- *
- * IP literals in the hostname are validated directly without DNS.
- *
- * Signature matches axios's `lookup` config option (not Node's dns.lookup).
- */
 export function ssrfGuardedLookup(
   hostname: string,
   options: object,

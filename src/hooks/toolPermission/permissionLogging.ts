@@ -1,6 +1,5 @@
 
 
-// which fans out to Statsig analytics, OTel telemetry, and code-edit metrics.
 import { feature } from 'bun:bundle'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -25,7 +24,6 @@ type PermissionLogContext = {
   toolUseID: string
 }
 
-// Discriminated union: 'accept' pairs with approval sources, 'reject' with rejection sources
 type PermissionDecisionArgs =
   | { decision: 'accept'; source: PermissionApprovalSource | 'config' }
   | { decision: 'reject'; source: PermissionRejectionSource | 'config' }
@@ -36,15 +34,13 @@ function isCodeEditingTool(toolName: string): boolean {
   return CODE_EDITING_TOOLS.includes(toolName)
 }
 
-// Builds OTel counter attributes for code editing tools, enriching with
-
 async function buildCodeEditToolAttributes(
   tool: ToolType,
   input: unknown,
   decision: 'accept' | 'reject',
   source: string,
 ): Promise<Record<string, string>> {
-  // Derive language from file path if the tool exposes one (e.g., Edit, Write)
+  
   let language: string | undefined
   if (tool.getPath && input) {
     const parseResult = tool.inputSchema.safeParse(input)
@@ -64,7 +60,6 @@ async function buildCodeEditToolAttributes(
   }
 }
 
-// Flattens structured source into a string label for analytics/OTel events
 function sourceToString(
   source: PermissionApprovalSource | PermissionRejectionSource,
 ): string {
@@ -98,12 +93,11 @@ function baseMetadata(
       messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     toolName: sanitizeToolNameForAnalytics(toolName),
     sandboxEnabled: SandboxManager.isSandboxingEnabled(),
-    // Only include wait time when the user was actually prompted (not auto-approved)
+    
     ...(waitMs !== undefined && { waiting_for_user_permission_ms: waitMs }),
   }
 }
 
-// Emits a distinct analytics event name per approval source for funnel analysis
 function logApprovalEvent(
   tool: ToolType,
   messageId: string,
@@ -111,7 +105,7 @@ function logApprovalEvent(
   waitMs: number | undefined,
 ): void {
   if (source === 'config') {
-    // Auto-approved by allowlist in settings -- no user wait time
+    
     logEvent(
       'tengu_tool_use_granted_in_config',
       baseMetadata(messageId, tool.name, undefined),
@@ -148,7 +142,6 @@ function logApprovalEvent(
   }
 }
 
-// Rejections share a single event name, differentiated by metadata fields
 function logRejectionEvent(
   tool: ToolType,
   messageId: string,
@@ -156,7 +149,7 @@ function logRejectionEvent(
   waitMs: number | undefined,
 ): void {
   if (source === 'config') {
-    // Denied by denylist in settings
+    
     logEvent(
       'tengu_tool_use_denied_in_config',
       baseMetadata(messageId, tool.name, undefined),
@@ -165,7 +158,7 @@ function logRejectionEvent(
   }
   logEvent('tengu_tool_use_rejected_in_prompt', {
     ...baseMetadata(messageId, tool.name, waitMs),
-    // Distinguish hook rejections from user rejections via separate fields
+    
     ...(source.type === 'hook'
       ? { isHook: true }
       : {
@@ -174,8 +167,6 @@ function logRejectionEvent(
         }),
   })
 }
-
-// Single entry point for all permission decision logging. Called by permission
 
 function logPermissionDecision(
   ctx: PermissionLogContext,
@@ -216,7 +207,7 @@ function logPermissionDecision(
     )
   }
 
-  // Persist decision on the context so downstream code can inspect what happened
+  
   if (!toolUseContext.toolDecisions) {
     toolUseContext.toolDecisions = new Map()
   }

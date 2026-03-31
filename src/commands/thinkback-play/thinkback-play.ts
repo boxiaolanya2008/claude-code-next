@@ -4,7 +4,7 @@ import { loadInstalledPluginsV2 } from '../../utils/plugins/installedPluginsMana
 import { OFFICIAL_MARKETPLACE_NAME } from '../../utils/plugins/officialMarketplace.js'
 import { playAnimation } from '../thinkback/thinkback.js'
 
-const INTERNAL_MARKETPLACE_NAME = 'claude-code-marketplace'
+const INTERNAL_MARKETPLACE_NAME = 'claude-code-next-marketplace'
 const SKILL_NAME = 'thinkback'
 
 function getPluginId(): string {
@@ -16,7 +16,7 @@ function getPluginId(): string {
 }
 
 export async function call(): Promise<LocalCommandResult> {
-  // Get skill directory from installed plugins config
+  
   const v2Data = loadInstalledPluginsV2()
   const pluginId = getPluginId()
   const installations = v2Data.plugins[pluginId]

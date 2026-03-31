@@ -44,21 +44,18 @@ export function notifyVscodeFileUpdated(
       params: { filePath, oldContent, newContent },
     })
     .catch((error: Error) => {
-      // Do not throw if the notification failed
+      
       logForDebugging(
         `[VSCode] Failed to send file_updated notification: ${error.message}`,
       )
     })
 }
 
-/**
- * Sets up the speicial internal VSCode MCP for bidirectional communication using notifications.
- */
 export function setupVscodeSdkMcp(sdkClients: MCPServerConnection[]): void {
   const client = sdkClients.find(client => client.name === 'claude-vscode')
 
   if (client && client.type === 'connected') {
-    // Store the client reference for later use
+    
     vscodeMcpClient = client
 
     client.client.setNotificationHandler(
@@ -80,18 +77,18 @@ export function setupVscodeSdkMcp(sdkClients: MCPServerConnection[]): void {
       tengu_vscode_onboarding: checkStatsigFeatureGate_CACHED_MAY_BE_STALE(
         'tengu_vscode_onboarding',
       ),
-      // Browser support.
+      
       tengu_quiet_fern: getFeatureValue_CACHED_MAY_BE_STALE(
         'tengu_quiet_fern',
         false,
       ),
-      // In-band OAuth via claude_authenticate (vs. extension-native PKCE).
+      
       tengu_vscode_cc_auth: getFeatureValue_CACHED_MAY_BE_STALE(
         'tengu_vscode_cc_auth',
         false,
       ),
     }
-    // Tri-state: 'enabled' | 'disabled' | 'opt-in'. Omit if unknown so VSCode
+    
     
     const autoModeState = readAutoModeEnabledState()
     if (autoModeState !== undefined) {

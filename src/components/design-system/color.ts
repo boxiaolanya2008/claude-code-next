@@ -11,7 +11,7 @@ export function color(
     if (!c) {
       return text
     }
-    // Raw color values bypass theme lookup
+    
     if (
       c.startsWith('rgb(') ||
       c.startsWith('#') ||
@@ -20,7 +20,7 @@ export function color(
     ) {
       return colorize(text, c, type)
     }
-    // Theme key lookup
+    
     return colorize(text, getTheme(theme)[c as keyof Theme], type)
   }
 }

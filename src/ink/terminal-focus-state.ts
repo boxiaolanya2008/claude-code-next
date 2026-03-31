@@ -1,7 +1,5 @@
 
 
-// consumers treat 'unknown' identically to 'focused' (no throttling).
-
 export type TerminalFocusState = 'focused' | 'blurred' | 'unknown'
 
 let focusState: TerminalFocusState = 'unknown'
@@ -30,7 +28,6 @@ export function getTerminalFocusState(): TerminalFocusState {
   return focusState
 }
 
-// For useSyncExternalStore
 export function subscribeTerminalFocus(cb: () => void): () => void {
   subscribers.add(cb)
   return () => {

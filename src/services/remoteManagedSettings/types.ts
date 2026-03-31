@@ -4,7 +4,7 @@ import type { SettingsJson } from '../../utils/settings/types.js'
 
 export const RemoteManagedSettingsResponseSchema = lazySchema(() =>
   z.object({
-    uuid: z.string(), // Settings UUID
+    uuid: z.string(), 
     checksum: z.string(),
     settings: z.record(z.string(), z.unknown()) as z.ZodType<SettingsJson>,
   }),

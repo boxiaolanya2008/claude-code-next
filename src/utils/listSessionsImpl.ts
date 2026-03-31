@@ -33,11 +33,8 @@ export type SessionInfo = {
 }
 
 export type ListSessionsOptions = {
-  /**
-   * Directory to list sessions for. When provided, returns sessions for
-   * this project directory (and optionally its git worktrees). When omitted,
-   * returns sessions across all projects.
-   */
+  
+
   dir?: string
   
   limit?: number
@@ -48,8 +45,6 @@ export type ListSessionsOptions = {
 
   includeWorktrees?: boolean
 }
-
-// ---------------------------------------------------------------------------
 
 export function parseSessionInfoFromLite(
   sessionId: string,
@@ -67,7 +62,7 @@ export function parseSessionInfoFromLite(
   ) {
     return null
   }
-  // User title (customTitle) wins over AI title (aiTitle); distinct
+  
   
   const customTitle =
     extractLastJsonStringField(tail, 'customTitle') ||
@@ -84,7 +79,7 @@ export function parseSessionInfoFromLite(
     const parsed = Date.parse(firstTimestamp)
     if (!Number.isNaN(parsed)) createdAt = parsed
   }
-  // last-prompt tail entry (captured by extractFirstPrompt at write
+  
   
   
   const summary =
@@ -103,7 +98,7 @@ export function parseSessionInfoFromLite(
     extractJsonStringField(head, 'cwd') || projectPath || undefined
   
   
-  // Docker tags, cloud resource tags). Mirrors sessionStorage.ts:608.
+  
   const tagLine = tail.split('\n').findLast(l => l.startsWith('{"type":"tag"'))
   const tag = tagLine
     ? extractLastJsonStringField(tagLine, 'tag') || undefined
@@ -123,8 +118,6 @@ export function parseSessionInfoFromLite(
   }
 }
 
-// ---------------------------------------------------------------------------
-
 type Candidate = {
   sessionId: string
   filePath: string
@@ -133,11 +126,6 @@ type Candidate = {
   projectPath?: string
 }
 
-/**
- * Lists candidate session files in a directory via readdir, optionally
- * stat'ing each for mtime. When `doStat` is false, mtime is set to 0
- * (caller must sort/dedup after reading file contents instead).
- */
 export async function listCandidates(
   projectDir: string,
   doStat: boolean,
@@ -169,10 +157,6 @@ export async function listCandidates(
   return results.filter((c): c is Candidate => c !== null)
 }
 
-/**
- * Reads a candidate's file contents and extracts full SessionInfo.
- * Returns null if the session should be filtered out (sidechain, no summary).
- */
 async function readCandidate(c: Candidate): Promise<SessionInfo | null> {
   const lite = await readSessionLite(c.filePath)
   if (!lite) return null
@@ -186,8 +170,6 @@ async function readCandidate(c: Candidate): Promise<SessionInfo | null> {
 
   return info
 }
-
-// ---------------------------------------------------------------------------
 
 const READ_BATCH_SIZE = 32
 
@@ -234,11 +216,6 @@ async function applySortAndLimit(
   return sessions
 }
 
-/**
- * Read-all path for when no limit/offset is set. Skips the stat pass
- * entirely — reads every candidate, then sorts/dedups on real mtimes
- * from readSessionLite. Matches pre-refactor I/O cost (no extra stats).
- */
 async function readAllAndSort(candidates: Candidate[]): Promise<SessionInfo[]> {
   const all = await Promise.all(candidates.map(readCandidate))
   const byId = new Map<string, SessionInfo>()
@@ -262,8 +239,6 @@ async function readAllAndSort(candidates: Candidate[]): Promise<SessionInfo[]> {
   return sessions
 }
 
-// ---------------------------------------------------------------------------
-
 async function gatherProjectCandidates(
   dir: string,
   includeWorktrees: boolean,
@@ -282,14 +257,14 @@ async function gatherProjectCandidates(
     worktreePaths = []
   }
 
-  // No worktrees (or git not available / scanning disabled) — just scan the single project dir
+  
   if (worktreePaths.length <= 1) {
     const projectDir = await findProjectDir(canonicalDir)
     if (!projectDir) return []
     return listCandidates(projectDir, doStat, canonicalDir)
   }
 
-  // Worktree-aware scanning: find all project dirs matching any worktree
+  
   const projectsDir = getProjectsDir()
   const caseInsensitive = process.platform === 'win32'
 
@@ -308,7 +283,7 @@ async function gatherProjectCandidates(
   try {
     allDirents = await readdir(projectsDir, { withFileTypes: true })
   } catch {
-    // Fall back to single project dir
+    
     const projectDir = await findProjectDir(canonicalDir)
     if (!projectDir) return []
     return listCandidates(projectDir, doStat, canonicalDir)
@@ -334,7 +309,7 @@ async function gatherProjectCandidates(
     if (seenDirs.has(dirName)) continue
 
     for (const { path: wtPath, prefix } of indexed) {
-      // Only use startsWith for truncated paths (>MAX_SANITIZED_LENGTH) where
+      
       
       
       const isMatch =
@@ -358,9 +333,6 @@ async function gatherProjectCandidates(
   return all
 }
 
-/**
- * Gathers candidate session files across all project directories.
- */
 async function gatherAllCandidates(doStat: boolean): Promise<Candidate[]> {
   const projectsDir = getProjectsDir()
 
@@ -380,20 +352,6 @@ async function gatherAllCandidates(doStat: boolean): Promise<Candidate[]> {
   return perProject.flat()
 }
 
-/**
- * Lists sessions with metadata extracted from stat + head/tail reads.
- *
- * When `dir` is provided, returns sessions for that project directory
- * and its git worktrees. When omitted, returns sessions across all
- * projects.
- *
- * Pagination via `limit`/`offset` operates on the filtered, sorted result
- * set. When either is set, a cheap stat-only pass sorts candidates before
- * expensive head/tail reads — so `limit: 20` on a directory with 1000
- * sessions does ~1000 stats + ~20 content reads, not 1000 content reads.
- * When neither is set, stat is skipped (read-all-then-sort, same I/O cost
- * as the original implementation).
- */
 export async function listSessionsImpl(
   options?: ListSessionsOptions,
 ): Promise<SessionInfo[]> {

@@ -20,7 +20,7 @@ export async function updateGithubRepoPathMapping(): Promise<void> {
       return
     }
 
-    // Use the git root as the canonical path for this repo clone.
+    
     
     const cwd = getOriginalCwd()
     const gitRoot = findGitRoot(cwd)
@@ -34,19 +34,19 @@ export async function updateGithubRepoPathMapping(): Promise<void> {
       currentPath = basePath
     }
 
-    // Normalize repo key to lowercase for case-insensitive matching
+    
     const repoKey = repo.toLowerCase()
 
     const config = getGlobalConfig()
     const existingPaths = config.githubRepoPaths?.[repoKey] ?? []
 
     if (existingPaths[0] === currentPath) {
-      // Already at the front — nothing to do
+      
       logForDebugging(`Path ${currentPath} already tracked for repo ${repoKey}`)
       return
     }
 
-    // Remove if present elsewhere (to promote to front), then prepend
+    
     const withoutCurrent = existingPaths.filter(p => p !== currentPath)
     const updatedPaths = [currentPath, ...withoutCurrent]
 
@@ -65,33 +65,17 @@ export async function updateGithubRepoPathMapping(): Promise<void> {
   }
 }
 
-/**
- * Gets known local paths for a given GitHub repository.
- * @param repo The repository in "owner/repo" format
- * @returns Array of known absolute paths, or empty array if none
- */
 export function getKnownPathsForRepo(repo: string): string[] {
   const config = getGlobalConfig()
   const repoKey = repo.toLowerCase()
   return config.githubRepoPaths?.[repoKey] ?? []
 }
 
-/**
- * Filters paths to only those that exist on the filesystem.
- * @param paths Array of absolute paths to check
- * @returns Array of paths that exist
- */
 export async function filterExistingPaths(paths: string[]): Promise<string[]> {
   const results = await Promise.all(paths.map(pathExists))
   return paths.filter((_, i) => results[i])
 }
 
-/**
- * Validates that a path contains the expected GitHub repository.
- * @param path Absolute path to check
- * @param expectedRepo Expected repository in "owner/repo" format
- * @returns true if the path contains the expected repo, false otherwise
- */
 export async function validateRepoAtPath(
   path: string,
   expectedRepo: string,
@@ -107,19 +91,13 @@ export async function validateRepoAtPath(
       return false
     }
 
-    // Case-insensitive comparison
+    
     return actualRepo.toLowerCase() === expectedRepo.toLowerCase()
   } catch {
     return false
   }
 }
 
-/**
- * Removes a path from the tracked paths for a given repository.
- * Used when a path is found to be invalid during selection.
- * @param repo The repository in "owner/repo" format
- * @param pathToRemove The path to remove from tracking
- */
 export function removePathFromRepo(repo: string, pathToRemove: string): void {
   const config = getGlobalConfig()
   const repoKey = repo.toLowerCase()
@@ -128,14 +106,14 @@ export function removePathFromRepo(repo: string, pathToRemove: string): void {
   const updatedPaths = existingPaths.filter(path => path !== pathToRemove)
 
   if (updatedPaths.length === existingPaths.length) {
-    // Path wasn't in the list, nothing to do
+    
     return
   }
 
   const updatedMapping = { ...config.githubRepoPaths }
 
   if (updatedPaths.length === 0) {
-    // Remove the repo key entirely if no paths remain
+    
     delete updatedMapping[repoKey]
   } else {
     updatedMapping[repoKey] = updatedPaths

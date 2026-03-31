@@ -36,11 +36,6 @@ export type TaskAttachment = {
 
 type SetAppState = (updater: (prev: AppState) => AppState) => void
 
-/**
- * Update a task's state in AppState.
- * Helper function for task implementations.
- * Generic to allow type-safe updates for specific task types.
- */
 export function updateTaskState<T extends TaskState>(
   taskId: string,
   setAppState: SetAppState,
@@ -53,7 +48,7 @@ export function updateTaskState<T extends TaskState>(
     }
     const updated = updater(task)
     if (updated === task) {
-      // Updater returned the same reference (early-return no-op). Skip the
+      
       
       return prev
     }
@@ -67,9 +62,6 @@ export function updateTaskState<T extends TaskState>(
   })
 }
 
-/**
- * Register a new task in AppState.
- */
 export function registerTask(task: TaskState, setAppState: SetAppState): void {
   let isReplacement = false
   setAppState(prev => {
@@ -112,12 +104,6 @@ export function registerTask(task: TaskState, setAppState: SetAppState): void {
   })
 }
 
-/**
- * Eagerly evict a terminal task from AppState.
- * The task must be in a terminal state (completed/failed/killed) with notified=true.
- * This allows memory to be freed without waiting for the next query loop iteration.
- * The lazy GC in generateTaskAttachments() remains as a safety net.
- */
 export function evictTerminalTask(
   taskId: string,
   setAppState: SetAppState,
@@ -139,18 +125,11 @@ export function evictTerminalTask(
   })
 }
 
-/**
- * Get all running tasks.
- */
 export function getRunningTasks(state: AppState): TaskState[] {
   const tasks = state.tasks ?? {}
   return Object.values(tasks).filter(task => task.status === 'running')
 }
 
-/**
- * Generate attachments for tasks with new output or status changes.
- * Called by the framework to create push notifications.
- */
 export async function generateTaskAttachments(state: AppState): Promise<{
   attachments: TaskAttachment[]
   
@@ -170,14 +149,14 @@ export async function generateTaskAttachments(state: AppState): Promise<{
         case 'completed':
         case 'failed':
         case 'killed':
-          // Evict terminal tasks — they've been consumed and can be GC'd
+          
           evictedTaskIds.push(taskState.id)
           continue
         case 'pending':
-          // Keep in map — hasn't run yet, but parent already knows about it
+          
           continue
         case 'running':
-          // Fall through to running logic below
+          
           break
       }
     }
@@ -192,20 +171,15 @@ export async function generateTaskAttachments(state: AppState): Promise<{
       }
     }
 
-    // Completed tasks are NOT notified here — each task type handles its own
-    // completion notification via enqueuePendingNotification(). Generating
-    // attachments here would race with those per-type callbacks, causing
-    // dual delivery (one inline attachment + one separate API turn).
+    
+    
+    
+    
   }
 
   return { attachments, updatedTaskOffsets, evictedTaskIds }
 }
 
-/**
- * Apply the outputOffset patches and evictions from generateTaskAttachments.
- * Merges patches against FRESH prev.tasks (not the stale pre-await snapshot),
- * so concurrent status transitions aren't clobbered.
- */
 export function applyTaskOffsetsAndEvictions(
   setAppState: SetAppState,
   updatedTaskOffsets: Record<string, number>,
@@ -244,10 +218,6 @@ export function applyTaskOffsetsAndEvictions(
   })
 }
 
-/**
- * Poll all running tasks and check for updates.
- * This is the main polling loop called by the framework.
- */
 export async function pollTasks(
   getAppState: () => AppState,
   setAppState: SetAppState,
@@ -264,9 +234,6 @@ export async function pollTasks(
   }
 }
 
-/**
- * Enqueue a task notification to the message queue.
- */
 function enqueueTaskNotification(attachment: TaskAttachment): void {
   const statusText = getStatusText(attachment.status)
 
@@ -285,9 +252,6 @@ function enqueueTaskNotification(attachment: TaskAttachment): void {
   enqueuePendingNotification({ value: message, mode: 'task-notification' })
 }
 
-/**
- * Get human-readable status text.
- */
 function getStatusText(status: TaskStatus): string {
   switch (status) {
     case 'completed':

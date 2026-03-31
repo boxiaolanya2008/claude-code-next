@@ -22,23 +22,6 @@ export function resetSyncCache(): void {
   resetLeafCache()
 }
 
-/**
- * Check if the current user is eligible for remote managed settings
- *
- * Eligibility:
- * - Console users (API key): All eligible (must have actual key, not just apiKeyHelper)
- * - OAuth users with known subscriptionType: Only Enterprise/C4E and Team
- * - OAuth users with subscriptionType === null (externally-injected tokens via
- *   CLAUDE_CODE_OAUTH_TOKEN / FD, or keychain tokens missing metadata): Eligible —
- *   the API returns empty settings for ineligible orgs, so the cost of a false
- *   positive is one round-trip
- *
- * This is a pre-check to determine if we should query the API.
- * The API will return empty settings for users without managed settings.
- *
- * IMPORTANT: This function must NOT call getSettings() or any function that calls
- * getSettings() to avoid circular dependencies during settings loading.
- */
 export function isRemoteManagedSettingsEligible(): boolean {
   if (cached !== undefined) return cached
 
@@ -47,20 +30,20 @@ export function isRemoteManagedSettingsEligible(): boolean {
     return (cached = setEligibility(false))
   }
 
-  // Custom base URL users should not hit the settings endpoint
+  
   if (!isFirstPartyAnthropicBaseUrl()) {
     return (cached = setEligibility(false))
   }
 
-  // Cowork runs in a VM with its own permission model; server-managed settings
   
   
   
-  if (process.env.CLAUDE_CODE_ENTRYPOINT === 'local-agent') {
+  
+  if (process.env.CLAUDE_CODE_NEXT_ENTRYPOINT === 'local-agent') {
     return (cached = setEligibility(false))
   }
 
-  // Check OAuth first: most Claude.ai users have no API key in the keychain.
+  
   
   
   
@@ -86,7 +69,7 @@ export function isRemoteManagedSettingsEligible(): boolean {
     return (cached = setEligibility(true))
   }
 
-  // Console users (API key) are eligible if we can get the actual key
+  
   
   
   
@@ -98,7 +81,7 @@ export function isRemoteManagedSettingsEligible(): boolean {
       return (cached = setEligibility(true))
     }
   } catch {
-    // No API key available (e.g., CI/test environment)
+    
   }
 
   return (cached = setEligibility(false))

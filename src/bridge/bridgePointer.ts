@@ -29,12 +29,6 @@ export function getBridgePointerPath(dir: string): string {
   return join(getProjectsDir(), sanitizePath(dir), 'bridge-pointer.json')
 }
 
-/**
- * Write the pointer. Also used to refresh mtime during long sessions —
- * calling with the same IDs is a cheap no-content-change write that bumps
- * the staleness clock. Best-effort — a crash-recovery file must never
- * itself cause a crash. Logs and swallows on error.
- */
 export async function writeBridgePointer(
   dir: string,
   pointer: BridgePointer,
@@ -49,13 +43,6 @@ export async function writeBridgePointer(
   }
 }
 
-/**
- * Read the pointer and its age (ms since last write). Operates directly
- * and handles errors — no existence check (CLAUDE.md TOCTOU rule). Returns
- * null on any failure: missing file, corrupted JSON, schema mismatch, or
- * stale (mtime > 4h ago). Stale/invalid pointers are deleted so they don't
- * keep re-prompting after the backend has already GC'd the env.
- */
 export async function readBridgePointer(
   dir: string,
 ): Promise<(BridgePointer & { ageMs: number }) | null> {
@@ -63,7 +50,7 @@ export async function readBridgePointer(
   let raw: string
   let mtimeMs: number
   try {
-    // stat for mtime (staleness anchor), then read. Two syscalls, but both
+    
     
     mtimeMs = (await stat(path)).mtimeMs
     raw = await readFile(path, 'utf8')
@@ -88,32 +75,18 @@ export async function readBridgePointer(
   return { ...parsed.data, ageMs }
 }
 
-/**
- * Worktree-aware read for `--continue`. The REPL bridge writes its pointer
- * to `getOriginalCwd()` which EnterWorktreeTool/activeWorktreeSession can
- * mutate to a worktree path — but `claude remote-control --continue` runs
- * with `resolve('.')` = shell CWD. This fans out across git worktree
- * siblings to find the freshest pointer, matching /resume's semantics.
- *
- * Fast path: checks `dir` first. Only shells out to `git worktree list` if
- * that misses — the common case (pointer in launch dir) is one stat, zero
- * exec. Fanout reads run in parallel; capped at MAX_WORKTREE_FANOUT.
- *
- * Returns the pointer AND the dir it was found in, so the caller can clear
- * the right file on resume failure.
- */
 export async function readBridgePointerAcrossWorktrees(
   dir: string,
 ): Promise<{ pointer: BridgePointer & { ageMs: number }; dir: string } | null> {
-  // Fast path: current dir. Covers standalone bridge (always matches) and
-  // REPL bridge when no worktree mutation happened.
+  
+  
   const here = await readBridgePointer(dir)
   if (here) {
     return { pointer: here, dir }
   }
 
-  // Fanout: scan worktree siblings. getWorktreePathsPortable has a 5s
-  // timeout and returns [] on any error (not a git repo, git not installed).
+  
+  
   const worktrees = await getWorktreePathsPortable(dir)
   if (worktrees.length <= 1) return null
   if (worktrees.length > MAX_WORKTREE_FANOUT) {
@@ -123,7 +96,7 @@ export async function readBridgePointerAcrossWorktrees(
     return null
   }
 
-  // Dedupe against `dir` so we don't re-stat it. sanitizePath normalizes
+  
   
   
   const dirKey = sanitizePath(dir)
@@ -159,10 +132,6 @@ export async function readBridgePointerAcrossWorktrees(
   return freshest
 }
 
-/**
- * Delete the pointer. Idempotent — ENOENT is expected when the process
- * shut down clean previously.
- */
 export async function clearBridgePointer(dir: string): Promise<void> {
   const path = getBridgePointerPath(dir)
   try {

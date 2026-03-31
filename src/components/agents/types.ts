@@ -9,7 +9,6 @@ export const AGENT_PATHS = {
 type WithPreviousMode = { previousMode: ModeState }
 type WithAgent = { agent: AgentDefinition }
 
-// Simplified state type using intersection types
 export type ModeState =
   | { mode: 'main-menu' }
   | { mode: 'list-agents'; source: SettingSource | 'all' | 'built-in' }

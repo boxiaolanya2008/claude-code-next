@@ -32,7 +32,7 @@ export function usePromptInputPlaceholder({
       return
     }
 
-    // Show teammate hint when viewing teammate
+    
     if (viewingAgentName) {
       const displayName =
         viewingAgentName.length > MAX_TEAMMATE_NAME_LENGTH
@@ -41,7 +41,7 @@ export function usePromptInputPlaceholder({
       return `Message @${displayName}…`
     }
 
-    // Show queue hint if user has not seen it yet.
+    
     
     
     if (
@@ -52,7 +52,7 @@ export function usePromptInputPlaceholder({
       return 'Press up to edit queued messages'
     }
 
-    // Show example command if user has not submitted yet and suggestions are enabled.
+    
     
     
     if (

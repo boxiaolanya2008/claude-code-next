@@ -69,7 +69,7 @@ export function usePasteHandler({
           onImagePaste(
             imageData.base64,
             imageData.mediaType,
-            undefined, // no filename for clipboard images
+            undefined, 
             imageData.dimensions,
           )
         }
@@ -108,7 +108,7 @@ export function usePasteHandler({
         ) => {
           pastePendingRef.current = false
           setPasteState(({ chunks }) => {
-            // Join chunks and filter out orphaned focus sequences
+            
             
             const pastedText = chunks
               .join('')
@@ -117,10 +117,10 @@ export function usePasteHandler({
 
             
             
-            // 1. Newline-separated paths (common in some terminals)
             
             
-            // - Unix: space followed by `/` (e.g., `/Users/...`)
+            
+            
             
             
             const lines = pastedText
@@ -144,7 +144,7 @@ export function usePasteHandler({
                 )
 
                 if (validImages.length > 0) {
-                  // Successfully read at least one image
+                  
                   for (const imageData of validImages) {
                     const filename = basename(imageData.path)
                     onImagePaste(
@@ -155,7 +155,7 @@ export function usePasteHandler({
                       imageData.path,
                     )
                   }
-                  // If some paths weren't images, paste them as text
+                  
                   const nonImageLines = lines.filter(
                     line => !isImageFilePath(line),
                   )
@@ -164,7 +164,7 @@ export function usePasteHandler({
                   }
                   setIsPasting(false)
                 } else if (isTempScreenshot && isMacOS) {
-                  // For temporary screenshot files that no longer exist, try clipboard
+                  
                   checkClipboardForImage()
                 } else {
                   if (onPaste) {
@@ -176,18 +176,18 @@ export function usePasteHandler({
               return { chunks: [], timeoutId: null }
             }
 
-            // If paste is empty (common when trying to paste images with Cmd+V),
-            // check if clipboard has an image (macOS only)
+            
+            
             if (isMacOS && onImagePaste && pastedText.length === 0) {
               checkClipboardForImage()
               return { chunks: [], timeoutId: null }
             }
 
-            // Handle regular paste
+            
             if (onPaste) {
               onPaste(pastedText)
             }
-            // Reset isPasting state after paste is complete
+            
             setIsPasting(false)
             return { chunks: [], timeoutId: null }
           })
@@ -205,14 +205,14 @@ export function usePasteHandler({
     [checkClipboardForImage, isMacOS, onImagePaste, onPaste],
   )
 
-  // Paste detection is now done via the InputEvent's keypress.isPasted flag,
-  // which is set by the keypress parser when it detects bracketed paste mode.
+  
+  
   
   
   
 
   const wrappedOnInput = (input: string, key: Key, event: InputEvent): void => {
-    // Detect paste from the parsed keypress event.
+    
     
     const isFromPaste = event.keypress.isPasted
 
@@ -221,7 +221,7 @@ export function usePasteHandler({
       setIsPasting(true)
     }
 
-    // Handle large pastes (>PASTE_THRESHOLD chars)
+    
     
     
     
@@ -232,24 +232,24 @@ export function usePasteHandler({
     
     
     
-    // - Unix: ` /` - Windows: ` C:\` etc.
+    
     const hasImageFilePath = input
       .split(/ (?=\/|[A-Za-z]:\\)/)
       .flatMap(part => part.split('\n'))
       .some(line => isImageFilePath(line.trim()))
 
-    // Handle empty paste (clipboard image on macOS)
-    // When the user pastes an image with Cmd+V, the terminal sends an empty
-    // bracketed paste sequence. The keypress parser emits this as isPasted=true
-    // with empty input.
+    
+    
+    
+    
     if (isFromPaste && input.length === 0 && isMacOS && onImagePaste) {
       checkClipboardForImage()
-      // Reset isPasting since there's no text content to process
+      
       setIsPasting(false)
       return
     }
 
-    // Check if we should handle as paste (from bracketed paste, large input, or continuation)
+    
     const shouldHandleAsPaste =
       onPaste &&
       (input.length > PASTE_THRESHOLD ||
@@ -269,10 +269,10 @@ export function usePasteHandler({
     }
     onInput(input, key)
     if (input.length > 10) {
-      // Ensure that setIsPasting is turned off on any other multicharacter
-      // input, because the stdin buffer may chunk at arbitrary points and split
-      // the closing escape sequence if the input length is too long for the
-      // stdin buffer.
+      
+      
+      
+      
       setIsPasting(false)
     }
   }

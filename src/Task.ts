@@ -36,7 +36,6 @@ export type TaskContext = {
   setAppState: SetAppState
 }
 
-// Base fields shared by all task states
 export type TaskStateBase = {
   id: string
   type: TaskType
@@ -61,17 +60,14 @@ export type LocalShellSpawnInput = {
   kind?: 'bash' | 'monitor'
 }
 
-// What getTaskByType dispatches for: kill. spawn/render were never
-
 export type Task = {
   name: string
   type: TaskType
   kill(taskId: string, setAppState: SetAppState): Promise<void>
 }
 
-// Task ID prefixes
 const TASK_ID_PREFIXES: Record<string, string> = {
-  local_bash: 'b', // Keep as 'b' for backward compatibility
+  local_bash: 'b', 
   local_agent: 'a',
   remote_agent: 'r',
   in_process_teammate: 't',
@@ -80,12 +76,9 @@ const TASK_ID_PREFIXES: Record<string, string> = {
   dream: 'd',
 }
 
-// Get task ID prefix
 function getTaskIdPrefix(type: TaskType): string {
   return TASK_ID_PREFIXES[type] ?? 'x'
 }
-
-// Case-insensitive-safe alphabet (digits + lowercase) for task IDs.
 
 const TASK_ID_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz'
 

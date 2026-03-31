@@ -28,16 +28,16 @@ const FRICTION_PATTERNS = [
   
   
   /^no[,!]\s/i,
-  // Direct corrections about Claude's output
+  
   /\bthat'?s (wrong|incorrect|not (what|right|correct))\b/i,
   /\bnot what I (asked|wanted|meant|said)\b/i,
-  // Referencing prior instructions Claude missed
+  
   /\bI (said|asked|wanted|told you|already said)\b/i,
-  // Questioning Claude's actions
+  
   /\bwhy did you\b/i,
   /\byou should(n'?t| not)? have\b/i,
   /\byou were supposed to\b/i,
-  // Explicit retry/revert of Claude's work
+  
   /\btry again\b/i,
   /\b(undo|revert) (that|this|it|what you)\b/i,
 ]
@@ -97,22 +97,22 @@ export function useIssueFlagBanner(
     return false
   }
 
-  // biome-ignore lint/correctness/useHookAtTopLevel: process.env.USER_TYPE is a compile-time constant
+  
   const lastTriggeredAtRef = useRef(0)
-  // biome-ignore lint/correctness/useHookAtTopLevel: process.env.USER_TYPE is a compile-time constant
+  
   const activeForSubmitRef = useRef(-1)
 
-  // Memoize the O(messages) scans. This hook runs on every REPL render
-  // (including every keystroke), but messages is stable during typing.
-  // isSessionContainerCompatible walks all messages + regex-tests each
-  // bash command — by far the heaviest work here.
-  // biome-ignore lint/correctness/useHookAtTopLevel: process.env.USER_TYPE is a compile-time constant
+  
+  
+  
+  
+  
   const shouldTrigger = useMemo(
     () => isSessionContainerCompatible(messages) && hasFrictionSignal(messages),
     [messages],
   )
 
-  // Keep showing the banner until the user submits another message
+  
   if (activeForSubmitRef.current === submitCount) {
     return true
   }

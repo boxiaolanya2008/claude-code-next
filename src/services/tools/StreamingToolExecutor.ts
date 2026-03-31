@@ -31,12 +31,6 @@ type TrackedTool = {
   contextModifiers?: Array<(context: ToolUseContext) => ToolUseContext>
 }
 
-/**
- * Executes tools as they stream in with concurrency control.
- * - Concurrent-safe tools can execute in parallel with other concurrent-safe tools
- * - Non-concurrent tools must execute alone (exclusive access)
- * - Results are buffered and emitted in the order tools were received
- */
 export class StreamingToolExecutor {
   private tools: TrackedTool[] = []
   private toolUseContext: ToolUseContext
@@ -61,18 +55,14 @@ export class StreamingToolExecutor {
     )
   }
 
-  /**
-   * Discards all pending and in-progress tools. Called when streaming fallback
-   * occurs and results from the failed attempt should be abandoned.
-   * Queued tools won't start, and in-progress tools will receive synthetic errors.
-   */
+  
+
   discard(): void {
     this.discarded = true
   }
 
-  /**
-   * Add a tool to the execution queue. Will start executing immediately if conditions allow.
-   */
+  
+
   addTool(block: ToolUseBlock, assistantMessage: AssistantMessage): void {
     const toolDefinition = findToolByName(this.toolDefinitions, block.name)
     if (!toolDefinition) {
@@ -123,9 +113,8 @@ export class StreamingToolExecutor {
     void this.processQueue()
   }
 
-  /**
-   * Check if a tool can execute based on current concurrency state
-   */
+  
+
   private canExecuteTool(isConcurrencySafe: boolean): boolean {
     const executingTools = this.tools.filter(t => t.status === 'executing')
     return (
@@ -134,9 +123,8 @@ export class StreamingToolExecutor {
     )
   }
 
-  /**
-   * Process the queue, starting tools when concurrency conditions allow
-   */
+  
+
   private async processQueue(): Promise<void> {
     for (const tool of this.tools) {
       if (tool.status !== 'queued') continue
@@ -144,7 +132,7 @@ export class StreamingToolExecutor {
       if (this.canExecuteTool(tool.isConcurrencySafe)) {
         await this.executeTool(tool)
       } else {
-        // Can't execute this tool yet, and since we need to maintain order for non-concurrent tools, stop here
+        
         if (!tool.isConcurrencySafe) break
       }
     }
@@ -155,8 +143,8 @@ export class StreamingToolExecutor {
     reason: 'sibling_error' | 'user_interrupted' | 'streaming_fallback',
     assistantMessage: AssistantMessage,
   ): Message {
-    // For user interruptions (ESC to reject), use REJECT_MESSAGE so the UI shows
-    // "User rejected edit" instead of "Error editing file"
+    
+    
     if (reason === 'user_interrupted') {
       return createUserMessage({
         content: [
@@ -204,9 +192,8 @@ export class StreamingToolExecutor {
     })
   }
 
-  /**
-   * Determine why a tool should be cancelled.
-   */
+  
+
   private getAbortReason(
     tool: TrackedTool,
   ): 'sibling_error' | 'user_interrupted' | 'streaming_fallback' | null {
@@ -217,9 +204,9 @@ export class StreamingToolExecutor {
       return 'sibling_error'
     }
     if (this.toolUseContext.abortController.signal.aborted) {
-      // 'interrupt' means the user typed a new message while tools were
-      // running. Only cancel tools whose interruptBehavior is 'cancel';
-      // 'block' tools shouldn't reach here (abort isn't fired).
+      
+      
+      
       if (this.toolUseContext.abortController.signal.reason === 'interrupt') {
         return this.getToolInterruptBehavior(tool) === 'cancel'
           ? 'user_interrupted'
@@ -259,9 +246,8 @@ export class StreamingToolExecutor {
     )
   }
 
-  /**
-   * Execute a tool and collect its results
-   */
+  
+
   private async executeTool(tool: TrackedTool): Promise<void> {
     tool.status = 'executing'
     this.toolUseContext.setInProgressToolUseIDs(prev =>
@@ -274,7 +260,7 @@ export class StreamingToolExecutor {
       []
 
     const collectResults = async () => {
-      // If already aborted (by error or user), generate synthetic error block instead of running the tool
+      
       const initialAbortReason = this.getAbortReason(tool)
       if (initialAbortReason) {
         messages.push(
@@ -291,11 +277,11 @@ export class StreamingToolExecutor {
         return
       }
 
-      // Per-tool child controller. Lets siblingAbortController kill running
-      // subprocesses (Bash spawns listen to this signal) when a Bash error
-      // cascades. Permission-dialog rejection also aborts this controller
-      // (PermissionContext.ts cancelAndAbort) — that abort must bubble up to
-      // the query controller so the query loop's post-tool abort check ends
+      
+      
+      
+      
+      
       
       
       const toolAbortController = createChildAbortController(
@@ -330,7 +316,7 @@ export class StreamingToolExecutor {
       let thisToolErrored = false
 
       for await (const update of generator) {
-        // Check if we were aborted by a sibling tool error or user interruption.
+        
         
         const abortReason = this.getAbortReason(tool)
         if (abortReason && !thisToolErrored) {
@@ -364,7 +350,7 @@ export class StreamingToolExecutor {
         }
 
         if (update.message) {
-          // Progress messages go to pendingProgress for immediate yielding
+          
           if (update.message.type === 'progress') {
             tool.pendingProgress.push(update.message)
             
@@ -404,18 +390,15 @@ export class StreamingToolExecutor {
     })
   }
 
-  /**
-   * Get any completed results that haven't been yielded yet (non-blocking)
-   * Maintains order where necessary
-   * Also yields any pending progress messages immediately
-   */
+  
+
   *getCompletedResults(): Generator<MessageUpdate, void> {
     if (this.discarded) {
       return
     }
 
     for (const tool of this.tools) {
-      // Always yield pending progress messages immediately, regardless of tool status
+      
       while (tool.pendingProgress.length > 0) {
         const progressMessage = tool.pendingProgress.shift()!
         yield { message: progressMessage, newContext: this.toolUseContext }
@@ -439,17 +422,14 @@ export class StreamingToolExecutor {
     }
   }
 
-  /**
-   * Check if any tool has pending progress messages
-   */
+  
+
   private hasPendingProgress(): boolean {
     return this.tools.some(t => t.pendingProgress.length > 0)
   }
 
-  /**
-   * Wait for remaining tools and yield their results as they complete
-   * Also yields progress messages as they become available
-   */
+  
+
   async *getRemainingResults(): AsyncGenerator<MessageUpdate, void> {
     if (this.discarded) {
       return
@@ -462,7 +442,7 @@ export class StreamingToolExecutor {
         yield result
       }
 
-      // If we still have executing tools but nothing completed, wait for any to complete
+      
       
       if (
         this.hasExecutingTools() &&
@@ -489,30 +469,26 @@ export class StreamingToolExecutor {
     }
   }
 
-  /**
-   * Check if there are any completed results ready to yield
-   */
+  
+
   private hasCompletedResults(): boolean {
     return this.tools.some(t => t.status === 'completed')
   }
 
-  /**
-   * Check if there are any tools still executing
-   */
+  
+
   private hasExecutingTools(): boolean {
     return this.tools.some(t => t.status === 'executing')
   }
 
-  /**
-   * Check if there are any unfinished tools
-   */
+  
+
   private hasUnfinishedTools(): boolean {
     return this.tools.some(t => t.status !== 'yielded')
   }
 
-  /**
-   * Get the current tool use context (may have been modified by context modifiers)
-   */
+  
+
   getUpdatedContext(): ToolUseContext {
     return this.toolUseContext
   }

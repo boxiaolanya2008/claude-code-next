@@ -29,8 +29,6 @@ export type AntModelOverrideConfig = {
   switchCallout?: AntModelSwitchCalloutConfig
 }
 
-// @[MODEL LAUNCH]: Update tengu_ant_model_override with new ant-only models
-
 export function getAntModelOverrideConfig(): AntModelOverrideConfig | null {
   if (process.env.USER_TYPE !== 'ant') {
     return null

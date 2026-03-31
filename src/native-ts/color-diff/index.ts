@@ -38,8 +38,6 @@ export type NativeModule = {
   getSyntaxTheme: (themeName: string) => SyntaxTheme
 }
 
-// ---------------------------------------------------------------------------
-
 type Color = { r: number; g: number; b: number; a: number }
 type Style = { foreground: Color; background: Color }
 type Block = [Style, string]
@@ -57,7 +55,6 @@ function ansiIdx(index: number): Color {
   return { r: index, g: 0, b: 0, a: 0 }
 }
 
-// Sentinel: a=1 means "terminal default" (matches bat convention)
 const DEFAULT_BG: Color = { r: 0, g: 0, b: 0, a: 1 }
 
 function detectColorMode(theme: string): ColorMode {
@@ -65,8 +62,6 @@ function detectColorMode(theme: string): ColorMode {
   const ct = process.env.COLORTERM ?? ''
   return ct === 'truecolor' || ct === '24bit' ? 'truecolor' : 'color256'
 }
-
-// Port of ansi_colours::ansi256_from_rgb — approximates RGB to the xterm-256
 
 const CUBE_LEVELS = [0, 95, 135, 175, 215, 255]
 function ansi256FromRgb(r: number, g: number, b: number): number {
@@ -94,14 +89,14 @@ function ansi256FromRgb(r: number, g: number, b: number): number {
 }
 
 function colorToEscape(c: Color, fg: boolean, mode: ColorMode): string {
-  // alpha=0: palette index encoded in .r (bat's ansi-theme convention)
+  
   if (c.a === 0) {
     const idx = c.r
     if (idx < 8) return `\x1b[${(fg ? 30 : 40) + idx}m`
     if (idx < 16) return `\x1b[${(fg ? 90 : 100) + (idx - 8)}m`
     return `\x1b[${fg ? 38 : 48};5;${idx}m`
   }
-  // alpha=1: terminal default
+  
   if (c.a === 1) return fg ? '\x1b[39m' : '\x1b[49m'
 
   const codeType = fg ? 38 : 48
@@ -128,10 +123,6 @@ function asTerminalEscaped(
   return out + RESET
 }
 
-// ---------------------------------------------------------------------------
-// Theme
-// ---------------------------------------------------------------------------
-
 type Marker = '+' | '-' | ' '
 
 type Theme = {
@@ -152,8 +143,6 @@ function defaultSyntaxThemeName(themeName: string): string {
   return 'GitHub'
 }
 
-// highlight.js scope → syntect Monokai Extended foreground (measured from the
-// Rust module's output so colors match the original exactly)
 const MONOKAI_SCOPES: Record<string, Color> = {
   keyword: rgb(249, 38, 114),
   _storage: rgb(102, 217, 239),
@@ -181,7 +170,6 @@ const MONOKAI_SCOPES: Record<string, Color> = {
   subst: rgb(248, 248, 242),
 }
 
-// highlight.js scope → syntect GitHub-light foreground (measured from Rust)
 const GITHUB_SCOPES: Record<string, Color> = {
   keyword: rgb(167, 29, 93),
   _storage: rgb(167, 29, 93),
@@ -208,8 +196,6 @@ const GITHUB_SCOPES: Record<string, Color> = {
   regexp: rgb(24, 54, 145),
   subst: rgb(51, 51, 51),
 }
-
-// Keywords that syntect scopes as storage.type rather than keyword.control.
 
 const STORAGE_KEYWORDS = new Set([
   'const',
@@ -296,7 +282,7 @@ function buildTheme(themeName: string, mode: ColorMode): Theme {
     }
   }
 
-  // light
+  
   const fg = rgb(51, 51, 51)
   const deleteLine = rgb(255, 220, 220)
   const deleteWord = rgb(255, 199, 199)
@@ -364,16 +350,12 @@ function decorationColor(marker: Marker, theme: Theme): Color {
   }
 }
 
-// ---------------------------------------------------------------------------
-
 type HljsNode = {
   scope?: string
   kind?: string
   children: (HljsNode | string)[]
 }
 
-// Filename-based and extension-based language detection (approximates bat's
-// SyntaxMapping + syntect's find_syntax_by_extension)
 const FILENAME_LANGS: Record<string, string> = {
   Dockerfile: 'dockerfile',
   Makefile: 'makefile',
@@ -397,7 +379,7 @@ function detectLanguage(
     const lang = hljs().getLanguage(ext)
     if (lang) return ext
   }
-  // Shebang / first-line detection (strip UTF-8 BOM)
+  
   if (firstLine) {
     const line = firstLine.startsWith('\ufeff') ? firstLine.slice(1) : firstLine
     if (line.startsWith('#!')) {
@@ -446,9 +428,6 @@ function flattenHljs(
   }
 }
 
-// result.emitter is in the public HighlightResult type, but rootNode is
-
-// scope vs kind) behind a silent gray fallback.
 function hasRootNode(emitter: unknown): emitter is { rootNode: HljsNode } {
   return (
     typeof emitter === 'object' &&
@@ -467,7 +446,7 @@ function highlightLine(
   line: string,
   theme: Theme,
 ): Block[] {
-  // syntect-parity: feed a trailing \n so line comments terminate, then strip
+  
   const code = line + '\n'
   if (!state.lang) {
     return [[defaultStyle(theme), code]]
@@ -479,7 +458,7 @@ function highlightLine(
       ignoreIllegals: true,
     })
   } catch {
-    // hljs throws on unknown language despite ignoreIllegals
+    
     return [[defaultStyle(theme), code]]
   }
   if (!hasRootNode(result.emitter)) {
@@ -497,8 +476,6 @@ function highlightLine(
   flattenHljs(result.emitter.rootNode, theme, undefined, blocks)
   return blocks
 }
-
-// ---------------------------------------------------------------------------
 
 type Range = { start: number; end: number }
 
@@ -520,7 +497,7 @@ function tokenize(text: string): string[] {
       tokens.push(text.slice(i, j))
       i = j
     } else {
-      // advance one codepoint (handle surrogate pairs)
+      
       const cp = text.codePointAt(i)!
       const len = cp > 0xffff ? 2 : 1
       tokens.push(text.slice(i, i + len))
@@ -592,8 +569,6 @@ function wordDiffStrings(oldStr: string, newStr: string): [Range[], Range[]] {
   return [oldRanges, newRanges]
 }
 
-// ---------------------------------------------------------------------------
-
 type Highlight = {
   marker: Marker | null
   lineNumber: number
@@ -640,13 +615,13 @@ function wrapText(h: Highlight, width: number, theme: Theme): void {
         }
         if (bytePos === 0) {
           if (curW === 0) {
-            // Fresh line and first char still doesn't fit — force one codepoint
-            // to guarantee forward progress (overflows, but prevents infinite loop)
+            
+            
             const firstCp = text.codePointAt(0)!
             bytePos = firstCp > 0xffff ? 2 : 1
           } else {
-            // Line has content and next char doesn't fit — finish this line,
-            // re-queue the whole block for a fresh line
+            
+            
             newLines.push(cur)
             queue.unshift([style, text])
             cur = []
@@ -780,8 +755,6 @@ function intoLines(
   return h.lines.map(line => asTerminalEscaped(line, mode, skipBg, dim))
 }
 
-// ---------------------------------------------------------------------------
-
 function maxLineNumber(hunk: Hunk): number {
   const oldEnd = Math.max(0, hunk.oldStart + hunk.oldLines - 1)
   const newEnd = Math.max(0, hunk.newStart + hunk.newLines - 1)
@@ -816,8 +789,8 @@ export class ColorDiff {
     const lang = detectLanguage(this.filePath, this.firstLine)
     const hlState = { lang, stack: null }
 
-    // Warm highlighter with prefix lines (highlight.js is stateless per call,
-    // so this is a no-op for now — preserved for API parity)
+    
+    
     void this.prefixContent
 
     const maxDigits = String(maxLineNumber(this.hunk)).length
@@ -861,7 +834,7 @@ export class ColorDiff {
       }
     }
 
-    // Second pass: highlight + transform pipeline
+    
     const out: string[] = []
     for (let i = 0; i < entries.length; i++) {
       const { lineNumber, marker, code } = entries[i]!
@@ -921,15 +894,14 @@ export class ColorFile {
 }
 
 export function getSyntaxTheme(themeName: string): SyntaxTheme {
-  // highlight.js has no bat theme set, so env vars can't select alternate
-  // syntect themes. We still report the env var if set, for diagnostics.
+  
+  
   const envTheme =
-    process.env.CLAUDE_CODE_SYNTAX_HIGHLIGHT ?? process.env.BAT_THEME
+    process.env.CLAUDE_CODE_NEXT_SYNTAX_HIGHLIGHT ?? process.env.BAT_THEME
   void envTheme
   return { theme: defaultSyntaxThemeName(themeName), source: null }
 }
 
-// Lazy loader to match vendor/color-diff-src/index.ts API
 let cachedModule: NativeModule | null = null
 
 export function getNativeModule(): NativeModule | null {
@@ -940,7 +912,6 @@ export function getNativeModule(): NativeModule | null {
 
 export type { ColorDiff as ColorDiffClass, ColorFile as ColorFileClass }
 
-// Exported for testing
 export const __test = {
   tokenize,
   findAdjacentPairs,

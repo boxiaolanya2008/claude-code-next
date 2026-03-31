@@ -106,13 +106,13 @@ export const CHROMIUM_BROWSERS: Record<ChromiumBrowser, BrowserConfig> = {
       ],
     },
     linux: {
-      // Arc is not available on Linux
+      
       binaries: [],
       dataPath: [],
       nativeMessagingPath: [],
     },
     windows: {
-      // Arc Windows is Chromium-based
+      
       dataPath: ['Arc', 'User Data'],
       registryKey: 'HKCU\\Software\\ArcBrowser\\Arc\\NativeMessagingHosts',
     },
@@ -208,12 +208,11 @@ export const CHROMIUM_BROWSERS: Record<ChromiumBrowser, BrowserConfig> = {
       dataPath: ['Opera Software', 'Opera Stable'],
       registryKey:
         'HKCU\\Software\\Opera Software\\Opera Stable\\NativeMessagingHosts',
-      useRoaming: true, // Opera uses Roaming AppData, not Local
+      useRoaming: true, 
     },
   },
 }
 
-// Priority order for browser detection (most common first)
 export const BROWSER_DETECTION_ORDER: ChromiumBrowser[] = [
   'chrome',
   'brave',
@@ -269,9 +268,6 @@ export function getAllBrowserDataPaths(): {
   return paths
 }
 
-/**
- * Get native messaging host directories for all supported browsers
- */
 export function getAllNativeMessagingHostsDirs(): {
   browser: ChromiumBrowser
   path: string
@@ -302,7 +298,7 @@ export function getAllNativeMessagingHostsDirs(): {
         }
         break
       case 'windows':
-        // Windows uses registry, not file paths for native messaging
+        
         
         break
     }
@@ -311,9 +307,6 @@ export function getAllNativeMessagingHostsDirs(): {
   return paths
 }
 
-/**
- * Get Windows registry keys for all supported browsers
- */
 export function getAllWindowsRegistryKeys(): {
   browser: ChromiumBrowser
   key: string
@@ -333,10 +326,6 @@ export function getAllWindowsRegistryKeys(): {
   return keys
 }
 
-/**
- * Detect which browser to use for opening URLs
- * Returns the first available browser, or null if none found
- */
 export async function detectAvailableBrowser(): Promise<ChromiumBrowser | null> {
   const platform = getPlatform()
 
@@ -345,7 +334,7 @@ export async function detectAvailableBrowser(): Promise<ChromiumBrowser | null> 
 
     switch (platform) {
       case 'macos': {
-        // Check if the .app bundle (a directory) exists
+        
         const appPath = `/Applications/${config.macos.appName}.app`
         try {
           const stats = await stat(appPath)
@@ -363,7 +352,7 @@ export async function detectAvailableBrowser(): Promise<ChromiumBrowser | null> 
       }
       case 'wsl':
       case 'linux': {
-        // Check if any binary exists
+        
         for (const binary of config.linux.binaries) {
           if (await which(binary).catch(() => null)) {
             logForDebugging(
@@ -375,7 +364,7 @@ export async function detectAvailableBrowser(): Promise<ChromiumBrowser | null> 
         break
       }
       case 'windows': {
-        // Check if data path exists (indicates browser is installed)
+        
         const home = homedir()
         if (config.windows.dataPath.length > 0) {
           const appDataBase = config.windows.useRoaming
@@ -444,7 +433,7 @@ export async function openInChrome(url: string): Promise<boolean> {
       return code === 0
     }
     case 'windows': {
-      // Use rundll32 to avoid cmd.exe metacharacter issues with URLs containing & | > <
+      
       const { code } = await execFileNoThrow('rundll32', ['url,OpenURL', url])
       return code === 0
     }
@@ -463,16 +452,10 @@ export async function openInChrome(url: string): Promise<boolean> {
   }
 }
 
-/**
- * Get the socket directory path (Unix only)
- */
 export function getSocketDir(): string {
   return `/tmp/claude-mcp-browser-bridge-${getUsername()}`
 }
 
-/**
- * Get the socket path (Unix) or pipe name (Windows)
- */
 export function getSecureSocketPath(): string {
   if (platform() === 'win32') {
     return `\\\\.\\pipe\\${getSocketName()}`
@@ -480,12 +463,8 @@ export function getSecureSocketPath(): string {
   return join(getSocketDir(), `${process.pid}.sock`)
 }
 
-/**
- * Get all socket paths including PID-based sockets in the directory
- * and legacy fallback paths
- */
 export function getAllSocketPaths(): string[] {
-  // Windows uses named pipes, not Unix sockets
+  
   if (platform() === 'win32') {
     return [`\\\\.\\pipe\\${getSocketName()}`]
   }
@@ -495,7 +474,7 @@ export function getAllSocketPaths(): string[] {
 
   
   try {
-    // eslint-disable-next-line custom-rules/no-sync-fs -- ClaudeForChromeContext.getSocketPaths (external @ant/claude-for-chrome-mcp) requires a sync () => string[] callback
+    
     const files = readdirSync(socketDir)
     for (const file of files) {
       if (file.endsWith('.sock')) {
@@ -503,10 +482,10 @@ export function getAllSocketPaths(): string[] {
       }
     }
   } catch {
-    // Directory may not exist yet
+    
   }
 
-  // Legacy fallback paths
+  
   const legacyName = `claude-mcp-browser-bridge-${getUsername()}`
   const legacyTmpdir = join(tmpdir(), legacyName)
   const legacyTmp = `/tmp/${legacyName}`
@@ -522,7 +501,7 @@ export function getAllSocketPaths(): string[] {
 }
 
 function getSocketName(): string {
-  // NOTE: This must match the one used in the Claude in Chrome MCP
+  
   return `claude-mcp-browser-bridge-${getUsername()}`
 }
 

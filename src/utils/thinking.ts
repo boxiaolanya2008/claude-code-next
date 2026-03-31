@@ -12,10 +12,6 @@ export type ThinkingConfig =
   | { type: 'enabled'; budgetTokens: number }
   | { type: 'disabled' }
 
-/**
- * Build-time gate (feature) + runtime gate (GrowthBook). The build flag
- * controls code inclusion in external builds; the GB flag controls rollout.
- */
 export function isUltrathinkEnabled(): boolean {
   if (!feature('ULTRATHINK')) {
     return false
@@ -23,16 +19,10 @@ export function isUltrathinkEnabled(): boolean {
   return getFeatureValue_CACHED_MAY_BE_STALE('tengu_turtle_carbon', true)
 }
 
-/**
- * Check if text contains the "ultrathink" keyword.
- */
 export function hasUltrathinkKeyword(text: string): boolean {
   return /\bultrathink\b/i.test(text)
 }
 
-/**
- * Find positions of "ultrathink" keyword in text (for UI highlighting/notification)
- */
 export function findThinkingTriggerPositions(text: string): Array<{
   word: string
   start: number
@@ -85,8 +75,6 @@ export function getRainbowColor(
   return colors[charIndex % colors.length]!
 }
 
-// TODO(inigo): add support for probing unknown models via API error detection
-
 export function modelSupportsThinking(model: string): boolean {
   const supported3P = get3PModelCapabilityOverride(model, 'thinking')
   if (supported3P !== undefined) {
@@ -97,7 +85,7 @@ export function modelSupportsThinking(model: string): boolean {
       return true
     }
   }
-  // IMPORTANT: Do not change thinking support without notifying the model
+  
   
   const canonical = getCanonicalName(model)
   const provider = getAPIProvider()
@@ -105,11 +93,10 @@ export function modelSupportsThinking(model: string): boolean {
   if (provider === 'foundry' || provider === 'firstParty') {
     return !canonical.includes('claude-3-')
   }
-  // 3P (Bedrock/Vertex): only Opus 4+ and Sonnet 4+
+  
   return canonical.includes('sonnet-4') || canonical.includes('opus-4')
 }
 
-// @[MODEL LAUNCH]: Add the new model to the allowlist if it supports adaptive thinking.
 export function modelSupportsAdaptiveThinking(model: string): boolean {
   const supported3P = get3PModelCapabilityOverride(model, 'adaptive_thinking')
   if (supported3P !== undefined) {
@@ -120,7 +107,7 @@ export function modelSupportsAdaptiveThinking(model: string): boolean {
   if (canonical.includes('opus-4-6') || canonical.includes('sonnet-4-6')) {
     return true
   }
-  // Exclude any other known legacy models (allowlist above catches 4-6 variants first)
+  
   if (
     canonical.includes('opus') ||
     canonical.includes('sonnet') ||
@@ -128,7 +115,7 @@ export function modelSupportsAdaptiveThinking(model: string): boolean {
   ) {
     return false
   }
-  // IMPORTANT: Do not change adaptive thinking support without notifying the
+  
   
   
 
@@ -153,7 +140,7 @@ export function shouldEnableThinkingByDefault(): boolean {
     return false
   }
 
-  // IMPORTANT: Do not change default thinking enabled value without notifying
+  
   
   
 

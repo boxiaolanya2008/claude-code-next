@@ -15,20 +15,15 @@ export function getDefaultBashTimeoutMs(env: EnvLike = process.env): number {
   return DEFAULT_TIMEOUT_MS
 }
 
-/**
- * Get the maximum timeout for bash operations in milliseconds
- * Checks BASH_MAX_TIMEOUT_MS environment variable or returns 10 minutes default
- * @param env Environment variables to check (defaults to process.env for production use)
- */
 export function getMaxBashTimeoutMs(env: EnvLike = process.env): number {
   const envValue = env.BASH_MAX_TIMEOUT_MS
   if (envValue) {
     const parsed = parseInt(envValue, 10)
     if (!isNaN(parsed) && parsed > 0) {
-      // Ensure max is at least as large as default
+      
       return Math.max(parsed, getDefaultBashTimeoutMs(env))
     }
   }
-  // Always ensure max is at least as large as default
+  
   return Math.max(MAX_TIMEOUT_MS, getDefaultBashTimeoutMs(env))
 }

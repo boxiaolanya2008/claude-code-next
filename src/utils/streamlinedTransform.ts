@@ -24,9 +24,6 @@ type ToolCounts = {
   other: number
 }
 
-/**
- * Tool categories for summarization.
- */
 const SEARCH_TOOLS = [
   GREP_TOOL_NAME,
   GLOB_TOOL_NAME,
@@ -59,9 +56,6 @@ function createEmptyToolCounts(): ToolCounts {
   }
 }
 
-/**
- * Generate a summary text for tool counts.
- */
 function getToolSummaryText(counts: ToolCounts): string | undefined {
   const parts: string[] = []
 
@@ -95,9 +89,6 @@ function getToolSummaryText(counts: ToolCounts): string | undefined {
   return capitalize(parts.join(', '))
 }
 
-/**
- * Count tool uses in an assistant message and add to existing counts.
- */
 function accumulateToolUses(
   message: SDKAssistantMessage,
   counts: ToolCounts,
@@ -115,10 +106,6 @@ function accumulateToolUses(
   }
 }
 
-/**
- * Create a stateful transformer that accumulates tool counts between text messages.
- * Tool counts reset when a message with text content is encountered.
- */
 export function createStreamlinedTransformer(): (
   message: StdoutMessage,
 ) => StdoutMessage | null {
@@ -138,7 +125,7 @@ export function createStreamlinedTransformer(): (
         accumulateToolUses(message, cumulativeCounts)
 
         if (text.length > 0) {
-          // Text message: emit text only, reset counts
+          
           cumulativeCounts = createEmptyToolCounts()
           return {
             type: 'streamlined_text',
@@ -148,7 +135,7 @@ export function createStreamlinedTransformer(): (
           }
         }
 
-        // Tool-only message: emit cumulative tool summary
+        
         const toolSummary = getToolSummaryText(cumulativeCounts)
         if (!toolSummary) {
           return null
@@ -163,7 +150,7 @@ export function createStreamlinedTransformer(): (
       }
 
       case 'result':
-        // Keep result messages as-is (they have structured_output, permission_denials)
+        
         return message
 
       case 'system':
@@ -184,10 +171,6 @@ export function createStreamlinedTransformer(): (
   }
 }
 
-/**
- * Check if a message should be included in streamlined output.
- * Useful for filtering before transformation.
- */
 export function shouldIncludeInStreamlined(message: StdoutMessage): boolean {
   return message.type === 'assistant' || message.type === 'result'
 }

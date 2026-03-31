@@ -33,12 +33,6 @@ function timeoutReject(reject: (e: Error) => void): void {
   reject(new Error(`computer-use native call exceeded ${TIMEOUT_MS}ms`))
 }
 
-/**
- * Hold a pump reference for the lifetime of a long-lived registration
- * (e.g. the CGEventTap Escape handler). Unlike `drainRunLoop(fn)` this has
- * no timeout — the caller is responsible for calling `releasePump()`. Same
- * refcount as drainRunLoop calls, so nesting is safe.
- */
 export const retainPump = retain
 export const releasePump = release
 
@@ -46,11 +40,11 @@ export async function drainRunLoop<T>(fn: () => Promise<T>): Promise<T> {
   retain()
   let timer: ReturnType<typeof setTimeout> | undefined
   try {
-    // If the timeout wins the race, fn()'s promise is orphaned — a late
-    // rejection from the native layer would become an unhandledRejection.
-    // Attaching a no-op catch swallows it; the timeout error is what surfaces.
-    // fn() sits inside try so a synchronous throw (e.g. NAPI argument
-    // validation) still reaches release() — otherwise the pump leaks.
+    
+    
+    
+    
+    
     const work = fn()
     work.catch(() => {})
     const timeout = withResolvers<never>()

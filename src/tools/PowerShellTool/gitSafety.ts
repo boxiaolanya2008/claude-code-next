@@ -16,19 +16,11 @@ function resolveCwdReentry(normalized: string): string {
   while (s.startsWith(prefix)) {
     s = s.slice(prefix.length)
   }
-  // Also handle exact `../<cwd-basename>` (no trailing slash)
+  
   if (s === '../' + cwdBase) return '.'
   return s
 }
 
-/**
- * Normalize PS arg text → canonical path for git-internal matching.
- * Order matters: structural strips first (colon-bound param, quotes,
- * backtick escapes, provider prefix, drive-relative prefix), then NTFS
- * per-component trailing-strip (spaces always; dots only if not `./..`
- * after space-strip), then posix.normalize (resolves `..`, `.`, `
- * then case-fold.
- */
 function normalizeGitPathArg(arg: string): string {
   let s = arg
   
@@ -48,7 +40,7 @@ function normalizeGitPathArg(arg: string): string {
   s = s.replace(/^[A-Za-z]:(?![/\\])/, '')
   s = s.replace(/\\/g, '/')
   
-  // then trailing dots, stopping if the result is `.` or `..` (special).
+  
   
   
   s = s
@@ -100,11 +92,6 @@ function matchesGitInternalPrefix(n: string): boolean {
   return false
 }
 
-/**
- * True if arg (raw PS arg text) resolves to a git-internal path in cwd.
- * Covers both bare-repo paths (hooks/, refs/) and standard-repo paths
- * (.git/hooks/, .git/config).
- */
 export function isGitInternalPathPS(arg: string): boolean {
   const n = resolveCwdReentry(normalizeGitPathArg(arg))
   if (matchesGitInternalPrefix(n)) return true
@@ -119,11 +106,6 @@ export function isGitInternalPathPS(arg: string): boolean {
   return false
 }
 
-/**
- * True if arg resolves to a path inside .git/ (standard-repo metadata dir).
- * Unlike isGitInternalPathPS, does NOT match bare-repo-style root-level
- * `hooks/`, `refs/` etc. — those are common project directory names.
- */
 export function isDotGitPathPS(arg: string): boolean {
   const n = resolveCwdReentry(normalizeGitPathArg(arg))
   if (matchesDotGitPrefix(n)) return true

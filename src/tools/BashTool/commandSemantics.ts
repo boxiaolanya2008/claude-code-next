@@ -11,9 +11,6 @@ export type CommandSemantic = (
   message?: string
 }
 
-/**
- * Default semantic: treat only 0 as success, everything else as error
- */
 const DEFAULT_SEMANTIC: CommandSemantic = (exitCode, _stdout, _stderr) => ({
   isError: exitCode !== 0,
   message:
@@ -30,7 +27,7 @@ const COMMAND_SEMANTICS: Map<string, CommandSemantic> = new Map([
     }),
   ],
 
-  // ripgrep has same semantics as grep
+  
   [
     'rg',
     (exitCode, _stdout, _stderr) => ({
@@ -39,7 +36,7 @@ const COMMAND_SEMANTICS: Map<string, CommandSemantic> = new Map([
     }),
   ],
 
-  // find: 0=success, 1=partial success (some dirs inaccessible), 2+=error
+  
   [
     'find',
     (exitCode, _stdout, _stderr) => ({
@@ -49,7 +46,7 @@ const COMMAND_SEMANTICS: Map<string, CommandSemantic> = new Map([
     }),
   ],
 
-  // diff: 0=no differences, 1=differences found, 2+=error
+  
   [
     'diff',
     (exitCode, _stdout, _stderr) => ({
@@ -58,7 +55,7 @@ const COMMAND_SEMANTICS: Map<string, CommandSemantic> = new Map([
     }),
   ],
 
-  // test/[: 0=condition true, 1=condition false, 2+=error
+  
   [
     'test',
     (exitCode, _stdout, _stderr) => ({
@@ -67,7 +64,7 @@ const COMMAND_SEMANTICS: Map<string, CommandSemantic> = new Map([
     }),
   ],
 
-  // [ is an alias for test
+  
   [
     '[',
     (exitCode, _stdout, _stderr) => ({
@@ -76,28 +73,21 @@ const COMMAND_SEMANTICS: Map<string, CommandSemantic> = new Map([
     }),
   ],
 
-  // wc, head, tail, cat, etc.: these typically only fail on real errors
+  
   
 ])
 
 function getCommandSemantic(command: string): CommandSemantic {
-  // Extract the base command (first word, handling pipes)
+  
   const baseCommand = heuristicallyExtractBaseCommand(command)
   const semantic = COMMAND_SEMANTICS.get(baseCommand)
   return semantic !== undefined ? semantic : DEFAULT_SEMANTIC
 }
 
-/**
- * Extract just the command name (first word) from a single command string.
- */
 function extractBaseCommand(command: string): string {
   return command.trim().split(/\s+/)[0] || ''
 }
 
-/**
- * Extract the primary command from a complex command line;
- * May get it super wrong - don't depend on this for security
- */
 function heuristicallyExtractBaseCommand(command: string): string {
   const segments = splitCommand_DEPRECATED(command)
 
@@ -107,9 +97,6 @@ function heuristicallyExtractBaseCommand(command: string): string {
   return extractBaseCommand(lastCommand)
 }
 
-/**
- * Interpret command result based on semantic rules
- */
 export function interpretCommandResult(
   command: string,
   exitCode: number,

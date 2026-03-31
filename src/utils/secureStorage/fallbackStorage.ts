@@ -21,13 +21,13 @@ export function createFallbackStorage(
       return (await secondary.readAsync()) || {}
     },
     update(data: SecureStorageData): { success: boolean; warning?: string } {
-      // Capture state before update
+      
       const primaryDataBefore = primary.read()
 
       const result = primary.update(data)
 
       if (result.success) {
-        // Delete secondary when migrating to primary for the first time
+        
         
         
         if (primaryDataBefore === null) {
@@ -39,7 +39,7 @@ export function createFallbackStorage(
       const fallbackResult = secondary.update(data)
 
       if (fallbackResult.success) {
-        // Primary write failed but primary may still hold an *older* valid
+        
         
         
         

@@ -20,9 +20,6 @@ export function tagMessagesWithToolUseID(
   })
 }
 
-/**
- * Extracts the tool use ID from a parent message for a given tool name.
- */
 export function getToolUseIDFromParentMessage(
   parentMessage: AssistantMessage,
   toolName: string,

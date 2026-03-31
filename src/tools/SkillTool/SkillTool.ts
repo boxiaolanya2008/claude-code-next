@@ -75,7 +75,7 @@ import {
 } from './UI.js'
 
 async function getAllCommands(context: ToolUseContext): Promise<Command[]> {
-  // Only include MCP skills (loadedFrom === 'mcp'), not plain MCP prompts.
+  
   
   
   
@@ -89,7 +89,6 @@ async function getAllCommands(context: ToolUseContext): Promise<Command[]> {
   return uniqBy([...localCommands, ...mcpSkills], 'name')
 }
 
-// Re-export Progress from centralized types to break import cycles
 export type { SkillToolProgress as Progress } from '../../types/tools.js'
 
 import type { SkillToolProgress as Progress } from '../../types/tools.js'
@@ -136,7 +135,7 @@ async function executeForkedSkill(
   logEvent('tengu_skill_tool_invocation', {
     command_name:
       forkedSanitizedName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    // _PROTO_skill_name routes to the privileged skill_name BQ column
+    
     
     
     _PROTO_skill_name:
@@ -167,9 +166,9 @@ async function executeForkedSkill(
       }),
     }),
     ...(command.pluginInfo && {
-      // _PROTO_* routes to PII-tagged plugin_name/marketplace_name BQ columns
       
-      // additional_metadata as redacted variants.
+      
+      
       _PROTO_plugin_name: command.pluginInfo.pluginManifest
         .name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
       ...(pluginMarketplace && {
@@ -203,7 +202,7 @@ async function executeForkedSkill(
   )
 
   try {
-    // Run the sub-agent
+    
     for await (const message of runAgent({
       agentDefinition,
       promptMessages,
@@ -267,7 +266,7 @@ async function executeForkedSkill(
       },
     }
   } finally {
-    // Release skill content from invokedSkills state
+    
     clearInvokedSkillsForAgent(agentId)
   }
 }
@@ -283,7 +282,7 @@ export const inputSchema = lazySchema(() =>
 type InputSchema = ReturnType<typeof inputSchema>
 
 export const outputSchema = lazySchema(() => {
-  // Output schema for inline skills (default)
+  
   const inlineOutputSchema = z.object({
     success: z.boolean().describe('Whether the skill is valid'),
     commandName: z.string().describe('The name of the skill'),
@@ -327,7 +326,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
 
   prompt: async () => getPrompt(getProjectRoot()),
 
-  // Only one skill/command should run at a time, since the tool expands the
+  
   
   
   
@@ -336,7 +335,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
   toAutoClassifierInput: ({ skill }) => skill ?? '',
 
   async validateInput({ skill }, context): Promise<ValidationResult> {
-    // Skills are just skill names, no arguments
+    
     const trimmed = skill.trim()
     if (!trimmed) {
       return {
@@ -346,7 +345,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
       }
     }
 
-    // Remove leading slash if present (for compatibility)
+    
     const hasLeadingSlash = trimmed.startsWith('/')
     if (hasLeadingSlash) {
       logEvent('tengu_skill_tool_slash_prefix', {})
@@ -374,12 +373,12 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
             errorCode: 6,
           }
         }
-        // Discovered remote skill — valid. Loading happens in call().
+        
         return { result: true }
       }
     }
 
-    // Get available commands (including MCP skills)
+    
     const commands = await getAllCommands(context)
 
     
@@ -392,7 +391,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
       }
     }
 
-    // Check if command has model invocation disabled
+    
     if (foundCommand.disableModelInvocation) {
       return {
         result: false,
@@ -401,7 +400,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
       }
     }
 
-    // Check if command is a prompt-based command
+    
     if (foundCommand.type !== 'prompt') {
       return {
         result: false,
@@ -417,7 +416,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
     { skill, args },
     context,
   ): Promise<PermissionDecision> {
-    // Skills are just skill names, no arguments
+    
     const trimmed = skill.trim()
 
     
@@ -433,7 +432,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
     
     
     const ruleMatches = (ruleContent: string): boolean => {
-      // Normalize rule content by stripping leading slash
+      
       const normalizedRule = ruleContent.startsWith('/')
         ? ruleContent.substring(1)
         : ruleContent
@@ -442,7 +441,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
       if (normalizedRule === commandName) {
         return true
       }
-      // Check prefix match (e.g., "review:*" matches "review-pr 123")
+      
       if (normalizedRule.endsWith(':*')) {
         const prefix = normalizedRule.slice(0, -2) 
         return commandName.startsWith(prefix)
@@ -450,7 +449,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
       return false
     }
 
-    // Check for deny rules
+    
     const denyRules = getRuleByContentsForTool(
       permissionContext,
       SkillTool as Tool,
@@ -469,7 +468,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
       }
     }
 
-    // Remote canonical skills are ant-only experimental — auto-grant.
+    
     
     
     
@@ -487,7 +486,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
       }
     }
 
-    // Check for allow rules
+    
     const allowRules = getRuleByContentsForTool(
       permissionContext,
       SkillTool as Tool,
@@ -506,7 +505,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
       }
     }
 
-    // Auto-allow skills that only use safe properties.
+    
     
     
     
@@ -521,7 +520,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
       }
     }
 
-    // Prepare suggestions for exact skill and prefix
+    
     
     const suggestions = [
       
@@ -536,7 +535,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
         behavior: 'allow' as const,
         destination: 'localSettings' as const,
       },
-      // Prefix suggestion to allow any args
+      
       {
         type: 'addRules' as const,
         rules: [
@@ -568,8 +567,8 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
     parentMessage,
     onProgress?,
   ): Promise<ToolResult<Output>> {
-    // At this point, validateInput has already confirmed:
-    // - Skill format is valid
+    
+    
     
     
     
@@ -615,13 +614,13 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
       )
     }
 
-    // Process the skill with optional args
+    
     const { processPromptSlashCommand } = await import(
       'src/utils/processUserInput/processSlashCommand.js'
     )
     const processedCommand = await processPromptSlashCommand(
       commandName,
-      args || '', // Pass args if provided
+      args || '', 
       commands,
       context,
     )
@@ -630,7 +629,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
       throw new Error('Command processing failed')
     }
 
-    // Extract metadata from the command
+    
     const allowedTools = processedCommand.allowedTools || []
     const model = processedCommand.model
     const effort = command?.type === 'prompt' ? command.effort : undefined
@@ -659,7 +658,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
     logEvent('tengu_skill_tool_invocation', {
       command_name:
         sanitizedCommandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      // _PROTO_skill_name routes to the privileged skill_name BQ column
+      
       
       
       _PROTO_skill_name:
@@ -722,7 +721,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
           if (m.type === 'progress') {
             return false
           }
-          // Filter out command-message since SkillTool handles display
+          
           if (m.type === 'user' && 'message' in m) {
             const content = m.message.content
             if (
@@ -761,13 +760,13 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
 
         
         if (allowedTools.length > 0) {
-          // Capture the current getAppState to chain modifications properly
+          
           const previousGetAppState = modifiedContext.getAppState
           modifiedContext = {
             ...modifiedContext,
             getAppState() {
-              // Use the previous getAppState, not the closure's context.getAppState,
-              // to properly chain context modifications
+              
+              
               const appState = previousGetAppState()
               return {
                 ...appState,
@@ -789,8 +788,8 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
           }
         }
 
-        // Carry [1m] suffix over — otherwise a skill with `model: opus` on an
-        // opus[1m] session drops the effective window to 200K and trips autocompact.
+        
+        
         if (model) {
           modifiedContext = {
             ...modifiedContext,
@@ -804,7 +803,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
           }
         }
 
-        // Override effort level if skill specifies one
+        
         if (effort !== undefined) {
           const previousGetAppState = modifiedContext.getAppState
           modifiedContext = {
@@ -828,7 +827,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
     result: Output,
     toolUseID: string,
   ): ToolResultBlockParam {
-    // Handle forked skill result
+    
     if ('status' in result && result.status === 'forked') {
       return {
         type: 'tool_result' as const,
@@ -837,7 +836,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
       }
     }
 
-    // Inline skill result (default)
+    
     return {
       type: 'tool_result' as const,
       tool_use_id: toolUseID,
@@ -851,8 +850,6 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
   renderToolUseRejectedMessage,
   renderToolUseErrorMessage,
 } satisfies ToolDef<InputSchema, Output, Progress>)
-
-// Allowlist of PromptCommand property keys that are safe and don't require permission.
 
 const SAFE_SKILL_PROPERTIES = new Set([
   
@@ -870,7 +867,7 @@ const SAFE_SKILL_PROPERTIES = new Set([
   'agent',
   'getPromptForCommand',
   'frontmatterKeys',
-  // CommandBase properties
+  
   'name',
   'description',
   'hasUserSpecifiedDescription',
@@ -894,7 +891,7 @@ function skillHasOnlySafeProperties(command: Command): boolean {
     if (SAFE_SKILL_PROPERTIES.has(key)) {
       continue
     }
-    // Property not in safe allowlist - check if it has a meaningful value
+    
     const value = (command as Record<string, unknown>)[key]
     if (value === undefined || value === null) {
       continue
@@ -923,11 +920,6 @@ function isOfficialMarketplaceSkill(command: PromptCommand): boolean {
   )
 }
 
-/**
- * Extract URL scheme for telemetry. Defaults to 'gs' for unrecognized schemes
- * since the AKI backend is the only production path and the loader throws on
- * unknown schemes before we reach telemetry anyway.
- */
 function extractUrlScheme(url: string): 'gs' | 'http' | 'https' | 's3' {
   if (url.startsWith('gs://')) return 'gs'
   if (url.startsWith('https://')) return 'https'
@@ -936,18 +928,6 @@ function extractUrlScheme(url: string): 'gs' | 'http' | 'https' | 's3' {
   return 'gs'
 }
 
-/**
- * Load a remote canonical skill and inject its SKILL.md content into the
- * conversation. Unlike local skills (which go through processPromptSlashCommand
- * for !command / $ARGUMENTS expansion), remote skills are declarative markdown
- * — we wrap the content directly in a user message.
- *
- * The skill is also registered with addInvokedSkill so it survives compaction
- * (same as local skills).
- *
- * Only called from within a feature('EXPERIMENTAL_SKILL_SEARCH') guard in
- * call() — remoteSkillModules is non-null here.
- */
 async function executeRemoteSkill(
   slug: string,
   commandName: string,
@@ -957,7 +937,7 @@ async function executeRemoteSkill(
   const { getDiscoveredRemoteSkill, loadRemoteSkill, logRemoteSkillLoaded } =
     remoteSkillModules!
 
-  // validateInput already confirmed this slug is in session state, but we
+  
   
   
   const meta = getDiscoveredRemoteSkill(slug)
@@ -1004,14 +984,14 @@ async function executeRemoteSkill(
   })
 
   
-  // so was_discovered is always true. is_remote lets BQ queries separate
+  
   
   const queryDepth = context.queryTracking?.depth ?? 0
   const parentAgentId = getAgentContext()?.agentId
   logEvent('tengu_skill_tool_invocation', {
     command_name:
       'remote_skill' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    // _PROTO_skill_name routes to the privileged skill_name BQ column
+    
     
     
     _PROTO_skill_name:
@@ -1050,7 +1030,7 @@ async function executeRemoteSkill(
   const { content: bodyContent } = parseFrontmatter(content, skillPath)
 
   
-  // substitution (matches loadSkillsDir.ts) so the model can resolve relative
+  
   
   const skillDir = dirname(skillPath)
   const normalizedDir =

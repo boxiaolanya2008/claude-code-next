@@ -28,7 +28,7 @@ import {
 import { jsonParse } from './slowOperations.js'
 
 const GCS_BUCKET_URL =
-  'https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases'
+  'https://storage.googleapis.com/claude-code-next-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-next-releases'
 
 class AutoUpdaterError extends ClaudeError {}
 
@@ -51,22 +51,6 @@ export type MaxVersionConfig = {
   ant_message?: string
 }
 
-/**
- * Checks if the current version meets the minimum required version from Statsig config
- * Terminates the process with an error message if the version is too old
- *
- * NOTE ON SHA-BASED VERSIONING:
- * We use SemVer-compliant versioning with build metadata format (X.X.X+SHA) for continuous deployment.
- * According to SemVer specs, build metadata (the +SHA part) is ignored when comparing versions.
- *
- * Versioning approach:
- * 1. For version requirements/compatibility (assertMinVersion), we use semver comparison that ignores build metadata
- * 2. For updates ('claude update'), we use exact string comparison to detect any change, including SHA
- *    - This ensures users always get the latest build, even when only the SHA changes
- *    - The UI clearly shows both versions including build metadata
- *
- * This approach keeps version comparison logic simple while maintaining traceability via the SHA.
- */
 export async function assertMinVersion(): Promise<void> {
   if (process.env.NODE_ENV === 'test') {
     return
@@ -81,9 +65,9 @@ export async function assertMinVersion(): Promise<void> {
       versionConfig.minVersion &&
       lt(MACRO.VERSION, versionConfig.minVersion)
     ) {
-      // biome-ignore lint/suspicious/noConsole:: intentional console output
+      
       console.error(`
-It looks like your version of Claude Code (${MACRO.VERSION}) needs an update.
+It looks like your version of Claude Code Next (${MACRO.VERSION}) needs an update.
 A newer version (${versionConfig.minVersion} or higher) is required to continue.
 
 To update, please run:
@@ -98,13 +82,6 @@ This will ensure you have access to the latest features and improvements.
   }
 }
 
-/**
- * Returns the maximum allowed version for the current user type.
- * For ants, returns the `ant` field (dev version format).
- * For external users, returns the `external` field (clean semver).
- * This is used as a server-side kill switch to pause auto-updates during incidents.
- * Returns undefined if no cap is configured.
- */
 export async function getMaxVersion(): Promise<string | undefined> {
   const config = await getMaxVersionConfig()
   if (process.env.USER_TYPE === 'ant') {
@@ -113,10 +90,6 @@ export async function getMaxVersion(): Promise<string | undefined> {
   return config.external || undefined
 }
 
-/**
- * Returns the server-driven message explaining the known issue, if configured.
- * Shown in the warning banner when the current version exceeds the max allowed version.
- */
 export async function getMaxVersionMessage(): Promise<string | undefined> {
   const config = await getMaxVersionConfig()
   if (process.env.USER_TYPE === 'ant') {
@@ -137,18 +110,13 @@ async function getMaxVersionConfig(): Promise<MaxVersionConfig> {
   }
 }
 
-/**
- * Checks if a target version should be skipped due to user's minimumVersion setting.
- * This is used when switching to stable channel - the user can choose to stay on their
- * current version until stable catches up, preventing downgrades.
- */
 export function shouldSkipVersion(targetVersion: string): boolean {
   const settings = getInitialSettings()
   const minimumVersion = settings?.minimumVersion
   if (!minimumVersion) {
     return false
   }
-  // Skip if target version is less than minimum
+  
   const shouldSkip = !gte(targetVersion, minimumVersion)
   if (shouldSkip) {
     logForDebugging(
@@ -158,30 +126,25 @@ export function shouldSkipVersion(targetVersion: string): boolean {
   return shouldSkip
 }
 
-// Lock file for auto-updater to prevent concurrent updates
 const LOCK_TIMEOUT_MS = 5 * 60 * 1000 
 
 export function getLockFilePath(): string {
   return join(getClaudeConfigHomeDir(), '.update.lock')
 }
 
-/**
- * Attempts to acquire a lock for auto-updater
- * @returns true if lock was acquired, false if another process holds the lock
- */
 async function acquireLock(): Promise<boolean> {
   const fs = getFsImplementation()
   const lockPath = getLockFilePath()
 
   
-  // 2 on stale-lock recovery (re-verify staleness immediately before unlink).
+  
   try {
     const stats = await fs.stat(lockPath)
     const age = Date.now() - stats.mtimeMs
     if (age < LOCK_TIMEOUT_MS) {
       return false
     }
-    // Lock is stale, remove it before taking over. Re-verify staleness
+    
     
     
     
@@ -203,10 +166,10 @@ async function acquireLock(): Promise<boolean> {
       logError(err as Error)
       return false
     }
-    // ENOENT: no lock file, proceed to create one
+    
   }
 
-  // Create lock file atomically with O_EXCL (flag: 'wx'). If another process
+  
   
   
   try {
@@ -222,7 +185,7 @@ async function acquireLock(): Promise<boolean> {
     }
     if (code === 'ENOENT') {
       try {
-        // fs.mkdir from getFsImplementation() is always recursive:true and
+        
         
         
         await fs.mkdir(getClaudeConfigHomeDir())
@@ -244,9 +207,6 @@ async function acquireLock(): Promise<boolean> {
   }
 }
 
-/**
- * Releases the update lock if it's held by this process
- */
 async function releaseLock(): Promise<void> {
   const fs = getFsImplementation()
   const lockPath = getLockFilePath()
@@ -264,7 +224,7 @@ async function releaseLock(): Promise<void> {
 }
 
 async function getInstallationPrefix(): Promise<string | null> {
-  // Run from home directory to avoid reading project-level .npmrc/.bunfig.toml
+  
   const isBun = env.isRunningWithBun()
   let prefixResult = null
   if (isBun) {
@@ -344,12 +304,8 @@ export type NpmDistTags = {
   stable: string | null
 }
 
-/**
- * Get npm dist-tags (latest and stable versions) from the registry.
- * This is used by the doctor command to show users what versions are available.
- */
 export async function getNpmDistTags(): Promise<NpmDistTags> {
-  // Run from home directory to avoid reading project-level .npmrc
+  
   const result = await execFileNoThrowWithCwd(
     'npm',
     ['view', MACRO.PACKAGE_URL, 'dist-tags', '--json', '--prefer-online'],
@@ -373,10 +329,6 @@ export async function getNpmDistTags(): Promise<NpmDistTags> {
   }
 }
 
-/**
- * Get the latest version from GCS bucket for a given release channel.
- * This is used by installations that don't have npm (e.g. package manager installs).
- */
 export async function getLatestVersionFromGcs(
   channel: ReleaseChannel,
 ): Promise<string | null> {
@@ -392,10 +344,6 @@ export async function getLatestVersionFromGcs(
   }
 }
 
-/**
- * Get available versions from GCS bucket (for native installations).
- * Fetches both latest and stable channel pointers.
- */
 export async function getGcsDistTags(): Promise<NpmDistTags> {
   const [latest, stable] = await Promise.all([
     getLatestVersionFromGcs('latest'),
@@ -405,21 +353,12 @@ export async function getGcsDistTags(): Promise<NpmDistTags> {
   return { latest, stable }
 }
 
-/**
- * Get version history from npm registry (ant-only feature)
- * Returns versions sorted newest-first, limited to the specified count
- *
- * Uses NATIVE_PACKAGE_URL when available because:
- * 1. Native installation is the primary installation method for ant users
- * 2. Not all JS package versions have corresponding native packages
- * 3. This prevents rollback from listing versions that don't have native binaries
- */
 export async function getVersionHistory(limit: number): Promise<string[]> {
   if (process.env.USER_TYPE !== 'ant') {
     return []
   }
 
-  // Use native package URL when available to ensure we only show versions
+  
   
   const packageUrl = MACRO.NATIVE_PACKAGE_URL ?? MACRO.PACKAGE_URL
 
@@ -427,7 +366,7 @@ export async function getVersionHistory(limit: number): Promise<string[]> {
   const result = await execFileNoThrowWithCwd(
     'npm',
     ['view', packageUrl, 'versions', '--json', '--prefer-online'],
-    // Longer timeout for version list
+    
     { abortSignal: AbortSignal.timeout(30000), cwd: homedir() },
   )
 
@@ -478,7 +417,7 @@ export async function installGlobalPackage(
       console.error(`
 Error: Windows NPM detected in WSL
 
-You're running Claude Code in WSL but using the Windows NPM installation from /mnt/c/.
+You're running Claude Code Next in WSL but using the Windows NPM installation from /mnt/c/.
 This configuration is not supported for updates.
 
 To fix this issue:
@@ -494,7 +433,7 @@ To fix this issue:
       return 'no_permissions'
     }
 
-    // Use specific version if provided, otherwise use latest
+    
     const packageSpec = specificVersion
       ? `${MACRO.PACKAGE_URL}@${specificVersion}`
       : MACRO.PACKAGE_URL
@@ -515,7 +454,7 @@ To fix this issue:
       return 'install_failed'
     }
 
-    // Set installMethod to 'global' to track npm global installations
+    
     saveGlobalConfig(current => ({
       ...current,
       installMethod: 'global',
@@ -523,15 +462,11 @@ To fix this issue:
 
     return 'success'
   } finally {
-    // Ensure we always release the lock
+    
     await releaseLock()
   }
 }
 
-/**
- * Remove claude aliases from shell configuration files
- * This helps clean up old installation methods when switching to native or npm global
- */
 async function removeClaudeAliasesFromShellConfigs(): Promise<void> {
   const configMap = getShellConfigPaths()
 
@@ -548,7 +483,7 @@ async function removeClaudeAliasesFromShellConfigs(): Promise<void> {
         logForDebugging(`Removed claude alias from ${configFile}`)
       }
     } catch (error) {
-      // Don't fail the whole operation if one file can't be processed
+      
       logForDebugging(`Failed to remove alias from ${configFile}: ${error}`, {
         level: 'error',
       })

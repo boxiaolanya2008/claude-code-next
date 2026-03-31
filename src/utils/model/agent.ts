@@ -18,33 +18,21 @@ export type AgentModelOption = {
   description: string
 }
 
-/**
- * Get the default subagent model. Returns 'inherit' so subagents inherit
- * the model from the parent thread.
- */
 export function getDefaultSubagentModel(): string {
   return 'inherit'
 }
 
-/**
- * Get the effective model string for an agent.
- *
- * For Bedrock, if the parent model uses a cross-region inference prefix (e.g., "eu.", "us."),
- * that prefix is inherited by subagents using alias models (e.g., "sonnet", "haiku", "opus").
- * This ensures subagents use the same region as the parent, which is necessary when
- * IAM permissions are scoped to specific cross-region inference profiles.
- */
 export function getAgentModel(
   agentModel: string | undefined,
   parentModel: string,
   toolSpecifiedModel?: ModelAlias,
   permissionMode?: PermissionMode,
 ): string {
-  if (process.env.CLAUDE_CODE_SUBAGENT_MODEL) {
-    return parseUserSpecifiedModel(process.env.CLAUDE_CODE_SUBAGENT_MODEL)
+  if (process.env.CLAUDE_CODE_NEXT_SUBAGENT_MODEL) {
+    return parseUserSpecifiedModel(process.env.CLAUDE_CODE_NEXT_SUBAGENT_MODEL)
   }
 
-  // Extract Bedrock region prefix from parent model to inherit for subagents.
+  
   
   
   const parentRegionPrefix = getBedrockRegionPrefix(parentModel)
@@ -66,7 +54,7 @@ export function getAgentModel(
     return resolvedModel
   }
 
-  // Prioritize tool-specified model if provided
+  
   if (toolSpecifiedModel) {
     if (aliasMatchesParentTier(toolSpecifiedModel, parentModel)) {
       return parentModel
@@ -78,7 +66,7 @@ export function getAgentModel(
   const agentModelWithExp = agentModel ?? getDefaultSubagentModel()
 
   if (agentModelWithExp === 'inherit') {
-    // Apply runtime model resolution for inherit to get the effective model
+    
     
     return getRuntimeMainLoopModel({
       permissionMode: permissionMode ?? 'default',
@@ -94,19 +82,6 @@ export function getAgentModel(
   return applyParentRegionPrefix(model, agentModelWithExp)
 }
 
-/**
- * Check if a bare family alias (opus/sonnet/haiku) matches the parent model's
- * tier. When it does, the subagent inherits the parent's exact model string
- * instead of resolving the alias to a provider default.
- *
- * Prevents surprising downgrades: a Vertex user on Opus 4.6 (via /model) who
- * spawns a subagent with `model: opus` should get Opus 4.6, not whatever
- * getDefaultOpusModel() returns for 3P.
- * See https://github.com/anthropics/claude-code/issues/30815.
- *
- * Only bare family aliases match. `opus[1m]`, `best`, `opusplan` fall through
- * since they carry semantics beyond "same tier as parent".
- */
 function aliasMatchesParentTier(alias: string, parentModel: string): boolean {
   const canonical = getCanonicalName(parentModel)
   switch (alias.toLowerCase()) {
@@ -122,15 +97,12 @@ function aliasMatchesParentTier(alias: string, parentModel: string): boolean {
 }
 
 export function getAgentModelDisplay(model: string | undefined): string {
-  // When model is omitted, getDefaultSubagentModel() returns 'inherit' at runtime
+  
   if (!model) return 'Inherit from parent (default)'
   if (model === 'inherit') return 'Inherit from parent'
   return capitalize(model)
 }
 
-/**
- * Get available model options for agents
- */
 export function getAgentModelOptions(): AgentModelOption[] {
   return [
     {

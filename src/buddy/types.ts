@@ -101,7 +101,6 @@ export type CompanionBones = {
   stats: Record<StatName, number>
 }
 
-// Model-generated soul — stored in config after first hatch
 export type CompanionSoul = {
   name: string
   personality: string
@@ -111,8 +110,6 @@ export type Companion = CompanionBones &
   CompanionSoul & {
     hatchedAt: number
   }
-
-// What actually persists in config. Bones are regenerated from hash(userId)
 
 export type StoredCompanion = CompanionSoul & { hatchedAt: number }
 

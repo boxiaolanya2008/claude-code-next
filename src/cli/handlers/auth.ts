@@ -44,7 +44,7 @@ import {
 } from '../../utils/status.js'
 
 export async function installOAuthTokens(tokens: OAuthTokens): Promise<void> {
-  // Clear old state before saving new credentials
+  
   await performLogout({ clearOnboarding: false })
 
   
@@ -64,7 +64,7 @@ export async function installOAuthTokens(tokens: OAuthTokens): Promise<void> {
       accountCreatedAt: profile.account.created_at,
     })
   } else if (tokens.tokenAccount) {
-    // Fallback to token exchange account data when profile endpoint fails
+    
     storeOAuthAccountInfo({
       accountUuid: tokens.tokenAccount.uuid,
       emailAddress: tokens.tokenAccount.emailAddress,
@@ -82,7 +82,7 @@ export async function installOAuthTokens(tokens: OAuthTokens): Promise<void> {
     })
   }
 
-  // Roles and first-token-date may fail for limited-scope tokens (e.g.
+  
   
   await fetchAndStoreUserRoles(tokens.accessToken).catch(err =>
     logForDebugging(String(err), { level: 'error' }),
@@ -93,7 +93,7 @@ export async function installOAuthTokens(tokens: OAuthTokens): Promise<void> {
       logForDebugging(String(err), { level: 'error' }),
     )
   } else {
-    // API key creation is critical for Console users — let it throw.
+    
     const apiKey = await createAndStoreApiKey(tokens.accessToken)
     if (!apiKey) {
       throw new Error(
@@ -133,14 +133,14 @@ export async function authLogin({
 
   
   
-  const envRefreshToken = process.env.CLAUDE_CODE_OAUTH_REFRESH_TOKEN
+  const envRefreshToken = process.env.CLAUDE_CODE_NEXT_OAUTH_REFRESH_TOKEN
   if (envRefreshToken) {
-    const envScopes = process.env.CLAUDE_CODE_OAUTH_SCOPES
+    const envScopes = process.env.CLAUDE_CODE_NEXT_OAUTH_SCOPES
     if (!envScopes) {
       process.stderr.write(
-        'CLAUDE_CODE_OAUTH_SCOPES is required when using CLAUDE_CODE_OAUTH_REFRESH_TOKEN.\n' +
+        'CLAUDE_CODE_NEXT_OAUTH_SCOPES is required when using CLAUDE_CODE_NEXT_OAUTH_REFRESH_TOKEN.\n' +
           'Set it to the space-separated scopes the refresh token was issued with\n' +
-          '(e.g. "user:inference" or "user:profile user:inference user:sessions:claude_code user:mcp_servers").\n',
+          '(e.g. "user:inference" or "user:profile user:inference user:sessions:claude_code_next user:mcp_servers").\n',
       )
       process.exit(1)
     }
@@ -159,7 +159,7 @@ export async function authLogin({
         process.exit(1)
       }
 
-      // Mark onboarding complete — interactive paths handle this via
+      
       
       saveGlobalConfig(current => {
         if (current.hasCompletedOnboarding) return current

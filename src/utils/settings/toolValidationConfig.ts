@@ -1,7 +1,7 @@
 
 
 export type ToolValidationConfig = {
-  /** Tools that accept file glob patterns (e.g., *.ts, src/**) */
+  
   filePatternTools: string[]
 
   
@@ -19,5 +19,5 @@ export type ToolValidationConfig = {
 }
 
 export const TOOL_VALIDATION_CONFIG: ToolValidationConfig = {
-  // File pattern tools (accept *.ts, src
+  
 

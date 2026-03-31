@@ -27,7 +27,7 @@ type BetaJSONOutputFormat = Anthropic.Beta.Messages.BetaJSONOutputFormat
 type BetaThinkingConfigParam = Anthropic.Beta.Messages.BetaThinkingConfigParam
 
 export type SideQueryOptions = {
-  /** Model to use for the query */
+  
   model: string
   
 
@@ -58,9 +58,6 @@ export type SideQueryOptions = {
   querySource: QuerySource
 }
 
-/**
- * Extract text from first user message for fingerprint computation.
- */
 function extractFirstUserMessageText(messages: MessageParam[]): string {
   const firstUserMessage = messages.find(m => m.role === 'user')
   if (!firstUserMessage) return ''
@@ -73,32 +70,6 @@ function extractFirstUserMessageText(messages: MessageParam[]): string {
   return textBlock?.type === 'text' ? textBlock.text : ''
 }
 
-/**
- * Lightweight API wrapper for "side queries" outside the main conversation loop.
- *
- * Use this instead of direct client.beta.messages.create() calls to ensure
- * proper OAuth token validation with fingerprint attribution headers.
- *
- * This handles:
- * - Fingerprint computation for OAuth validation
- * - Attribution header injection
- * - CLI system prompt prefix
- * - Proper betas for the model
- * - API metadata
- * - Model string normalization (strips [1m] suffix for API)
- *
- * @example
- * // Permission explainer
- * await sideQuery({ querySource: 'permission_explainer', model, system: SYSTEM_PROMPT, messages, tools, tool_choice })
- *
- * @example
- * 
- * await sideQuery({ querySource: 'session_search', model, system: SEARCH_PROMPT, messages })
- *
- * @example
- * 
- * await sideQuery({ querySource: 'model_validation', model, max_tokens: 1, messages: [{ role: 'user', content: 'Hi' }] })
- */
 export async function sideQuery(opts: SideQueryOptions): Promise<BetaMessage> {
   const {
     model,
@@ -131,7 +102,7 @@ export async function sideQuery(opts: SideQueryOptions): Promise<BetaMessage> {
     betas.push(STRUCTURED_OUTPUTS_BETA_HEADER)
   }
 
-  // Extract first user message text for fingerprint
+  
   const messageText = extractFirstUserMessageText(messages)
 
   
@@ -142,7 +113,7 @@ export async function sideQuery(opts: SideQueryOptions): Promise<BetaMessage> {
   
   const systemBlocks: TextBlockParam[] = [
     attributionHeader ? { type: 'text', text: attributionHeader } : null,
-    // Skip CLI system prompt prefix for internal classifiers that provide their own prompt
+    
     ...(skipSystemPromptPrefix
       ? []
       : [

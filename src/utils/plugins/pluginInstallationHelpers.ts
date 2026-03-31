@@ -59,23 +59,10 @@ export type PluginInstallationInfo = {
   version?: string
 }
 
-/**
- * Get current ISO timestamp
- */
 export function getCurrentTimestamp(): string {
   return new Date().toISOString()
 }
 
-/**
- * Validate that a resolved path stays within a base directory.
- * Prevents path traversal attacks where malicious paths like './../../../etc/passwd'
- * could escape the expected directory.
- *
- * @param basePath - The base directory that the resolved path must stay within
- * @param relativePath - The relative path to validate
- * @returns The validated absolute path
- * @throws Error if the path would escape the base directory
- */
 export function validatePathWithinBase(
   basePath: string,
   relativePath: string,
@@ -83,8 +70,8 @@ export function validatePathWithinBase(
   const resolvedPath = resolve(basePath, relativePath)
   const normalizedBase = resolve(basePath) + sep
 
-  // Check if the resolved path starts with the base path
-  // Adding sep ensures we don't match partial directory names
+  
+  
   
   if (
     !resolvedPath.startsWith(normalizedBase) &&
@@ -98,25 +85,6 @@ export function validatePathWithinBase(
   return resolvedPath
 }
 
-/**
- * Cache a plugin (local or external) and add it to installed_plugins.json
- *
- * This function combines the common pattern of:
- * 1. Caching a plugin to ~/.claude/plugins/cache/
- * 2. Adding it to the installed plugins registry
- *
- * Both local plugins (with string source like "./path") and external plugins
- * (with object source like {source: "github", ...}) are cached to the same
- * location to ensure consistent behavior.
- *
- * @param pluginId - Plugin ID in "plugin@marketplace" format
- * @param entry - Plugin marketplace entry
- * @param scope - Installation scope (user, project, local, or managed). Defaults to 'user'.
- *                'managed' scope is used for plugins installed automatically from managed settings.
- * @param projectPath - Project path (required for project/local scopes)
- * @param localSourcePath - For local plugins, the resolved absolute path to the source directory
- * @returns The installation path
- */
 export async function cacheAndRegisterPlugin(
   pluginId: string,
   entry: PluginMarketplaceEntry,
@@ -124,7 +92,7 @@ export async function cacheAndRegisterPlugin(
   projectPath?: string,
   localSourcePath?: string,
 ): Promise<string> {
-  // For local plugins, we need the resolved absolute path
+  
   
   const source: PluginSource =
     typeof entry.source === 'string' && localSourcePath
@@ -160,7 +128,7 @@ export async function cacheAndRegisterPlugin(
 
   
   if (cacheResult.path !== versionedPath) {
-    // Create the versioned directory structure
+    
     await getFsImplementation().mkdir(dirname(versionedPath))
 
     
@@ -175,7 +143,7 @@ export async function cacheAndRegisterPlugin(
     const isSubdirectory = versionedPath.startsWith(normalizedCachePath)
 
     if (isSubdirectory) {
-      // Move to a temp location first, then to final destination
+      
       
       
       
@@ -187,20 +155,20 @@ export async function cacheAndRegisterPlugin(
       await getFsImplementation().mkdir(dirname(versionedPath))
       await rename(tempPath, versionedPath)
     } else {
-      // Move the cached plugin to the versioned location
+      
       await rename(cacheResult.path, versionedPath)
     }
     finalPath = versionedPath
   }
 
-  // Zip cache mode: convert directory to ZIP and remove the directory
+  
   if (isPluginZipCacheEnabled()) {
     const zipPath = getVersionedZipCachePath(pluginId, version)
     await convertDirectoryToZipInPlace(finalPath, zipPath)
     finalPath = zipPath
   }
 
-  // Add to both V1 and V2 installed_plugins files with correct scope
+  
   addInstalledPlugin(
     pluginId,
     {
@@ -217,17 +185,6 @@ export async function cacheAndRegisterPlugin(
   return finalPath
 }
 
-/**
- * Register a plugin installation without caching
- *
- * Used for local plugins that are already on disk and don't need remote caching.
- * External plugins should use cacheAndRegisterPlugin() instead.
- *
- * @param info - Plugin installation information
- * @param scope - Installation scope (user, project, local, or managed). Defaults to 'user'.
- *                'managed' scope is used for plugins registered from managed settings.
- * @param projectPath - Project path (required for project/local scopes)
- */
 export function registerPluginInstallation(
   info: PluginInstallationInfo,
   scope: PluginScope = 'user',
@@ -247,12 +204,6 @@ export function registerPluginInstallation(
   )
 }
 
-/**
- * Parse plugin ID into components
- *
- * @param pluginId - Plugin ID in "plugin@marketplace" format
- * @returns Parsed components or null if invalid
- */
 export function parsePluginId(
   pluginId: string,
 ): { name: string; marketplace: string } | null {
@@ -267,10 +218,6 @@ export function parsePluginId(
   }
 }
 
-/**
- * Structured result from the install core. Wrappers format messages and
- * handle analytics/error-catching around this.
- */
 export type InstallCoreResult =
   | { ok: true; closure: string[]; depNote: string }
   | { ok: false; reason: 'local-source-no-location'; pluginName: string }
@@ -288,11 +235,6 @@ export type InstallCoreResult =
       blockedDependency: string
     }
 
-/**
- * Format a failed ResolutionResult into a user-facing message. Unified on
- * the richer CLI messages (the "Is the X marketplace added?" hint is useful
- * for UI users too).
- */
 export function formatResolutionError(
   r: ResolutionResult & { ok: false },
 ): string {
@@ -318,25 +260,6 @@ export function formatResolutionError(
   }
 }
 
-/**
- * Core plugin install logic, shared by the CLI path (`installPluginOp`) and
- * the interactive UI path (`installPluginFromMarketplace`). Given a
- * pre-resolved marketplace entry, this:
- *
- *   1. Guards against local-source plugins without a marketplace install
- *      location (would silently no-op otherwise).
- *   2. Resolves the transitive dependency closure (when PLUGIN_DEPENDENCIES
- *      is on; trivial single-plugin closure otherwise).
- *   3. Writes the entire closure to enabledPlugins in one settings update.
- *   4. Caches each closure member (downloads/copies sources as needed).
- *   5. Clears memoization caches.
- *
- * Returns a structured result. Message formatting, analytics, and top-level
- * error wrapping stay in the caller-specific wrappers.
- *
- * @param marketplaceInstallLocation Pass this if the caller already has it
- *   (from a prior marketplace search) to avoid a redundant lookup.
- */
 export async function installResolvedPlugin({
   pluginId,
   entry,
@@ -358,7 +281,7 @@ export async function installResolvedPlugin({
     return { ok: false, reason: 'blocked-by-policy', pluginName: entry.name }
   }
 
-  // ── Resolve dependency closure ──
+  
   
   
   const depInfo = new Map<
@@ -403,7 +326,7 @@ export async function installResolvedPlugin({
     return { ok: false, reason: 'resolution-failed', resolution }
   }
 
-  // ── Policy guard for transitive dependencies ──
+  
   
   
   
@@ -418,7 +341,7 @@ export async function installResolvedPlugin({
     }
   }
 
-  // ── ACTION: write entire closure to settings in one call ──
+  
   const closureEnabled: Record<string, true> = {}
   for (const id of resolution.closure) closureEnabled[id] = true
   const { error } = updateSettingsForSource(settingSource, {
@@ -435,7 +358,7 @@ export async function installResolvedPlugin({
     }
   }
 
-  // ── Materialize: cache each closure member ──
+  
   const projectPath = scope !== 'user' ? getCwd() : undefined
   for (const id of resolution.closure) {
     let info = depInfo.get(id)
@@ -472,16 +395,10 @@ export async function installResolvedPlugin({
   return { ok: true, closure: resolution.closure, depNote }
 }
 
-/**
- * Result of a plugin installation operation
- */
 export type InstallPluginResult =
   | { success: true; message: string }
   | { success: false; error: string }
 
-/**
- * Parameters for installing a plugin from marketplace
- */
 export type InstallPluginParams = {
   pluginId: string
   entry: PluginMarketplaceEntry
@@ -490,11 +407,6 @@ export type InstallPluginParams = {
   trigger?: 'hint' | 'user'
 }
 
-/**
- * Install a single plugin from a marketplace with the specified scope.
- * Interactive-UI wrapper around `installResolvedPlugin` — adds try/catch,
- * analytics, and UI-style message formatting.
- */
 export async function installPluginFromMarketplace({
   pluginId,
   entry,
@@ -503,7 +415,7 @@ export async function installPluginFromMarketplace({
   trigger = 'user',
 }: InstallPluginParams): Promise<InstallPluginResult> {
   try {
-    // Look up the marketplace install location for local-source plugins.
+    
     
     
     const pluginInfo = await getPluginById(pluginId)
@@ -546,7 +458,7 @@ export async function installPluginFromMarketplace({
       }
     }
 
-    // _PROTO_* routes to PII-tagged plugin_name/marketplace_name BQ columns.
+    
     
     
     

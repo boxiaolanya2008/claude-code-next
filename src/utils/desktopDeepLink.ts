@@ -15,7 +15,7 @@ function isDevMode(): boolean {
     return true
   }
 
-  // Local builds from build directories are dev mode even with NODE_ENV=production
+  
   const pathsToCheck = [process.argv[1] || '', process.execPath || '']
   const buildDirs = [
     '/build-ant/',
@@ -27,11 +27,6 @@ function isDevMode(): boolean {
   return pathsToCheck.some(p => buildDirs.some(dir => p.includes(dir)))
 }
 
-/**
- * Builds a deep link URL for Claude Desktop to resume a CLI session.
- * Format: claude://resume?session={sessionId}&cwd={cwd}
- * In dev mode: claude-dev://resume?session={sessionId}&cwd={cwd}
- */
 function buildDesktopDeepLink(sessionId: string): string {
   const protocol = isDevMode() ? 'claude-dev' : 'claude'
   const url = new URL(`${protocol}://resume`)
@@ -40,15 +35,8 @@ function buildDesktopDeepLink(sessionId: string): string {
   return url.toString()
 }
 
-/**
- * Check if Claude Desktop app is installed.
- * On macOS, checks for /Applications/Claude.app.
- * On Linux, checks if xdg-open can handle claude:// protocol.
- * On Windows, checks if the protocol handler exists.
- * In dev mode, always returns true (assumes dev Desktop is running).
- */
 async function isDesktopInstalled(): Promise<boolean> {
-  // In dev mode, assume the dev Desktop app is running
+  
   if (isDevMode()) {
     return true
   }
@@ -56,11 +44,11 @@ async function isDesktopInstalled(): Promise<boolean> {
   const platform = process.platform
 
   if (platform === 'darwin') {
-    // Check for Claude.app in /Applications
+    
     return pathExists('/Applications/Claude.app')
   } else if (platform === 'linux') {
-    // Check if xdg-mime can find a handler for claude://
-    // Note: xdg-mime returns exit code 0 even with no handler, so check stdout too
+    
+    
     const { code, stdout } = await execFileNoThrow('xdg-mime', [
       'query',
       'default',
@@ -68,7 +56,7 @@ async function isDesktopInstalled(): Promise<boolean> {
     ])
     return code === 0 && stdout.trim().length > 0
   } else if (platform === 'win32') {
-    // On Windows, try to query the registry for the protocol handler
+    
     const { code } = await execFileNoThrow('reg', [
       'query',
       'HKEY_CLASSES_ROOT\\claude',
@@ -80,12 +68,6 @@ async function isDesktopInstalled(): Promise<boolean> {
   return false
 }
 
-/**
- * Detect the installed Claude Desktop version.
- * On macOS, reads CFBundleShortVersionString from the app plist.
- * On Windows, finds the highest app-X.Y.Z directory in the Squirrel install.
- * Returns null if version cannot be determined.
- */
 async function getDesktopVersion(): Promise<string | null> {
   const platform = process.platform
 
@@ -131,9 +113,6 @@ export type DesktopInstallStatus =
   | { status: 'version-too-old'; version: string }
   | { status: 'ready'; version: string }
 
-/**
- * Check Desktop install status including version compatibility.
- */
 export async function getDesktopInstallStatus(): Promise<DesktopInstallStatus> {
   const installed = await isDesktopInstalled()
   if (!installed) {
@@ -144,12 +123,12 @@ export async function getDesktopInstallStatus(): Promise<DesktopInstallStatus> {
   try {
     version = await getDesktopVersion()
   } catch {
-    // Best effort — proceed with handoff if version detection fails
+    
     return { status: 'ready', version: 'unknown' }
   }
 
   if (!version) {
-    // Can't determine version — assume it's ready (dev mode or unknown install)
+    
     return { status: 'ready', version: 'unknown' }
   }
 
@@ -161,19 +140,15 @@ export async function getDesktopInstallStatus(): Promise<DesktopInstallStatus> {
   return { status: 'ready', version }
 }
 
-/**
- * Opens a deep link URL using the platform-specific mechanism.
- * Returns true if the command succeeded, false otherwise.
- */
 async function openDeepLink(deepLinkUrl: string): Promise<boolean> {
   const platform = process.platform
   logForDebugging(`Opening deep link: ${deepLinkUrl}`)
 
   if (platform === 'darwin') {
     if (isDevMode()) {
-      // In dev mode, `open` launches a bare Electron binary (without app code)
-      // because setAsDefaultProtocolClient registers just the Electron executable.
-      // Use AppleScript to route the URL to the already-running Electron app.
+      
+      
+      
       const { code } = await execFileNoThrow('osascript', [
         '-e',
         `tell application "Electron" to open location "${deepLinkUrl}"`,
@@ -186,7 +161,7 @@ async function openDeepLink(deepLinkUrl: string): Promise<boolean> {
     const { code } = await execFileNoThrow('xdg-open', [deepLinkUrl])
     return code === 0
   } else if (platform === 'win32') {
-    // On Windows, use cmd /c start to open URLs
+    
     const { code } = await execFileNoThrow('cmd', [
       '/c',
       'start',
@@ -199,10 +174,6 @@ async function openDeepLink(deepLinkUrl: string): Promise<boolean> {
   return false
 }
 
-/**
- * Build and open a deep link to resume the current session in Claude Desktop.
- * Returns an object with success status and any error message.
- */
 export async function openCurrentSessionInDesktop(): Promise<{
   success: boolean
   error?: string
@@ -210,7 +181,7 @@ export async function openCurrentSessionInDesktop(): Promise<{
 }> {
   const sessionId = getSessionId()
 
-  // Check if Desktop is installed
+  
   const installed = await isDesktopInstalled()
   if (!installed) {
     return {
@@ -220,7 +191,7 @@ export async function openCurrentSessionInDesktop(): Promise<{
     }
   }
 
-  // Build and open the deep link
+  
   const deepLinkUrl = buildDesktopDeepLink(sessionId)
   const opened = await openDeepLink(deepLinkUrl)
 

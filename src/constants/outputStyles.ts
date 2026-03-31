@@ -23,7 +23,6 @@ export type OutputStyles = {
   readonly [K in OutputStyle]: OutputStyleConfig | null
 }
 
-// Used in both the Explanatory and Learning modes
 const EXPLANATORY_FEATURE_PROMPT = `
 ## Insights
 In order to encourage learning, before and after writing code, always provide brief educational explanations about implementation choices using (with backticks):

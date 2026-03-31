@@ -69,26 +69,12 @@ function isUsingExternalPermissions(): boolean {
   return config?.forceExternalPermissions === true
 }
 
-/**
- * Shape of the settings.autoMode config — the three classifier prompt
- * sections a user can customize. Required-field variant (empty arrays when
- * absent) for JSON output; settings.ts uses the optional-field variant.
- */
 export type AutoModeRules = {
   allow: string[]
   soft_deny: string[]
   environment: string[]
 }
 
-/**
- * Parses the external permissions template into the settings.autoMode schema
- * shape. The external template wraps each section's defaults in
- * <user_*_to_replace> tags (user settings REPLACE these defaults), so the
- * captured tag contents ARE the defaults. Bullet items are single-line in the
- * template; each line starting with `- ` becomes one array entry.
- * Used by `claude auto-mode defaults`. Always returns external defaults,
- * never the Anthropic-internal template.
- */
 export function getDefaultExternalAutoModeRules(): AutoModeRules {
   return {
     allow: extractTaggedBullets('user_allow_rules_to_replace'),
@@ -109,11 +95,6 @@ function extractTaggedBullets(tagName: string): string[] {
     .map(line => line.slice(2))
 }
 
-/**
- * Returns the full external classifier system prompt with default rules (no user
- * overrides). Used by `claude auto-mode critique` to show the model how the
- * classifier sees its instructions.
- */
 export function buildDefaultExternalSystemPrompt(): string {
   return BASE_PROMPT.replace(
     '<permissions_template>',
@@ -137,11 +118,6 @@ function getAutoModeDumpDir(): string {
   return join(getClaudeTempDir(), 'auto-mode')
 }
 
-/**
- * Dump the auto mode classifier request and response bodies to the per-user
- * claude temp directory when CLAUDE_CODE_DUMP_AUTO_MODE is set. Files are
- * named by unix timestamp: {timestamp}[.{suffix}].req.json and .res.json
- */
 async function maybeDumpAutoMode(
   request: unknown,
   response: unknown,
@@ -149,7 +125,7 @@ async function maybeDumpAutoMode(
   suffix?: string,
 ): Promise<void> {
   if (process.env.USER_TYPE !== 'ant') return
-  if (!isEnvTruthy(process.env.CLAUDE_CODE_DUMP_AUTO_MODE)) return
+  if (!isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DUMP_AUTO_MODE)) return
   const base = suffix ? `${timestamp}.${suffix}` : `${timestamp}`
   try {
     await mkdir(getAutoModeDumpDir(), { recursive: true })
@@ -167,14 +143,10 @@ async function maybeDumpAutoMode(
       `Dumped auto mode req/res to ${getAutoModeDumpDir()}/${base}.{req,res}.json`,
     )
   } catch {
-    // Ignore errors
+    
   }
 }
 
-/**
- * Session-scoped dump file for auto mode classifier error prompts. Written on API
- * error so users can share via /share without needing to repro with env var.
- */
 export function getAutoModeClassifierErrorDumpPath(): string {
   return join(
     getClaudeTempDir(),
@@ -183,25 +155,12 @@ export function getAutoModeClassifierErrorDumpPath(): string {
   )
 }
 
-/**
- * Snapshot of the most recent classifier API request(s), stringified lazily
- * only when /share reads it. Array because the XML path may send two requests
- * (stage1 + stage2). Stored in bootstrap/state.ts to avoid module-scope
- * mutable state.
- */
 export function getAutoModeClassifierTranscript(): string | null {
   const requests = getLastClassifierRequests()
   if (requests === null) return null
   return jsonStringify(requests, null, 2)
 }
 
-/**
- * Dump classifier input prompts + context-comparison diagnostics on API error.
- * Written to a session-scoped file in the claude temp dir so /share can collect
- * it (replaces the old Desktop dump). Includes context numbers to help diagnose
- * projection divergence (classifier tokens >> main loop tokens).
- * Returns the dump path on success, null on failure.
- */
 async function dumpErrorPrompts(
   systemPrompt: string,
   userPrompt: string,
@@ -285,12 +244,6 @@ export type TranscriptEntry = {
   content: TranscriptBlock[]
 }
 
-/**
- * Build transcript entries from messages.
- * Includes user text messages and assistant tool_use blocks (excluding assistant text).
- * Queued user messages (attachment messages with queued_command type) are extracted
- * and emitted as user turns.
- */
 export function buildTranscriptEntries(messages: Message[]): TranscriptEntry[] {
   const transcript: TranscriptEntry[] = []
   for (const msg of messages) {
@@ -333,7 +286,7 @@ export function buildTranscriptEntries(messages: Message[]): TranscriptEntry[] {
     } else if (msg.type === 'assistant') {
       const blocks: TranscriptBlock[] = []
       for (const block of msg.message.content) {
-        // Only include tool_use blocks — assistant text is model-authored
+        
         
         if (block.type === 'tool_use') {
           blocks.push({
@@ -364,15 +317,6 @@ function buildToolLookup(tools: Tools): ToolLookup {
   return map
 }
 
-/**
- * Serialize a single transcript block as a JSONL dict line: `{"Bash":"ls"}`
- * for tool calls, `{"user":"text"}` for user text. The tool value is the
- * per-tool `toAutoClassifierInput` projection. JSON escaping means hostile
- * content can't break out of its string context to forge a `{"user":...}`
- * line — newlines become `\n` inside the value.
- *
- * Returns '' for tool_use blocks whose tool encodes to ''.
- */
 function toCompactBlock(
   block: TranscriptBlock,
   role: TranscriptEntry['role'],
@@ -419,10 +363,6 @@ function toCompact(entry: TranscriptEntry, lookup: ToolLookup): string {
   return entry.content.map(b => toCompactBlock(b, entry.role, lookup)).join('')
 }
 
-/**
- * Build a compact transcript string including user messages and assistant tool_use blocks.
- * Used by AgentTool for handoff classification.
- */
 export function buildTranscriptForClassifier(
   messages: Message[],
   tools: Tools,
@@ -433,22 +373,6 @@ export function buildTranscriptForClassifier(
     .join('')
 }
 
-/**
- * Build the CLAUDE.md prefix message for the classifier. Returns null when
- * CLAUDE.md is disabled or empty. The content is wrapped in a delimiter that
- * tells the classifier this is user-provided configuration — actions
- * described here reflect user intent. cache_control is set because the
- * content is static per-session, making the system + CLAUDE.md prefix a
- * stable cache prefix across classifier calls.
- *
- * Reads from bootstrap/state.ts cache (populated by context.ts) instead of
- * importing claudemd.ts directly — claudemd → permissions/filesystem →
- * permissions → yoloClassifier is a cycle. context.ts already gates on
- * CLAUDE_CODE_DISABLE_CLAUDE_MDS and normalizes '' to null before caching.
- * If the cache is unpopulated (tests, or an entrypoint that never calls
- * getUserContext), the classifier proceeds without CLAUDE.md — same as
- * pre-PR behavior.
- */
 function buildClaudeMdMessage(): Anthropic.MessageParam | null {
   const claudeMd = getCachedClaudeMdContent()
   if (claudeMd === null) return null
@@ -468,11 +392,6 @@ function buildClaudeMdMessage(): Anthropic.MessageParam | null {
   }
 }
 
-/**
- * Build the system prompt for the auto mode classifier.
- * Assembles the base prompt with the permissions template and substitutes
- * user allow/deny/environment values from settings.autoMode.
- */
 export async function buildYoloSystemPrompt(
   context: ToolPermissionContext,
 ): Promise<string> {
@@ -530,14 +449,7 @@ export async function buildYoloSystemPrompt(
       (_m, defaults: string) => userEnvironment ?? defaults,
     )
 }
-// ============================================================================
-// 2-Stage XML Classifier
 
-/**
- * Stage 1 suffix (xml_s1_h2): appended after the transcript to nudge
- * immediate decision. Matches XML_S1_SUFFIXES["h2"] in
- * sandbox/johnh/control/bpc_classifier/classifier.py.
- */
 const XML_S1_SUFFIX = '\nErr on the side of blocking. <block> immediately.'
 
 const XML_S2_SUFFIX =
@@ -549,11 +461,6 @@ function stripThinking(text: string): string {
     .replace(/<thinking>[\s\S]*$/, '')
 }
 
-/**
- * Parse XML block response: <block>yes/no</block>
- * Strips thinking content first to avoid matching tags inside reasoning.
- * Returns true for "yes" (should block), false for "no", null if unparseable.
- */
 function parseXmlBlock(text: string): boolean | null {
   const matches = [
     ...stripThinking(text).matchAll(/<block>(yes|no)\b(<\/block>)?/gi),
@@ -562,10 +469,6 @@ function parseXmlBlock(text: string): boolean | null {
   return matches[0]![1]!.toLowerCase() === 'yes'
 }
 
-/**
- * Parse XML reason: <reason>...</reason>
- * Strips thinking content first to avoid matching tags inside reasoning.
- */
 function parseXmlReason(text: string): string | null {
   const matches = [
     ...stripThinking(text).matchAll(/<reason>([\s\S]*?)<\/reason>/g),
@@ -574,17 +477,11 @@ function parseXmlReason(text: string): string | null {
   return matches[0]![1]!.trim()
 }
 
-/**
- * Parse XML thinking content: <thinking>...</thinking>
- */
 function parseXmlThinking(text: string): string | null {
   const match = /<thinking>([\s\S]*?)<\/thinking>/.exec(text)
   return match ? match[1]!.trim() : null
 }
 
-/**
- * Extract usage stats from an API response.
- */
 function extractUsage(
   result: Anthropic.Beta.Messages.BetaMessage,
 ): ClassifierUsage {
@@ -596,19 +493,12 @@ function extractUsage(
   }
 }
 
-/**
- * Extract the API request_id (req_xxx) that the SDK attaches as a
- * non-enumerable `_request_id` property on response objects.
- */
 function extractRequestId(
   result: Anthropic.Beta.Messages.BetaMessage,
 ): string | undefined {
   return (result as { _request_id?: string | null })._request_id ?? undefined
 }
 
-/**
- * Combine usage from two classifier stages into a single total.
- */
 function combineUsage(a: ClassifierUsage, b: ClassifierUsage): ClassifierUsage {
   return {
     inputTokens: a.inputTokens + b.inputTokens,
@@ -619,11 +509,6 @@ function combineUsage(a: ClassifierUsage, b: ClassifierUsage): ClassifierUsage {
   }
 }
 
-/**
- * Replace the tool_use output format instruction with XML format.
- * Finds the last line of the prompt ("Use the classify_result tool...")
- * and replaces it with XML output instructions.
- */
 function replaceOutputFormatWithXml(systemPrompt: string): string {
   const toolUseLine =
     'Use the classify_result tool to report your classification.'
@@ -642,23 +527,6 @@ function replaceOutputFormatWithXml(systemPrompt: string): string {
   return systemPrompt.replace(toolUseLine, xmlFormat)
 }
 
-/**
- * Thinking config for classifier calls. The classifier wants short text-only
- * responses — API thinking blocks are ignored by extractTextContent() and waste tokens.
- *
- * For most models: send { type: 'disabled' } via sideQuery's `thinking: false`.
- *
- * Models with alwaysOnThinking (declared in tengu_ant_model_override) default
- * to adaptive thinking server-side and reject `disabled` with a 400. For those:
- * don't pass `thinking: false`, instead pad max_tokens so adaptive thinking
- * (observed 0–1114 tokens replaying go/ccshare/shawnm-20260310-202833) doesn't
- * exhaust the budget before <block> is emitted. Without headroom,
- * stop_reason=max_tokens yields an empty text response → parseXmlBlock('')
- * → null → "unparseable" → safe commands blocked.
- *
- * Returns [disableThinking, headroom] — tuple instead of named object so
- * property-name strings don't survive minification into external builds.
- */
 function getClassifierThinkingConfig(
   model: string,
 ): [false | undefined, number] {
@@ -671,22 +539,6 @@ function getClassifierThinkingConfig(
   return [false, 0]
 }
 
-/**
- * XML classifier for auto mode security decisions. Supports three modes:
- *
- * 'both' (default): Stage 1 ("fast") runs first with max_tokens=64 and
- * stop_sequences for an immediate yes/no. If allowed, returns. If blocked,
- * escalates to stage 2 ("thinking") with chain-of-thought to reduce false
- * positives.
- *
- * 'fast': Stage 1 only. Bumps max_tokens to 256 and drops stop_sequences so
- * the response can include <reason>. Stage 1 verdict is final.
- *
- * 'thinking': Stage 2 only. Skips stage 1 entirely.
- *
- * Both stages share the same system prompt and user content, benefiting from
- * prompt caching (1h TTL) across calls.
- */
 async function classifyYoloActionXml(
   prefixMessages: Anthropic.MessageParam[],
   systemPrompt: string,
@@ -745,7 +597,7 @@ async function classifyYoloActionXml(
   ]
 
   try {
-    // Stage 1: fast (suffix nudges immediate <block> decision)
+    
     
     if (mode !== 'thinking') {
       const stage1Start = Date.now()
@@ -801,7 +653,7 @@ async function classifyYoloActionXml(
         }
       }
 
-      // In fast-only mode, stage 1 is final — handle block + unparseable here.
+      
       if (mode === 'fast') {
         if (stage1Block === null) {
           logAutoModeOutcome('parse_failure', model, { classifierType })
@@ -817,7 +669,7 @@ async function classifyYoloActionXml(
             stage1MsgId,
           }
         }
-        // stage1Block === true
+        
         logAutoModeOutcome('success', model, {
           classifierType,
           durationMs: stage1DurationMs,
@@ -836,7 +688,7 @@ async function classifyYoloActionXml(
       }
     }
 
-    // Stage 2: thinking (suffix asks for chain-of-thought)
+    
     const stage2Start = Date.now()
     const stage2Content = [
       ...wrappedContent,
@@ -974,20 +826,6 @@ async function classifyYoloActionXml(
   }
 }
 
-/**
- * Use Opus to classify whether an agent action should be allowed or blocked.
- * Returns a YoloClassifierResult indicating the decision.
- *
- * On API errors, returns shouldBlock: true with unavailable: true so callers
- * can distinguish "classifier actively blocked" from "classifier couldn't respond".
- * Transient errors (429, 500) are retried by sideQuery internally (see getDefaultMaxRetries).
- *
- * @param messages - The conversation history
- * @param action - The action being evaluated (tool name + input)
- * @param tools - Tool registry for encoding tool inputs via toAutoClassifierInput
- * @param context - Tool permission context for extracting Bash(prompt:) rules
- * @param signal - Abort signal
- */
 export async function classifyYoloAction(
   messages: Message[],
   action: TranscriptEntry,
@@ -1044,7 +882,7 @@ export async function classifyYoloAction(
     userPrompts: userPromptsLength,
   }
 
-  // Compare main-loop context vs classifier transcript to track projection
+  
   
   
   
@@ -1070,11 +908,11 @@ export async function classifyYoloAction(
     )
   }
 
-  // Use getCacheControl for consistency with the main agent loop —
+  
   
   const cacheControl = getCacheControl({ querySource: 'auto_mode' })
   
-  // stage 2 shares the same transcript+action prefix as stage 1 — the
+  
   
   
   
@@ -1150,7 +988,7 @@ export async function classifyYoloAction(
       cacheReadInputTokens: result.usage.cache_read_input_tokens ?? 0,
       cacheCreationInputTokens: result.usage.cache_creation_input_tokens ?? 0,
     }
-    // Actual total input tokens the classifier API consumed (uncached + cache)
+    
     const classifierInputTokens =
       usage.inputTokens +
       usage.cacheReadInputTokens +
@@ -1168,7 +1006,7 @@ export async function classifyYoloAction(
       )
     }
 
-    // Extract the tool use result using shared utility
+    
     const toolUseBlock = extractToolUseBlock(
       result.content,
       YOLO_CLASSIFIER_TOOL_NAME,
@@ -1191,7 +1029,7 @@ export async function classifyYoloAction(
       }
     }
 
-    // Parse response using shared utility
+    
     const parsed = parseClassifierResponse(
       toolUseBlock,
       yoloClassifierResponseSchema(),
@@ -1226,7 +1064,7 @@ export async function classifyYoloAction(
       stage1RequestId,
       stage1MsgId,
     }
-    // Context-delta telemetry: chart classifierInputTokens / mainLoopTokens
+    
     
     
     logAutoModeOutcome('success', model, {
@@ -1299,14 +1137,9 @@ type AutoModeConfig = {
   jsonlTranscript?: boolean
 }
 
-/**
- * Get the model for the classifier.
- * Ant-only env var takes precedence, then GrowthBook JSON config override,
- * then the main loop model.
- */
 function getClassifierModel(): string {
   if (process.env.USER_TYPE === 'ant') {
-    const envModel = process.env.CLAUDE_CODE_AUTO_MODE_MODEL
+    const envModel = process.env.CLAUDE_CODE_NEXT_AUTO_MODE_MODEL
     if (envModel) return envModel
   }
   const config = getFeatureValue_CACHED_MAY_BE_STALE(
@@ -1319,17 +1152,13 @@ function getClassifierModel(): string {
   return getMainLoopModel()
 }
 
-/**
- * Resolve the XML classifier setting: ant-only env var takes precedence,
- * then GrowthBook. Returns undefined when unset (caller decides default).
- */
 function resolveTwoStageClassifier():
   | boolean
   | 'fast'
   | 'thinking'
   | undefined {
   if (process.env.USER_TYPE === 'ant') {
-    const env = process.env.CLAUDE_CODE_TWO_STAGE_CLASSIFIER
+    const env = process.env.CLAUDE_CODE_NEXT_TWO_STAGE_CLASSIFIER
     if (env === 'fast' || env === 'thinking') return env
     if (isEnvTruthy(env)) return true
     if (isEnvDefinedFalsy(env)) return false
@@ -1341,9 +1170,6 @@ function resolveTwoStageClassifier():
   return config?.twoStageClassifier
 }
 
-/**
- * Check if the XML classifier is enabled (any truthy value including 'fast'/'thinking').
- */
 function isTwoStageClassifierEnabled(): boolean {
   const v = resolveTwoStageClassifier()
   return v === true || v === 'fast' || v === 'thinking'
@@ -1351,7 +1177,7 @@ function isTwoStageClassifierEnabled(): boolean {
 
 function isJsonlTranscriptEnabled(): boolean {
   if (process.env.USER_TYPE === 'ant') {
-    const env = process.env.CLAUDE_CODE_JSONL_TRANSCRIPT
+    const env = process.env.CLAUDE_CODE_NEXT_JSONL_TRANSCRIPT
     if (isEnvTruthy(env)) return true
     if (isEnvDefinedFalsy(env)) return false
   }
@@ -1362,16 +1188,6 @@ function isJsonlTranscriptEnabled(): boolean {
   return config?.jsonlTranscript === true
 }
 
-/**
- * PowerShell-specific deny guidance for the classifier. Appended to the
- * deny list in buildYoloSystemPrompt when PowerShell auto mode is active.
- * Maps PS idioms to the existing BLOCK categories so the classifier
- * recognizes `iex (iwr ...)` as "Code from External", `Remove-Item
- * -Recurse -Force` as "Irreversible Local Destruction", etc.
- *
- * Guarded at definition for DCE — with external:false, the string content
- * is absent from external builds (same pattern as the .txt requires above).
- */
 const POWERSHELL_DENY_GUIDANCE: readonly string[] = feature(
   'POWERSHELL_AUTO_MODE',
 )
@@ -1422,12 +1238,6 @@ function logAutoModeOutcome(
   })
 }
 
-/**
- * Detect API 400 "prompt is too long: N tokens > M maximum" errors and
- * parse the token counts. Returns undefined for any other error.
- * These are deterministic (same transcript → same error) so retrying
- * won't help — unlike 429/5xx which sideQuery already retries internally.
- */
 function detectPromptTooLong(
   error: unknown,
 ): ReturnType<typeof parsePromptTooLongTokenCounts> | undefined {
@@ -1438,20 +1248,11 @@ function detectPromptTooLong(
   return parsePromptTooLongTokenCounts(error.message)
 }
 
-/**
- * Get which stage(s) the XML classifier should run.
- * Only meaningful when isTwoStageClassifierEnabled() is true.
- */
 function getTwoStageMode(): TwoStageMode {
   const v = resolveTwoStageClassifier()
   return v === 'fast' || v === 'thinking' ? v : 'both'
 }
 
-/**
- * Format an action for the classifier from tool name and input.
- * Returns a TranscriptEntry with the tool_use block. Each tool controls which
- * fields get exposed via its `toAutoClassifierInput` implementation.
- */
 export function formatActionForClassifier(
   toolName: string,
   toolInput: unknown,

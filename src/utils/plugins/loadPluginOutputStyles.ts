@@ -86,7 +86,7 @@ async function loadOutputStyleFromFile(
 
 export const loadPluginOutputStyles = memoize(
   async (): Promise<OutputStyleConfig[]> => {
-    // Only load output styles from enabled plugins
+    
     const { enabled, errors } = await loadAllPluginsCacheOnly()
     const allStyles: OutputStyleConfig[] = []
 
@@ -97,7 +97,7 @@ export const loadPluginOutputStyles = memoize(
     }
 
     for (const plugin of enabled) {
-      // Track loaded file paths to prevent duplicates within this plugin
+      
       const loadedPaths = new Set<string>()
 
       
@@ -123,7 +123,7 @@ export const loadPluginOutputStyles = memoize(
         }
       }
 
-      // Load output styles from additional paths specified in manifest
+      
       if (plugin.outputStylesPaths) {
         for (const stylePath of plugin.outputStylesPaths) {
           try {
@@ -131,7 +131,7 @@ export const loadPluginOutputStyles = memoize(
             const stats = await fs.stat(stylePath)
 
             if (stats.isDirectory()) {
-              // Load all .md files from directory
+              
               const styles = await loadOutputStylesFromDirectory(
                 stylePath,
                 plugin.name,
@@ -145,7 +145,7 @@ export const loadPluginOutputStyles = memoize(
                 )
               }
             } else if (stats.isFile() && stylePath.endsWith('.md')) {
-              // Load single output style file
+              
               const style = await loadOutputStyleFromFile(
                 stylePath,
                 plugin.name,

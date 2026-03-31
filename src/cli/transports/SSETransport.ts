@@ -24,12 +24,9 @@ const POST_MAX_DELAY_MS = 8000
 
 const STREAM_DECODE_OPTS: TextDecodeOptions = { stream: true }
 
-/** Hoisted axios validateStatus callback to avoid per-request closure allocation. */
 function alwaysValidStatus(): boolean {
   return true
 }
-
-// ---------------------------------------------------------------------------
 
 type SSEFrame = {
   event?: string
@@ -37,12 +34,6 @@ type SSEFrame = {
   data?: string
 }
 
-/**
- * Incrementally parse SSE frames from a text buffer.
- * Returns parsed frames and the remaining (incomplete) buffer.
- *
- * @internal exported for testing
- */
 export function parseSSEFrames(buffer: string): {
   frames: SSEFrame[]
   remaining: string
@@ -64,7 +55,7 @@ export function parseSSEFrames(buffer: string): {
 
     for (const line of rawFrame.split('\n')) {
       if (line.startsWith(':')) {
-        // SSE comment (e.g., `:keepalive`)
+        
         isComment = true
         continue
       }
@@ -87,14 +78,14 @@ export function parseSSEFrames(buffer: string): {
           frame.id = value
           break
         case 'data':
-          // Per SSE spec, multiple data: lines are concatenated with \n
+          
           frame.data = frame.data ? frame.data + '\n' + value : value
           break
         
       }
     }
 
-    // Only emit frames that have data (or are pure comments which reset liveness)
+    
     if (frame.data || isComment) {
       frames.push(frame)
     }
@@ -102,8 +93,6 @@ export function parseSSEFrames(buffer: string): {
 
   return { frames, remaining: buffer.slice(pos) }
 }
-
-// ---------------------------------------------------------------------------
 
 type SSETransportState =
   | 'idle'
@@ -120,8 +109,6 @@ export type StreamClientEvent = {
   payload: Record<string, unknown>
   created_at: string
 }
-
-// ---------------------------------------------------------------------------
 
 export class SSETransport implements Transport {
   private state: SSETransportState = 'idle'
@@ -157,12 +144,8 @@ export class SSETransport implements Transport {
     sessionId?: string,
     refreshHeaders?: () => Record<string, string>,
     initialSequenceNum?: number,
-    /**
-     * Per-instance auth header source. Omit to read the process-wide
-     * CLAUDE_CODE_SESSION_ACCESS_TOKEN (single-session callers). Required
-     * for concurrent multi-session callers — the env-var path is a process
-     * global and would stomp across sessions.
-     */
+    
+
     getAuthHeaders?: () => Record<string, string>,
   ) {
     this.headers = headers
@@ -182,12 +165,8 @@ export class SSETransport implements Transport {
     logForDiagnosticsNoPII('info', 'cli_sse_transport_initialized')
   }
 
-  /**
-   * High-water mark of sequence numbers seen on this stream. Callers that
-   * recreate the transport (e.g. replBridge onWorkReceived) read this before
-   * close() and pass it as `initialSequenceNum` to the next instance so the
-   * server resumes from the right point instead of replaying everything.
-   */
+  
+
   getLastSequenceNum(): number {
     return this.lastSequenceNum
   }
@@ -211,9 +190,9 @@ export class SSETransport implements Transport {
       sseUrl.searchParams.set('from_sequence_num', String(this.lastSequenceNum))
     }
 
-    // Build headers -- use fresh auth headers (supports Cookie for session keys).
     
-    // since sending both confuses the auth interceptor.
+    
+    
     const authHeaders = this.getAuthHeaders()
     const headers: Record<string, string> = {
       ...this.headers,
@@ -235,7 +214,7 @@ export class SSETransport implements Transport {
     this.abortController = new AbortController()
 
     try {
-      // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
+      
       const response = await fetch(sseUrl.href, {
         headers,
         signal: this.abortController.signal,
@@ -267,7 +246,7 @@ export class SSETransport implements Transport {
         return
       }
 
-      // Successfully connected
+      
       const connectDuration = Date.now() - connectStartTime
       logForDebugging('SSETransport: Connected')
       logForDiagnosticsNoPII('info', 'cli_sse_connect_connected', {
@@ -283,7 +262,7 @@ export class SSETransport implements Transport {
       await this.readStream(response.body)
     } catch (error) {
       if (this.abortController?.signal.aborted) {
-        // Intentional close
+        
         return
       }
 
@@ -296,9 +275,8 @@ export class SSETransport implements Transport {
     }
   }
 
-  /**
-   * Read and process the SSE stream body.
-   */
+  
+
   
   private async readStream(body: ReadableStream<Uint8Array>): Promise<void> {
     const reader = body.getReader()
@@ -315,7 +293,7 @@ export class SSETransport implements Transport {
         buffer = remaining
 
         for (const frame of frames) {
-          // Any frame (including keepalive comments) proves the connection is alive
+          
           this.resetLivenessTimer()
 
           if (frame.id) {
@@ -350,7 +328,7 @@ export class SSETransport implements Transport {
           if (frame.event && frame.data) {
             this.handleSSEFrame(frame.event, frame.data)
           } else if (frame.data) {
-            // data: without event: — server is emitting the old envelope format
+            
             
             logForDebugging(
               'SSETransport: Frame has data: but no event: field — dropped',
@@ -371,21 +349,15 @@ export class SSETransport implements Transport {
       reader.releaseLock()
     }
 
-    // Stream ended — reconnect unless we're closing
+    
     if (this.state !== 'closing' && this.state !== 'closed') {
       logForDebugging('SSETransport: Stream ended, reconnecting')
       this.handleConnectionError()
     }
   }
 
-  /**
-   * Handle a single SSE frame. The event: field names the variant; data:
-   * carries the inner proto JSON directly (no envelope).
-   *
-   * Worker subscribers only receive client_event frames (see notifier.go) —
-   * any other event type indicates a server-side change that CC doesn't yet
-   * understand. Log a diagnostic so we notice in telemetry.
-   */
+  
+
   private handleSSEFrame(eventType: string, data: string): void {
     if (eventType !== 'client_event') {
       logForDebugging(
@@ -417,7 +389,7 @@ export class SSETransport implements Transport {
       )
       logForDiagnosticsNoPII('info', 'cli_sse_message_received')
       
-      // matching the format that StructuredIO/WebSocketTransport consumers expect
+      
       this.onData?.(jsonStringify(payload) + '\n')
     } else {
       logForDebugging(
@@ -428,15 +400,14 @@ export class SSETransport implements Transport {
     this.onEventCallback?.(ev)
   }
 
-  /**
-   * Handle connection errors with exponential backoff and time budget.
-   */
+  
+
   private handleConnectionError(): void {
     this.clearLivenessTimer()
 
     if (this.state === 'closing' || this.state === 'closed') return
 
-    // Abort any in-flight SSE fetch
+    
     this.abortController?.abort()
     this.abortController = null
 
@@ -447,13 +418,13 @@ export class SSETransport implements Transport {
 
     const elapsed = now - this.reconnectStartTime
     if (elapsed < RECONNECT_GIVE_UP_MS) {
-      // Clear any existing timer
+      
       if (this.reconnectTimer) {
         clearTimeout(this.reconnectTimer)
         this.reconnectTimer = null
       }
 
-      // Refresh headers before reconnecting
+      
       if (this.refreshHeaders) {
         const freshHeaders = this.refreshHeaders()
         Object.assign(this.headers, freshHeaders)
@@ -498,11 +469,8 @@ export class SSETransport implements Transport {
     }
   }
 
-  /**
-   * Bound timeout callback. Hoisted from an inline closure so that
-   * resetLivenessTimer (called per-frame) does not allocate a new closure
-   * on every SSE frame.
-   */
+  
+
   private readonly onLivenessTimeout = (): void => {
     this.livenessTimer = null
     logForDebugging('SSETransport: Liveness timeout, reconnecting', {
@@ -513,10 +481,8 @@ export class SSETransport implements Transport {
     this.handleConnectionError()
   }
 
-  /**
-   * Reset the liveness timer. If no SSE frame arrives within the timeout,
-   * treat the connection as dead and reconnect.
-   */
+  
+
   private resetLivenessTimer(): void {
     this.clearLivenessTimer()
     this.livenessTimer = setTimeout(this.onLivenessTimeout, LIVENESS_TIMEOUT_MS)
@@ -529,7 +495,7 @@ export class SSETransport implements Transport {
     }
   }
 
-  // -----------------------------------------------------------------------
+  
   
   
 
@@ -582,7 +548,7 @@ export class SSETransport implements Transport {
           return
         }
 
-        // 429 or 5xx - retry
+        
         logForDebugging(
           `SSETransport: POST returned ${response.status}, attempt ${attempt}/${POST_MAX_RETRIES}`,
         )
@@ -616,7 +582,7 @@ export class SSETransport implements Transport {
     }
   }
 
-  // -----------------------------------------------------------------------
+  
   
   
 
@@ -652,8 +618,6 @@ export class SSETransport implements Transport {
     this.abortController = null
   }
 }
-
-// ---------------------------------------------------------------------------
 
 function convertSSEUrlToPostUrl(sseUrl: URL): string {
   let pathname = sseUrl.pathname

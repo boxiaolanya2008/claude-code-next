@@ -40,7 +40,7 @@ import { estimateMessageTokens } from './microCompact.js'
 import { getCompactUserSummaryMessage } from './prompt.js'
 
 export type SessionMemoryCompactConfig = {
-  /** Minimum tokens to preserve after compaction */
+  
   minTokens: number
   
   minTextBlockMessages: number
@@ -48,19 +48,16 @@ export type SessionMemoryCompactConfig = {
   maxTokens: number
 }
 
-// Default configuration values (exported for use in tests)
 export const DEFAULT_SM_COMPACT_CONFIG: SessionMemoryCompactConfig = {
   minTokens: 10_000,
   minTextBlockMessages: 5,
   maxTokens: 40_000,
 }
 
-// Current configuration (starts with defaults)
 let smCompactConfig: SessionMemoryCompactConfig = {
   ...DEFAULT_SM_COMPACT_CONFIG,
 }
 
-// Track whether config has been initialized from remote
 let configInitialized = false
 
 export function setSessionMemoryCompactConfig(
@@ -72,25 +69,15 @@ export function setSessionMemoryCompactConfig(
   }
 }
 
-/**
- * Get the current session memory compact configuration
- */
 export function getSessionMemoryCompactConfig(): SessionMemoryCompactConfig {
   return { ...smCompactConfig }
 }
 
-/**
- * Reset config state (useful for testing)
- */
 export function resetSessionMemoryCompactConfig(): void {
   smCompactConfig = { ...DEFAULT_SM_COMPACT_CONFIG }
   configInitialized = false
 }
 
-/**
- * Initialize configuration from remote config (GrowthBook).
- * Only fetches once per session - subsequent calls return immediately.
- */
 async function initSessionMemoryCompactConfig(): Promise<void> {
   if (configInitialized) {
     return
@@ -121,9 +108,6 @@ async function initSessionMemoryCompactConfig(): Promise<void> {
   setSessionMemoryCompactConfig(config)
 }
 
-/**
- * Check if a message contains text blocks (text content for user/assistant interaction)
- */
 export function hasTextBlocks(message: Message): boolean {
   if (message.type === 'assistant') {
     const content = message.message.content
@@ -141,9 +125,6 @@ export function hasTextBlocks(message: Message): boolean {
   return false
 }
 
-/**
- * Check if a message contains tool_result blocks and return their tool_use_ids
- */
 function getToolResultIds(message: Message): string[] {
   if (message.type !== 'user') {
     return []
@@ -161,9 +142,6 @@ function getToolResultIds(message: Message): string[] {
   return ids
 }
 
-/**
- * Check if a message contains tool_use blocks with any of the given ids
- */
 function hasToolUseWithIds(message: Message, toolUseIds: Set<string>): boolean {
   if (message.type !== 'assistant') {
     return false
@@ -177,50 +155,6 @@ function hasToolUseWithIds(message: Message, toolUseIds: Set<string>): boolean {
   )
 }
 
-/**
- * Adjust the start index to ensure we don't split tool_use/tool_result pairs
- * or thinking blocks that share the same message.id with kept assistant messages.
- *
- * If ANY message we're keeping contains tool_result blocks, we need to
- * include the preceding assistant message(s) that contain the matching tool_use blocks.
- *
- * Additionally, if ANY assistant message in the kept range has the same message.id
- * as a preceding assistant message (which may contain thinking blocks), we need to
- * include those messages so they can be properly merged by normalizeMessagesForAPI.
- *
- * This handles the case where streaming yields separate messages per content block
- * (thinking, tool_use, etc.) with the same message.id but different uuids. If the
- * startIndex lands on one of these streaming messages, we need to look at ALL kept
- * messages for tool_results, not just the first one.
- *
- * Example bug scenarios this fixes:
- *
- * Tool pair scenario:
- *   Session storage (before compaction):
- *     Index N:   assistant, message.id: X, content: [thinking]
- *     Index N+1: assistant, message.id: X, content: [tool_use: ORPHAN_ID]
- *     Index N+2: assistant, message.id: X, content: [tool_use: VALID_ID]
- *     Index N+3: user, content: [tool_result: ORPHAN_ID, tool_result: VALID_ID]
- *
- *   If startIndex = N+2:
- *     - Old code: checked only message N+2 for tool_results, found none, returned N+2
- *     - After slicing and normalizeMessagesForAPI merging by message.id:
- *       msg[1]: assistant with [tool_use: VALID_ID]  (ORPHAN tool_use was excluded!)
- *       msg[2]: user with [tool_result: ORPHAN_ID, tool_result: VALID_ID]
- *     - API error: orphan tool_result references non-existent tool_use
- *
- * Thinking block scenario:
- *   Session storage (before compaction):
- *     Index N:   assistant, message.id: X, content: [thinking]
- *     Index N+1: assistant, message.id: X, content: [tool_use: ID]
- *     Index N+2: user, content: [tool_result: ID]
- *
- *   If startIndex = N+1:
- *     - Without this fix: thinking block at N is excluded
- *     - After normalizeMessagesForAPI: thinking block is lost (no message to merge with)
- *
- *   Fixed code: detects that message N+1 has same message.id as N, adjusts to N.
- */
 export function adjustIndexToPreserveAPIInvariants(
   messages: Message[],
   startIndex: number,
@@ -231,15 +165,15 @@ export function adjustIndexToPreserveAPIInvariants(
 
   let adjustedIndex = startIndex
 
-  // Step 1: Handle tool_use/tool_result pairs
-  // Collect tool_result IDs from ALL messages in the kept range
+  
+  
   const allToolResultIds: string[] = []
   for (let i = startIndex; i < messages.length; i++) {
     allToolResultIds.push(...getToolResultIds(messages[i]!))
   }
 
   if (allToolResultIds.length > 0) {
-    // Collect tool_use IDs already in the kept range
+    
     const toolUseIdsInKeptRange = new Set<string>()
     for (let i = adjustedIndex; i < messages.length; i++) {
       const msg = messages[i]!
@@ -252,17 +186,17 @@ export function adjustIndexToPreserveAPIInvariants(
       }
     }
 
-    // Only look for tool_uses that are NOT already in the kept range
+    
     const neededToolUseIds = new Set(
       allToolResultIds.filter(id => !toolUseIdsInKeptRange.has(id)),
     )
 
-    // Find the assistant message(s) with matching tool_use blocks
+    
     for (let i = adjustedIndex - 1; i >= 0 && neededToolUseIds.size > 0; i--) {
       const message = messages[i]!
       if (hasToolUseWithIds(message, neededToolUseIds)) {
         adjustedIndex = i
-        // Remove found tool_use_ids from the set
+        
         if (
           message.type === 'assistant' &&
           Array.isArray(message.message.content)
@@ -277,8 +211,8 @@ export function adjustIndexToPreserveAPIInvariants(
     }
   }
 
-  // Step 2: Handle thinking blocks that share message.id with kept assistant messages
-  // Collect all message.ids from assistant messages in the kept range
+  
+  
   const messageIdsInKeptRange = new Set<string>()
   for (let i = adjustedIndex; i < messages.length; i++) {
     const msg = messages[i]!
@@ -287,8 +221,8 @@ export function adjustIndexToPreserveAPIInvariants(
     }
   }
 
-  // Look backwards for assistant messages with the same message.id that are not in the kept range
-  // These may contain thinking blocks that need to be merged by normalizeMessagesForAPI
+  
+  
   for (let i = adjustedIndex - 1; i >= 0; i--) {
     const message = messages[i]!
     if (
@@ -296,8 +230,8 @@ export function adjustIndexToPreserveAPIInvariants(
       message.message.id &&
       messageIdsInKeptRange.has(message.message.id)
     ) {
-      // This message has the same message.id as one in the kept range
-      // Include it so thinking blocks can be properly merged
+      
+      
       adjustedIndex = i
     }
   }
@@ -305,14 +239,6 @@ export function adjustIndexToPreserveAPIInvariants(
   return adjustedIndex
 }
 
-/**
- * Calculate the starting index for messages to keep after compaction.
- * Starts from lastSummarizedMessageId, then expands backwards to meet minimums:
- * - At least config.minTokens tokens
- * - At least config.minTextBlockMessages messages with text blocks
- * Stops expanding if config.maxTokens is reached.
- * Also ensures tool_use/tool_result pairs are not split.
- */
 export function calculateMessagesToKeepIndex(
   messages: Message[],
   lastSummarizedIndex: number,
@@ -323,13 +249,13 @@ export function calculateMessagesToKeepIndex(
 
   const config = getSessionMemoryCompactConfig()
 
-  // Start from the message after lastSummarizedIndex
-  // If lastSummarizedIndex is -1 (not found) or messages.length (no summarized id),
-  // we start with no messages kept
+  
+  
+  
   let startIndex =
     lastSummarizedIndex >= 0 ? lastSummarizedIndex + 1 : messages.length
 
-  // Calculate current tokens and text-block message count from startIndex to end
+  
   let totalTokens = 0
   let textBlockMessageCount = 0
   for (let i = startIndex; i < messages.length; i++) {
@@ -340,12 +266,12 @@ export function calculateMessagesToKeepIndex(
     }
   }
 
-  // Check if we already hit the max cap
+  
   if (totalTokens >= config.maxTokens) {
     return adjustIndexToPreserveAPIInvariants(messages, startIndex)
   }
 
-  // Check if we already meet both minimums
+  
   if (
     totalTokens >= config.minTokens &&
     textBlockMessageCount >= config.minTextBlockMessages
@@ -353,10 +279,10 @@ export function calculateMessagesToKeepIndex(
     return adjustIndexToPreserveAPIInvariants(messages, startIndex)
   }
 
-  // Expand backwards until we meet both minimums or hit max cap.
-  // Floor at the last boundary: the preserved-segment chain has a disk
-  // discontinuity there (att[0]→summary shortcut from dedup-skip), which
-  // would let the loader's tail→head walk bypass inner preserved messages
+  
+  
+  
+  
   
   
   const idx = messages.findLastIndex(m => isCompactBoundaryMessage(m))
@@ -375,7 +301,7 @@ export function calculateMessagesToKeepIndex(
       break
     }
 
-    // Stop if we meet both minimums
+    
     if (
       totalTokens >= config.minTokens &&
       textBlockMessageCount >= config.minTextBlockMessages
@@ -384,20 +310,16 @@ export function calculateMessagesToKeepIndex(
     }
   }
 
-  // Adjust for tool pairs
+  
   return adjustIndexToPreserveAPIInvariants(messages, startIndex)
 }
 
-/**
- * Check if we should use session memory for compaction
- * Uses cached gate values to avoid blocking on Statsig initialization
- */
 export function shouldUseSessionMemoryCompaction(): boolean {
-  // Allow env var override for eval runs and testing
-  if (isEnvTruthy(process.env.ENABLE_CLAUDE_CODE_SM_COMPACT)) {
+  
+  if (isEnvTruthy(process.env.ENABLE_CLAUDE_CODE_NEXT_SM_COMPACT)) {
     return true
   }
-  if (isEnvTruthy(process.env.DISABLE_CLAUDE_CODE_SM_COMPACT)) {
+  if (isEnvTruthy(process.env.DISABLE_CLAUDE_CODE_NEXT_SM_COMPACT)) {
     return false
   }
 
@@ -423,9 +345,6 @@ export function shouldUseSessionMemoryCompaction(): boolean {
   return shouldUse
 }
 
-/**
- * Create a CompactionResult from session memory
- */
 function createCompactionResultFromSessionMemory(
   messages: Message[],
   sessionMemory: string,
@@ -448,7 +367,7 @@ function createCompactionResultFromSessionMemory(
     ].sort()
   }
 
-  // Truncate oversized sections to prevent session memory from consuming
+  
   
   const { truncatedContent, wasTruncated } =
     truncateSessionMemoryForCompact(sessionMemory)
@@ -487,22 +406,13 @@ function createCompactionResultFromSessionMemory(
     hookResults,
     messagesToKeep,
     preCompactTokenCount,
-    // SM-compact has no compact-API-call, so postCompactTokenCount (kept for
+    
     
     postCompactTokenCount: estimateMessageTokens(summaryMessages),
     truePostCompactTokenCount: estimateMessageTokens(summaryMessages),
   }
 }
 
-/**
- * Try to use session memory for compaction instead of traditional compaction.
- * Returns null if session memory compaction cannot be used.
- *
- * Handles two scenarios:
- * 1. Normal case: lastSummarizedMessageId is set, keep only messages after that ID
- * 2. Resumed session: lastSummarizedMessageId is not set but session memory has content,
- *    keep all messages but use session memory as the summary
- */
 export async function trySessionMemoryCompaction(
   messages: Message[],
   agentId?: AgentId,
@@ -512,7 +422,7 @@ export async function trySessionMemoryCompaction(
     return null
   }
 
-  // Initialize config from remote (only fetches once)
+  
   await initSessionMemoryCompactConfig()
 
   
@@ -527,7 +437,7 @@ export async function trySessionMemoryCompaction(
     return null
   }
 
-  // Session memory exists but matches the template (no actual content extracted)
+  
   
   if (await isSessionMemoryEmpty(sessionMemory)) {
     logEvent('tengu_sm_compact_empty_template', {})
@@ -538,46 +448,46 @@ export async function trySessionMemoryCompaction(
     let lastSummarizedIndex: number
 
     if (lastSummarizedMessageId) {
-      // Normal case: we know exactly which messages have been summarized
+      
       lastSummarizedIndex = messages.findIndex(
         msg => msg.uuid === lastSummarizedMessageId,
       )
 
       if (lastSummarizedIndex === -1) {
-        // The summarized message ID doesn't exist in current messages
-        // This can happen if messages were modified - fall back to legacy compact
-        // since we can't determine the boundary between summarized and unsummarized messages
+        
+        
+        
         logEvent('tengu_sm_compact_summarized_id_not_found', {})
         return null
       }
     } else {
-      // Resumed session case: session memory has content but we don't know the boundary
-      // Set lastSummarizedIndex to last message so startIndex becomes messages.length (no messages kept initially)
+      
+      
       lastSummarizedIndex = messages.length - 1
       logEvent('tengu_sm_compact_resumed_session', {})
     }
 
-    // Calculate the starting index for messages to keep
-    // This starts from lastSummarizedIndex, expands to meet minimums,
-    // and adjusts to not split tool_use/tool_result pairs
+    
+    
+    
     const startIndex = calculateMessagesToKeepIndex(
       messages,
       lastSummarizedIndex,
     )
-    // Filter out old compact boundary messages from messagesToKeep.
-    // After REPL pruning, old boundaries re-yielded from messagesToKeep would
-    // trigger an unwanted second prune (isCompactBoundaryMessage returns true),
-    // discarding the new boundary and summary.
+    
+    
+    
+    
     const messagesToKeep = messages
       .slice(startIndex)
       .filter(m => !isCompactBoundaryMessage(m))
 
-    // Run session start hooks to restore CLAUDE.md and other context
+    
     const hookResults = await processSessionStartHooks('compact', {
       model: getMainLoopModel(),
     })
 
-    // Get transcript path for the summary message
+    
     const transcriptPath = getTranscriptPath()
 
     const compactionResult = createCompactionResultFromSessionMemory(
@@ -593,7 +503,7 @@ export async function trySessionMemoryCompaction(
 
     const postCompactTokenCount = estimateMessageTokens(postCompactMessages)
 
-    // Only check threshold if one was provided (for autocompact)
+    
     if (
       autoCompactThreshold !== undefined &&
       postCompactTokenCount >= autoCompactThreshold
@@ -611,8 +521,8 @@ export async function trySessionMemoryCompaction(
       truePostCompactTokenCount: postCompactTokenCount,
     }
   } catch (error) {
-    // Use logEvent instead of logError since errors here are expected
-    // (e.g., file not found, path issues) and shouldn't go to error logs
+    
+    
     logEvent('tengu_sm_compact_error', {})
     if (process.env.USER_TYPE === 'ant') {
       logForDebugging(`Session memory compaction error: ${errorMessage(error)}`)

@@ -6,7 +6,7 @@ export function requireComputerUseSwift(): ComputerUseAPI {
   if (process.platform !== 'darwin') {
     throw new Error('@ant/computer-use-swift is macOS-only')
   }
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  
   return (cached ??= require('@ant/computer-use-swift') as ComputerUseAPI)
 }
 

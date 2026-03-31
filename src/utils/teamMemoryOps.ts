@@ -4,9 +4,6 @@ import { FILE_WRITE_TOOL_NAME } from '../tools/FileWriteTool/prompt.js'
 
 export { isTeamMemFile }
 
-/**
- * Check if a search tool use targets team memory files by examining its path.
- */
 export function isTeamMemorySearch(toolInput: unknown): boolean {
   const input = toolInput as
     | { path?: string; pattern?: string; glob?: string }
@@ -20,9 +17,6 @@ export function isTeamMemorySearch(toolInput: unknown): boolean {
   return false
 }
 
-/**
- * Check if a Write or Edit tool use targets a team memory file.
- */
 export function isTeamMemoryWriteOrEdit(
   toolName: string,
   toolInput: unknown,
@@ -35,10 +29,6 @@ export function isTeamMemoryWriteOrEdit(
   return filePath !== undefined && isTeamMemFile(filePath)
 }
 
-/**
- * Append team memory summary parts to the parts array.
- * Encapsulates all team memory verb/string logic for getSearchReadSummaryText.
- */
 export function appendTeamMemorySummaryParts(
   memoryCounts: {
     teamMemoryReadCount?: number

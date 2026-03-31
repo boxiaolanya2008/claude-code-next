@@ -13,23 +13,13 @@ type CoordinatorPermissionParams = {
   permissionMode: string | undefined
 }
 
-/**
- * Handles the coordinator worker permission flow.
- *
- * For coordinator workers, automated checks (hooks and classifier) are
- * awaited sequentially before falling through to the interactive dialog.
- *
- * Returns a PermissionDecision if the automated checks resolved the
- * permission, or null if the caller should fall through to the
- * interactive dialog.
- */
 async function handleCoordinatorPermission(
   params: CoordinatorPermissionParams,
 ): Promise<PermissionDecision | null> {
   const { ctx, updatedInput, suggestions, permissionMode } = params
 
   try {
-    // 1. Try permission hooks first (fast, local)
+    
     const hookResult = await ctx.runHooks(
       permissionMode,
       suggestions,
@@ -45,7 +35,7 @@ async function handleCoordinatorPermission(
       return classifierResult
     }
   } catch (error) {
-    // If automated checks fail unexpectedly, fall through to show the dialog
+    
     
     
     
@@ -56,7 +46,7 @@ async function handleCoordinatorPermission(
     }
   }
 
-  // 3. Neither resolved (or checks failed) -- fall through to dialog below.
+  
   
   return null
 }

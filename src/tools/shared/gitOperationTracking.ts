@@ -51,27 +51,18 @@ function parsePrUrl(
   return null
 }
 
-/** Find a GitHub PR URL embedded anywhere in stdout and parse it. */
 function findPrInStdout(stdout: string): ReturnType<typeof parsePrUrl> {
   const m = stdout.match(/https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/pull\/\d+/)
   return m ? parsePrUrl(m[0]) : null
 }
 
-// Exported for testing purposes
 export function parseGitCommitId(stdout: string): string | undefined {
-  // git commit output: [branch abc1234] message
+  
   
   const match = stdout.match(/\[[\w./-]+(?: \(root-commit\))? ([0-9a-f]+)\]/)
   return match?.[1]
 }
 
-/**
- * Parse branch name from git push output. Push writes progress to stderr but
- * the ref update line ("abc..def  branch -> branch", "* [new branch]
- * branch -> branch", or " + abc...def  branch -> branch (forced update)") is
- * the signal. Works on either stdout or stderr. Git prefixes each ref line
- * with a status flag (space, +, -, *, !, =); the char class tolerates any.
- */
 function parseGitPushBranch(output: string): string | undefined {
   const match = output.match(
     /^\s*[+\-*!= ]?\s*(?:\[new branch\]|\S+\.\.+\S+)\s+\S+\s*->\s*(\S+)/m,
@@ -79,19 +70,11 @@ function parseGitPushBranch(output: string): string | undefined {
   return match?.[1]
 }
 
-/**
- * gh pr merge/close/ready print "✓ <Verb> pull request owner/repo#1234" with
- * no URL. Extract the PR number from the text.
- */
 function parsePrNumberFromText(stdout: string): number | undefined {
   const match = stdout.match(/[Pp]ull request (?:\S+#)?#?(\d+)/)
   return match?.[1] ? parseInt(match[1], 10) : undefined
 }
 
-/**
- * Extract target ref from `git merge <ref>` / `git rebase <ref>` command.
- * Skips flags and keywords — first non-flag argument is the ref.
- */
 function parseRefFromCommand(
   command: string,
   verb: string,
@@ -106,14 +89,6 @@ function parseRefFromCommand(
   return undefined
 }
 
-/**
- * Scan bash command + output for git operations worth surfacing in the
- * collapsed tool-use summary ("committed a1b2c3, created PR #42, ran 3 bash
- * commands"). Checks the command to avoid matching SHAs/URLs that merely
- * appear in unrelated output (e.g. `git log`).
- *
- * Pass stdout+stderr concatenated — git push writes the ref update to stderr.
- */
 export function detectGitOperation(
   command: string,
   output: string,
@@ -124,7 +99,7 @@ export function detectGitOperation(
   pr?: { number: number; url?: string; action: PrAction }
 } {
   const result: ReturnType<typeof detectGitOperation> = {}
-  // commit and cherry-pick both produce "[branch sha] msg" output
+  
   const isCherryPick = GIT_CHERRY_PICK_RE.test(command)
   if (GIT_COMMIT_RE.test(command) || isCherryPick) {
     const sha = parseGitCommitId(output)
@@ -167,7 +142,6 @@ export function detectGitOperation(
   return result
 }
 
-// Exported for testing purposes
 export function trackGitOperations(
   command: string,
   exitCode: number,
@@ -210,7 +184,7 @@ export function trackGitOperations(
     if (stdout) {
       const prInfo = findPrInStdout(stdout)
       if (prInfo) {
-        // Import is done dynamically to avoid circular dependency
+        
         void import('../../utils/sessionStorage.js').then(
           ({ linkSessionToPR }) => {
             void import('../../bootstrap/state.js').then(({ getSessionId }) => {
@@ -236,7 +210,7 @@ export function trackGitOperations(
     })
     getPrCounter()?.add(1)
   }
-  // Detect PR creation via curl to REST APIs (Bitbucket, GitHub API, GitLab API)
+  
   
   
   const isCurlPost =

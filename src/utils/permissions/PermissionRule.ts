@@ -15,12 +15,6 @@ export type {
   PermissionRuleValue,
 }
 
-/**
- * ToolPermissionBehavior is the behavior associated with a permission rule.
- * 'allow' means the rule allows the tool to run.
- * 'deny' means the rule denies the tool from running.
- * 'ask' means the rule forces a prompt to be shown to the user.
- */
 export const permissionBehaviorSchema = lazySchema(() =>
   z.enum(['allow', 'deny', 'ask']),
 )

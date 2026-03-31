@@ -33,7 +33,7 @@ export function applySettingsChange(
     
     if (
       process.env.USER_TYPE === 'ant' &&
-      process.env.CLAUDE_CODE_ENTRYPOINT !== 'local-agent'
+      process.env.CLAUDE_CODE_NEXT_ENTRYPOINT !== 'local-agent'
     ) {
       const overlyBroad = findOverlyBroadBashPermissions(updatedRules, [])
       if (overlyBroad.length > 0) {
@@ -62,9 +62,9 @@ export function applySettingsChange(
       ...prev,
       settings: newSettings,
       toolPermissionContext: newContext,
-      // Only propagate a defined new value — when the disk key is absent
       
-      // prev.settings.effortLevel can be stale (internal writes suppress the
+      
+      
       
       
       ...(effortChanged && newEffort !== undefined

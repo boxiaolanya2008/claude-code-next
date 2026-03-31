@@ -55,11 +55,6 @@ Use the Edit tool with file_path: {{docPath}}
 REMEMBER: Only update if there is substantial new information. The Magic Doc header (# MAGIC DOC: {{docTitle}}) must remain unchanged.`
 }
 
-/**
- * Load custom Magic Docs prompt from file if it exists
- * Custom prompts can be placed at ~/.claude/magic-docs/prompt.md
- * Use {{variableName}} syntax for variable substitution (e.g., {{docContents}}, {{docPath}}, {{docTitle}})
- */
 async function loadMagicDocsPrompt(): Promise<string> {
   const fs = getFsImplementation()
   const promptPath = join(getClaudeConfigHomeDir(), 'magic-docs', 'prompt.md')
@@ -67,21 +62,18 @@ async function loadMagicDocsPrompt(): Promise<string> {
   try {
     return await fs.readFile(promptPath, { encoding: 'utf-8' })
   } catch {
-    // Silently fall back to default if custom prompt doesn't exist or fails to load
+    
     return getUpdatePromptTemplate()
   }
 }
 
-/**
- * Substitute variables in the prompt template using {{variable}} syntax
- */
 function substituteVariables(
   template: string,
   variables: Record<string, string>,
 ): string {
-  // Single-pass replacement avoids two bugs: (1) $ backreference corruption
-  // (replacer fn treats $ literally), and (2) double-substitution when user
-  // content happens to contain {{varName}} matching a later variable.
+  
+  
+  
   return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) =>
     Object.prototype.hasOwnProperty.call(variables, key)
       ? variables[key]!
@@ -89,9 +81,6 @@ function substituteVariables(
   )
 }
 
-/**
- * Build the Magic Docs update prompt with variable substitution
- */
 export async function buildMagicDocsUpdatePrompt(
   docContents: string,
   docPath: string,
@@ -100,7 +89,7 @@ export async function buildMagicDocsUpdatePrompt(
 ): Promise<string> {
   const promptTemplate = await loadMagicDocsPrompt()
 
-  // Build custom instructions section if provided
+  
   const customInstructions = instructions
     ? `
 
@@ -112,7 +101,7 @@ The document author has provided specific instructions for how this file should 
 These instructions take priority over the general rules below. Make sure your updates align with these specific guidelines.`
     : ''
 
-  // Substitute variables in the prompt
+  
   const variables = {
     docContents,
     docPath,

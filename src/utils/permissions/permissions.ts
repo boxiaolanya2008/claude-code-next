@@ -130,14 +130,11 @@ export function getAllowRules(
   )
 }
 
-/**
- * Creates a permission request message that explain the permission request
- */
 export function createPermissionRequestMessage(
   toolName: string,
   decisionReason?: PermissionDecisionReason,
 ): string {
-  // Handle different decision reason types
+  
   if (decisionReason) {
     if (
       (feature('BASH_CLASSIFIER') || feature('TRANSCRIPT_CLASSIFIER')) &&
@@ -165,7 +162,7 @@ export function createPermissionRequestMessage(
         const needsApproval: string[] = []
         for (const [cmd, result] of decisionReason.reasons) {
           if (result.behavior === 'ask' || result.behavior === 'passthrough') {
-            // Strip output redirections for display to avoid showing filenames as commands
+            
             
             if (toolName === 'Bash') {
               const { commandWithoutRedirections, redirections } =
@@ -203,7 +200,7 @@ export function createPermissionRequestMessage(
     }
   }
 
-  // Default message without listing allowed commands
+  
   const message = `Claude requested permissions to use ${toolName}, but you haven't granted it yet.`
 
   return message
@@ -229,21 +226,16 @@ export function getAskRules(context: ToolPermissionContext): PermissionRule[] {
   )
 }
 
-/**
- * Check if the entire tool matches a rule
- * For example, this matches "Bash" but not "Bash(prefix:*)" for BashTool
- * This also matches MCP tools with a server name, e.g. the rule "mcp__server1"
- */
 function toolMatchesRule(
   tool: Pick<Tool, 'name' | 'mcpInfo'>,
   rule: PermissionRule,
 ): boolean {
-  // Rule must not have content to match the entire tool
+  
   if (rule.ruleValue.ruleContent !== undefined) {
     return false
   }
 
-  // MCP tools are matched by their fully qualified mcp__server__tool name. In
+  
   
   
   
@@ -254,7 +246,7 @@ function toolMatchesRule(
     return true
   }
 
-  // MCP server-level permission: rule "mcp__server1" matches tool "mcp__server1__tool1"
+  
   
   const ruleInfo = mcpInfoFromString(rule.ruleValue.toolName)
   const toolInfo = mcpInfoFromString(nameForRuleMatch)
@@ -267,10 +259,6 @@ function toolMatchesRule(
   )
 }
 
-/**
- * Check if the entire tool is listed in the always allow rules
- * For example, this finds "Bash" but not "Bash(prefix:*)" for BashTool
- */
 export function toolAlwaysAllowedRule(
   context: ToolPermissionContext,
   tool: Pick<Tool, 'name' | 'mcpInfo'>,
@@ -280,9 +268,6 @@ export function toolAlwaysAllowedRule(
   )
 }
 
-/**
- * Check if the tool is listed in the always deny rules
- */
 export function getDenyRuleForTool(
   context: ToolPermissionContext,
   tool: Pick<Tool, 'name' | 'mcpInfo'>,
@@ -290,9 +275,6 @@ export function getDenyRuleForTool(
   return getDenyRules(context).find(rule => toolMatchesRule(tool, rule)) || null
 }
 
-/**
- * Check if the tool is listed in the always ask rules
- */
 export function getAskRuleForTool(
   context: ToolPermissionContext,
   tool: Pick<Tool, 'name' | 'mcpInfo'>,
@@ -300,10 +282,6 @@ export function getAskRuleForTool(
   return getAskRules(context).find(rule => toolMatchesRule(tool, rule)) || null
 }
 
-/**
- * Check if a specific agent is denied via Agent(agentType) syntax.
- * For example, Agent(Explore) would deny the Explore agent.
- */
 export function getDenyRuleForAgent(
   context: ToolPermissionContext,
   agentToolName: string,
@@ -318,15 +296,12 @@ export function getDenyRuleForAgent(
   )
 }
 
-/**
- * Filter agents to exclude those that are denied via Agent(agentType) syntax.
- */
 export function filterDeniedAgents<T extends { agentType: string }>(
   agents: T[],
   context: ToolPermissionContext,
   agentToolName: string,
 ): T[] {
-  // Parse deny rules once and collect Agent(x) contents into a Set.
+  
   
   
   const deniedAgentTypes = new Set<string>()
@@ -341,10 +316,6 @@ export function filterDeniedAgents<T extends { agentType: string }>(
   return agents.filter(agent => !deniedAgentTypes.has(agent.agentType))
 }
 
-/**
- * Map of rule contents to the associated rule for a given tool.
- * e.g. the string key is "prefix:*" from "Bash(prefix:*)" for BashTool
- */
 export function getRuleByContentsForTool(
   context: ToolPermissionContext,
   tool: Tool,
@@ -357,7 +328,6 @@ export function getRuleByContentsForTool(
   )
 }
 
-// Used to break circular dependency where a Tool calls this function
 export function getRuleByContentsForToolName(
   context: ToolPermissionContext,
   toolName: string,
@@ -388,14 +358,6 @@ export function getRuleByContentsForToolName(
   return ruleByContents
 }
 
-/**
- * Runs PermissionRequest hooks for headless/async agents that cannot show
- * permission prompts. This gives hooks an opportunity to allow or deny
- * tool use before the fallback auto-deny kicks in.
- *
- * Returns a PermissionDecision if a hook made a decision, or null if no
- * hook provided a decision (caller should proceed to auto-deny).
- */
 async function runPermissionRequestHooksForHeadlessAgent(
   tool: Tool,
   input: { [key: string]: unknown },
@@ -459,7 +421,7 @@ async function runPermissionRequestHooksForHeadlessAgent(
       }
     }
   } catch (error) {
-    // If hooks fail, fall through to auto-deny rather than crashing
+    
     logError(
       new Error('PermissionRequest hook failed for headless agent', {
         cause: toError(error),
@@ -498,7 +460,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
     return result
   }
 
-  // Apply dontAsk mode transformation: convert 'ask' to 'deny'
+  
   
   if (result.behavior === 'ask') {
     const appState = context.getAppState()
@@ -513,7 +475,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
         message: DONT_ASK_REJECT_MESSAGE(tool.name),
       }
     }
-    // Apply auto mode: use AI classifier instead of prompting user
+    
     
     if (
       feature('TRANSCRIPT_CLASSIFIER') &&
@@ -521,9 +483,9 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
         (appState.toolPermissionContext.mode === 'plan' &&
           (autoModeStateModule?.isAutoModeActive() ?? false)))
     ) {
-      // Non-classifier-approvable safetyCheck decisions stay immune to ALL
       
-      // and the classifier. Step 1g only guards bypassPermissions; this guards
+      
+      
       
       
       
@@ -548,7 +510,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
         return result
       }
 
-      // Use local denial tracking for async subagents (whose setAppState
+      
       
       const denialState =
         context.localDenialTracking ??
@@ -588,7 +550,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
         return result
       }
 
-      // Before running the auto mode classifier, check if acceptEdits mode would
+      
       
       
       
@@ -626,7 +588,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
                 'allowed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
               toolName: sanitizeToolNameForAnalytics(tool.name),
               inProtectedNamespace: isInProtectedNamespace(),
-              // msg_id of the agent completion that produced this tool_use —
+              
               
               
               agentMsgId: assistantMessage.message
@@ -649,12 +611,12 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
           if (e instanceof AbortError || e instanceof APIUserAbortError) {
             throw e
           }
-          // If the acceptEdits check fails, fall through to the classifier
+          
         }
       }
 
-      // Allowlisted tools are safe and don't need YOLO classification.
-      // This uses the safe-tool allowlist to skip unnecessary classifier API calls.
+      
+      
       if (classifierDecisionModule!.isAutoModeAllowlistedTool(tool.name)) {
         const newDenialState = recordSuccess(denialState)
         persistDenialState(context, newDenialState)
@@ -683,7 +645,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
         }
       }
 
-      // Run the auto mode classifier
+      
       const action = formatActionForClassifier(tool.name, input)
       setClassifierChecking(toolUseID)
       let classifierResult
@@ -699,7 +661,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
         clearClassifierChecking(toolUseID)
       }
 
-      // Notify ants when classifier error dumped prompts (will be in /share)
+      
       if (
         process.env.USER_TYPE === 'ant' &&
         classifierResult.errorDumpPath &&
@@ -713,14 +675,14 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
         })
       }
 
-      // Log classifier decision for metrics (including overhead telemetry)
+      
       const yoloDecision = classifierResult.unavailable
         ? 'unavailable'
         : classifierResult.shouldBlock
           ? 'blocked'
           : 'allowed'
 
-      // Compute classifier cost in USD for overhead analysis
+      
       const classifierCostUSD =
         classifierResult.usage && classifierResult.model
           ? calculateCostFromTokens(
@@ -733,8 +695,8 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
           yoloDecision as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         toolName: sanitizeToolNameForAnalytics(tool.name),
         inProtectedNamespace: isInProtectedNamespace(),
-        // msg_id of the agent completion that produced this tool_use —
-        // the action at the bottom of the classifier transcript.
+        
+        
         agentMsgId: assistantMessage.message
           .id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         classifierModel:
@@ -745,7 +707,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
         totalDenials: classifierResult.shouldBlock
           ? denialState.totalDenials + 1
           : denialState.totalDenials,
-        // Overhead telemetry: token usage and latency for the classifier API call
+        
         classifierInputTokens: classifierResult.usage?.inputTokens,
         classifierOutputTokens: classifierResult.usage?.outputTokens,
         classifierCacheReadInputTokens:
@@ -753,15 +715,15 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
         classifierCacheCreationInputTokens:
           classifierResult.usage?.cacheCreationInputTokens,
         classifierDurationMs: classifierResult.durationMs,
-        // Character lengths of the prompt components sent to the classifier
+        
         classifierSystemPromptLength:
           classifierResult.promptLengths?.systemPrompt,
         classifierToolCallsLength: classifierResult.promptLengths?.toolCalls,
         classifierUserPromptsLength:
           classifierResult.promptLengths?.userPrompts,
-        // Session totals at time of classifier call (for computing overhead %).
-        // These are main-transcript-only — sideQuery (used by the classifier)
-        // does NOT call addToTotalSessionCost, so classifier tokens are excluded.
+        
+        
+        
         sessionInputTokens: getTotalInputTokens(),
         sessionOutputTokens: getTotalOutputTokens(),
         sessionCacheReadInputTokens: getTotalCacheReadInputTokens(),
@@ -814,12 +776,12 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
       }
 
       if (classifierResult.shouldBlock) {
-        // Transcript exceeded the classifier's context window — deterministic
+        
         
         
         if (classifierResult.transcriptTooLong) {
           if (appState.toolPermissionContext.shouldAvoidPermissionPrompts) {
-            // Permanent condition (transcript only grows) — deny-retry-deny
+            
             
             throw new AbortError(
               'Agent aborted: auto mode classifier transcript exceeded context window in headless mode',
@@ -838,7 +800,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
             },
           }
         }
-        // When classifier is unavailable (API error), behavior depends on
+        
         
         if (classifierResult.unavailable) {
           if (
@@ -865,7 +827,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
               ),
             }
           }
-          // Fail open: fall back to normal permission handling
+          
           logForDebugging(
             'Auto mode classifier unavailable, falling back to normal permission handling (fail open)',
             { level: 'warn' },
@@ -873,7 +835,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
           return result
         }
 
-        // Update denial tracking and check limits
+        
         const newDenialState = recordDenial(denialState)
         persistDenialState(context, newDenialState)
 
@@ -909,7 +871,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
         }
       }
 
-      // Reset consecutive denials on success
+      
       const newDenialState = recordSuccess(denialState)
       persistDenialState(context, newDenialState)
 
@@ -924,8 +886,8 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
       }
     }
 
-    // When permission prompts should be avoided (e.g., background/headless agents),
-    // run PermissionRequest hooks first to give them a chance to allow/deny.
+    
+    
     
     if (appState.toolPermissionContext.shouldAvoidPermissionPrompts) {
       const hookDecision = await runPermissionRequestHooksForHeadlessAgent(
@@ -953,11 +915,6 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
   return result
 }
 
-/**
- * Persist denial tracking state. For async subagents with localDenialTracking,
- * mutate the local state in place (since setAppState is a no-op). Otherwise,
- * write to appState as usual.
- */
 function persistDenialState(
   context: ToolUseContext,
   newState: DenialTrackingState,
@@ -966,7 +923,7 @@ function persistDenialState(
     Object.assign(context.localDenialTracking, newState)
   } else {
     context.setAppState(prev => {
-      // recordSuccess returns the same reference when state is
+      
       
       
       if (prev.denialTracking === newState) return prev
@@ -975,10 +932,6 @@ function persistDenialState(
   }
 }
 
-/**
- * Check if a denial limit was exceeded and return an 'ask' result
- * so the user can review. Returns null if no limit was hit.
- */
 function handleDenialLimitExceeded(
   denialState: DenialTrackingState,
   appState: {
@@ -1037,7 +990,7 @@ function handleDenialLimitExceeded(
     })
   }
 
-  // Preserve the original classifier value (e.g. 'dangerous-agent-action')
+  
   
   
   const originalClassifier =
@@ -1055,17 +1008,6 @@ function handleDenialLimitExceeded(
   }
 }
 
-/**
- * Check only the rule-based steps of the permission pipeline — the subset
- * that bypassPermissions mode respects (everything that fires before step 2a).
- *
- * Returns a deny/ask decision if a rule blocks the tool, or null if no rule
- * objects. Unlike hasPermissionsToUseTool, this does NOT run the auto mode classifier,
- * mode-based transformations (dontAsk/auto/asyncAgent), PermissionRequest hooks,
- * or bypassPermissions / always-allowed checks.
- *
- * Caller must pre-check tool.requiresUserInteraction() — step 1e is not replicated.
- */
 export async function checkRuleBasedPermissions(
   tool: Tool,
   input: { [key: string]: unknown },
@@ -1086,7 +1028,7 @@ export async function checkRuleBasedPermissions(
     }
   }
 
-  // 1b. Entire tool has an ask rule
+  
   const askRule = getAskRuleForTool(appState.toolPermissionContext, tool)
   if (askRule) {
     const canSandboxAutoAllow =
@@ -1105,10 +1047,10 @@ export async function checkRuleBasedPermissions(
         message: createPermissionRequestMessage(tool.name),
       }
     }
-    // Fall through to let tool.checkPermissions handle command-specific rules
+    
   }
 
-  // 1c. Tool-specific permission check (e.g. bash subcommand rules)
+  
   let toolPermissionResult: PermissionResult = {
     behavior: 'passthrough',
     message: createPermissionRequestMessage(tool.name),
@@ -1123,13 +1065,13 @@ export async function checkRuleBasedPermissions(
     logError(e)
   }
 
-  // 1d. Tool implementation denied (catches bash subcommand denies wrapped
+  
   
   if (toolPermissionResult?.behavior === 'deny') {
     return toolPermissionResult
   }
 
-  // 1f. Content-specific ask rules from tool.checkPermissions
+  
   
   if (
     toolPermissionResult?.behavior === 'ask' &&
@@ -1139,7 +1081,7 @@ export async function checkRuleBasedPermissions(
     return toolPermissionResult
   }
 
-  // 1g. Safety checks (e.g. .git/, .claude/, .vscode/, shell configs) are
+  
   
   
   if (
@@ -1149,7 +1091,7 @@ export async function checkRuleBasedPermissions(
     return toolPermissionResult
   }
 
-  // No rule-based objection
+  
   return null
 }
 
@@ -1178,10 +1120,10 @@ async function hasPermissionsToUseToolInner(
     }
   }
 
-  // 1b. Check if the entire tool should always ask for permission
+  
   const askRule = getAskRuleForTool(appState.toolPermissionContext, tool)
   if (askRule) {
-    // When autoAllowBashIfSandboxed is on, sandboxed commands skip the ask rule and
+    
     
     
     const canSandboxAutoAllow =
@@ -1200,11 +1142,11 @@ async function hasPermissionsToUseToolInner(
         message: createPermissionRequestMessage(tool.name),
       }
     }
-    // Fall through to let Bash's checkPermissions handle command-specific rules
+    
   }
 
-  // 1c. Ask the tool implementation for a permission result
-  // Overridden unless tool input schema is not valid
+  
+  
   let toolPermissionResult: PermissionResult = {
     behavior: 'passthrough',
     message: createPermissionRequestMessage(tool.name),
@@ -1213,19 +1155,19 @@ async function hasPermissionsToUseToolInner(
     const parsedInput = tool.inputSchema.parse(input)
     toolPermissionResult = await tool.checkPermissions(parsedInput, context)
   } catch (e) {
-    // Rethrow abort errors so they propagate properly
+    
     if (e instanceof AbortError || e instanceof APIUserAbortError) {
       throw e
     }
     logError(e)
   }
 
-  // 1d. Tool implementation denied permission
+  
   if (toolPermissionResult?.behavior === 'deny') {
     return toolPermissionResult
   }
 
-  // 1e. Tool requires user interaction even in bypass mode
+  
   if (
     tool.requiresUserInteraction?.() &&
     toolPermissionResult?.behavior === 'ask'
@@ -1233,12 +1175,12 @@ async function hasPermissionsToUseToolInner(
     return toolPermissionResult
   }
 
-  // 1f. Content-specific ask rules from tool.checkPermissions take precedence
-  // over bypassPermissions mode. When a user explicitly configures a
-  // content-specific ask rule (e.g. Bash(npm publish:*)), the tool's
   
-  // rule:{ruleBehavior:'ask'}}}. This must be respected even in bypass mode,
-  // just as deny rules are respected at step 1d.
+  
+  
+  
+  
+  
   if (
     toolPermissionResult?.behavior === 'ask' &&
     toolPermissionResult.decisionReason?.type === 'rule' &&
@@ -1247,7 +1189,7 @@ async function hasPermissionsToUseToolInner(
     return toolPermissionResult
   }
 
-  // 1g. Safety checks (e.g. .git/, .claude/, .vscode/, shell configs) are
+  
   
   
   if (
@@ -1257,11 +1199,11 @@ async function hasPermissionsToUseToolInner(
     return toolPermissionResult
   }
 
-  // 2a. Check if mode allows the tool to run
+  
   
   appState = context.getAppState()
   
-  // - Direct bypassPermissions mode
+  
   
   const shouldBypassPermissions =
     appState.toolPermissionContext.mode === 'bypassPermissions' ||
@@ -1278,7 +1220,7 @@ async function hasPermissionsToUseToolInner(
     }
   }
 
-  // 2b. Entire tool is allowed
+  
   const alwaysAllowedRule = toolAlwaysAllowedRule(
     appState.toolPermissionContext,
     tool,
@@ -1294,7 +1236,7 @@ async function hasPermissionsToUseToolInner(
     }
   }
 
-  // 3. Convert "passthrough" to "ask"
+  
   const result: PermissionDecision =
     toolPermissionResult.behavior === 'passthrough'
       ? {
@@ -1321,9 +1263,6 @@ type EditPermissionRuleArgs = {
   setToolPermissionContext: (updatedContext: ToolPermissionContext) => void
 }
 
-/**
- * Delete a permission rule from the appropriate destination
- */
 export async function deletePermissionRule({
   rule,
   initialContext,
@@ -1350,7 +1289,7 @@ export async function deletePermissionRule({
     case 'localSettings':
     case 'userSettings':
     case 'projectSettings': {
-      // Note: Typescript doesn't know that rule conforms to `PermissionRuleFromEditableSettings` even when we switch on `rule.source`
+      
       deletePermissionRuleFromSettings(
         rule as PermissionRuleFromEditableSettings,
       )
@@ -1358,23 +1297,20 @@ export async function deletePermissionRule({
     }
     case 'cliArg':
     case 'session': {
-      // No action needed for in-memory sources - not persisted to disk
+      
       break
     }
   }
 
-  // Update React state with updated context
+  
   setToolPermissionContext(updatedContext)
 }
 
-/**
- * Helper to convert PermissionRule array to PermissionUpdate array
- */
 function convertRulesToUpdates(
   rules: PermissionRule[],
   updateType: 'addRules' | 'replaceRules',
 ): PermissionUpdate[] {
-  // Group rules by source and behavior
+  
   const grouped = new Map<string, PermissionRuleValue[]>()
 
   for (const rule of rules) {
@@ -1385,7 +1321,7 @@ function convertRulesToUpdates(
     grouped.get(key)!.push(rule.ruleValue)
   }
 
-  // Convert to PermissionUpdate array
+  
   const updates: PermissionUpdate[] = []
   for (const [key, ruleValues] of grouped) {
     const [source, behavior] = key.split(':')
@@ -1400,9 +1336,6 @@ function convertRulesToUpdates(
   return updates
 }
 
-/**
- * Apply permission rules to context (additive - for initial setup)
- */
 export function applyPermissionRulesToPermissionContext(
   toolPermissionContext: ToolPermissionContext,
   rules: PermissionRule[],
@@ -1411,16 +1344,13 @@ export function applyPermissionRulesToPermissionContext(
   return applyPermissionUpdates(toolPermissionContext, updates)
 }
 
-/**
- * Sync permission rules from disk (replacement - for settings changes)
- */
 export function syncPermissionRulesFromDisk(
   toolPermissionContext: ToolPermissionContext,
   rules: PermissionRule[],
 ): ToolPermissionContext {
   let context = toolPermissionContext
 
-  // When allowManagedPermissionRulesOnly is enabled, clear all non-policy sources
+  
   if (shouldAllowManagedPermissionRulesOnly()) {
     const sourcesToClear: PermissionUpdateDestination[] = [
       'userSettings',
@@ -1443,11 +1373,11 @@ export function syncPermissionRulesFromDisk(
     }
   }
 
-  // Clear all disk-based source:behavior combos before applying new rules.
-  // Without this, removing a rule from settings (e.g. deleting a deny entry)
-  // would leave the old rule in the context because convertRulesToUpdates
-  // only generates replaceRules for source:behavior pairs that have rules —
-  // an empty group produces no update, so stale rules persist.
+  
+  
+  
+  
+  
   const diskSources: PermissionUpdateDestination[] = [
     'userSettings',
     'projectSettings',
@@ -1468,10 +1398,6 @@ export function syncPermissionRulesFromDisk(
   return applyPermissionUpdates(context, updates)
 }
 
-/**
- * Extract updatedInput from a permission result, falling back to the original input.
- * Handles the case where some PermissionResult variants don't have updatedInput.
- */
 function getUpdatedInputOrFallback(
   permissionResult: PermissionResult,
   fallback: Record<string, unknown>,

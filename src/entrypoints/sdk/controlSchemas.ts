@@ -22,12 +22,7 @@ import {
   SlashCommandSchema,
 } from './coreSchemas.js'
 
-// External Type Placeholders
-
-// JSONRPCMessage from @modelcontextprotocol/sdk - treat as unknown
 export const JSONRPCMessagePlaceholder = lazySchema(() => z.unknown())
-
-// Hook Callback Types
 
 export const SDKHookCallbackMatcherSchema = lazySchema(() =>
   z
@@ -38,8 +33,6 @@ export const SDKHookCallbackMatcherSchema = lazySchema(() =>
     })
     .describe('Configuration for matching and routing hook callbacks.'),
 )
-
-// Control Request Types
 
 export const SDKControlInitializeRequestSchema = lazySchema(() =>
   z
@@ -490,7 +483,7 @@ export const SDKControlGetSettingsResponseSchema = lazySchema(() =>
       applied: z
         .object({
           model: z.string(),
-          // String levels only — numeric effort is ant-only and the
+          
           
           effort: z.enum(['low', 'medium', 'high', 'max']).nullable(),
         })
@@ -528,8 +521,6 @@ export const SDKControlElicitationResponseSchema = lazySchema(() =>
     })
     .describe('Response from the SDK consumer for an elicitation request.'),
 )
-
-// Control Request/Response Wrappers
 
 export const SDKControlRequestInnerSchema = lazySchema(() =>
   z.union([
@@ -616,8 +607,6 @@ export const SDKUpdateEnvironmentVariablesMessageSchema = lazySchema(() =>
     })
     .describe('Updates environment variables at runtime.'),
 )
-
-// Aggregate Message Types
 
 export const StdoutMessageSchema = lazySchema(() =>
   z.union([

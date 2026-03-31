@@ -20,12 +20,8 @@ function getMcpOAuthCallbackPort(): number | undefined {
   return port > 0 ? port : undefined
 }
 
-/**
- * Finds an available port in the specified range for OAuth redirect
- * Uses random selection for better security
- */
 export async function findAvailablePort(): Promise<number> {
-  // First, try the configured port if specified
+  
   const configuredPort = getMcpOAuthCallbackPort()
   if (configuredPort) {
     return configuredPort
@@ -48,12 +44,12 @@ export async function findAvailablePort(): Promise<number> {
       })
       return port
     } catch {
-      // Port in use, try another random port
+      
       continue
     }
   }
 
-  // If random selection failed, try the fallback port
+  
   try {
     await new Promise<void>((resolve, reject) => {
       const testServer = createServer()

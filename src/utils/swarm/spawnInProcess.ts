@@ -31,20 +31,13 @@ import { removeMemberByAgentId } from './teamHelpers.js'
 
 type SetAppStateFn = (updater: (prev: AppState) => AppState) => void
 
-/**
- * Minimal context required for spawning an in-process teammate.
- * This is a subset of ToolUseContext - only what spawnInProcessTeammate actually uses.
- */
 export type SpawnContext = {
   setAppState: SetAppStateFn
   toolUseId?: string
 }
 
-/**
- * Configuration for spawning an in-process teammate.
- */
 export type InProcessSpawnConfig = {
-  /** Display name for the teammate, e.g., "researcher" */
+  
   name: string
   
   teamName: string
@@ -58,11 +51,8 @@ export type InProcessSpawnConfig = {
   model?: string
 }
 
-/**
- * Result from spawning an in-process teammate.
- */
 export type InProcessSpawnOutput = {
-  /** Whether spawn was successful */
+  
   success: boolean
   
   agentId: string
@@ -76,18 +66,6 @@ export type InProcessSpawnOutput = {
   error?: string
 }
 
-/**
- * Spawns an in-process teammate.
- *
- * Creates the teammate's context, registers the task in AppState, and returns
- * the spawn result. The actual agent execution is driven by the
- * InProcessTeammateTask component which uses runWithTeammateContext() to
- * execute the agent loop with proper identity isolation.
- *
- * @param config - Spawn configuration
- * @param context - Context with setAppState for registering task
- * @returns Spawn result with teammate info
- */
 export async function spawnInProcessTeammate(
   config: InProcessSpawnConfig,
   context: SpawnContext,
@@ -104,7 +82,7 @@ export async function spawnInProcessTeammate(
   )
 
   try {
-    // Create independent AbortController for this teammate
+    
     
     const abortController = createAbortController()
 
@@ -121,7 +99,7 @@ export async function spawnInProcessTeammate(
       parentSessionId,
     }
 
-    // Create teammate context for AsyncLocalStorage
+    
     
     const teammateContext = createTeammateContext({
       agentId,
@@ -138,7 +116,7 @@ export async function spawnInProcessTeammate(
       registerPerfettoAgent(agentId, name, parentSessionId)
     }
 
-    // Create task state
+    
     const description = `${name}: ${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}`
 
     const taskState: InProcessTeammateTaskState = {
@@ -163,10 +141,10 @@ export async function spawnInProcessTeammate(
       lastReportedToolCount: 0,
       lastReportedTokenCount: 0,
       pendingUserMessages: [],
-      messages: [], // Initialize to empty array so getDisplayedMessages works immediately
+      messages: [], 
     }
 
-    // Register cleanup handler for graceful shutdown
+    
     const unregisterCleanup = registerCleanup(async () => {
       logForDebugging(`[spawnInProcessTeammate] Cleanup called for ${agentId}`)
       abortController.abort()
@@ -202,15 +180,6 @@ export async function spawnInProcessTeammate(
   }
 }
 
-/**
- * Kills an in-process teammate by aborting its controller.
- *
- * Note: This is the implementation called by InProcessBackend.kill().
- *
- * @param taskId - Task ID of the teammate to kill
- * @param setAppState - AppState setter
- * @returns true if killed successfully
- */
 export function killInProcessTeammate(
   taskId: string,
   setAppState: SetAppStateFn,
@@ -233,7 +202,7 @@ export function killInProcessTeammate(
       return prev
     }
 
-    // Capture identity for cleanup after state update
+    
     teamName = teammateTask.identity.teamName
     agentId = teammateTask.identity.agentId
     toolUseId = teammateTask.toolUseId
@@ -271,7 +240,7 @@ export function killInProcessTeammate(
           status: 'killed' as const,
           notified: true,
           endTime: Date.now(),
-          onIdleCallbacks: [], // Clear callbacks to prevent stale references
+          onIdleCallbacks: [], 
           messages: teammateTask.messages?.length
             ? [teammateTask.messages[teammateTask.messages.length - 1]!]
             : undefined,
@@ -306,7 +275,7 @@ export function killInProcessTeammate(
     )
   }
 
-  // Release perfetto agent registry entry
+  
   if (agentId) {
     unregisterPerfettoAgent(agentId)
   }

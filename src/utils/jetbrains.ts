@@ -3,7 +3,7 @@ import { join } from 'path'
 import { getFsImplementation } from '../utils/fsOperations.js'
 import type { IdeType } from './ide.js'
 
-const PLUGIN_PREFIX = 'claude-code-jetbrains-plugin'
+const PLUGIN_PREFIX = 'claude-code-next-jetbrains-plugin'
 
 const ideNameToDirMap: { [key: string]: string[] } = {
   pycharm: ['PyCharm'],
@@ -22,8 +22,6 @@ const ideNameToDirMap: { [key: string]: string[] } = {
   fleet: ['Fleet'],
   androidstudio: ['AndroidStudio'],
 }
-
-// Build plugin directory paths
 
 function buildCommonPluginDirectoryPaths(ideName: string): string[] {
   const homeDir = homedir()
@@ -80,7 +78,6 @@ function buildCommonPluginDirectoryPaths(ideName: string): string[] {
   return directories
 }
 
-// Find all actual plugin directories that exist
 async function detectPluginDirectories(ideName: string): Promise<string[]> {
   const foundDirectories: string[] = []
   const fs = getFsImplementation()
@@ -91,7 +88,7 @@ async function detectPluginDirectories(ideName: string): Promise<string[]> {
     return foundDirectories
   }
 
-  // Precompile once — idePatterns is invariant across baseDirs
+  
   const regexes = idePatterns.map(p => new RegExp('^' + p))
 
   for (const baseDir of pluginDirPaths) {
@@ -101,7 +98,7 @@ async function detectPluginDirectories(ideName: string): Promise<string[]> {
         for (const entry of entries) {
           if (!regex.test(entry.name)) continue
           
-          // but GNU stow users symlink their JetBrains config dirs. Downstream
+          
           
           if (!entry.isDirectory() && !entry.isSymbolicLink()) continue
           const dir = join(baseDir, entry.name)
@@ -115,12 +112,12 @@ async function detectPluginDirectories(ideName: string): Promise<string[]> {
             await fs.stat(pluginDir)
             foundDirectories.push(pluginDir)
           } catch {
-            // Plugin directory doesn't exist, skip
+            
           }
         }
       }
     } catch {
-      // Ignore errors from stale IDE directories (ENOENT, EACCES, etc.)
+      
       continue
     }
   }
@@ -140,7 +137,7 @@ export async function isJetBrainsPluginInstalled(
       await getFsImplementation().stat(pluginPath)
       return true
     } catch {
-      // Plugin not found in this directory, continue
+      
     }
   }
   return false
@@ -178,11 +175,6 @@ export async function isJetBrainsPluginInstalledCached(
   return isJetBrainsPluginInstalledMemoized(ideType, forceRefresh)
 }
 
-/**
- * Returns the cached result of isJetBrainsPluginInstalled synchronously.
- * Returns false if the result hasn't been resolved yet.
- * Use this only in sync contexts (e.g., status notice isActive checks).
- */
 export function isJetBrainsPluginInstalledCachedSync(
   ideType: IdeType,
 ): boolean {

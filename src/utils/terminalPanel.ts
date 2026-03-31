@@ -10,7 +10,7 @@ import { logForDebugging } from './debug.js'
 const TMUX_SESSION = 'panel'
 
 export function getTerminalPanelSocket(): string {
-  // Use first 8 chars of session UUID for uniqueness while keeping name short
+  
   const sessionId = getSessionId()
   return `claude-panel-${sessionId.slice(0, 8)}`
 }
@@ -34,7 +34,7 @@ class TerminalPanel {
     this.showShell()
   }
 
-  // ── tmux helpers ──────────────────────────────────────────────────
+  
 
   private checkTmux(): boolean {
     if (this.hasTmux !== undefined) return this.hasTmux
@@ -86,7 +86,7 @@ class TerminalPanel {
       return false
     }
 
-    // Bind Meta+J (toggles back to Claude Code from inside the terminal)
+    
     
     
     
@@ -102,7 +102,7 @@ class TerminalPanel {
     if (!this.cleanupRegistered) {
       this.cleanupRegistered = true
       registerCleanup(async () => {
-        // Detached async spawn — spawnSync here would block the event loop
+        
         
         
         
@@ -126,7 +126,7 @@ class TerminalPanel {
     )
   }
 
-  // ── show shell ────────────────────────────────────────────────────
+  
 
   private showShell(): void {
     const inkInstance = instances.get(process.stdout)
@@ -147,7 +147,7 @@ class TerminalPanel {
     }
   }
 
-  // ── helpers ───────────────────────────────────────────────────────
+  
 
   
   private ensureSession(): boolean {
@@ -155,7 +155,7 @@ class TerminalPanel {
     return this.createSession()
   }
 
-  /** Fallback when tmux is not available — runs a non-persistent shell. */
+  
   private runShellDirect(): void {
     const shell = process.env.SHELL || '/bin/bash'
     const cwd = pwd()

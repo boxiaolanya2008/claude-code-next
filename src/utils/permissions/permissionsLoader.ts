@@ -31,10 +31,6 @@ export function shouldAllowManagedPermissionRulesOnly(): boolean {
   )
 }
 
-/**
- * Returns true if "always allow" options should be shown in permission prompts.
- * When allowManagedPermissionRulesOnly is enabled, these options are hidden.
- */
 export function shouldShowAlwaysAllowOptions(): boolean {
   return !shouldAllowManagedPermissionRulesOnly()
 }
@@ -69,12 +65,6 @@ function getSettingsForSourceLenient_FOR_EDITING_ONLY_NOT_FOR_READING(
   }
 }
 
-/**
- * Converts permissions JSON to an array of PermissionRule objects
- * @param data The parsed permissions data
- * @param source The source of these rules
- * @returns Array of PermissionRule objects
- */
 function settingsJsonToRules(
   data: SettingsJson | null,
   source: PermissionRuleSource,
@@ -100,17 +90,13 @@ function settingsJsonToRules(
   return rules
 }
 
-/**
- * Loads all permission rules from all relevant sources (managed and project settings)
- * @returns Array of all permission rules
- */
 export function loadAllPermissionRulesFromDisk(): PermissionRule[] {
-  // If allowManagedPermissionRulesOnly is set, only use managed permission rules
+  
   if (shouldAllowManagedPermissionRulesOnly()) {
     return getPermissionRulesForSource('policySettings')
   }
 
-  // Otherwise, load from all enabled sources (backwards compatible)
+  
   const rules: PermissionRule[] = []
 
   for (const source of getEnabledSettingSources()) {
@@ -119,11 +105,6 @@ export function loadAllPermissionRulesFromDisk(): PermissionRule[] {
   return rules
 }
 
-/**
- * Loads permission rules from a specific source
- * @param source The source to load from
- * @returns Array of permission rules from that source
- */
 export function getPermissionRulesForSource(
   source: SettingSource,
 ): PermissionRule[] {
@@ -135,7 +116,6 @@ export type PermissionRuleFromEditableSettings = PermissionRule & {
   source: EditableSettingSource
 }
 
-// Editable sources that can be modified (excludes policySettings and flagSettings)
 const EDITABLE_SOURCES: EditableSettingSource[] = [
   'userSettings',
   'projectSettings',
@@ -145,7 +125,7 @@ const EDITABLE_SOURCES: EditableSettingSource[] = [
 export function deletePermissionRuleFromSettings(
   rule: PermissionRuleFromEditableSettings,
 ): boolean {
-  // Runtime check to ensure source is actually editable
+  
   if (!EDITABLE_SOURCES.includes(rule.source as EditableSettingSource)) {
     return false
   }
@@ -163,7 +143,7 @@ export function deletePermissionRuleFromSettings(
     return false
   }
 
-  // Normalize raw settings entries via roundtrip parse→serialize so legacy
+  
   
   const normalizeEntry = (raw: string): string =>
     permissionRuleValueToString(permissionRuleValueFromString(raw))
@@ -173,7 +153,7 @@ export function deletePermissionRuleFromSettings(
   }
 
   try {
-    // Keep a copy of the original permissions data to preserve unrecognized keys
+    
     const updatedSettingsData = {
       ...settingsData,
       permissions: {
@@ -186,7 +166,7 @@ export function deletePermissionRuleFromSettings(
 
     const { error } = updateSettingsForSource(rule.source, updatedSettingsData)
     if (error) {
-      // Error already logged inside updateSettingsForSource
+      
       return false
     }
 
@@ -203,11 +183,6 @@ function getEmptyPermissionSettingsJson(): SettingsJson {
   }
 }
 
-/**
- * Adds rules to the project permissions file
- * @param ruleValues The rule values to add
- * @returns Promise resolving to a boolean indicating success
- */
 export function addPermissionRulesToSettings(
   {
     ruleValues,
@@ -218,32 +193,32 @@ export function addPermissionRulesToSettings(
   },
   source: EditableSettingSource,
 ): boolean {
-  // When allowManagedPermissionRulesOnly is enabled, don't persist new permission rules
+  
   if (shouldAllowManagedPermissionRulesOnly()) {
     return false
   }
 
   if (ruleValues.length < 1) {
-    // No rules to add
+    
     return true
   }
 
   const ruleStrings = ruleValues.map(permissionRuleValueToString)
-  // First try the normal settings loader which validates the schema
-  // If validation fails, fall back to lenient loading to preserve existing rules
-  // even if some fields (like hooks) have validation errors
+  
+  
+  
   const settingsData =
     getSettingsForSource(source) ||
     getSettingsForSourceLenient_FOR_EDITING_ONLY_NOT_FOR_READING(source) ||
     getEmptyPermissionSettingsJson()
 
   try {
-    // Ensure permissions object exists
+    
     const existingPermissions = settingsData.permissions || {}
     const existingRules = existingPermissions[ruleBehavior] || []
 
-    // Filter out duplicates - normalize existing entries via roundtrip
-    // parse→serialize so legacy names match their canonical form.
+    
+    
     const existingRulesSet = new Set(
       existingRules.map(raw =>
         permissionRuleValueToString(permissionRuleValueFromString(raw)),
@@ -251,12 +226,12 @@ export function addPermissionRulesToSettings(
     )
     const newRules = ruleStrings.filter(rule => !existingRulesSet.has(rule))
 
-    // If no new rules to add, return success
+    
     if (newRules.length === 0) {
       return true
     }
 
-    // Keep a copy of the original settings data to preserve unrecognized keys
+    
     const updatedSettingsData = {
       ...settingsData,
       permissions: {

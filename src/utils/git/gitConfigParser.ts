@@ -17,10 +17,6 @@ export async function parseGitConfigValue(
   }
 }
 
-/**
- * Parse a config value from an in-memory config string.
- * Exported for testing.
- */
 export function parseConfigString(
   config: string,
   section: string,
@@ -40,7 +36,7 @@ export function parseConfigString(
       continue
     }
 
-    // Section header
+    
     if (trimmed[0] === '[') {
       inSection = matchesSectionHeader(trimmed, sectionLower, subsection)
       continue
@@ -50,7 +46,7 @@ export function parseConfigString(
       continue
     }
 
-    // Key-value line: find the key name
+    
     const parsed = parseKeyValue(trimmed)
     if (parsed && parsed.key.toLowerCase() === keyLower) {
       return parsed.value
@@ -60,11 +56,8 @@ export function parseConfigString(
   return null
 }
 
-/**
- * Parse a key = value line. Returns null if the line doesn't contain a valid key.
- */
 function parseKeyValue(line: string): { key: string; value: string } | null {
-  // Read key: alphanumeric + hyphen, starting with alpha
+  
   let i = 0
   while (i < line.length && isKeyChar(line[i]!)) {
     i++
@@ -79,9 +72,9 @@ function parseKeyValue(line: string): { key: string; value: string } | null {
     i++
   }
 
-  // Must have '='
+  
   if (i >= line.length || line[i] !== '=') {
-    // Boolean key with no value — not relevant for our use cases
+    
     return null
   }
   i++ 
@@ -95,10 +88,6 @@ function parseKeyValue(line: string): { key: string; value: string } | null {
   return { key, value }
 }
 
-/**
- * Parse a config value starting at position i.
- * Handles quoted strings, escape sequences, and inline comments.
- */
 function parseValue(line: string, start: number): string {
   let result = ''
   let inQuote = false
@@ -107,7 +96,7 @@ function parseValue(line: string, start: number): string {
   while (i < line.length) {
     const ch = line[i]!
 
-    // Inline comments outside quotes end the value
+    
     if (!inQuote && (ch === '#' || ch === ';')) {
       break
     }
@@ -121,7 +110,7 @@ function parseValue(line: string, start: number): string {
     if (ch === '\\' && i + 1 < line.length) {
       const next = line[i + 1]!
       if (inQuote) {
-        // Inside quotes: recognize escape sequences
+        
         switch (next) {
           case 'n':
             result += '\n'
@@ -139,29 +128,29 @@ function parseValue(line: string, start: number): string {
             result += '\\'
             break
           default:
-            // Git silently drops the backslash for unknown escapes
+            
             result += next
             break
         }
         i += 2
         continue
       }
-      // Outside quotes: backslash at end of line = continuation (we don't
-      // handle multi-line since we split on \n, but handle \\ and others)
+      
+      
       if (next === '\\') {
         result += '\\'
         i += 2
         continue
       }
-      // Fallthrough — treat backslash literally outside quotes
+      
     }
 
     result += ch
     i++
   }
 
-  // Trim trailing whitespace from unquoted portions.
-  // Git trims trailing whitespace that isn't inside quotes, but since we
+  
+  
   
   
   if (!inQuote) {
@@ -179,16 +168,12 @@ function trimTrailingWhitespace(s: string): string {
   return s.slice(0, end)
 }
 
-/**
- * Check if a config line like `[remote "origin"]` matches the given section/subsection.
- * Section matching is case-insensitive; subsection matching is case-sensitive.
- */
 function matchesSectionHeader(
   line: string,
   sectionLower: string,
   subsection: string | null,
 ): boolean {
-  // line starts with '['
+  
   let i = 1
 
   
@@ -208,16 +193,16 @@ function matchesSectionHeader(
   }
 
   if (subsection === null) {
-    // Simple section: must end with ']'
+    
     return i < line.length && line[i] === ']'
   }
 
-  // Skip whitespace before subsection quote
+  
   while (i < line.length && (line[i] === ' ' || line[i] === '\t')) {
     i++
   }
 
-  // Must have opening quote
+  
   if (i >= line.length || line[i] !== '"') {
     return false
   }
@@ -233,7 +218,7 @@ function matchesSectionHeader(
         i += 2
         continue
       }
-      // Git drops the backslash for other escapes in subsections
+      
       foundSubsection += next
       i += 2
       continue
@@ -242,7 +227,7 @@ function matchesSectionHeader(
     i++
   }
 
-  // Must have closing quote followed by ']'
+  
   if (i >= line.length || line[i] !== '"') {
     return false
   }

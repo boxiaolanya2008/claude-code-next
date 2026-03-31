@@ -27,10 +27,6 @@ export type TeammateStatus = {
   mode?: string 
 }
 
-/**
- * Get detailed teammate statuses for a team
- * Reads isActive from config to determine status
- */
 export function getTeammateStatuses(teamName: string): TeammateStatus[] {
   const teamFile = readTeamFile(teamName)
   if (!teamFile) {
@@ -41,12 +37,12 @@ export function getTeammateStatuses(teamName: string): TeammateStatus[] {
   const statuses: TeammateStatus[] = []
 
   for (const member of teamFile.members) {
-    // Exclude team-lead from the list
+    
     if (member.name === 'team-lead') {
       continue
     }
 
-    // Read isActive from config, defaulting to true (active) if undefined
+    
     const isActive = member.isActive !== false
     const status: 'running' | 'idle' = isActive ? 'running' : 'idle'
 
@@ -73,4 +69,3 @@ export function getTeammateStatuses(teamName: string): TeammateStatus[] {
   return statuses
 }
 
-// Note: For time formatting, use formatRelativeTimeAgo from '../utils/format.js'

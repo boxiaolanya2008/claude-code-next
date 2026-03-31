@@ -76,12 +76,6 @@ export function isPromptTooLongMessage(msg: AssistantMessage): boolean {
   )
 }
 
-/**
- * Parse actual/limit token counts from a raw prompt-too-long API error
- * message like "prompt is too long: 137500 tokens > 135000 maximum".
- * The raw string may be wrapped in SDK prefixes or JSON envelopes, or
- * have different casing (Vertex), so this is intentionally lenient.
- */
 export function parsePromptTooLongTokenCounts(rawMessage: string): {
   actualTokens: number | undefined
   limitTokens: number | undefined
@@ -95,12 +89,6 @@ export function parsePromptTooLongTokenCounts(rawMessage: string): {
   }
 }
 
-/**
- * Returns how many tokens over the limit a prompt-too-long error reports,
- * or undefined if the message isn't PTL or its errorDetails are unparseable.
- * Reactive compact uses this gap to jump past multiple groups in one retry
- * instead of peeling one-at-a-time.
- */
 export function getPromptTooLongTokenGap(
   msg: AssistantMessage,
 ): number | undefined {
@@ -117,19 +105,6 @@ export function getPromptTooLongTokenGap(
   return gap > 0 ? gap : undefined
 }
 
-/**
- * Is this raw API error text a media-size rejection that stripImagesFromMessages
- * can fix? Reactive compact's summarize retry uses this to decide whether to
- * strip and retry (media error) or bail (anything else).
- *
- * Patterns MUST stay in sync with the getAssistantMessageFromError branches
- * that populate errorDetails (~L523 PDF, ~L560 image, ~L573 many-image) and
- * the classifyAPIError branches (~L929-946). The closed loop: errorDetails is
- * only set after those branches already matched these same substrings, so
- * isMediaSizeError(errorDetails) is tautologically true for that path. API
- * wording drift causes graceful degradation (errorDetails stays undefined,
- * caller short-circuits), not a false negative.
- */
 export function isMediaSizeError(raw: string): boolean {
   return (
     (raw.includes('image exceeds') && raw.includes('maximum')) ||
@@ -138,12 +113,6 @@ export function isMediaSizeError(raw: string): boolean {
   )
 }
 
-/**
- * Message-level predicate: is this assistant message a media-size rejection?
- * Parallel to isPromptTooLongMessage. Checks errorDetails (the raw API error
- * string populated by the getAssistantMessageFromError branches at ~L523/560/573)
- * rather than content text, since media errors have per-variant content strings.
- */
 export function isMediaSizeErrorMessage(msg: AssistantMessage): boolean {
   return (
     msg.isApiErrorMessage === true &&
@@ -195,7 +164,7 @@ export function getRequestTooLargeErrorMessage(): string {
     : `Request too large (${limits}). Double press esc to go back and try with a smaller file.`
 }
 export const OAUTH_ORG_NOT_ALLOWED_ERROR_MESSAGE =
-  'Your account does not have access to Claude Code. Please run /login.'
+  'Your account does not have access to Claude Code Next. Please run /login.'
 
 export function getTokenRevokedErrorMessage(): string {
   return getIsNonInteractiveSession()
@@ -209,23 +178,17 @@ export function getOauthOrgNotAllowedErrorMessage(): string {
     : OAUTH_ORG_NOT_ALLOWED_ERROR_MESSAGE
 }
 
-/**
- * Check if we're in CCR (Claude Code Remote) mode.
- * In CCR mode, auth is handled via JWTs provided by the infrastructure,
- * not via /login. Transient auth errors should suggest retrying, not logging in.
- */
 function isCCRMode(): boolean {
-  return isEnvTruthy(process.env.CLAUDE_CODE_REMOTE)
+  return isEnvTruthy(process.env.CLAUDE_CODE_NEXT_REMOTE)
 }
 
-// Temp helper to log tool_use/tool_result mismatch errors
 function logToolUseToolResultMismatch(
   toolUseId: string,
   messages: Message[],
   messagesForAPI: (UserMessage | AssistantMessage)[],
 ): void {
   try {
-    // Find tool_use in normalized messages
+    
     let normalizedIndex = -1
     for (let i = 0; i < messagesForAPI.length; i++) {
       const msg = messagesForAPI[i]
@@ -246,7 +209,7 @@ function logToolUseToolResultMismatch(
       if (normalizedIndex !== -1) break
     }
 
-    // Find tool_use in original messages
+    
     let originalIndex = -1
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i]
@@ -269,7 +232,7 @@ function logToolUseToolResultMismatch(
       if (originalIndex !== -1) break
     }
 
-    // Build normalized sequence
+    
     const normalizedSeq: string[] = []
     for (let i = normalizedIndex + 1; i < messagesForAPI.length; i++) {
       const msg = messagesForAPI[i]
@@ -297,7 +260,7 @@ function logToolUseToolResultMismatch(
       }
     }
 
-    // Build pre-normalized sequence
+    
     const preNormalizedSeq: string[] = []
     for (let i = originalIndex + 1; i < messages.length; i++) {
       const msg = messages[i]
@@ -361,7 +324,7 @@ function logToolUseToolResultMismatch(
       }
     }
 
-    // Log to Statsig
+    
     logEvent('tengu_tool_use_tool_result_mismatch_error', {
       toolUseId:
         toolUseId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -377,13 +340,10 @@ function logToolUseToolResultMismatch(
       originalToolUseIndex: originalIndex,
     })
   } catch (_) {
-    // Ignore errors in debug logging
+    
   }
 }
 
-/**
- * Type guard to check if a value is a valid Message response from the API
- */
 export function isValidAPIMessage(value: unknown): value is BetaMessage {
   return (
     typeof value === 'object' &&
@@ -397,7 +357,6 @@ export function isValidAPIMessage(value: unknown): value is BetaMessage {
   )
 }
 
-/** Lower-level error that AWS can return. */
 type AmazonError = {
   Output?: {
     __type?: string
@@ -405,16 +364,13 @@ type AmazonError = {
   Version?: string
 }
 
-/**
- * Given a response that doesn't look quite right, see if it contains any known error types we can extract.
- */
 export function extractUnknownErrorFormat(value: unknown): string | undefined {
-  // Check if value is a valid object first
+  
   if (!value || typeof value !== 'object') {
     return undefined
   }
 
-  // Amazon Bedrock routing errors
+  
   if ((value as AmazonError).Output?.__type) {
     return (value as AmazonError).Output!.__type
   }
@@ -430,7 +386,7 @@ export function getAssistantMessageFromError(
     messagesForAPI?: (UserMessage | AssistantMessage)[]
   },
 ): AssistantMessage {
-  // Check for SDK timeout errors
+  
   if (
     error instanceof APIConnectionTimeoutError ||
     (error instanceof APIConnectionError &&
@@ -442,7 +398,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for image size/resize errors (thrown before API call during validation)
+  
   
   
   if (error instanceof ImageSizeError || error instanceof ImageResizeError) {
@@ -451,7 +407,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for emergency capacity off switch for Opus PAYG users
+  
   if (
     error instanceof Error &&
     error.message.includes(CUSTOM_OFF_SWITCH_MESSAGE)
@@ -467,7 +423,7 @@ export function getAssistantMessageFromError(
     error.status === 429 &&
     shouldProcessRateLimits(isClaudeAISubscriber())
   ) {
-    // Check if this is the new API with multiple rate limit headers
+    
     const rateLimitType = error.headers?.get?.(
       'anthropic-ratelimit-unified-representative-claim',
     ) as 'five_hour' | 'seven_day' | 'seven_day_opus' | null
@@ -478,14 +434,14 @@ export function getAssistantMessageFromError(
 
     
     if (rateLimitType || overageStatus) {
-      // Build limits object from error headers to determine the appropriate message
+      
       const limits: ClaudeAILimits = {
         status: 'rejected',
         unifiedRateLimitFallbackAvailable: false,
         isUsingOverage: false,
       }
 
-      // Extract rate limit information from headers
+      
       const resetHeader = error.headers?.get?.(
         'anthropic-ratelimit-unified-reset',
       )
@@ -515,7 +471,7 @@ export function getAssistantMessageFromError(
         limits.overageDisabledReason = overageDisabledReason
       }
 
-      // Use the new message format for all new API rate limits
+      
       const specificErrorMessage = getRateLimitErrorMessage(limits, model)
       if (specificErrorMessage) {
         return createAssistantAPIErrorMessage({
@@ -524,7 +480,7 @@ export function getAssistantMessageFromError(
         })
       }
 
-      // If getRateLimitErrorMessage returned null, it means the fallback mechanism
+      
       
       
       
@@ -534,7 +490,7 @@ export function getAssistantMessageFromError(
       })
     }
 
-    // No quota headers — this is NOT a quota limit. Surface what the API actually
+    
     
     
     if (error.message.includes('Extra usage is required for long context')) {
@@ -546,8 +502,8 @@ export function getAssistantMessageFromError(
         error: 'rate_limit',
       })
     }
-    // SDK's APIError.makeMessage prepends "429 " and JSON-stringifies the body
-    // when there's no top-level .message — extract the inner error.message.
+    
+    
     const stripped = error.message.replace(/^429\s+/, '')
     const innerMessage = stripped.match(/"message"\s*:\s*"([^"]*)"/)?.[1]
     const detail = innerMessage || stripped
@@ -557,13 +513,13 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Handle prompt too long errors (Vertex returns 413, direct API returns 400)
+  
   
   if (
     error instanceof Error &&
     error.message.toLowerCase().includes('prompt is too long')
   ) {
-    // Content stays generic (UI matches on exact string). The raw error with
+    
     
     
     return createAssistantAPIErrorMessage({
@@ -573,7 +529,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for PDF page limit errors
+  
   if (
     error instanceof Error &&
     /maximum of \d+ PDF pages/.test(error.message)
@@ -585,7 +541,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for password-protected PDF errors
+  
   if (
     error instanceof Error &&
     error.message.includes('The PDF specified is password protected')
@@ -596,7 +552,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for invalid PDF errors (e.g., HTML file renamed to .pdf)
+  
   
   
   if (
@@ -609,7 +565,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for image size errors (e.g., "image exceeds 5 MB maximum: 5316852 bytes > 5242880 bytes")
+  
   if (
     error instanceof APIError &&
     error.status === 400 &&
@@ -622,7 +578,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for many-image dimension errors (API enforces stricter 2000px limit for many-image requests)
+  
   if (
     error instanceof APIError &&
     error.status === 400 &&
@@ -638,9 +594,9 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Server rejected the afk-mode beta header (plan does not include auto
   
-  // so the truthy guard keeps this inert there.
+  
+  
   if (
     AFK_MODE_BETA_HEADER &&
     error instanceof APIError &&
@@ -654,7 +610,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for request too large errors (413 status)
+  
   
   if (error instanceof APIError && error.status === 413) {
     return createAssistantAPIErrorMessage({
@@ -663,7 +619,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for tool_use/tool_result concurrency error
+  
   if (
     error instanceof APIError &&
     error.status === 400 &&
@@ -671,7 +627,7 @@ export function getAssistantMessageFromError(
       '`tool_use` ids were found without `tool_result` blocks immediately after',
     )
   ) {
-    // Log to Statsig if we have the message context
+    
     if (options?.messages && options?.messagesForAPI) {
       const toolUseIdMatch = error.message.match(/toolu_[a-zA-Z0-9]+/)
       const toolUseId = toolUseIdMatch ? toolUseIdMatch[0] : null
@@ -713,7 +669,7 @@ export function getAssistantMessageFromError(
     logEvent('tengu_unexpected_tool_result', {})
   }
 
-  // Duplicate tool_use IDs (CC-1212). ensureToolResultPairing strips these
+  
   
   
   if (
@@ -732,7 +688,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for invalid model name error for subscription users trying to use Opus
+  
   if (
     isClaudeAISubscriber() &&
     error instanceof APIError &&
@@ -747,7 +703,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for invalid model name error for Ant users. Claude Code may be
+  
   
   
   if (
@@ -756,7 +712,7 @@ export function getAssistantMessageFromError(
     error instanceof Error &&
     error.message.toLowerCase().includes('invalid model name')
   ) {
-    // Get organization ID from config - only use OAuth account data when actively using OAuth
+    
     const orgId = getOauthAccountInfo()?.organizationUuid
     const baseMsg = `[ANT-ONLY] Your org isn't gated into the \`${model}\` model. Either run \`claude\` with \`ANTHROPIC_MODEL=${getDefaultMainLoopModelSetting()}\``
     const msg = orgId
@@ -778,7 +734,7 @@ export function getAssistantMessageFromError(
       error: 'billing_error',
     })
   }
-  // "Organization has been disabled" — commonly a stale ANTHROPIC_API_KEY
+  
   
   
   
@@ -814,7 +770,7 @@ export function getAssistantMessageFromError(
     error instanceof Error &&
     error.message.toLowerCase().includes('x-api-key')
   ) {
-    // In CCR mode, auth is via JWTs - this is likely a transient network issue
+    
     if (isCCRMode()) {
       return createAssistantAPIErrorMessage({
         error: 'authentication_failed',
@@ -822,7 +778,7 @@ export function getAssistantMessageFromError(
       })
     }
 
-    // Check if the API key is from an external source
+    
     const { source } = getAnthropicApiKeyWithSource()
     const isExternalSource =
       source === 'ANTHROPIC_API_KEY' || source === 'apiKeyHelper'
@@ -835,7 +791,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for OAuth token revocation error
+  
   if (
     error instanceof APIError &&
     error.status === 403 &&
@@ -847,7 +803,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for OAuth organization not allowed error
+  
   if (
     error instanceof APIError &&
     (error.status === 401 || error.status === 403) &&
@@ -861,12 +817,12 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Generic handler for other 401/403 authentication errors
+  
   if (
     error instanceof APIError &&
     (error.status === 401 || error.status === 403)
   ) {
-    // In CCR mode, auth is via JWTs - this is likely a transient network issue
+    
     if (isCCRMode()) {
       return createAssistantAPIErrorMessage({
         error: 'authentication_failed',
@@ -882,10 +838,10 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Bedrock errors like "403 You don't have access to the model with the specified model ID."
+  
   
   if (
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK) &&
+    isEnvTruthy(process.env.CLAUDE_CODE_NEXT_USE_BEDROCK) &&
     error instanceof Error &&
     error.message.toLowerCase().includes('model id')
   ) {
@@ -899,7 +855,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // 404 Not Found — usually means the selected model doesn't exist or isn't
+  
   
   
   if (error instanceof APIError && error.status === 404) {
@@ -913,7 +869,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Connection errors (non-timeout) — use formatAPIError for detailed messages
+  
   if (error instanceof APIConnectionError) {
     return createAssistantAPIErrorMessage({
       content: `${API_ERROR_MESSAGE_PREFIX}: ${formatAPIError(error)}`,
@@ -933,42 +889,34 @@ export function getAssistantMessageFromError(
   })
 }
 
-/**
- * For 3P users, suggest a fallback model when the selected model is unavailable.
- * Returns a model name suggestion, or undefined if no suggestion is applicable.
- */
 function get3PModelFallbackSuggestion(model: string): string | undefined {
   if (getAPIProvider() === 'firstParty') {
     return undefined
   }
-  // @[MODEL LAUNCH]: Add a fallback suggestion chain for the new model → previous version for 3P
+  
   const m = model.toLowerCase()
   
   if (m.includes('opus-4-6') || m.includes('opus_4_6')) {
     return getModelStrings().opus41
   }
-  // If the failing model looks like a Sonnet 4.6 variant, suggest Sonnet 4.5
+  
   if (m.includes('sonnet-4-6') || m.includes('sonnet_4_6')) {
     return getModelStrings().sonnet45
   }
-  // If the failing model looks like a Sonnet 4.5 variant, suggest Sonnet 4
+  
   if (m.includes('sonnet-4-5') || m.includes('sonnet_4_5')) {
     return getModelStrings().sonnet40
   }
   return undefined
 }
 
-/**
- * Classifies an API error into a specific error type for analytics tracking.
- * Returns a standardized error type string suitable for Datadog tagging.
- */
 export function classifyAPIError(error: unknown): string {
-  // Aborted requests
+  
   if (error instanceof Error && error.message === 'Request was aborted.') {
     return 'aborted'
   }
 
-  // Timeout errors
+  
   if (
     error instanceof APIConnectionTimeoutError ||
     (error instanceof APIConnectionError &&
@@ -977,7 +925,7 @@ export function classifyAPIError(error: unknown): string {
     return 'api_timeout'
   }
 
-  // Check for repeated 529 errors
+  
   if (
     error instanceof Error &&
     error.message.includes(REPEATED_529_ERROR_MESSAGE)
@@ -985,7 +933,7 @@ export function classifyAPIError(error: unknown): string {
     return 'repeated_529'
   }
 
-  // Check for emergency capacity off switch
+  
   if (
     error instanceof Error &&
     error.message.includes(CUSTOM_OFF_SWITCH_MESSAGE)
@@ -993,12 +941,12 @@ export function classifyAPIError(error: unknown): string {
     return 'capacity_off_switch'
   }
 
-  // Rate limiting
+  
   if (error instanceof APIError && error.status === 429) {
     return 'rate_limit'
   }
 
-  // Server overload (529)
+  
   if (
     error instanceof APIError &&
     (error.status === 529 ||
@@ -1007,7 +955,7 @@ export function classifyAPIError(error: unknown): string {
     return 'server_overload'
   }
 
-  // Prompt/content size errors
+  
   if (
     error instanceof Error &&
     error.message
@@ -1017,7 +965,7 @@ export function classifyAPIError(error: unknown): string {
     return 'prompt_too_long'
   }
 
-  // PDF errors
+  
   if (
     error instanceof Error &&
     /maximum of \d+ PDF pages/.test(error.message)
@@ -1032,7 +980,7 @@ export function classifyAPIError(error: unknown): string {
     return 'pdf_password_protected'
   }
 
-  // Image size errors
+  
   if (
     error instanceof APIError &&
     error.status === 400 &&
@@ -1042,7 +990,7 @@ export function classifyAPIError(error: unknown): string {
     return 'image_too_large'
   }
 
-  // Many-image dimension errors
+  
   if (
     error instanceof APIError &&
     error.status === 400 &&
@@ -1052,7 +1000,7 @@ export function classifyAPIError(error: unknown): string {
     return 'image_too_large'
   }
 
-  // Tool use errors (400)
+  
   if (
     error instanceof APIError &&
     error.status === 400 &&
@@ -1079,7 +1027,7 @@ export function classifyAPIError(error: unknown): string {
     return 'duplicate_tool_use_id'
   }
 
-  // Invalid model errors (400)
+  
   if (
     error instanceof APIError &&
     error.status === 400 &&
@@ -1088,7 +1036,7 @@ export function classifyAPIError(error: unknown): string {
     return 'invalid_model'
   }
 
-  // Credit/billing errors
+  
   if (
     error instanceof Error &&
     error.message
@@ -1098,7 +1046,7 @@ export function classifyAPIError(error: unknown): string {
     return 'credit_balance_low'
   }
 
-  // Authentication errors
+  
   if (
     error instanceof Error &&
     error.message.toLowerCase().includes('x-api-key')
@@ -1124,7 +1072,7 @@ export function classifyAPIError(error: unknown): string {
     return 'oauth_org_not_allowed'
   }
 
-  // Generic auth errors
+  
   if (
     error instanceof APIError &&
     (error.status === 401 || error.status === 403)
@@ -1132,23 +1080,23 @@ export function classifyAPIError(error: unknown): string {
     return 'auth_error'
   }
 
-  // Bedrock-specific errors
+  
   if (
-    isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK) &&
+    isEnvTruthy(process.env.CLAUDE_CODE_NEXT_USE_BEDROCK) &&
     error instanceof Error &&
     error.message.toLowerCase().includes('model id')
   ) {
     return 'bedrock_model_access'
   }
 
-  // Status code based fallbacks
+  
   if (error instanceof APIError) {
     const status = error.status
     if (status >= 500) return 'server_error'
     if (status >= 400) return 'client_error'
   }
 
-  // Connection errors - check for SSL/TLS issues first
+  
   if (error instanceof APIConnectionError) {
     const connectionDetails = extractConnectionErrorDetails(error)
     if (connectionDetails?.isSSLError) {
@@ -1192,8 +1140,8 @@ export function getErrorMessageIfRefusal(
   logEvent('tengu_refusal_api_response', {})
 
   const baseMessage = getIsNonInteractiveSession()
-    ? `${API_ERROR_MESSAGE_PREFIX}: Claude Code is unable to respond to this request, which appears to violate our Usage Policy (https://www.anthropic.com/legal/aup). Try rephrasing the request or attempting a different approach.`
-    : `${API_ERROR_MESSAGE_PREFIX}: Claude Code is unable to respond to this request, which appears to violate our Usage Policy (https://www.anthropic.com/legal/aup). Please double press esc to edit your last message or start a new session for Claude Code to assist with a different task.`
+    ? `${API_ERROR_MESSAGE_PREFIX}: Claude Code Next is unable to respond to this request, which appears to violate our Usage Policy (https:
+    : `${API_ERROR_MESSAGE_PREFIX}: Claude Code Next is unable to respond to this request, which appears to violate our Usage Policy (https:
 
   const modelSuggestion =
     model !== 'claude-sonnet-4-20250514'

@@ -14,9 +14,9 @@ import { isVoiceModeEnabled } from '../../voice/voiceModeEnabled.js'
 const LANG_HINT_MAX_SHOWS = 2
 
 export const call: LocalCommandCall = async () => {
-  // Check auth and kill-switch before allowing voice mode
+  
   if (!isVoiceModeEnabled()) {
-    // Differentiate: OAuth-less users get an auth hint, everyone else
+    
     
     if (!isAnthropicAuthEnabled()) {
       return {
@@ -54,7 +54,7 @@ export const call: LocalCommandCall = async () => {
     }
   }
 
-  // Toggle ON — run pre-flight checks first
+  
   const { isVoiceStreamAvailable } = await import(
     '../../services/voiceStreamSTT.js'
   )
@@ -70,7 +70,7 @@ export const call: LocalCommandCall = async () => {
     }
   }
 
-  // Check for API key
+  
   if (!isVoiceStreamAvailable()) {
     return {
       type: 'text' as const,
@@ -79,7 +79,7 @@ export const call: LocalCommandCall = async () => {
     }
   }
 
-  // Check for recording tools
+  
   const { checkVoiceDependencies, requestMicrophonePermission } = await import(
     '../../services/voice.js'
   )
@@ -94,7 +94,7 @@ export const call: LocalCommandCall = async () => {
     }
   }
 
-  // Probe mic access so the OS permission dialog fires now rather than
+  
   
   if (!(await requestMicrophonePermission())) {
     let guidance: string
@@ -111,7 +111,7 @@ export const call: LocalCommandCall = async () => {
     }
   }
 
-  // All checks passed — enable voice
+  
   const result = updateSettingsForSource('userSettings', { voiceEnabled: true })
   if (result.error) {
     return {

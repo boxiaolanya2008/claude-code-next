@@ -25,13 +25,13 @@ export function getLogDisplayTitle(
   log: LogOption,
   defaultTitle?: string,
 ): string {
-  // Skip firstPrompt if it's a tick/goal message (autonomous mode auto-prompt)
+  
   const isAutonomousPrompt = log.firstPrompt?.startsWith(`<${TICK_TAG}>`)
-  // Strip display-unfriendly tags (command-name, ide_opened_file, etc.) early
-  // so that command-only prompts (e.g. /clear) become empty and fall through
-  // to the next fallback instead of showing raw XML tags.
-  // Note: stripDisplayTags returns the original when stripping yields empty,
-  // so we call stripDisplayTagsAllowEmpty to detect command-only prompts.
+  
+  
+  
+  
+  
   const strippedFirstPrompt = log.firstPrompt
     ? stripDisplayTagsAllowEmpty(log.firstPrompt)
     : ''
@@ -42,12 +42,12 @@ export function getLogDisplayTitle(
     log.summary ||
     (useFirstPrompt ? strippedFirstPrompt : undefined) ||
     defaultTitle ||
-    // For autonomous sessions without other context, show a meaningful label
+    
     (isAutonomousPrompt ? 'Autonomous session' : undefined) ||
-    // Fall back to truncated session ID for lite logs with no metadata
+    
     (log.sessionId ? log.sessionId.slice(0, 8) : '') ||
     ''
-  // Strip display-unfriendly tags (like <ide_opened_file>) for cleaner titles
+  
   return stripDisplayTags(title).trim()
 }
 
@@ -55,8 +55,6 @@ export function dateToFilename(date: Date): string {
   return date.toISOString().replace(/[:.]/g, '-')
 }
 
-// In-memory error log for recent errors
-// Moved from bootstrap/state.ts to break import cycle
 const MAX_IN_MEMORY_ERRORS = 100
 let inMemoryErrorLog: Array<{ error: string; timestamp: string }> = []
 
@@ -65,14 +63,11 @@ function addToInMemoryErrorLog(errorInfo: {
   timestamp: string
 }): void {
   if (inMemoryErrorLog.length >= MAX_IN_MEMORY_ERRORS) {
-    inMemoryErrorLog.shift() // Remove oldest error
+    inMemoryErrorLog.shift() 
   }
   inMemoryErrorLog.push(errorInfo)
 }
 
-/**
- * Sink interface for the error logging backend
- */
 export type ErrorLogSink = {
   logError: (error: Error) => void
   logMCPError: (serverName: string, error: unknown) => void
@@ -81,7 +76,6 @@ export type ErrorLogSink = {
   getMCPLogsPath: (serverName: string) => string
 }
 
-// Queued events for events logged before sink is attached
 type QueuedErrorEvent =
   | { type: 'error'; error: Error }
   | { type: 'mcpError'; serverName: string; error: unknown }
@@ -89,24 +83,15 @@ type QueuedErrorEvent =
 
 const errorQueue: QueuedErrorEvent[] = []
 
-// Sink - initialized during app startup
 let errorLogSink: ErrorLogSink | null = null
 
-/**
- * Attach the error log sink that will receive all error events.
- * Queued events are drained immediately to ensure no errors are lost.
- *
- * Idempotent: if a sink is already attached, this is a no-op. This allows
- * calling from both the preAction hook (for subcommands) and setup() (for
- * the default command) without coordination.
- */
 export function attachErrorLogSink(newSink: ErrorLogSink): void {
   if (errorLogSink !== null) {
     return
   }
   errorLogSink = newSink
 
-  // Drain the queue immediately - errors should not be delayed
+  
   if (errorQueue.length > 0) {
     const queuedEvents = [...errorQueue]
     errorQueue.length = 0
@@ -127,24 +112,6 @@ export function attachErrorLogSink(newSink: ErrorLogSink): void {
   }
 }
 
-/**
- * Logs an error to multiple destinations for debugging and monitoring.
- *
- * This function logs errors to:
- * - Debug logs (visible via `claude --debug` or `tail -f ~/.claude/debug/latest`)
- * - In-memory error log (accessible via `getInMemoryErrors()`, useful for including
- *   in bug reports or displaying recent errors to users)
- * - Persistent error log file (only for internal 'ant' users, stored in ~/.claude/errors/)
- *
- * Usage:
- * ```ts
- * logError(new Error('Failed to connect'))
- * ```
- *
- * To view errors:
- * - Debug: Run `claude --debug` or `tail -f ~/.claude/debug/latest`
- * - In-memory: Call `getInMemoryErrors()` to get recent errors for the current session
- */
 const isHardFailMode = memoize((): boolean => {
   return process.argv.includes('--hard-fail')
 })
@@ -152,18 +119,18 @@ const isHardFailMode = memoize((): boolean => {
 export function logError(error: unknown): void {
   const err = toError(error)
   if (feature('HARD_FAIL') && isHardFailMode()) {
-    // biome-ignore lint/suspicious/noConsole:: intentional crash output
+    
     console.error('[HARD FAIL] logError called with:', err.stack || err.message)
-    // eslint-disable-next-line custom-rules/no-process-exit
+    
     process.exit(1)
   }
   try {
-    // Check if error reporting should be disabled
+    
     if (
-      // Cloud providers (Bedrock/Vertex/Foundry) always disable features
-      isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK) ||
-      isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX) ||
-      isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY) ||
+      
+      isEnvTruthy(process.env.CLAUDE_CODE_NEXT_USE_BEDROCK) ||
+      isEnvTruthy(process.env.CLAUDE_CODE_NEXT_USE_VERTEX) ||
+      isEnvTruthy(process.env.CLAUDE_CODE_NEXT_USE_FOUNDRY) ||
       process.env.DISABLE_ERROR_REPORTING ||
       isEssentialTrafficOnly()
     ) {
@@ -177,10 +144,10 @@ export function logError(error: unknown): void {
       timestamp: new Date().toISOString(),
     }
 
-    // Always add to in-memory log (no dependencies needed)
+    
     addToInMemoryErrorLog(errorInfo)
 
-    // If sink not attached, queue the event
+    
     if (errorLogSink === null) {
       errorQueue.push({ type: 'error', error: err })
       return
@@ -188,7 +155,7 @@ export function logError(error: unknown): void {
 
     errorLogSink.logError(err)
   } catch {
-    // pass
+    
   }
 }
 
@@ -196,19 +163,10 @@ export function getInMemoryErrors(): { error: string; timestamp: string }[] {
   return [...inMemoryErrorLog]
 }
 
-/**
- * Loads the list of error logs
- * @returns List of error logs sorted by date
- */
 export function loadErrorLogs(): Promise<LogOption[]> {
   return loadLogList(CACHE_PATHS.errors())
 }
 
-/**
- * Gets an error log by its index
- * @param index Index in the sorted list of logs (0-based)
- * @returns Log data or null if not found
- */
 export async function getErrorLogByIndex(
   index: number,
 ): Promise<LogOption | null> {
@@ -216,12 +174,6 @@ export async function getErrorLogByIndex(
   return logs[index] || null
 }
 
-/**
- * Internal function to load and process logs from a specified path
- * @param path Directory containing logs
- * @returns Array of logs sorted by date
- * @private
- */
 async function loadLogList(path: string): Promise<LogOption[]> {
   let files: Awaited<ReturnType<typeof readdir>>
   try {
@@ -243,7 +195,7 @@ async function loadLogList(path: string): Promise<LogOption[]> {
           ? firstMessage?.message?.content
           : 'No prompt'
 
-      // For new random filenames, we'll get stats from the file itself
+      
       const fileStats = await stat(fullPath)
 
       
@@ -256,7 +208,7 @@ async function loadLogList(path: string): Promise<LogOption[]> {
         date,
         fullPath,
         messages,
-        value: i, // hack: overwritten after sorting, right below this
+        value: i, 
         created: parseISOString(firstMessage?.timestamp || date),
         modified: lastMessage?.timestamp
           ? parseISOString(lastMessage.timestamp)
@@ -293,7 +245,7 @@ function parseISOString(s: string): Date {
 
 export function logMCPError(serverName: string, error: unknown): void {
   try {
-    // If sink not attached, queue the event
+    
     if (errorLogSink === null) {
       errorQueue.push({ type: 'mcpError', serverName, error })
       return
@@ -301,13 +253,13 @@ export function logMCPError(serverName: string, error: unknown): void {
 
     errorLogSink.logMCPError(serverName, error)
   } catch {
-    // Silently fail
+    
   }
 }
 
 export function logMCPDebug(serverName: string, message: string): void {
   try {
-    // If sink not attached, queue the event
+    
     if (errorLogSink === null) {
       errorQueue.push({ type: 'mcpDebug', serverName, message })
       return
@@ -315,40 +267,33 @@ export function logMCPDebug(serverName: string, message: string): void {
 
     errorLogSink.logMCPDebug(serverName, message)
   } catch {
-    // Silently fail
+    
   }
 }
 
-/**
- * Captures the last API request for inclusion in bug reports.
- */
 export function captureAPIRequest(
   params: BetaMessageStreamParams,
   querySource?: QuerySource,
 ): void {
-  // startsWith, not exact match — users with non-default output styles get
+  
   
   if (!querySource || !querySource.startsWith('repl_main_thread')) {
     return
   }
 
-  // Store params WITHOUT messages to avoid retaining the entire conversation
+  
   
   
   const { messages, ...paramsWithoutMessages } = params
   setLastAPIRequest(paramsWithoutMessages)
   
   
-  // CLAUDE.md-injected payload the API received. Overwritten each turn;
-  // dumpPrompts.ts already holds 5 full request bodies for ants, so this is
+  
+  
   
   setLastAPIRequestMessages(process.env.USER_TYPE === 'ant' ? messages : null)
 }
 
-/**
- * Reset error log state for testing purposes only.
- * @internal
- */
 export function _resetErrorLogForTesting(): void {
   errorLogSink = null
   errorQueue.length = 0

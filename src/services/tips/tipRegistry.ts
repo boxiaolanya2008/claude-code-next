@@ -239,11 +239,11 @@ const externalTips: Tip[] = [
   {
     id: 'powershell-tool-env',
     content: async () =>
-      'Set CLAUDE_CODE_USE_POWERSHELL_TOOL=1 to enable the PowerShell tool (preview)',
+      'Set CLAUDE_CODE_NEXT_USE_POWERSHELL_TOOL=1 to enable the PowerShell tool (preview)',
     cooldownSessions: 10,
     isRelevant: async () =>
       getPlatform() === 'windows' &&
-      process.env.CLAUDE_CODE_USE_POWERSHELL_TOOL === undefined,
+      process.env.CLAUDE_CODE_NEXT_USE_POWERSHELL_TOOL === undefined,
   },
   {
     id: 'status-line',
@@ -282,7 +282,7 @@ const externalTips: Tip[] = [
       `Open the Command Palette (Cmd+Shift+P) and run "Shell Command: Install '${env.terminal === 'vscode' ? 'code' : env.terminal}' command in PATH" to enable IDE integration`,
     cooldownSessions: 0,
     async isRelevant() {
-      // Only show this tip if we're in a VS Code-style terminal
+      
       if (!isSupportedVSCodeTerminal()) {
         return false
       }
@@ -290,7 +290,7 @@ const externalTips: Tip[] = [
         return false
       }
 
-      // Check if the relevant command is available
+      
       switch (env.terminal) {
         case 'vscode':
           return !(await isVSCodeInstalled())
@@ -312,7 +312,7 @@ const externalTips: Tip[] = [
         return false
       }
 
-      // Use lockfiles as a (quicker) signal for running IDEs
+      
       const lockfiles = await getSortedIdeLockfiles()
       if (lockfiles.length !== 0) {
         return false
@@ -355,7 +355,7 @@ const externalTips: Tip[] = [
   {
     id: 'paste-images-mac',
     content: async () =>
-      'Paste images into Claude Code using control+v (not cmd+v!)',
+      'Paste images into Claude Code Next using control+v (not cmd+v!)',
     cooldownSessions: 10,
     isRelevant: async () => getPlatform() === 'macos',
   },
@@ -437,7 +437,7 @@ const externalTips: Tip[] = [
   {
     id: 'desktop-app',
     content: async () =>
-      'Run Claude Code locally or remotely using the Claude desktop app: clau.de/desktop',
+      'Run Claude Code Next locally or remotely using the Claude desktop app: clau.de/desktop',
     cooldownSessions: 15,
     isRelevant: async () => getPlatform() !== 'linux',
   },
@@ -445,7 +445,7 @@ const externalTips: Tip[] = [
     id: 'desktop-shortcut',
     content: async ctx => {
       const blue = color('suggestion', ctx.theme)
-      return `Continue your session in Claude Code Desktop with ${blue('/desktop')}`
+      return `Continue your session in Claude Code Next Desktop with ${blue('/desktop')}`
     },
     cooldownSessions: 15,
     isRelevant: async () => {
@@ -466,7 +466,7 @@ const externalTips: Tip[] = [
   {
     id: 'mobile-app',
     content: async () =>
-      '/mobile to use Claude Code from the Claude app on your phone',
+      '/mobile to use Claude Code Next from the Claude app on your phone',
     cooldownSessions: 15,
     isRelevant: async () => true,
   },
@@ -480,7 +480,7 @@ const externalTips: Tip[] = [
       const config = getGlobalConfig()
       const modelSetting = getUserSpecifiedModelSetting()
       const hasOpusPlanMode = modelSetting === 'opusplan'
-      // Show reminder if they have Opus Plan Mode and haven't used plan mode recently (3+ days)
+      
       const daysSinceLastUse = config.lastPlanModeUse
         ? (Date.now() - config.lastPlanModeUse) / (1000 * 60 * 60 * 24)
         : Infinity
@@ -593,7 +593,7 @@ const externalTips: Tip[] = [
       const claude = color('claude', ctx.theme)
       const reward = getCachedReferrerReward()
       return reward
-        ? `Share Claude Code and earn ${claude(formatCreditAmount(reward))} of extra usage · ${claude('/passes')}`
+        ? `Share Claude Code Next and earn ${claude(formatCreditAmount(reward))} of extra usage · ${claude('/passes')}`
         : `You have free guest passes to share · ${claude('/passes')}`
     },
     cooldownSessions: 3,
@@ -675,7 +675,7 @@ export async function getRelevantTips(context?: TipContext): Promise<Tip[]> {
     return customTips
   }
 
-  // Otherwise, filter built-in tips as before and combine with custom
+  
   const tips = [...externalTips, ...internalOnlyTips]
   const isRelevant = await Promise.all(tips.map(_ => _.isRelevant(context)))
   const filtered = tips

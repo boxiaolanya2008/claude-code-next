@@ -22,7 +22,7 @@ function startHeartbeatTimer(): void {
     logForDiagnosticsNoPII('debug', 'session_keepalive_heartbeat', {
       refcount,
     })
-    if (isEnvTruthy(process.env.CLAUDE_CODE_REMOTE_SEND_KEEPALIVES)) {
+    if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_REMOTE_SEND_KEEPALIVES)) {
       activityCallback?.()
     }
   }, SESSION_ACTIVITY_INTERVAL_MS)
@@ -65,7 +65,7 @@ export function unregisterSessionActivityCallback(): void {
 }
 
 export function sendSessionActivitySignal(): void {
-  if (isEnvTruthy(process.env.CLAUDE_CODE_REMOTE_SEND_KEEPALIVES)) {
+  if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_REMOTE_SEND_KEEPALIVES)) {
     activityCallback?.()
   }
 }
@@ -74,10 +74,6 @@ export function isSessionActivityTrackingActive(): boolean {
   return activityCallback !== null
 }
 
-/**
- * Increment the activity refcount. When it transitions from 0→1 and a callback
- * is registered, start a periodic heartbeat timer.
- */
 export function startSessionActivity(reason: SessionActivityReason): void {
   refcount++
   activeReasons.set(reason, (activeReasons.get(reason) ?? 0) + 1)
@@ -93,7 +89,7 @@ export function startSessionActivity(reason: SessionActivityReason): void {
       logForDiagnosticsNoPII('info', 'session_activity_at_shutdown', {
         refcount,
         active: Object.fromEntries(activeReasons),
-        // Only meaningful while work is in-flight; stale otherwise.
+        
         oldest_activity_ms:
           refcount > 0 && oldestActivityStartedAt !== null
             ? Date.now() - oldestActivityStartedAt
@@ -103,10 +99,6 @@ export function startSessionActivity(reason: SessionActivityReason): void {
   }
 }
 
-/**
- * Decrement the activity refcount. When it reaches 0, stop the heartbeat timer
- * and start an idle timer that logs after 30s of inactivity.
- */
 export function stopSessionActivity(reason: SessionActivityReason): void {
   if (refcount > 0) {
     refcount--

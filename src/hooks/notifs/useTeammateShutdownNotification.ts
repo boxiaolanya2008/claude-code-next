@@ -46,11 +46,6 @@ function makeShutdownNotif(count: number): Notification {
   }
 }
 
-/**
- * Fires batched notifications when in-process teammates spawn or shut down.
- * Uses fold() to combine repeated events into a single notification
- * like "3 agents spawned" or "2 agents shut down".
- */
 export function useTeammateLifecycleNotification(): void {
   const tasks = useAppState(s => s.tasks)
   const { addNotification } = useNotifications()

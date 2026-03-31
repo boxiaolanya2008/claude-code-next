@@ -62,8 +62,8 @@ export type SpeculationState =
       id: string
       abort: () => void
       startTime: number
-      messagesRef: { current: Message[] } // Mutable ref - avoids array spreading per message
-      writtenPathsRef: { current: Set<string> } // Mutable ref - relative paths written to overlay
+      messagesRef: { current: Message[] } 
+      writtenPathsRef: { current: Set<string> } 
       boundary: CompletionBoundary | null
       suggestionLength: number
       toolUseCount: number
@@ -125,7 +125,7 @@ export type AppState = DeepImmutable<{
     | 'reconnecting'
     | 'disconnected'
   
-  // workflows) running inside the REMOTE daemon child. Event-sourced from
+  
   
   
   
@@ -156,9 +156,9 @@ export type AppState = DeepImmutable<{
   
   showRemoteCallout: boolean
 }> & {
-  // Unified task state - excluded from DeepImmutable because TaskState contains function types
+  
   tasks: { [taskId: string]: TaskState }
-  // Name → AgentId registry populated by Agent tool when `name` is provided.
+  
   
   agentNameRegistry: Map<string, AgentId>
   
@@ -200,12 +200,8 @@ export type AppState = DeepImmutable<{
         error?: string
       }>
     }
-    /**
-     * Set to true when plugin state on disk has changed (background reconcile,
-     * /plugin menu install, external settings edit) and active components are
-     * stale. In interactive mode, user runs /reload-plugins to consume. In
-     * headless mode, refreshPluginState() auto-consumes via refreshActivePlugins().
-     */
+    
+
     needsRefresh: boolean
   }
   agentDefinitions: AgentDefinitionsResult
@@ -233,7 +229,7 @@ export type AppState = DeepImmutable<{
     command: string 
     timestamp: number 
   }
-  // Sticky tmux panel visibility — mirrors globalConfig.tungstenPanelVisible for reactivity.
+  
   tungstenPanelVisible?: boolean
   
   
@@ -251,7 +247,7 @@ export type AppState = DeepImmutable<{
   
   
   computerUseMcpState?: {
-    // Session-scoped app allowlist. NOT persisted across resume.
+    
     allowedApps?: readonly {
       bundleId: string
       displayName: string
@@ -263,7 +259,7 @@ export type AppState = DeepImmutable<{
       clipboardWrite: boolean
       systemKeyCombos: boolean
     }
-    // Dims-only (NOT the blob) for scaleCoord after compaction. The full
+    
     
     lastScreenshotDims?: {
       width: number
@@ -274,7 +270,7 @@ export type AppState = DeepImmutable<{
       originX?: number
       originY?: number
     }
-    // Accumulated by onAppsHidden, cleared + unhidden at turn end.
+    
     hiddenDuringTurn?: ReadonlySet<string>
     
     
@@ -291,7 +287,7 @@ export type AppState = DeepImmutable<{
     
     displayResolvedForApps?: string
   }
-  // REPL tool VM context - persists across REPL calls for state sharing
+  
   replContext?: {
     vmContext: import('vm').Context
     registeredTools: Map<
@@ -337,7 +333,7 @@ export type AppState = DeepImmutable<{
       }
     }
   }
-  // Standalone agent context for non-swarm sessions with custom name/color
+  
   standaloneAgentContext?: {
     name: string
     color?: AgentColorName
@@ -353,7 +349,7 @@ export type AppState = DeepImmutable<{
       summary?: string
     }>
   }
-  // Worker sandbox permission requests (leader side) - for network access approval
+  
   workerSandboxPermissions: {
     queue: Array<{
       requestId: string
@@ -365,7 +361,7 @@ export type AppState = DeepImmutable<{
     }>
     selectedIndex: number
   }
-  // Pending permission request on worker side (shown while waiting for leader approval)
+  
   pendingWorkerRequest: {
     toolName: string
     toolUseId: string
@@ -391,7 +387,7 @@ export type AppState = DeepImmutable<{
       updates: { section: string; change: string; reason: string }[]
     } | null
   }
-  // Auth version - incremented on login/logout to trigger re-fetching of auth-dependent data
+  
   authVersion: number
   
   
@@ -409,7 +405,7 @@ export type AppState = DeepImmutable<{
     verificationStarted: boolean
     verificationCompleted: boolean
   }
-  // Denial tracking for classifier modes (YOLO, headless, etc.) - falls back to prompting when limits exceeded
+  
   denialTracking?: DenialTrackingState
   
   activeOverlays: ReadonlySet<string>
@@ -425,30 +421,30 @@ export type AppState = DeepImmutable<{
   
   ultraplanLaunching?: boolean
   
-  // truthy disables the keyword trigger + rainbow. Cleared when the poll
+  
   
   ultraplanSessionUrl?: string
   
   
   ultraplanPendingChoice?: { plan: string; sessionId: string; taskId: string }
-  // Pre-launch permission dialog. Set by /ultraplan (slash or keyword);
-  // cleared by UltraplanLaunchDialog on choice.
+  
+  
   ultraplanLaunchPending?: { blurb: string }
-  // Remote-harness side: set via set_permission_mode control_request,
-  // pushed to CCR external_metadata.is_ultraplan_mode by onChangeAppState.
+  
+  
   isUltraplanMode?: boolean
   
   replBridgePermissionCallbacks?: BridgePermissionCallbacks
   
   
-  // interactiveHandler.ts. Constructed once in useManageMCPConnections.
+  
   channelPermissionCallbacks?: ChannelPermissionCallbacks
 }
 
 export type AppStateStore = Store<AppState>
 
 export function getDefaultAppState(): AppState {
-  // Determine initial permission mode for teammates spawned with plan_mode_required
+  
   
   
   const teammateUtils =
@@ -464,7 +460,7 @@ export function getDefaultAppState(): AppState {
     tasks: {},
     agentNameRegistry: new Map(),
     verbose: false,
-    mainLoopModel: null, // alias, full name (as with --model or env var), or null (default)
+    mainLoopModel: null, 
     mainLoopModelForSession: null,
     statusLineText: undefined,
     expandedView: 'none',

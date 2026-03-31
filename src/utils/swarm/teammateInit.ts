@@ -36,7 +36,7 @@ export function initializeTeammateHooks(
     )
 
     for (const allowedPath of teamFile.teamAllowedPaths) {
-      // For absolute paths (starting with /), prepend one / to create 
+      
       
       const ruleContent = allowedPath.path.startsWith('/')
         ? `/${allowedPath.path}/**`
@@ -66,11 +66,11 @@ export function initializeTeammateHooks(
     }
   }
 
-  // Find the leader's name from the members array
+  
   const leadMember = teamFile.members.find(m => m.agentId === leadAgentId)
   const leadAgentName = leadMember?.name || 'team-lead'
 
-  // Don't register hook if this agent is the leader
+  
   if (agentId === leadAgentId) {
     logForDebugging(
       '[TeammateInit] This agent is the team leader - skipping idle notification hook',
@@ -87,9 +87,9 @@ export function initializeTeammateHooks(
     setAppState,
     sessionId,
     'Stop',
-    '', // No matcher - applies to all Stop events
+    '', 
     async (messages, _signal) => {
-      // Mark this teammate as idle in the team config (fire and forget)
+      
       void setMemberActive(teamName, agentName, false)
 
       

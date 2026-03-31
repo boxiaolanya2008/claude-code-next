@@ -10,7 +10,7 @@ export const DEFAULT_MAX_AGE_DAYS =
 
 export function isKairosCronEnabled(): boolean {
   return feature('AGENT_TRIGGERS')
-    ? !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_CRON) &&
+    ? !isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_CRON) &&
         getFeatureValue_CACHED_WITH_REFRESH(
           'tengu_kairos_cron',
           true,
@@ -19,15 +19,6 @@ export function isKairosCronEnabled(): boolean {
     : false
 }
 
-/**
- * Kill switch for disk-persistent (durable) cron tasks. Narrower than
- * {@link isKairosCronEnabled} — flipping this off forces `durable: false` at
- * the call() site, leaving session-only cron (in-memory, GA) untouched.
- *
- * Defaults to `true` so Bedrock/Vertex/Foundry and DISABLE_TELEMETRY users get
- * durable cron. Does NOT consult CLAUDE_CODE_DISABLE_CRON (that kills the whole
- * scheduler via isKairosCronEnabled).
- */
 export function isDurableCronEnabled(): boolean {
   return getFeatureValue_CACHED_WITH_REFRESH(
     'tengu_kairos_cron_durable',

@@ -23,7 +23,7 @@ export function useMemoryUsage(): MemoryUsageInfo | null {
           ? 'high'
           : 'normal'
     setMemoryUsage(prev => {
-      // Bail when status is 'normal' — nothing is shown, so heapUsed is
+      
       
       
       if (status === 'normal') return prev === null ? prev : null

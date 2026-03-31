@@ -55,10 +55,6 @@ function getDeferredToolsCacheKey(deferredTools: Tools): string {
     .join(',')
 }
 
-/**
- * Get tool description, memoized by tool name.
- * Used for keyword search scoring.
- */
 const getToolDescriptionMemoized = memoize(
   async (toolName: string, tools: Tools): Promise<string> => {
     const tool = findToolByName(tools, toolName)
@@ -97,9 +93,6 @@ export function clearToolSearchDescriptionCache(): void {
   cachedDeferredToolNames = null
 }
 
-/**
- * Build the search result output structure.
- */
 function buildSearchResult(
   matches: string[],
   query: string,
@@ -118,16 +111,12 @@ function buildSearchResult(
   }
 }
 
-/**
- * Parse tool name into searchable parts.
- * Handles both MCP tools (mcp__server__action) and regular tools (CamelCase).
- */
 function parseToolName(name: string): {
   parts: string[]
   full: string
   isMcp: boolean
 } {
-  // Check if it's an MCP tool
+  
   if (name.startsWith('mcp__')) {
     const withoutPrefix = name.replace(/^mcp__/, '').toLowerCase()
     const parts = withoutPrefix.split('__').flatMap(p => p.split('_'))
@@ -138,9 +127,9 @@ function parseToolName(name: string): {
     }
   }
 
-  // Regular tool - split by CamelCase and underscores
+  
   const parts = name
-    .replace(/([a-z])([A-Z])/g, '$1 $2') // CamelCase to spaces
+    .replace(/([a-z])([A-Z])/g, '$1 $2') 
     .replace(/_/g, ' ')
     .toLowerCase()
     .split(/\s+/)
@@ -153,10 +142,6 @@ function parseToolName(name: string): {
   }
 }
 
-/**
- * Pre-compile word-boundary regexes for all search terms.
- * Called once per search instead of tools×terms×2 times.
- */
 function compileTermPatterns(terms: string[]): Map<string, RegExp> {
   const patterns = new Map<string, RegExp>()
   for (const term of terms) {
@@ -167,15 +152,6 @@ function compileTermPatterns(terms: string[]): Map<string, RegExp> {
   return patterns
 }
 
-/**
- * Keyword-based search over tool names and descriptions.
- * Handles both MCP tools (mcp__server__action) and regular tools (CamelCase).
- *
- * The model typically queries with:
- * - Server names when it knows the integration (e.g., "slack", "github")
- * - Action words when looking for functionality (e.g., "read", "list", "create")
- * - Tool-specific terms (e.g., "notebook", "shell", "kill")
- */
 async function searchToolsWithKeywords(
   query: string,
   deferredTools: Tools,
@@ -184,11 +160,11 @@ async function searchToolsWithKeywords(
 ): Promise<string[]> {
   const queryLower = query.toLowerCase().trim()
 
-  // Fast path: if query matches a tool name exactly, return it directly.
-  // Handles models using a bare tool name instead of select: prefix (seen
-  // from subagents/post-compaction). Checks deferred first, then falls back
-  // to the full tool set — selecting an already-loaded tool is a harmless
-  // no-op that lets the model proceed without retry churn.
+  
+  
+  
+  
+  
   const exactMatch =
     deferredTools.find(t => t.name.toLowerCase() === queryLower) ??
     tools.find(t => t.name.toLowerCase() === queryLower)
@@ -196,8 +172,8 @@ async function searchToolsWithKeywords(
     return [exactMatch.name]
   }
 
-  // If query looks like an MCP tool prefix (mcp__server), find matching tools.
-  // Handles models searching by server name with mcp__ prefix.
+  
+  
   if (queryLower.startsWith('mcp__') && queryLower.length > 5) {
     const prefixMatches = deferredTools
       .filter(t => t.name.toLowerCase().startsWith(queryLower))
@@ -210,7 +186,7 @@ async function searchToolsWithKeywords(
 
   const queryTerms = queryLower.split(/\s+/).filter(term => term.length > 0)
 
-  // Partition into required (+prefixed) and optional terms
+  
   const requiredTerms: string[] = []
   const optionalTerms: string[] = []
   for (const term of queryTerms) {
@@ -225,7 +201,7 @@ async function searchToolsWithKeywords(
     requiredTerms.length > 0 ? [...requiredTerms, ...optionalTerms] : queryTerms
   const termPatterns = compileTermPatterns(allScoringTerms)
 
-  // Pre-filter to tools matching ALL required terms in name or description
+  
   let candidateTools = deferredTools
   if (requiredTerms.length > 0) {
     const matches = await Promise.all(
@@ -260,24 +236,24 @@ async function searchToolsWithKeywords(
       for (const term of allScoringTerms) {
         const pattern = termPatterns.get(term)!
 
-        // Exact part match (high weight for MCP server names, tool name parts)
+        
         if (parsed.parts.includes(term)) {
           score += parsed.isMcp ? 12 : 10
         } else if (parsed.parts.some(part => part.includes(term))) {
           score += parsed.isMcp ? 6 : 5
         }
 
-        // Full name fallback (for edge cases)
+        
         if (parsed.full.includes(term) && score === 0) {
           score += 3
         }
 
-        // searchHint match — curated capability phrase, higher signal than prompt
+        
         if (hintNormalized && pattern.test(hintNormalized)) {
           score += 4
         }
 
-        // Description match - use word boundary to avoid false positives
+        
         if (pattern.test(descNormalized)) {
           score += 2
         }
@@ -324,14 +300,14 @@ export const ToolSearchTool = buildTool({
     const deferredTools = tools.filter(isDeferredTool)
     maybeInvalidateCache(deferredTools)
 
-    // Check for MCP servers still connecting
+    
     function getPendingServerNames(): string[] | undefined {
       const appState = getAppState()
       const pending = appState.mcp.clients.filter(c => c.type === 'pending')
       return pending.length > 0 ? pending.map(s => s.name) : undefined
     }
 
-    // Helper to log search outcome
+    
     function logSearchOutcome(
       matches: string[],
       queryType: 'select' | 'keyword',
@@ -348,10 +324,10 @@ export const ToolSearchTool = buildTool({
       })
     }
 
-    // Check for select: prefix — direct tool selection.
-    // Supports comma-separated multi-select: `select:A,B,C`.
-    // If a name isn't in the deferred set but IS in the full tool set,
-    // we still return it — the tool is already loaded, so "selecting" it
+    
+    
+    
+    
     
     const selectMatch = query.match(/^select:(.+)$/i)
     if (selectMatch) {
@@ -398,7 +374,7 @@ export const ToolSearchTool = buildTool({
       return buildSearchResult(found, query, deferredTools.length)
     }
 
-    // Keyword search
+    
     const matches = await searchToolsWithKeywords(
       query,
       deferredTools,
@@ -429,11 +405,8 @@ export const ToolSearchTool = buildTool({
     return null
   },
   userFacingName: () => '',
-  /**
-   * Returns a tool_result with tool_reference blocks.
-   * This format works on 1P/Foundry. Bedrock/Vertex may not support
-   * client-side tool_reference expansion yet.
-   */
+  
+
   mapToolResultToToolResultBlockParam(
     content: Output,
     toolUseID: string,

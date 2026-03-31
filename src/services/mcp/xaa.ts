@@ -21,7 +21,7 @@ function makeXaaFetch(abortSignal?: AbortSignal): FetchLike {
   return (url, init) => {
     const timeout = AbortSignal.timeout(XAA_REQUEST_TIMEOUT_MS)
     const signal = abortSignal
-      ? // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
+      ? 
         AbortSignal.any([timeout, abortSignal])
       : timeout
     
@@ -39,14 +39,6 @@ function normalizeUrl(url: string): string {
   }
 }
 
-/**
- * Thrown by requestJwtAuthorizationGrant when the IdP token-exchange leg
- * fails. Carries `shouldClearIdToken` so callers can decide whether to drop
- * the cached id_token based on OAuth error semantics (not substring matching):
- *   - 4xx / invalid_grant / invalid_token → id_token is bad, clear it
- *   - 5xx → IdP is down, id_token may still be valid, keep it
- *   - 200 with structurally-invalid body → protocol violation, clear it
- */
 export class XaaTokenExchangeError extends Error {
   readonly shouldClearIdToken: boolean
   constructor(message: string, shouldClearIdToken: boolean) {
@@ -56,8 +48,6 @@ export class XaaTokenExchangeError extends Error {
   }
 }
 
-// Matches quoted values for known token-bearing keys regardless of nesting
-
 const SENSITIVE_TOKEN_RE =
   /"(access_token|refresh_token|id_token|assertion|subject_token|client_secret)"\s*:\s*"[^"]*"/g
 
@@ -66,14 +56,12 @@ function redactTokens(raw: unknown): string {
   return s.replace(SENSITIVE_TOKEN_RE, (_, k) => `"${k}":"[REDACTED]"`)
 }
 
-// ─── Zod Schemas ────────────────────────────────────────────────────────────
-
 const TokenExchangeResponseSchema = lazySchema(() =>
   z.object({
     access_token: z.string().optional(),
     issued_token_type: z.string().optional(),
-    // z.coerce tolerates IdPs that send expires_in as a string (common in
-    // PHP-backed IdPs) — technically non-conformant JSON but widespread.
+    
+    
     expires_in: z.coerce.number().optional(),
     scope: z.string().optional(),
   }),
@@ -82,7 +70,7 @@ const TokenExchangeResponseSchema = lazySchema(() =>
 const JwtBearerResponseSchema = lazySchema(() =>
   z.object({
     access_token: z.string().min(1),
-    // Many ASes omit token_type since Bearer is the only value anyone uses
+    
     
     token_type: z.string().default('Bearer'),
     expires_in: z.coerce.number().optional(),
@@ -96,10 +84,6 @@ export type ProtectedResourceMetadata = {
   authorization_servers: string[]
 }
 
-/**
- * RFC 9728 PRM discovery via SDK, plus RFC 9728 §3.3 resource-mismatch
- * validation (mix-up protection — TODO: upstream to SDK).
- */
 export async function discoverProtectedResource(
   serverUrl: string,
   opts?: { fetchFn?: FetchLike },
@@ -139,10 +123,6 @@ export type AuthorizationServerMetadata = {
   token_endpoint_auth_methods_supported?: string[]
 }
 
-/**
- * AS metadata discovery via SDK (RFC 8414 + OIDC fallback), plus RFC 8414
- * §3.3 issuer-mismatch validation (mix-up protection — TODO: upstream to SDK).
- */
 export async function discoverAuthorizationServer(
   asUrl: string,
   opts?: { fetchFn?: FetchLike },
@@ -160,7 +140,7 @@ export async function discoverAuthorizationServer(
       `XAA: AS metadata discovery failed: issuer mismatch: expected ${asUrl}, got ${meta.issuer}`,
     )
   }
-  // RFC 8414 §3.3 / RFC 9728 §3 require HTTPS. A PRM-advertised http:// AS
+  
   
   
   if (new URL(meta.token_endpoint).protocol !== 'https:') {
@@ -177,27 +157,13 @@ export async function discoverAuthorizationServer(
   }
 }
 
-// ─── Layer 2: Exchange ──────────────────────────────────────────────────────
-
 export type JwtAuthGrantResult = {
-  /** The ID-JAG (Identity Assertion Authorization Grant) */
+  
   jwtAuthGrant: string
   expiresIn?: number
   scope?: string
 }
 
-/**
- * RFC 8693 Token Exchange at the IdP: id_token → ID-JAG.
- * Validates `issued_token_type` is `urn:ietf:params:oauth:token-type:id-jag`.
- *
- * `clientSecret` is optional — sent via `client_secret_post` if present.
- * Some IdPs register the client as confidential even when they advertise
- * `token_endpoint_auth_method: "none"`.
- *
- * TODO(xaa-ga): consult `token_endpoint_auth_methods_supported` from IdP
- * OIDC metadata and support `client_secret_basic`, mirroring the AS-side
- * selection in `performCrossAppAccess`. All major IdPs accept POST today.
- */
 export async function requestJwtAuthorizationGrant(opts: {
   tokenEndpoint: string
   audience: string
@@ -244,7 +210,7 @@ export async function requestJwtAuthorizationGrant(opts: {
   try {
     rawExchange = await res.json()
   } catch {
-    // Transient network condition (captive portal, proxy) — don't clear id_token.
+    
     throw new XaaTokenExchangeError(
       `XAA: token exchange returned non-JSON (captive portal?) at ${opts.tokenEndpoint}`,
       false,
@@ -286,22 +252,11 @@ export type XaaTokenResult = {
 }
 
 export type XaaResult = XaaTokenResult & {
-  /**
-   * The AS issuer URL discovered via PRM. Callers must persist this as
-   * `discoveryState.authorizationServerUrl` so that refresh (auth.ts _doRefresh)
-   * and revocation (revokeServerTokens) can locate the token/revocation
-   * endpoints — the MCP URL is not the AS URL in typical XAA setups.
-   */
+  
+
   authorizationServerUrl: string
 }
 
-/**
- * RFC 7523 JWT Bearer Grant at the AS: ID-JAG → access_token.
- *
- * `authMethod` defaults to `client_secret_basic` (Base64 header, not body
- * params) — the SEP-990 conformance test requires this. Only set
- * `client_secret_post` if the AS explicitly requires it.
- */
 export async function exchangeJwtAuthGrant(opts: {
   tokenEndpoint: string
   assertion: string
@@ -361,14 +316,8 @@ export async function exchangeJwtAuthGrant(opts: {
   return tokensParsed.data
 }
 
-// ─── Layer 3: Orchestrator ──────────────────────────────────────────────────
-
-/**
- * Config needed to run the full XAA orchestrator.
- * Mirrors the conformance test context shape (see ClientConformanceContextSchema).
- */
 export type XaaConfig = {
-  /** Client ID registered at the MCP server's authorization server */
+  
   clientId: string
   
   clientSecret: string
@@ -382,15 +331,6 @@ export type XaaConfig = {
   idpTokenEndpoint: string
 }
 
-/**
- * Full XAA flow: PRM → AS metadata → token-exchange → jwt-bearer → access_token.
- * Thin composition of the four Layer-2 ops. Used by performMCPXaaAuth,
- * ClaudeAuthProvider.xaaRefresh, and the try-xaa*.ts debug scripts.
- *
- * @param serverUrl The MCP server URL (e.g. `https://mcp.example.com/mcp`)
- * @param config IdP + AS credentials
- * @param serverName Server name for debug logging
- */
 export async function performCrossAppAccess(
   serverUrl: string,
   config: XaaConfig,
@@ -406,9 +346,9 @@ export async function performCrossAppAccess(
     `XAA: discovered resource=${prm.resource} ASes=[${prm.authorization_servers.join(', ')}]`,
   )
 
-  // Try each advertised AS in order. grant_types_supported is OPTIONAL per
-  // RFC 8414 §2 — only skip if the AS explicitly advertises a list that omits
-  // jwt-bearer. If absent, let the token endpoint decide.
+  
+  
+  
   let asMeta: AuthorizationServerMetadata | undefined
   const asErrors: string[] = []
   for (const asUrl of prm.authorization_servers) {
@@ -437,9 +377,9 @@ export async function performCrossAppAccess(
       `XAA: no authorization server supports jwt-bearer. Tried: ${asErrors.join('; ')}`,
     )
   }
-  // Pick auth method from what the AS advertises. We handle
-  // client_secret_basic and client_secret_post; if the AS only supports post,
-  // honor that, else default to basic (SEP-990 conformance expectation).
+  
+  
+  
   const authMethods = asMeta.token_endpoint_auth_methods_supported
   const authMethod: 'client_secret_basic' | 'client_secret_post' =
     authMethods &&

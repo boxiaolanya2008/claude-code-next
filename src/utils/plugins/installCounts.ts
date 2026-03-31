@@ -27,9 +27,6 @@ type InstallCountsCache = {
   }>
 }
 
-/**
- * Expected structure of the GitHub stats response
- */
 type GitHubStatsResponse = {
   plugins: Array<{
     plugin: string
@@ -37,17 +34,10 @@ type GitHubStatsResponse = {
   }>
 }
 
-/**
- * Get the path to the install counts cache file
- */
 function getInstallCountsCachePath(): string {
   return join(getPluginsDirectory(), INSTALL_COUNTS_CACHE_FILENAME)
 }
 
-/**
- * Load the install counts cache from disk.
- * Returns null if the file doesn't exist, is invalid, or is stale (>24h old).
- */
 async function loadInstallCountsCache(): Promise<InstallCountsCache | null> {
   const cachePath = getInstallCountsCachePath()
 
@@ -73,7 +63,7 @@ async function loadInstallCountsCache(): Promise<InstallCountsCache | null> {
       counts: unknown
     }
 
-    // Validate version
+    
     if (cache.version !== INSTALL_COUNTS_CACHE_VERSION) {
       logForDebugging(
         `Install counts cache version mismatch (got ${cache.version}, expected ${INSTALL_COUNTS_CACHE_VERSION})`,
@@ -81,20 +71,20 @@ async function loadInstallCountsCache(): Promise<InstallCountsCache | null> {
       return null
     }
 
-    // Validate fetchedAt and counts
+    
     if (typeof cache.fetchedAt !== 'string' || !Array.isArray(cache.counts)) {
       logForDebugging('Install counts cache has invalid structure')
       return null
     }
 
-    // Validate fetchedAt is a valid date
+    
     const fetchedAt = new Date(cache.fetchedAt).getTime()
     if (Number.isNaN(fetchedAt)) {
       logForDebugging('Install counts cache has invalid fetchedAt timestamp')
       return null
     }
 
-    // Validate count entries have required fields
+    
     const validCounts = cache.counts.every(
       (entry): entry is { plugin: string; unique_installs: number } =>
         typeof entry === 'object' &&
@@ -107,14 +97,14 @@ async function loadInstallCountsCache(): Promise<InstallCountsCache | null> {
       return null
     }
 
-    // Check if cache is stale (>24 hours old)
+    
     const now = Date.now()
     if (now - fetchedAt > CACHE_TTL_MS) {
       logForDebugging('Install counts cache is stale (>24h old)')
       return null
     }
 
-    // Return validated cache
+    
     return {
       version: cache.version as number,
       fetchedAt: cache.fetchedAt,
@@ -131,10 +121,6 @@ async function loadInstallCountsCache(): Promise<InstallCountsCache | null> {
   }
 }
 
-/**
- * Save the install counts cache to disk atomically.
- * Uses a temp file + rename pattern to prevent corruption.
- */
 async function saveInstallCountsCache(
   cache: InstallCountsCache,
 ): Promise<void> {
@@ -142,7 +128,7 @@ async function saveInstallCountsCache(
   const tempPath = `${cachePath}.${randomBytes(8).toString('hex')}.tmp`
 
   try {
-    // Ensure the plugins directory exists
+    
     const pluginsDir = getPluginsDirectory()
     await getFsImplementation().mkdir(pluginsDir)
 
@@ -162,14 +148,11 @@ async function saveInstallCountsCache(
     try {
       await unlink(tempPath)
     } catch {
-      // Ignore cleanup errors
+      
     }
   }
 }
 
-/**
- * Fetch install counts from GitHub stats repository
- */
 async function fetchInstallCountsFromGitHub(): Promise<
   Array<{ plugin: string; unique_installs: number }>
 > {
@@ -204,15 +187,8 @@ async function fetchInstallCountsFromGitHub(): Promise<
   }
 }
 
-/**
- * Get plugin install counts as a Map.
- * Uses cached data if available and less than 24 hours old.
- * Returns null on errors so UI can hide counts rather than show misleading zeros.
- *
- * @returns Map of plugin ID (name@marketplace) to install count, or null if unavailable
- */
 export async function getInstallCounts(): Promise<Map<string, number> | null> {
-  // Try to load from cache first
+  
   const cache = await loadInstallCountsCache()
   if (cache) {
     logForDebugging('Using cached install counts')
@@ -224,7 +200,7 @@ export async function getInstallCounts(): Promise<Map<string, number> | null> {
     return map
   }
 
-  // Cache miss or stale - fetch from GitHub
+  
   try {
     const counts = await fetchInstallCountsFromGitHub()
 
@@ -243,22 +219,13 @@ export async function getInstallCounts(): Promise<Map<string, number> | null> {
     }
     return map
   } catch (error) {
-    // Log error and return null so UI can hide counts
+    
     logError(error)
     logForDebugging(`Failed to fetch install counts: ${errorMessage(error)}`)
     return null
   }
 }
 
-/**
- * Format an install count for display.
- *
- * @param count - The raw install count
- * @returns Formatted string:
- *   - <1000: raw number (e.g., "42")
- *   - >=1000: K suffix with 1 decimal (e.g., "1.2K", "36.2K")
- *   - >=1000000: M suffix with 1 decimal (e.g., "1.2M")
- */
 export function formatInstallCount(count: number): string {
   if (count < 1000) {
     return String(count)

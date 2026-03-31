@@ -36,23 +36,14 @@ export function detectDelistedPlugins(
   return delisted
 }
 
-/**
- * Detect delisted plugins across all marketplaces, auto-uninstall them,
- * and record them as flagged.
- *
- * This is the core delisting enforcement logic, shared between interactive
- * mode (useManagePlugins) and headless mode (main.tsx print path).
- *
- * @returns List of newly flagged plugin IDs
- */
 export async function detectAndUninstallDelistedPlugins(): Promise<string[]> {
   await loadFlaggedPlugins()
 
   const installedPlugins = loadInstalledPluginsV2()
   const alreadyFlagged = getFlaggedPlugins()
   
-  // out of this function (it's called in the same try-block as loadAllPlugins
-  // in useManagePlugins, so a throw here would void loadAllPlugins' resilience).
+  
+  
   const knownMarketplaces = await loadKnownMarketplacesConfigSafe()
   const newlyFlagged: string[] = []
 
@@ -99,7 +90,7 @@ export async function detectAndUninstallDelistedPlugins(): Promise<string[]> {
         newlyFlagged.push(pluginId)
       }
     } catch (error) {
-      // Marketplace may not be available yet — log and continue
+      
       logForDebugging(
         `Failed to check for delisted plugins in "${marketplaceName}": ${errorMessage(error)}`,
         { level: 'warn' },

@@ -24,7 +24,7 @@ import {
 } from '../../utils/platform.js'
 import type { CoreUserData } from 'src/utils/user.js'
 import { getAgentContext } from '../../utils/agentContext.js'
-import type { EnvironmentMetadata } from '../../types/generated/events_mono/claude_code/v1/claude_code_internal_event.js'
+import type { EnvironmentMetadata } from '../../types/generated/events_mono/claude_code_next/v1/claude_code_next_internal_event.js'
 import type { PublicApiAuth } from '../../types/generated/events_mono/common/v1/auth.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import {
@@ -46,34 +46,15 @@ export function sanitizeToolNameForAnalytics(
   return toolName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
 }
 
-/**
- * Check if detailed tool name logging is enabled for OTLP events.
- * When enabled, MCP server/tool names and Skill names are logged.
- * Disabled by default to protect PII (user-specific server configurations).
- *
- * Enable with OTEL_LOG_TOOL_DETAILS=1
- */
 export function isToolDetailsLoggingEnabled(): boolean {
   return isEnvTruthy(process.env.OTEL_LOG_TOOL_DETAILS)
 }
 
-/**
- * Check if detailed tool name logging (MCP server/tool names) is enabled
- * for analytics events.
- *
- * Per go/taxonomy, MCP names are medium PII. We log them for:
- * - Cowork (entrypoint=local-agent) — no ZDR concept, log all MCPs
- * - claude.ai-proxied connectors — always official (from claude.ai's list)
- * - Servers whose URL matches the official MCP registry — directory
- *   connectors added via `claude mcp add`, not customer-specific config
- *
- * Custom/user-configured MCPs stay sanitized (toolName='mcp_tool').
- */
 export function isAnalyticsToolDetailsLoggingEnabled(
   mcpServerType: string | undefined,
   mcpServerBaseUrl: string | undefined,
 ): boolean {
-  if (process.env.CLAUDE_CODE_ENTRYPOINT === 'local-agent') {
+  if (process.env.CLAUDE_CODE_NEXT_ENTRYPOINT === 'local-agent') {
     return true
   }
   if (mcpServerType === 'claudeai-proxy') {
@@ -84,17 +65,6 @@ export function isAnalyticsToolDetailsLoggingEnabled(
   }
   return false
 }
-
-/**
- * Built-in first-party MCP servers whose names are fixed reserved strings,
- * not user-configured — so logging them is not PII. Checked in addition to
- * isAnalyticsToolDetailsLoggingEnabled's transport/URL gates, which a stdio
- * built-in would otherwise fail.
- *
- * Feature-gated so the set is empty when the feature is off: the name
- * reservation (main.tsx, config.ts addMcpServer) is itself feature-gated, so
- * a user-configured 'computer-use' is possible in builds without the feature.
- */
 
 const BUILTIN_MCP_SERVER_NAMES: ReadonlySet<string> = new Set(
   feature('CHICAGO_MCP')
@@ -130,13 +100,6 @@ export function mcpToolDetailsForAnalytics(
   }
 }
 
-/**
- * Extract MCP server and tool names from a full MCP tool name.
- * MCP tool names follow the format: mcp__<server>__<tool>
- *
- * @param toolName - The full tool name (e.g., 'mcp__slack__read_channel')
- * @returns Object with serverName and toolName, or undefined if not an MCP tool
- */
 export function extractMcpToolDetails(toolName: string):
   | {
       serverName: AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
@@ -147,7 +110,7 @@ export function extractMcpToolDetails(toolName: string):
     return undefined
   }
 
-  // Format: mcp__<server>__<tool>
+  
   const parts = toolName.split('__')
   if (parts.length < 3) {
     return undefined
@@ -169,13 +132,6 @@ export function extractMcpToolDetails(toolName: string):
   }
 }
 
-/**
- * Extract skill name from Skill tool input.
- *
- * @param toolName - The tool name (should be 'Skill')
- * @param input - The tool input containing the skill name
- * @returns The skill name if this is a Skill tool call, undefined otherwise
- */
 export function extractSkillName(
   toolName: string,
   input: unknown,
@@ -246,12 +202,6 @@ function truncateToolInputValue(value: unknown, depth = 0): unknown {
   return String(value)
 }
 
-/**
- * Serialize a tool's input arguments for the OTel tool_result event.
- * Truncates long strings and deep nesting to keep the output bounded while
- * preserving forensically useful fields like file paths, URLs, and MCP args.
- * Returns undefined when OTEL_LOG_TOOL_DETAILS is not enabled.
- */
 export function extractToolInputForTelemetry(
   input: unknown,
 ): string | undefined {
@@ -266,12 +216,6 @@ export function extractToolInputForTelemetry(
   return json
 }
 
-/**
- * Maximum length for file extensions to be logged.
- * Extensions longer than this are considered potentially sensitive
- * (e.g., hash-based filenames like "key-hash-abcd-123-456") and
- * will be replaced with 'other'.
- */
 const MAX_FILE_EXTENSION_LENGTH = 10
 
 export function getFileExtensionForAnalytics(
@@ -290,7 +234,6 @@ export function getFileExtensionForAnalytics(
   return extension as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
 }
 
-/** Allow list of commands we extract file extensions from. */
 const FILE_COMMANDS = new Set([
   'rm',
   'mv',
@@ -357,9 +300,6 @@ export function getFileExtensionsFromBashCommand(
   return result as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
 }
 
-/**
- * Environment context metadata
- */
 export type EnvContext = {
   platform: string
   platformRaw: string
@@ -397,9 +337,6 @@ export type EnvContext = {
   vcs?: string
 }
 
-/**
- * Process metrics included with all analytics events.
- */
 export type ProcessMetrics = {
   uptime: number
   rss: number
@@ -412,9 +349,6 @@ export type ProcessMetrics = {
   cpuPercent: number | undefined
 }
 
-/**
- * Core event metadata shared across all analytics systems
- */
 export type EventMetadata = {
   model: string
   sessionId: string
@@ -441,11 +375,8 @@ export type EventMetadata = {
   observerMode?: 'backseat' | 'skillcoach' | 'both' 
 }
 
-/**
- * Options for enriching event metadata
- */
 export type EnrichMetadataOptions = {
-  // Model to use, falls back to getMainLoopModel() if not provided
+  
   model?: unknown
   
   betas?: unknown
@@ -453,17 +384,13 @@ export type EnrichMetadataOptions = {
   additionalMetadata?: Record<string, unknown>
 }
 
-/**
- * Get agent identification for analytics.
- * Priority: AsyncLocalStorage context (subagents) > env vars (swarm teammates)
- */
 function getAgentIdentification(): {
   agentId?: string
   parentSessionId?: string
   agentType?: 'teammate' | 'subagent' | 'standalone'
   teamName?: string
 } {
-  // Check AsyncLocalStorage first (for subagents running in same process)
+  
   const agentContext = getAgentContext()
   if (agentContext) {
     const result: ReturnType<typeof getAgentIdentification> = {
@@ -477,7 +404,7 @@ function getAgentIdentification(): {
     return result
   }
 
-  // Fall back to swarm helpers (for swarm agents)
+  
   const agentId = getAgentId()
   const parentSessionId = getTeammateParentSessionId()
   const teamName = getTeamName()
@@ -497,7 +424,7 @@ function getAgentIdentification(): {
     }
   }
 
-  // Check bootstrap state for parent session ID (e.g., plan mode -> implementation)
+  
   const stateParentSessionId = getParentSessionIdFromState()
   if (stateParentSessionId) {
     return { parentSessionId: stateParentSessionId }
@@ -506,9 +433,6 @@ function getAgentIdentification(): {
   return {}
 }
 
-/**
- * Extract base version from full version string. "2.0.36-dev.20251107.t174150.sha2709699" → "2.0.36-dev"
- */
 const getVersionBase = memoize((): string | undefined => {
   const match = MACRO.VERSION.match(/^\d+\.\d+\.\d+(?:-[a-z]+)?/)
   return match ? match[0] : undefined
@@ -524,10 +448,10 @@ const buildEnvContext = memoize(async (): Promise<EnvContext> => {
 
   return {
     platform: getHostPlatformForAnalytics(),
-    // Raw process.platform so freebsd/openbsd/aix/sunos are visible in BQ.
     
     
-    platformRaw: process.env.CLAUDE_CODE_HOST_PLATFORM || process.platform,
+    
+    platformRaw: process.env.CLAUDE_CODE_NEXT_HOST_PLATFORM || process.platform,
     arch: env.arch,
     nodeVersion: env.nodeVersion,
     terminal: envDynamic.terminal,
@@ -536,29 +460,29 @@ const buildEnvContext = memoize(async (): Promise<EnvContext> => {
     isRunningWithBun: env.isRunningWithBun(),
     isCi: isEnvTruthy(process.env.CI),
     isClaubbit: isEnvTruthy(process.env.CLAUBBIT),
-    isClaudeCodeRemote: isEnvTruthy(process.env.CLAUDE_CODE_REMOTE),
-    isLocalAgentMode: process.env.CLAUDE_CODE_ENTRYPOINT === 'local-agent',
+    isClaudeCodeRemote: isEnvTruthy(process.env.CLAUDE_CODE_NEXT_REMOTE),
+    isLocalAgentMode: process.env.CLAUDE_CODE_NEXT_ENTRYPOINT === 'local-agent',
     isConductor: env.isConductor(),
-    ...(process.env.CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE && {
-      remoteEnvironmentType: process.env.CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE,
+    ...(process.env.CLAUDE_CODE_NEXT_REMOTE_ENVIRONMENT_TYPE && {
+      remoteEnvironmentType: process.env.CLAUDE_CODE_NEXT_REMOTE_ENVIRONMENT_TYPE,
     }),
-    // Gated by feature flag to prevent leaking "coworkerType" string in external builds
+    
     ...(feature('COWORKER_TYPE_TELEMETRY')
-      ? process.env.CLAUDE_CODE_COWORKER_TYPE
-        ? { coworkerType: process.env.CLAUDE_CODE_COWORKER_TYPE }
+      ? process.env.CLAUDE_CODE_NEXT_COWORKER_TYPE
+        ? { coworkerType: process.env.CLAUDE_CODE_NEXT_COWORKER_TYPE }
         : {}
       : {}),
-    ...(process.env.CLAUDE_CODE_CONTAINER_ID && {
-      claudeCodeContainerId: process.env.CLAUDE_CODE_CONTAINER_ID,
+    ...(process.env.CLAUDE_CODE_NEXT_CONTAINER_ID && {
+      claudeCodeContainerId: process.env.CLAUDE_CODE_NEXT_CONTAINER_ID,
     }),
-    ...(process.env.CLAUDE_CODE_REMOTE_SESSION_ID && {
-      claudeCodeRemoteSessionId: process.env.CLAUDE_CODE_REMOTE_SESSION_ID,
+    ...(process.env.CLAUDE_CODE_NEXT_REMOTE_SESSION_ID && {
+      claudeCodeRemoteSessionId: process.env.CLAUDE_CODE_NEXT_REMOTE_SESSION_ID,
     }),
-    ...(process.env.CLAUDE_CODE_TAGS && {
-      tags: process.env.CLAUDE_CODE_TAGS,
+    ...(process.env.CLAUDE_CODE_NEXT_TAGS && {
+      tags: process.env.CLAUDE_CODE_NEXT_TAGS,
     }),
     isGithubAction: isEnvTruthy(process.env.GITHUB_ACTIONS),
-    isClaudeCodeAction: isEnvTruthy(process.env.CLAUDE_CODE_ACTION),
+    isClaudeCodeAction: isEnvTruthy(process.env.CLAUDE_CODE_NEXT_ACTION),
     isClaudeAiAuth: isClaudeAISubscriber(),
     version: MACRO.VERSION,
     versionBase: getVersionBase(),
@@ -569,9 +493,9 @@ const buildEnvContext = memoize(async (): Promise<EnvContext> => {
       githubActionsRunnerEnvironment: process.env.RUNNER_ENVIRONMENT,
       githubActionsRunnerOs: process.env.RUNNER_OS,
       githubActionRef: process.env.GITHUB_ACTION_PATH?.includes(
-        'claude-code-action/',
+        'claude-code-next-action/',
       )
-        ? process.env.GITHUB_ACTION_PATH.split('claude-code-action/')[1]
+        ? process.env.GITHUB_ACTION_PATH.split('claude-code-next-action/')[1]
         : undefined,
     }),
     ...(getWslVersion() && { wslVersion: getWslVersion() }),
@@ -609,7 +533,7 @@ function buildProcessMetrics(): ProcessMetrics | undefined {
       heapUsed: mem.heapUsed,
       external: mem.external,
       arrayBuffers: mem.arrayBuffers,
-      // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
+      
       constrainedMemory: process.constrainedMemory(),
       cpuUsage: cpu,
       cpuPercent,
@@ -619,15 +543,6 @@ function buildProcessMetrics(): ProcessMetrics | undefined {
   }
 }
 
-/**
- * Get core event metadata shared across all analytics systems.
- *
- * This function collects environment, runtime, and context information
- * that should be included with all analytics events.
- *
- * @param options - Configuration options
- * @returns Promise resolving to enriched metadata object
- */
 export async function getEventMetadata(
   options: EnrichMetadataOptions = {},
 ): Promise<EventMetadata> {
@@ -648,8 +563,8 @@ export async function getEventMetadata(
     userType: process.env.USER_TYPE || '',
     ...(betas.length > 0 ? { betas: betas } : {}),
     envContext,
-    ...(process.env.CLAUDE_CODE_ENTRYPOINT && {
-      entrypoint: process.env.CLAUDE_CODE_ENTRYPOINT,
+    ...(process.env.CLAUDE_CODE_NEXT_ENTRYPOINT && {
+      entrypoint: process.env.CLAUDE_CODE_NEXT_ENTRYPOINT,
     }),
     ...(process.env.CLAUDE_AGENT_SDK_VERSION && {
       agentSdkVersion: process.env.CLAUDE_AGENT_SDK_VERSION,
@@ -660,29 +575,26 @@ export async function getEventMetadata(
     sweBenchRunId: process.env.SWE_BENCH_RUN_ID || '',
     sweBenchInstanceId: process.env.SWE_BENCH_INSTANCE_ID || '',
     sweBenchTaskId: process.env.SWE_BENCH_TASK_ID || '',
-    // Swarm/team agent identification
+    
     
     ...getAgentIdentification(),
-    // Subscription tier for DAU-by-tier analytics
+    
     ...(getSubscriptionType() && {
       subscriptionType: getSubscriptionType()!,
     }),
-    // Assistant mode tag — lives outside memoized buildEnvContext() because
+    
     
     
     ...(feature('KAIROS') && getKairosActive()
       ? { kairosActive: true as const }
       : {}),
-    // Repo remote hash for joining with server-side repo bundle data
+    
     ...(repoRemoteHash && { rh: repoRemoteHash }),
   }
 
   return metadata
 }
 
-/**
- * Core event metadata for 1P event logging (snake_case format).
- */
 export type FirstPartyEventLoggingCoreMetadata = {
   session_id: string
   model: string
@@ -702,9 +614,6 @@ export type FirstPartyEventLoggingCoreMetadata = {
   team_name?: string
 }
 
-/**
- * Complete event logging metadata format for 1P events.
- */
 export type FirstPartyEventLoggingMetadata = {
   env: EnvironmentMetadata
   process?: string
@@ -720,16 +629,6 @@ export type FirstPartyEventLoggingMetadata = {
   additional: Record<string, unknown>
 }
 
-/**
- * Convert metadata to 1P event logging format (snake_case fields).
- *
- * The /api/event_logging/batch endpoint expects snake_case field names
- * for environment and core metadata.
- *
- * @param metadata - Core event metadata
- * @param additionalMetadata - Additional metadata to include
- * @returns Metadata formatted for 1P event logging
- */
 export function to1PEventFormat(
   metadata: EventMetadata,
   userMetadata: CoreUserData,
@@ -752,7 +651,7 @@ export function to1PEventFormat(
   
   
   
-  //   event_schemas/.../claude_code/v1/claude_code_internal_event.proto
+  
   
   const env: EnvironmentMetadata = {
     platform: envContext.platform,
@@ -765,18 +664,18 @@ export function to1PEventFormat(
     is_running_with_bun: envContext.isRunningWithBun,
     is_ci: envContext.isCi,
     is_claubbit: envContext.isClaubbit,
-    is_claude_code_remote: envContext.isClaudeCodeRemote,
+    is_claude_code_next_remote: envContext.isClaudeCodeRemote,
     is_local_agent_mode: envContext.isLocalAgentMode,
     is_conductor: envContext.isConductor,
     is_github_action: envContext.isGithubAction,
-    is_claude_code_action: envContext.isClaudeCodeAction,
+    is_claude_code_next_action: envContext.isClaudeCodeAction,
     is_claude_ai_auth: envContext.isClaudeAiAuth,
     version: envContext.version,
     build_time: envContext.buildTime,
     deployment_environment: envContext.deploymentEnvironment,
   }
 
-  // Add optional env fields
+  
   if (envContext.remoteEnvironmentType) {
     env.remote_environment_type = envContext.remoteEnvironmentType
   }
@@ -784,10 +683,10 @@ export function to1PEventFormat(
     env.coworker_type = envContext.coworkerType
   }
   if (envContext.claudeCodeContainerId) {
-    env.claude_code_container_id = envContext.claudeCodeContainerId
+    env.claude_code_next_container_id = envContext.claudeCodeContainerId
   }
   if (envContext.claudeCodeRemoteSessionId) {
-    env.claude_code_remote_session_id = envContext.claudeCodeRemoteSessionId
+    env.claude_code_next_remote_session_id = envContext.claudeCodeRemoteSessionId
   }
   if (envContext.tags) {
     env.tags = envContext.tags
@@ -827,7 +726,7 @@ export function to1PEventFormat(
     env.version_base = envContext.versionBase
   }
 
-  // Convert core fields to snake_case
+  
   const core: FirstPartyEventLoggingCoreMetadata = {
     session_id: coreFields.sessionId,
     model: coreFields.model,
@@ -836,7 +735,7 @@ export function to1PEventFormat(
     client_type: coreFields.clientType,
   }
 
-  // Add other core fields
+  
   if (coreFields.betas) {
     core.betas = coreFields.betas
   }
@@ -855,7 +754,7 @@ export function to1PEventFormat(
   if (coreFields.sweBenchTaskId) {
     core.swe_bench_task_id = coreFields.sweBenchTaskId
   }
-  // Swarm/team agent identification
+  
   if (coreFields.agentId) {
     core.agent_id = coreFields.agentId
   }
@@ -869,7 +768,7 @@ export function to1PEventFormat(
     core.team_name = coreFields.teamName
   }
 
-  // Map userMetadata to output fields.
+  
   
   
   

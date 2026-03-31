@@ -94,7 +94,7 @@ function processCell(
       cell.cell_type === 'code' ? cell.execution_count || undefined : undefined,
     cell_id: cellId,
   }
-  // Avoid giving text cells the code language.
+  
   if (cell.cell_type === 'code') {
     cellData.language = codeLanguage
   }
@@ -158,9 +158,6 @@ function getToolResultFromCell(cell: NotebookCellSource) {
   return [contentResult, ...(outputResults ?? [])]
 }
 
-/**
- * Reads and parses a Jupyter notebook file into processed cell data
- */
 export async function readNotebook(
   notebookPath: string,
   cellId?: string,
@@ -182,9 +179,6 @@ export async function readNotebook(
   )
 }
 
-/**
- * Maps notebook cell data to tool result block parameters with sophisticated text block merging
- */
 export function mapNotebookCellsToToolResult(
   data: NotebookCellSource[],
   toolUseID: string,
@@ -201,7 +195,7 @@ export function mapNotebookCellsToToolResult(
 
         const prev = acc[acc.length - 1]
         if (prev && prev.type === 'text' && curr.type === 'text') {
-          // Merge the text blocks
+          
           prev.text += '\n' + curr.text
           return acc
         }

@@ -1,14 +1,5 @@
 
 
-//   Opens the file, stats the fd, reads the whole file with readFile(),
-//   then splits lines in memory.  This avoids the per-chunk async overhead
-
-//   Uses createReadStream with manual indexOf('\n') scanning.  Content is
-
-//   handlers access it via `this`, bound at registration time.
-
-//   false (default): legacy semantics — throws FileTooLargeError if the FILE
-
 import { createReadStream, fstat } from 'fs'
 import { stat as fsStat, readFile } from 'fs/promises'
 import { formatFileSize } from './format.js'
@@ -37,8 +28,6 @@ export class FileTooLargeError extends Error {
     this.name = 'FileTooLargeError'
   }
 }
-
-// ---------------------------------------------------------------------------
 
 export async function readFileInRange(
   filePath: string,
@@ -91,8 +80,6 @@ export async function readFileInRange(
   )
 }
 
-// ---------------------------------------------------------------------------
-
 function readFileInRangeFast(
   raw: string,
   mtimeMs: number,
@@ -139,7 +126,7 @@ function readFileInRangeFast(
     startPos = newlinePos + 1
   }
 
-  // Final fragment (no trailing newline).
+  
   if (lineIndex >= offset && lineIndex < endLine && !truncatedByBytes) {
     let line = text.slice(startPos)
     if (line.endsWith('\r')) {
@@ -160,8 +147,6 @@ function readFileInRangeFast(
     ...(truncatedByBytes ? { truncatedByBytes: true } : {}),
   }
 }
-
-// ---------------------------------------------------------------------------
 
 type StreamState = {
   stream: ReturnType<typeof createReadStream>
@@ -225,7 +210,7 @@ function streamOnData(this: StreamState, chunk: string): void {
         const sep = this.selectedLines.length > 0 ? 1 : 0
         const nextBytes = this.selectedBytes + sep + Buffer.byteLength(line)
         if (nextBytes > this.maxBytes) {
-          // Cap hit — collapse the selection range so nothing more is
+          
           
           this.truncatedByBytes = true
           this.endLine = this.currentLineIndex
@@ -241,7 +226,7 @@ function streamOnData(this: StreamState, chunk: string): void {
     startPos = newlinePos + 1
   }
 
-  // Only keep the trailing fragment when inside the selected range.
+  
   
   
   if (startPos < data.length) {

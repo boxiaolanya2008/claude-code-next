@@ -52,8 +52,6 @@ type PermissionRejectionSource =
   | { type: 'user_abort' }
   | { type: 'user_reject'; hasFeedback: boolean }
 
-// Generic interface for permission queue operations, decoupled from React.
-
 type PermissionQueueOps = {
   push(item: ToolUseConfirm): void
   remove(toolUseID: string): void

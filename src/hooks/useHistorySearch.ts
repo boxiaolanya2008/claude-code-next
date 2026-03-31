@@ -50,8 +50,8 @@ export function useHistorySearch(
 
   const closeHistoryReader = useCallback((): void => {
     if (historyReader.current) {
-      // Must explicitly call .return() to trigger the finally block in readLinesReverse,
-      // which closes the file handle. Without this, file descriptors leak.
+      
+      
       void historyReader.current.return(undefined)
       historyReader.current = undefined
     }
@@ -105,7 +105,7 @@ export function useHistorySearch(
 
         const item = await historyReader.current.next()
         if (item.done) {
-          // No match found - keep last match but mark as failed
+          
           setHistoryFailedMatch(true)
           return
         }
@@ -178,7 +178,7 @@ export function useHistorySearch(
       onModeChange(mode)
       setPastedContents(historyMatch.pastedContents)
     } else {
-      // No match - restore original pasted contents
+      
       setPastedContents(originalPastedContents)
     }
     reset()
@@ -267,10 +267,10 @@ export function useHistorySearch(
     }
   }
 
-  // Backward-compat bridge: PromptInput doesn't yet wire handleKeyDown to
-  // <Box onKeyDown>. Subscribe via useInput and adapt InputEvent →
-  // KeyboardEvent until the consumer is migrated (separate PR).
-  // TODO(onKeyDown-migration): remove once PromptInput passes handleKeyDown.
+  
+  
+  
+  
   useInput(
     (_input, _key, event) => {
       handleKeyDown(new KeyboardEvent(event.keypress))
@@ -278,11 +278,11 @@ export function useHistorySearch(
     { isActive: isSearching },
   )
 
-  // Keep a ref to searchHistory to avoid it being a dependency of useEffect
+  
   const searchHistoryRef = useRef(searchHistory)
   searchHistoryRef.current = searchHistory
 
-  // Reset history search when query changes
+  
   useEffect(() => {
     searchAbortController.current?.abort()
     const controller = new AbortController()

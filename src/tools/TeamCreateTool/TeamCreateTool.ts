@@ -58,12 +58,12 @@ export type Output = {
 export type Input = z.infer<InputSchema>
 
 function generateUniqueTeamName(providedName: string): string {
-  // If the team doesn't exist, use the provided name
+  
   if (!readTeamFile(providedName)) {
     return providedName
   }
 
-  // Team exists, generate a new unique name
+  
   return generateWordSlug()
 }
 
@@ -125,7 +125,7 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
     const { setAppState, getAppState } = context
     const { team_name, description: _description, agent_type } = input
 
-    // Check if already in a team - restrict to one team per leader
+    
     const appState = getAppState()
     const existingTeam = appState.teamContext?.teamName
 
@@ -135,13 +135,13 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
       )
     }
 
-    // If team already exists, generate a unique name instead of failing
+    
     const finalTeamName = generateUniqueTeamName(team_name)
 
-    // Generate a deterministic agent ID for the team lead
+    
     const leadAgentId = formatAgentId(TEAM_LEAD_NAME, finalTeamName)
     const leadAgentType = agent_type || TEAM_LEAD_NAME
-    // Get the team lead's current model from AppState (handles session model, settings, CLI override)
+    
     const leadModel = parseUserSpecifiedModel(
       appState.mainLoopModelForSession ??
         appState.mainLoopModel ??
@@ -155,7 +155,7 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
       description: _description,
       createdAt: Date.now(),
       leadAgentId,
-      leadSessionId: getSessionId(), // Store actual session ID for team discovery
+      leadSessionId: getSessionId(), 
       members: [
         {
           agentId: leadAgentId,
@@ -218,7 +218,7 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
     })
 
     
-    // 1. The lead is not a "teammate" - isTeammate() should return false for them
+    
     
     
     

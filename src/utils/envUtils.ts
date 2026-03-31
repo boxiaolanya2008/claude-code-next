@@ -15,10 +15,6 @@ export function getTeamsDir(): string {
   return join(getClaudeConfigHomeDir(), 'teams')
 }
 
-/**
- * Check if NODE_OPTIONS contains a specific flag.
- * Splits on whitespace and checks for exact match to avoid false positives.
- */
 export function hasNodeOption(flag: string): boolean {
   const nodeOptions = process.env.NODE_OPTIONS
   if (!nodeOptions) {
@@ -44,35 +40,19 @@ export function isEnvDefinedFalsy(
   return ['0', 'false', 'no', 'off'].includes(normalizedValue)
 }
 
-/**
- * --bare / CLAUDE_CODE_SIMPLE — skip hooks, LSP, plugin sync, skill dir-walk,
- * attribution, background prefetches, and ALL keychain/credential reads.
- * Auth is strictly ANTHROPIC_API_KEY env or apiKeyHelper from --settings.
- * Explicit CLI flags (--plugin-dir, --add-dir, --mcp-config) still honored.
- * ~30 gates across the codebase.
- *
- * Checks argv directly (in addition to the env var) because several gates
- * run before main.tsx's action handler sets CLAUDE_CODE_SIMPLE=1 from --bare
- * — notably startKeychainPrefetch() at main.tsx top-level.
- */
 export function isBareMode(): boolean {
   return (
-    isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE) ||
+    isEnvTruthy(process.env.CLAUDE_CODE_NEXT_SIMPLE) ||
     process.argv.includes('--bare')
   )
 }
 
-/**
- * Parses an array of environment variable strings into a key-value object
- * @param envVars Array of strings in KEY=VALUE format
- * @returns Object with key-value pairs
- */
 export function parseEnvVars(
   rawEnvArgs: string[] | undefined,
 ): Record<string, string> {
   const parsedEnv: Record<string, string> = {}
 
-  // Parse individual env vars
+  
   if (rawEnvArgs) {
     for (const envStr of rawEnvArgs) {
       const [key, ...valueParts] = envStr.split('=')
@@ -87,32 +67,18 @@ export function parseEnvVars(
   return parsedEnv
 }
 
-/**
- * Get the AWS region with fallback to default
- * Matches the Anthropic Bedrock SDK's region behavior
- */
 export function getAWSRegion(): string {
   return process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'us-east-1'
 }
 
-/**
- * Get the default Vertex AI region
- */
 export function getDefaultVertexRegion(): string {
   return process.env.CLOUD_ML_REGION || 'us-east5'
 }
 
-/**
- * Check if bash commands should maintain project working directory (reset to original after each command)
- * @returns true if CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR is set to a truthy value
- */
 export function shouldMaintainProjectWorkingDir(): boolean {
   return isEnvTruthy(process.env.CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR)
 }
 
-/**
- * Check if running on Homespace (ant-internal cloud environment)
- */
 export function isRunningOnHomespace(): boolean {
   return (
     process.env.USER_TYPE === 'ant' &&
@@ -120,22 +86,11 @@ export function isRunningOnHomespace(): boolean {
   )
 }
 
-/**
- * Conservative check for whether Claude Code is running inside a protected
- * (privileged or ASL3+) COO namespace or cluster.
- *
- * Conservative means: when signals are ambiguous, assume protected. We would
- * rather over-report protected usage than miss it. Unprotected environments
- * are homespace, namespaces on the open allowlist, and no k8s/COO signals
- * at all (laptop/local dev).
- *
- * Used for telemetry to measure auto-mode usage in sensitive environments.
- */
 export function isInProtectedNamespace(): boolean {
-  // USER_TYPE is build-time --define'd; in external builds this block is
-  // DCE'd so the require() and namespace allowlist never appear in the bundle.
+  
+  
   if (process.env.USER_TYPE === 'ant') {
-    /* eslint-disable @typescript-eslint/no-require-imports */
+    
     return (
       require('./protectedNamespace.js') as typeof import('./protectedNamespace.js')
     ).checkProtectedNamespace()
@@ -143,8 +98,6 @@ export function isInProtectedNamespace(): boolean {
   }
   return false
 }
-
-// @[MODEL LAUNCH]: Add a Vertex region override env var for the new model.
 
 const VERTEX_REGION_OVERRIDES: ReadonlyArray<[string, string]> = [
   ['claude-haiku-4-5', 'VERTEX_REGION_CLAUDE_HAIKU_4_5'],

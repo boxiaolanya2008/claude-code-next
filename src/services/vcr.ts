@@ -32,10 +32,6 @@ function shouldUseVCR(): boolean {
   return false
 }
 
-/**
- * Generic fixture management helper
- * Handles caching, reading, writing fixtures for any data type
- */
 async function withFixture<T>(
   input: unknown,
   fixtureName: string,
@@ -45,13 +41,13 @@ async function withFixture<T>(
     return await f()
   }
 
-  // Create hash of input for fixture filename
+  
   const hash = createHash('sha1')
     .update(jsonStringify(input))
     .digest('hex')
     .slice(0, 12)
   const filename = join(
-    process.env.CLAUDE_CODE_TEST_FIXTURES_ROOT ?? getCwd(),
+    process.env.CLAUDE_CODE_NEXT_TEST_FIXTURES_ROOT ?? getCwd(),
     `fixtures/${fixtureName}-${hash}.json`,
   )
 
@@ -74,7 +70,7 @@ async function withFixture<T>(
     )
   }
 
-  // Create & write new fixture
+  
   const result = await f()
 
   await mkdir(dirname(filename), { recursive: true })
@@ -110,7 +106,7 @@ export async function withVCR(
     dehydrateValue,
   )
   const filename = join(
-    process.env.CLAUDE_CODE_TEST_FIXTURES_ROOT ?? getCwd(),
+    process.env.CLAUDE_CODE_NEXT_TEST_FIXTURES_ROOT ?? getCwd(),
     `fixtures/${dehydratedInput.map(_ => createHash('sha1').update(jsonStringify(_)).digest('hex').slice(0, 6)).join('-')}.json`,
   )
 
@@ -136,7 +132,7 @@ export async function withVCR(
     )
   }
 
-  // Create & write new fixture
+  
   const results = await f()
   if (env.isCI && !isEnvTruthy(process.env.VCR_RECORD)) {
     return results
@@ -242,8 +238,8 @@ function mapAssistantMessage(
   uuid?: UUID,
 ): AssistantMessage {
   return {
-    // Use provided UUID if given (hydrate path uses randomUUID for globally unique IDs),
-    // otherwise fall back to deterministic index-based UUID (dehydrate/fixture path).
+    
+    
     
     
     uuid: uuid ?? (`UUID-${index}` as unknown as UUID),
@@ -259,7 +255,7 @@ function mapAssistantMessage(
                 ..._,
                 text: f(_.text) as string,
                 citations: _.citations || [],
-              } // Ensure citations
+              } 
             case 'tool_use':
               return {
                 ..._,
@@ -305,7 +301,7 @@ function dehydrateValue(s: unknown): unknown {
     .replaceAll(cwd, '[CWD]')
     .replace(/Available commands:.+/, 'Available commands: [COMMANDS]')
   
-  // 1. Forward-slash variants (Git, some Node APIs)
+  
   
   if (process.platform === 'win32') {
     const cwdFwd = cwd.replaceAll('\\', '/')
@@ -319,7 +315,7 @@ function dehydrateValue(s: unknown): unknown {
       .replaceAll(cwdFwd, '[CWD]')
       .replaceAll(configHomeFwd, '[CONFIG_HOME]')
   }
-  // Normalize backslash path separators after placeholders so VCR fixture
+  
   
   
   s1 = s1
@@ -360,7 +356,7 @@ export async function* withStreamingVCR(
     return yield* f()
   }
 
-  // Compute and yield messages
+  
   const buffer: (StreamEvent | AssistantMessage | SystemAPIErrorMessage)[] = []
 
   
@@ -384,11 +380,11 @@ export async function withTokenCountVCR(
   tools: unknown[],
   f: () => Promise<number | null>,
 ): Promise<number | null> {
-  // Dehydrate before hashing so fixture keys survive cwd/config-home/tempdir
   
   
   
-  // every test run produces a new hash and fixtures never hit in CI.
+  
+  
   const cwdSlug = getCwd().replace(/[^a-zA-Z0-9]/g, '-')
   const dehydrated = (
     dehydrateValue(jsonStringify({ messages, tools })) as string

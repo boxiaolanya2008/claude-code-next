@@ -106,7 +106,7 @@ function applyHeadLimit<T>(
   limit: number | undefined,
   offset: number = 0,
 ): { items: T[]; appliedLimit: number | undefined } {
-  // Explicit 0 = unlimited escape hatch
+  
   if (limit === 0) {
     return { items: items.slice(offset), appliedLimit: undefined }
   }
@@ -120,10 +120,6 @@ function applyHeadLimit<T>(
     appliedLimit: wasTruncated ? effectiveLimit : undefined,
   }
 }
-
-// Format limit/offset information for display in tool results.
-
-// so it may be undefined even when appliedOffset is set — build parts conditionally
 
 function formatLimitInfo(
   appliedLimit: number | undefined,
@@ -141,10 +137,10 @@ const outputSchema = lazySchema(() =>
     numFiles: z.number(),
     filenames: z.array(z.string()),
     content: z.string().optional(),
-    numLines: z.number().optional(), // For content mode
-    numMatches: z.number().optional(), // For count mode
-    appliedLimit: z.number().optional(), // The limit that was applied (if any)
-    appliedOffset: z.number().optional(), // The offset that was applied
+    numLines: z.number().optional(), 
+    numMatches: z.number().optional(), 
+    appliedLimit: z.number().optional(), 
+    appliedOffset: z.number().optional(), 
   }),
 )
 type OutputSchema = ReturnType<typeof outputSchema>
@@ -154,7 +150,7 @@ type Output = z.infer<OutputSchema>
 export const GrepTool = buildTool({
   name: GREP_TOOL_NAME,
   searchHint: 'search file contents with regex (ripgrep)',
-  // 20K chars - tool result persistence threshold
+  
   maxResultSizeChars: 20_000,
   strict: true,
   async description() {
@@ -193,7 +189,7 @@ export const GrepTool = buildTool({
     return rulePattern => matchWildcardPattern(rulePattern, pattern)
   },
   async validateInput({ path }): Promise<ValidationResult> {
-    // If path is provided, validate that it exists
+    
     if (path) {
       const fs = getFsImplementation()
       const absolutePath = expandPath(path)
@@ -238,7 +234,7 @@ export const GrepTool = buildTool({
   renderToolUseMessage,
   renderToolUseErrorMessage,
   renderToolResultMessage,
-  // SearchResultSummary shows content (mode=content) or filenames.join.
+  
   
   
   extractSearchText({ mode, content, filenames }) {
@@ -284,7 +280,7 @@ export const GrepTool = buildTool({
       }
     }
 
-    // files_with_matches mode
+    
     const limitInfo = formatLimitInfo(appliedLimit, appliedOffset)
     if (numFiles === 0) {
       return {
@@ -293,7 +289,7 @@ export const GrepTool = buildTool({
         content: 'No files found',
       }
     }
-    // head_limit has already been applied in call() method, so just show all filenames
+    
     const result = `Found ${numFiles} ${plural(numFiles, 'file')}${limitInfo ? ` ${limitInfo}` : ''}\n${filenames.join('\n')}`
     return {
       tool_use_id: toolUseID,
@@ -328,7 +324,7 @@ export const GrepTool = buildTool({
       args.push('--glob', `!${dir}`)
     }
 
-    // Limit line length to prevent base64/minified content from cluttering output
+    
     args.push('--max-columns', '500')
 
     
@@ -336,24 +332,24 @@ export const GrepTool = buildTool({
       args.push('-U', '--multiline-dotall')
     }
 
-    // Add optional flags
+    
     if (case_insensitive) {
       args.push('-i')
     }
 
-    // Add output mode flags
+    
     if (output_mode === 'files_with_matches') {
       args.push('-l')
     } else if (output_mode === 'count') {
       args.push('-c')
     }
 
-    // Add line numbers if requested
+    
     if (show_line_numbers && output_mode === 'content') {
       args.push('-n')
     }
 
-    // Add context flags (-C/context takes precedence over context_before/context_after)
+    
     if (output_mode === 'content') {
       if (context !== undefined) {
         args.push('-C', context.toString())
@@ -369,7 +365,7 @@ export const GrepTool = buildTool({
       }
     }
 
-    // If pattern starts with dash, use -e flag to specify it as a pattern
+    
     
     if (pattern.startsWith('-')) {
       args.push('-e', pattern)
@@ -377,22 +373,22 @@ export const GrepTool = buildTool({
       args.push(pattern)
     }
 
-    // Add type filter if specified
+    
     if (type) {
       args.push('--type', type)
     }
 
     if (glob) {
-      // Split on commas and spaces, but preserve patterns with braces
+      
       const globPatterns: string[] = []
       const rawPatterns = glob.split(/\s+/)
 
       for (const rawPattern of rawPatterns) {
-        // If pattern contains braces, don't split further
+        
         if (rawPattern.includes('{') && rawPattern.includes('}')) {
           globPatterns.push(rawPattern)
         } else {
-          // Split on commas for patterns without braces
+          
           globPatterns.push(...rawPattern.split(',').filter(Boolean))
         }
       }
@@ -402,40 +398,40 @@ export const GrepTool = buildTool({
       }
     }
 
-    // Add ignore patterns
+    
     const appState = getAppState()
     const ignorePatterns = normalizePatternsToPath(
       getFileReadIgnorePatterns(appState.toolPermissionContext),
       getCwd(),
     )
     for (const ignorePattern of ignorePatterns) {
-      // Note: ripgrep only applies gitignore patterns relative to the working directory
-      // So for non-absolute paths, we need to prefix them with '**'
-      // See: https://github.com/BurntSushi/ripgrep/discussions/2156#discussioncomment-2316335
-      //
-      // We also need to negate the pattern with `!` to exclude it
+      
+      
+      
+      
+      
       const rgIgnorePattern = ignorePattern.startsWith('/')
         ? `!${ignorePattern}`
         : `!**/${ignorePattern}`
       args.push('--glob', rgIgnorePattern)
     }
 
-    // Exclude orphaned plugin version directories
+    
     for (const exclusion of await getGlobExclusionsForPluginCache(
       absolutePath,
     )) {
       args.push('--glob', exclusion)
     }
 
-    // WSL has severe performance penalty for file reads (3-5x slower on WSL2)
-    // The timeout is handled by ripgrep itself via execFile timeout option
-    // We don't use AbortController for timeout to avoid interrupting the agent loop
+    
+    
+    
     
     
     const results = await ripGrep(args, absolutePath, abortController.signal)
 
     if (output_mode === 'content') {
-      // For content mode, results are the actual content lines
+      
       
 
       
@@ -448,7 +444,7 @@ export const GrepTool = buildTool({
       )
 
       const finalLines = limitedResults.map(line => {
-        // Lines have format: /absolute/path:line_content or /absolute/path:num:content
+        
         const colonIndex = line.indexOf(':')
         if (colonIndex > 0) {
           const filePath = line.substring(0, colonIndex)
@@ -459,7 +455,7 @@ export const GrepTool = buildTool({
       })
       const output = {
         mode: 'content' as const,
-        numFiles: 0, // Not applicable for content mode
+        numFiles: 0, 
         filenames: [],
         content: finalLines.join('\n'),
         numLines: finalLines.length,
@@ -470,7 +466,7 @@ export const GrepTool = buildTool({
     }
 
     if (output_mode === 'count') {
-      // For count mode, pass through raw ripgrep output (filename:count format)
+      
       
       const { items: limitedResults, appliedLimit } = applyHeadLimit(
         results,
@@ -480,7 +476,7 @@ export const GrepTool = buildTool({
 
       
       const finalCountLines = limitedResults.map(line => {
-        // Lines have format: /absolute/path:count
+        
         const colonIndex = line.lastIndexOf(':')
         if (colonIndex > 0) {
           const filePath = line.substring(0, colonIndex)
@@ -517,7 +513,7 @@ export const GrepTool = buildTool({
       return { data: output }
     }
 
-    // For files_with_matches mode (default)
+    
     
     
     const stats = await Promise.allSettled(
@@ -534,12 +530,12 @@ export const GrepTool = buildTool({
       })
       .sort((a, b) => {
         if (process.env.NODE_ENV === 'test') {
-          // In tests, we always want to sort by filename, so that results are deterministic
+          
           return a[0].localeCompare(b[0])
         }
         const timeComparison = b[1] - a[1]
         if (timeComparison === 0) {
-          // Sort by filename as a tiebreaker
+          
           return a[0].localeCompare(b[0])
         }
         return timeComparison

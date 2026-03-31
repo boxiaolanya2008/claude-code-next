@@ -12,10 +12,6 @@ type ExecSyncOptions = {
   stdio?: ExecaOptions['stdio']
 }
 
-/**
- * @deprecated Use `execa` directly with `{ shell: true, reject: false }` for non-blocking execution.
- * Sync exec calls block the event loop and cause performance issues.
- */
 export function execSyncWithDefaults_DEPRECATED(command: string): string | null
 
 export function execSyncWithDefaults_DEPRECATED(
@@ -37,16 +33,16 @@ export function execSyncWithDefaults_DEPRECATED(
   let options: ExecSyncOptions
 
   if (optionsOrAbortSignal === undefined) {
-    // No second argument - use defaults
+    
     options = {}
   } else if (optionsOrAbortSignal instanceof AbortSignal) {
-    // Old signature - second argument is AbortSignal
+    
     options = {
       abortSignal: optionsOrAbortSignal,
       timeout,
     }
   } else {
-    // New signature - second argument is options object
+    
     options = optionsOrAbortSignal
   }
 
@@ -66,8 +62,8 @@ export function execSyncWithDefaults_DEPRECATED(
       timeout: finalTimeout,
       cwd: getCwd(),
       stdio,
-      shell: true, // execSync typically runs shell commands
-      reject: false, // Don't throw on non-zero exit codes
+      shell: true, 
+      reject: false, 
       input,
     })
     if (!result.stdout) {

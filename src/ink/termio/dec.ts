@@ -19,12 +19,10 @@ export function decset(mode: number): string {
   return csi(`?${mode}h`)
 }
 
-/** Generate CSI ? N l sequence (reset mode) */
 export function decreset(mode: number): string {
   return csi(`?${mode}l`)
 }
 
-// Pre-generated sequences for common modes
 export const BSU = decset(DEC.SYNCHRONIZED_UPDATE)
 export const ESU = decreset(DEC.SYNCHRONIZED_UPDATE)
 export const EBP = decset(DEC.BRACKETED_PASTE)

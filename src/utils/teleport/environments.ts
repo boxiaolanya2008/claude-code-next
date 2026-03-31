@@ -24,16 +24,11 @@ export type EnvironmentListResponse = {
   last_id: string | null
 }
 
-/**
- * Fetches the list of available environments from the Environment API
- * @returns Promise<EnvironmentResource[]> Array of available environments
- * @throws Error if the API request fails or no access token is available
- */
 export async function fetchEnvironments(): Promise<EnvironmentResource[]> {
   const accessToken = getClaudeAIOAuthTokens()?.accessToken
   if (!accessToken) {
     throw new Error(
-      'Claude Code web sessions require authentication with a Claude.ai account. API key authentication is not sufficient. Please run /login to authenticate, or check your authentication status with /status.',
+      'Claude Code Next web sessions require authentication with a Claude.ai account. API key authentication is not sufficient. Please run /login to authenticate, or check your authentication status with /status.',
     )
   }
 
@@ -69,10 +64,6 @@ export async function fetchEnvironments(): Promise<EnvironmentResource[]> {
   }
 }
 
-/**
- * Creates a default anthropic_cloud environment for users who have none.
- * Uses the public environment_providers route (same auth as fetchEnvironments).
- */
 export async function createDefaultCloudEnvironment(
   name: string,
 ): Promise<EnvironmentResource> {

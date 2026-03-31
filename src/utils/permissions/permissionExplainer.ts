@@ -19,7 +19,6 @@ const RISK_LEVEL_NUMERIC: Record<RiskLevel, number> = {
   HIGH: 3,
 }
 
-// Error type codes for analytics
 const ERROR_TYPE_PARSE = 1
 const ERROR_TYPE_NETWORK = 2
 const ERROR_TYPE_UNKNOWN = 3
@@ -71,7 +70,6 @@ const EXPLAIN_COMMAND_TOOL = {
   },
 }
 
-// Zod schema for parsing and validating the response
 const RiskAssessmentSchema = lazySchema(() =>
   z.object({
     riskLevel: z.enum(['LOW', 'MEDIUM', 'HIGH']),
@@ -92,25 +90,20 @@ function formatToolInput(input: unknown): string {
   }
 }
 
-/**
- * Extract recent conversation context from messages for the explainer.
- * Returns a summary of recent assistant messages to provide context
- * for "why" this command is being run.
- */
 function extractConversationContext(
   messages: Message[],
   maxChars = 1000,
 ): string {
-  // Get recent assistant messages (they contain Claude's reasoning)
+  
   const assistantMessages = messages
     .filter((m): m is AssistantMessage => m.type === 'assistant')
-    .slice(-3) // Last 3 assistant messages
+    .slice(-3) 
 
   const contextParts: string[] = []
   let totalChars = 0
 
   for (const msg of assistantMessages.reverse()) {
-    // Extract text content from assistant message
+    
     const textBlocks = msg.message.content
       .filter(c => c.type === 'text')
       .map(c => ('text' in c ? c.text : ''))
@@ -130,18 +123,10 @@ function extractConversationContext(
   return contextParts.join('\n\n')
 }
 
-/**
- * Check if the permission explainer feature is enabled.
- * Enabled by default; users can opt out via config.
- */
 export function isPermissionExplainerEnabled(): boolean {
   return getGlobalConfig().permissionExplainerEnabled !== false
 }
 
-/**
- * Generate a permission explanation using Haiku with structured output.
- * Returns null if the feature is disabled, request is aborted, or an error occurs.
- */
 export async function generatePermissionExplanation({
   toolName,
   toolInput,
@@ -149,7 +134,7 @@ export async function generatePermissionExplanation({
   messages,
   signal,
 }: GenerateExplanationParams): Promise<PermissionExplanation | null> {
-  // Check if feature is enabled
+  
   if (!isPermissionExplainerEnabled()) {
     return null
   }
@@ -172,7 +157,7 @@ Explain this command in context.`
 
     const model = getMainLoopModel()
 
-    // Use sideQuery with forced tool choice for guaranteed structured output
+    
     const response = await sideQuery({
       model,
       system: SYSTEM_PROMPT,
@@ -188,7 +173,7 @@ Explain this command in context.`
       `Permission explainer: API returned in ${latencyMs}ms, stop_reason=${response.stop_reason}`,
     )
 
-    // Extract structured data from tool use block
+    
     const toolUseBlock = response.content.find(c => c.type === 'tool_use')
     if (toolUseBlock && toolUseBlock.type === 'tool_use') {
       logForDebugging(
@@ -216,7 +201,7 @@ Explain this command in context.`
       }
     }
 
-    // No valid JSON in response
+    
     logEvent('tengu_permission_explainer_error', {
       tool_name: sanitizeToolNameForAnalytics(toolName),
       error_type: ERROR_TYPE_PARSE,
@@ -227,7 +212,7 @@ Explain this command in context.`
   } catch (error) {
     const latencyMs = Date.now() - startTime
 
-    // Don't log aborted requests as errors
+    
     if (signal.aborted) {
       logForDebugging(`Permission explainer: request aborted for ${toolName}`)
       return null

@@ -14,8 +14,6 @@ function isCommandAvailable(command: string): boolean {
   return !!whichSync(command)
 }
 
-// GUI editors that open in a separate window and can be spawned detached
-
 const GUI_EDITORS = [
   'code',
   'cursor',
@@ -37,10 +35,6 @@ export function classifyGuiEditor(editor: string): string | undefined {
   return GUI_EDITORS.find(g => base.includes(g))
 }
 
-/**
- * Build goto-line argv for a GUI editor. VS Code family uses -g file:line;
- * subl uses bare file:line; others don't support goto-line.
- */
 function guiGotoArgv(
   guiFamily: string,
   filePath: string,
@@ -52,18 +46,6 @@ function guiGotoArgv(
   return [filePath]
 }
 
-/**
- * Launch a file in the user's external editor.
- *
- * For GUI editors (code, subl, etc.): spawns detached — the editor opens
- * in a separate window and Claude Code stays interactive.
- *
- * For terminal editors (vim, nvim, nano, etc.): blocks via Ink's alt-screen
- * handoff until the editor exits. This is the same dance as editFileInEditor()
- * in promptEditor.ts, minus the read-back.
- *
- * Returns true if the editor was launched, false if no editor is available.
- */
 export function openFileInExternalEditor(
   filePath: string,
   line?: number,
@@ -84,19 +66,19 @@ export function openFileInExternalEditor(
     const detachedOpts: SpawnOptions = { detached: true, stdio: 'ignore' }
     let child
     if (process.platform === 'win32') {
-      // shell: true on win32 so code.cmd / cursor.cmd / windsurf.cmd resolve —
+      
       
       
       
       const gotoStr = gotoArgv.map(a => `"${a}"`).join(' ')
       child = spawn(`${editor} ${gotoStr}`, { ...detachedOpts, shell: true })
     } else {
-      // POSIX: argv array with no shell — injection-safe. shell: true would
+      
       
       
       child = spawn(base, [...editorArgs, ...gotoArgv], detachedOpts)
     }
-    // spawn() emits ENOENT asynchronously. ENOENT on $VISUAL/$EDITOR is a
+    
     
     child.on('error', e =>
       logForDebugging(`editor spawn failed: ${e}`, { level: 'error' }),
@@ -105,7 +87,7 @@ export function openFileInExternalEditor(
     return true
   }
 
-  // Terminal editor — needs alt-screen handoff since it takes over the
+  
   
   const inkInstance = instances.get(process.stdout)
   if (!inkInstance) return false
@@ -118,7 +100,7 @@ export function openFileInExternalEditor(
     const syncOpts: SpawnSyncOptions = { stdio: 'inherit' }
     let result
     if (process.platform === 'win32') {
-      // On Windows use shell: true so cmd.exe builtins like `start` resolve.
+      
       
       
       
@@ -128,7 +110,7 @@ export function openFileInExternalEditor(
         shell: true,
       })
     } else {
-      // POSIX: spawn directly (no shell), argv array is quote-safe.
+      
       const args = [
         ...editorArgs,
         ...(useGotoLine ? [`+${line}`, filePath] : [filePath]),
@@ -148,7 +130,7 @@ export function openFileInExternalEditor(
 }
 
 export const getExternalEditor = memoize((): string | undefined => {
-  // Prioritize environment variables
+  
   if (process.env.VISUAL?.trim()) {
     return process.env.VISUAL.trim()
   }
@@ -157,13 +139,13 @@ export const getExternalEditor = memoize((): string | undefined => {
     return process.env.EDITOR.trim()
   }
 
-  // `isCommandAvailable` breaks the claude process' stdin on Windows
-  // as a bandaid, we skip it
+  
+  
   if (process.platform === 'win32') {
     return 'start /wait notepad'
   }
 
-  // Search for available editors in order of preference
+  
   const editors = ['code', 'vi', 'nano']
   return editors.find(command => isCommandAvailable(command))
 })

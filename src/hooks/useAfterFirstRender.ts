@@ -5,7 +5,7 @@ export function useAfterFirstRender(): void {
   useEffect(() => {
     if (
       process.env.USER_TYPE === 'ant' &&
-      isEnvTruthy(process.env.CLAUDE_CODE_EXIT_AFTER_FIRST_RENDER)
+      isEnvTruthy(process.env.CLAUDE_CODE_NEXT_EXIT_AFTER_FIRST_RENDER)
     ) {
       process.stderr.write(
         `\nStartup time: ${Math.round(process.uptime() * 1000)}ms\n`,

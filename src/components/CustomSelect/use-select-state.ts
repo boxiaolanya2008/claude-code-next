@@ -3,11 +3,8 @@ import type { OptionWithDescription } from './select.js'
 import { useSelectNavigation } from './use-select-navigation.js'
 
 export type UseSelectStateProps<T> = {
-  /**
-   * Number of items to display.
-   *
-   * @default 5
-   */
+  
+
   visibleOptionCount?: number
 
   
@@ -22,26 +19,22 @@ export type UseSelectStateProps<T> = {
 
   onChange?: (value: T) => void
 
-  /**
-   * Callback for canceling the select.
-   */
+  
+
   onCancel?: () => void
 
-  /**
-   * Callback for focusing an option.
-   */
+  
+
   onFocus?: (value: T) => void
 
-  /**
-   * Value to focus
-   */
+  
+
   focusValue?: T
 }
 
 export type SelectState<T> = {
-  /**
-   * Value of the currently focused option.
-   */
+  
+
   focusedValue: T | undefined
 
   
@@ -76,39 +69,32 @@ export type SelectState<T> = {
 
   focusNextOption: () => void
 
-  /**
-   * Focus previous option and scroll the list up, if needed.
-   */
+  
+
   focusPreviousOption: () => void
 
-  /**
-   * Focus next page and scroll the list down by a page.
-   */
+  
+
   focusNextPage: () => void
 
-  /**
-   * Focus previous page and scroll the list up by a page.
-   */
+  
+
   focusPreviousPage: () => void
 
-  /**
-   * Focus a specific option by value.
-   */
+  
+
   focusOption: (value: T | undefined) => void
 
-  /**
-   * Select currently focused option.
-   */
+  
+
   selectFocusedOption: () => void
 
-  /**
-   * Callback for selecting an option.
-   */
+  
+
   onChange?: (value: T) => void
 
-  /**
-   * Callback for canceling the select.
-   */
+  
+
   onCancel?: () => void
 }
 

@@ -10,7 +10,7 @@ import { clearBetaTracingState } from '../../utils/telemetry/betaSessionTracing.
 import { resetMicrocompactState } from './microCompact.js'
 
 export function runPostCompactCleanup(querySource?: QuerySource): void {
-  // Subagents (agent:*) run in the same process and share module-level
+  
   
   
   
@@ -22,7 +22,7 @@ export function runPostCompactCleanup(querySource?: QuerySource): void {
   resetMicrocompactState()
   if (feature('CONTEXT_COLLAPSE')) {
     if (isMainThreadCompact) {
-      /* eslint-disable @typescript-eslint/no-require-imports */
+      
       ;(
         require('../contextCollapse/index.js') as typeof import('../contextCollapse/index.js')
       ).resetContextCollapse()
@@ -30,12 +30,12 @@ export function runPostCompactCleanup(querySource?: QuerySource): void {
     }
   }
   if (isMainThreadCompact) {
-    // getUserContext is a memoized outer layer wrapping getClaudeMds() →
-    
-    // the next turn hits the getUserContext cache and never reaches
     
     
-    // auto-compact and reactive-compact did not — this centralizes the
+    
+    
+    
+    
     
     getUserContext.cache.clear?.()
     resetGetMemoryFilesCache('compact')

@@ -19,7 +19,7 @@ import { makeSecondaryModelPrompt } from './prompt.js'
 
 class DomainBlockedError extends Error {
   constructor(domain: string) {
-    super(`Claude Code is unable to fetch from ${domain}`)
+    super(`Claude Code Next is unable to fetch from ${domain}`)
     this.name = 'DomainBlockedError'
   }
 }
@@ -46,7 +46,6 @@ class EgressBlockedError extends Error {
   }
 }
 
-// Cache for storing fetched URL content
 type CacheEntry = {
   bytes: number
   code: number
@@ -56,8 +55,6 @@ type CacheEntry = {
   persistedPath?: string
   persistedSize?: number
 }
-
-// Cache with 15-minute TTL and 50MB size limit
 
 const CACHE_TTL_MS = 15 * 60 * 1000 
 const MAX_CACHE_SIZE_BYTES = 50 * 1024 * 1024 
@@ -69,15 +66,13 @@ const URL_CACHE = new LRUCache<string, CacheEntry>({
 
 const DOMAIN_CHECK_CACHE = new LRUCache<string, true>({
   max: 128,
-  ttl: 5 * 60 * 1000, // 5 minutes — shorter than URL_CACHE TTL
+  ttl: 5 * 60 * 1000, 
 })
 
 export function clearWebFetchCache(): void {
   URL_CACHE.clear()
   DOMAIN_CHECK_CACHE.clear()
 }
-
-// Lazy singleton — defers the turndown → @mixmark-io/domino import (~1.4MB
 
 type TurndownCtor = typeof import('turndown')
 let turndownServicePromise: Promise<InstanceType<TurndownCtor>> | undefined
@@ -88,33 +83,16 @@ function getTurndownService(): Promise<InstanceType<TurndownCtor>> {
   }))
 }
 
-// PSR requested limiting the length of URLs to 250 to lower the potential
-
-// which provides a primary security boundary. In addition, Claude Code has
-
-// so I'm removing that length restriction. -ab
 const MAX_URL_LENGTH = 2000
 
-// Per PSR:
-// "Implement resource consumption controls because setting limits on CPU,
-// memory, and network usage for the Web Fetch tool can prevent a single
-// request or user from overwhelming the system."
 const MAX_HTTP_CONTENT_LENGTH = 10 * 1024 * 1024
 
-// Timeout for the main HTTP fetch request (60 seconds).
-// Prevents hanging indefinitely on slow/unresponsive servers.
 const FETCH_TIMEOUT_MS = 60_000
 
-// Timeout for the domain blocklist preflight check (10 seconds).
 const DOMAIN_CHECK_TIMEOUT_MS = 10_000
 
-// Cap same-host redirect hops. Without this a malicious server can return
-// a redirect loop (/a → /b → /a …) and the per-request FETCH_TIMEOUT_MS
-// resets on every hop, hanging the tool until user interrupt. 10 matches
-// common client defaults (axios=5, follow-redirects=21, Chrome=20).
 const MAX_REDIRECTS = 10
 
-// Truncate to not spend too many tokens
 export const MAX_MARKDOWN_LENGTH = 100_000
 
 export function isPreapprovedUrl(url: string): boolean {
@@ -138,17 +116,17 @@ export function validateURL(url: string): boolean {
     return false
   }
 
-  // We don't need to check protocol here, as we'll upgrade http to https when making the request
+  
 
-  // As long as we aren't supporting aiming to cookies or internal domains,
-  // we should block URLs with usernames/passwords too, even though these
+  
+  
   
   if (parsed.username || parsed.password) {
     return false
   }
 
-  // Initial filter that this isn't a privileged, company-internal URL
-  // by checking that the hostname is publicly resolvable
+  
+  
   const hostname = parsed.hostname
   const parts = hostname.split('.')
   if (parts.length < 2) {
@@ -181,7 +159,7 @@ export async function checkDomainBlocklist(
       }
       return { status: 'blocked' }
     }
-    // Non-200 status but didn't throw
+    
     return {
       status: 'check_failed',
       error: new Error(`Domain check returned status ${response.status}`),
@@ -192,13 +170,6 @@ export async function checkDomainBlocklist(
   }
 }
 
-/**
- * Check if a redirect is safe to follow
- * Allows redirects that:
- * - Add or remove "www." in the hostname
- * - Keep the origin the same but change path/query params
- * - Or both of the above
- */
 export function isPermittedRedirect(
   originalUrl: string,
   redirectUrl: string,
@@ -219,7 +190,7 @@ export function isPermittedRedirect(
       return false
     }
 
-    // Now check hostname conditions
+    
     
     
     
@@ -232,16 +203,6 @@ export function isPermittedRedirect(
   }
 }
 
-/**
- * Helper function to handle fetching URLs with custom redirect handling
- * Recursively follows redirects if they pass the redirectChecker function
- *
- * Per PSR:
- * "Do not automatically follow redirects because following redirects could
- * allow for an attacker to exploit an open redirect vulnerability in a
- * trusted domain to force a user to make a request to a malicious domain
- * unknowingly"
- */
 type RedirectInfo = {
   type: 'redirect'
   originalUrl: string
@@ -281,11 +242,11 @@ export async function getWithPermittedRedirects(
         throw new Error('Redirect missing Location header')
       }
 
-      // Resolve relative URLs against the original URL
+      
       const redirectUrl = new URL(redirectLocation, url).toString()
 
       if (redirectChecker(url, redirectUrl)) {
-        // Recursively follow the permitted redirect
+        
         return getWithPermittedRedirects(
           redirectUrl,
           signal,
@@ -293,7 +254,7 @@ export async function getWithPermittedRedirects(
           depth + 1,
         )
       } else {
-        // Return redirect information to the caller
+        
         return {
           type: 'redirect',
           originalUrl: url,
@@ -303,7 +264,7 @@ export async function getWithPermittedRedirects(
       }
     }
 
-    // Detect egress proxy blocks: the proxy returns 403 with
+    
     
     if (
       axios.isAxiosError(error) &&
@@ -342,7 +303,7 @@ export async function getURLMarkdownContent(
     throw new Error('Invalid URL')
   }
 
-  // Check cache (LRUCache handles TTL automatically)
+  
   const cachedEntry = URL_CACHE.get(url)
   if (cachedEntry) {
     return {
@@ -378,7 +339,7 @@ export async function getURLMarkdownContent(
       const checkResult = await checkDomainBlocklist(hostname)
       switch (checkResult.status) {
         case 'allowed':
-          // Continue with the fetch
+          
           break
         case 'blocked':
           throw new DomainBlockedError(hostname)
@@ -398,7 +359,7 @@ export async function getURLMarkdownContent(
       e instanceof DomainBlockedError ||
       e instanceof DomainCheckFailedError
     ) {
-      // Expected user-facing failures - re-throw without logging as internal error
+      
       throw e
     }
     logError(e)
@@ -447,7 +408,7 @@ export async function getURLMarkdownContent(
     markdownContent = (await getTurndownService()).turndown(htmlContent)
     contentBytes = Buffer.byteLength(markdownContent)
   } else {
-    // It's not HTML - just use it raw. The decoded string's UTF-8 byte
+    
     
     
     
@@ -455,8 +416,8 @@ export async function getURLMarkdownContent(
     contentBytes = bytes
   }
 
-  // Store the fetched content in cache. Note that it's stored under
-  // the original URL, not the upgraded or redirected URL.
+  
+  
   const entry: CacheEntry = {
     bytes,
     code: response.status,
@@ -466,7 +427,7 @@ export async function getURLMarkdownContent(
     persistedPath,
     persistedSize,
   }
-  // lru-cache requires positive integers; clamp to 1 for empty responses.
+  
   URL_CACHE.set(url, entry, { size: Math.max(1, contentBytes) })
   return entry
 }
@@ -478,7 +439,7 @@ export async function applyPromptToMarkdown(
   isNonInteractiveSession: boolean,
   isPreapprovedDomain: boolean,
 ): Promise<string> {
-  // Truncate content to avoid "Prompt is too long" errors from the secondary model
+  
   const truncatedContent =
     markdownContent.length > MAX_MARKDOWN_LENGTH
       ? markdownContent.slice(0, MAX_MARKDOWN_LENGTH) +
@@ -503,8 +464,8 @@ export async function applyPromptToMarkdown(
     },
   })
 
-  // We need to bubble this up, so that the tool call throws, causing us to return
-  // an is_error tool_use block to the server, and render a red dot in the UI.
+  
+  
   if (signal.aborted) {
     throw new AbortError()
   }

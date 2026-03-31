@@ -61,7 +61,7 @@ export function useSwarmBanner(): SwarmBannerInfo {
     }
   }
 
-  // Leader with spawned teammates: tmux-attach hint when external, else show
+  
   
   const hasTeammates =
     teamContext?.teamName &&
@@ -88,13 +88,13 @@ export function useSwarmBanner(): SwarmBannerInfo {
         bgColor: viewedColor,
       }
     }
-    // insideTmux === null: still loading — fall through.
+    
     
   }
 
-  // Viewing a background agent (CoordinatorTaskPanel): local_agent tasks aren't
-  // InProcessTeammates, so getViewedTeammateTask misses them. Reverse-lookup the
-  // name from agentNameRegistry the same way CoordinatorAgentStatus does.
+  
+  
+  
   const active = getActiveAgentForInput(state)
   if (active.type === 'named_agent') {
     const task = active.task
@@ -111,7 +111,7 @@ export function useSwarmBanner(): SwarmBannerInfo {
     }
   }
 
-  // Standalone agent (/rename, /color): name and/or custom color, no @team.
+  
   const standaloneName = getStandaloneAgentName(state)
   const standaloneColor = standaloneAgentContext?.color
   if (standaloneName || standaloneColor) {
@@ -121,7 +121,7 @@ export function useSwarmBanner(): SwarmBannerInfo {
     }
   }
 
-  // --agent CLI flag (when not handled above).
+  
   if (agent) {
     const agentDef = state.agentDefinitions.activeAgents.find(
       a => a.agentType === agent,

@@ -28,7 +28,6 @@ export type IDESelection = {
   filePath?: string
 }
 
-// Define the selection changed notification schema
 const SelectionChangedSchema = lazySchema(() =>
   z.object({
     method: z.literal('selection_changed'),
@@ -60,7 +59,7 @@ export function useIdeSelection(
   const currentIDERef = useRef<ConnectedMCPServer | null>(null)
 
   useEffect(() => {
-    // Find the IDE client from the MCP clients list
+    
     const ideClient = getConnectedIdeClient(mcpClients)
 
     
@@ -78,12 +77,12 @@ export function useIdeSelection(
       })
     }
 
-    // Skip if we've already registered handlers for the current IDE or if there's no IDE client
+    
     if (handlersRegistered.current || !ideClient) {
       return
     }
 
-    // Handler function for selection changes
+    
     const selectionChangeHandler = (data: SelectionData) => {
       if (data.selection?.start && data.selection?.end) {
         const { start, end } = data.selection
@@ -104,7 +103,7 @@ export function useIdeSelection(
       }
     }
 
-    // Register notification handler for selection_changed events
+    
     ideClient.client.setNotificationHandler(
       SelectionChangedSchema(),
       notification => {
@@ -113,7 +112,7 @@ export function useIdeSelection(
         }
 
         try {
-          // Get the selection data from the notification params
+          
           const selectionData = notification.params
 
           
@@ -122,10 +121,10 @@ export function useIdeSelection(
             selectionData.selection.start &&
             selectionData.selection.end
           ) {
-            // Handle selection changes
+            
             selectionChangeHandler(selectionData as SelectionData)
           } else if (selectionData.text !== undefined) {
-            // Handle empty selection (when text is empty string)
+            
             selectionChangeHandler({
               selection: null,
               text: selectionData.text,

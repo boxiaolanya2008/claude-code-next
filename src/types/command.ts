@@ -20,7 +20,7 @@ export type LocalCommandResult =
       compactionResult: CompactionResult
       displayText?: string
     }
-  | { type: 'skip' } // Skip messages
+  | { type: 'skip' } 
 
 export type PromptCommand = {
   type: 'prompt'
@@ -56,9 +56,6 @@ export type PromptCommand = {
   ): Promise<ContentBlockParam[]>
 }
 
-/**
- * The call signature for a local command implementation.
- */
 export type LocalCommandCall = (
   args: string,
   context: LocalJSXCommandContext,
@@ -114,9 +111,6 @@ export type LocalJSXCommandOnDone = (
   },
 ) => void
 
-/**
- * The call signature for a local JSX command implementation.
- */
 export type LocalJSXCommandCall = (
   onDone: LocalJSXCommandOnDone,
   context: ToolUseContext & LocalJSXCommandContext,
@@ -134,23 +128,8 @@ type LocalJSXCommand = {
   load: () => Promise<LocalJSXCommandModule>
 }
 
-/**
- * Declares which auth/provider environments a command is available in.
- *
- * This is separate from `isEnabled()`:
- *   - `availability` = who can use this (auth/provider requirement, static)
- *   - `isEnabled()`  = is this turned on right now (GrowthBook, platform, env vars)
- *
- * Commands without `availability` are available everywhere.
- * Commands with `availability` are only shown if the user matches at least one
- * of the listed auth types. See meetsAvailabilityRequirement() in commands.ts.
- *
- * Example: `availability: ['claude-ai', 'console']` shows the command to
- * claude.ai subscribers and direct Console API key users (api.anthropic.com),
- * but hides it from Bedrock/Vertex/Foundry users and custom base URL users.
- */
 export type CommandAvailability =
-  // claude.ai OAuth subscriber (Pro/Max/Team/Enterprise via claude.ai)
+  
   | 'claude-ai'
   
   | 'console'
@@ -192,7 +171,6 @@ export function getCommandName(cmd: CommandBase): string {
   return cmd.userFacingName?.() ?? cmd.name
 }
 
-/** Resolves whether the command is enabled, defaulting to true. */
 export function isCommandEnabled(cmd: CommandBase): boolean {
   return cmd.isEnabled?.() ?? true
 }

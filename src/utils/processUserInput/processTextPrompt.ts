@@ -42,7 +42,7 @@ export function processTextPrompt(
   
   
   
-  // so .findLast gets the actual prompt. userPromptText (first block) is kept
+  
   
   const otelPromptText =
     typeof input === 'string'
@@ -65,7 +65,7 @@ export function processTextPrompt(
 
   
   if (imageContentBlocks.length > 0) {
-    // Build content: text first, then images below
+    
     const textContent =
       typeof input === 'string'
         ? input.trim()

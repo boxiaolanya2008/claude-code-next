@@ -46,7 +46,7 @@ export function onChangeAppState({
   newState: AppState
   oldState: AppState
 }) {
-  // toolPermissionContext.mode — single choke point for CCR/SDK mode sync.
+  
   
   
   
@@ -64,17 +64,17 @@ export function onChangeAppState({
   const prevMode = oldState.toolPermissionContext.mode
   const newMode = newState.toolPermissionContext.mode
   if (prevMode !== newMode) {
-    // CCR external_metadata must not receive internal-only mode names
     
     
-    // default→bubble→default is noise from CCR's POV since both
-    // externalize to 'default'). The SDK channel (notifyPermissionModeChanged)
-    // passes raw mode; its listener in print.ts applies its own filter.
+    
+    
+    
+    
     const prevExternal = toExternalPermissionMode(prevMode)
     const newExternal = toExternalPermissionMode(newMode)
     if (prevExternal !== newExternal) {
-      // Ultraplan = first plan cycle only. The initial control_request
-      // sets mode and isUltraplanMode atomically, so the flag's
+      
+      
       
       const isUltraplan =
         newExternal === 'plan' &&
@@ -90,27 +90,27 @@ export function onChangeAppState({
     notifyPermissionModeChanged(newMode)
   }
 
-  // mainLoopModel: remove it from settings?
+  
   if (
     newState.mainLoopModel !== oldState.mainLoopModel &&
     newState.mainLoopModel === null
   ) {
-    // Remove from settings
+    
     updateSettingsForSource('userSettings', { model: undefined })
     setMainLoopModelOverride(null)
   }
 
-  // mainLoopModel: add it to settings?
+  
   if (
     newState.mainLoopModel !== oldState.mainLoopModel &&
     newState.mainLoopModel !== null
   ) {
-    // Save to settings
+    
     updateSettingsForSource('userSettings', { model: newState.mainLoopModel })
     setMainLoopModelOverride(newState.mainLoopModel)
   }
 
-  // expandedView → persist as showExpandedTodos + showSpinnerTree for backwards compat
+  
   if (newState.expandedView !== oldState.expandedView) {
     const showExpandedTodos = newState.expandedView === 'tasks'
     const showSpinnerTree = newState.expandedView === 'teammates'
@@ -126,7 +126,7 @@ export function onChangeAppState({
     }
   }
 
-  // verbose
+  
   if (
     newState.verbose !== oldState.verbose &&
     getGlobalConfig().verbose !== newState.verbose
@@ -138,7 +138,7 @@ export function onChangeAppState({
     }))
   }
 
-  // tungstenPanelVisible (ant-only tmux panel sticky toggle)
+  
   if (process.env.USER_TYPE === 'ant') {
     if (
       newState.tungstenPanelVisible !== oldState.tungstenPanelVisible &&
@@ -150,7 +150,7 @@ export function onChangeAppState({
     }
   }
 
-  // settings: clear auth-related caches when settings change
+  
   
   if (newState.settings !== oldState.settings) {
     try {

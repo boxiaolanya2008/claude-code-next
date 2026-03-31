@@ -1,7 +1,5 @@
 
 
-// 1. Edit Zod schemas in coreSchemas.ts
-
 export type {
   SandboxFilesystemConfig,
   SandboxIgnoreViolations,

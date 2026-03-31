@@ -78,7 +78,7 @@ function makeToolSchema(input: Input): BetaWebSearchTool20250305 {
     name: 'web_search',
     allowed_domains: input.allowed_domains,
     blocked_domains: input.blocked_domains,
-    max_uses: 8, // Hardcoded to 8 searches maximum
+    max_uses: 8, 
   }
 }
 
@@ -87,9 +87,9 @@ function makeOutputFromSearchResponse(
   query: string,
   durationSeconds: number,
 ): Output {
-  // The result is a sequence of these blocks:
-  // - text to start -- always?
-  // [
+  
+  
+  
   
   
   
@@ -112,14 +112,14 @@ function makeOutputFromSearchResponse(
     }
 
     if (block.type === 'web_search_tool_result') {
-      // Handle error case - content is a WebSearchToolResultError
+      
       if (!Array.isArray(block.content)) {
         const errorMessage = `Web search error: ${block.content.error_code}`
         logError(new Error(errorMessage))
         results.push(errorMessage)
         continue
       }
-      // Success case - add results to our collection
+      
       const hits = block.content.map(r => ({ title: r.title, url: r.url }))
       results.push({
         tool_use_id: block.tool_use_id,
@@ -173,7 +173,7 @@ export const WebSearchTool = buildTool({
       return true
     }
 
-    // Enable for Vertex AI with supported models (Claude 4.0+)
+    
     if (provider === 'vertex') {
       const supportsWebSearch =
         model.includes('claude-opus-4') ||
@@ -183,7 +183,7 @@ export const WebSearchTool = buildTool({
       return supportsWebSearch
     }
 
-    // Foundry only ships models that already support Web Search
+    
     if (provider === 'foundry') {
       return true
     }
@@ -226,7 +226,7 @@ export const WebSearchTool = buildTool({
   renderToolUseProgressMessage,
   renderToolResultMessage,
   extractSearchText() {
-    // renderToolResultMessage shows only "Did N searches in Xs" chrome —
+    
     
     
     return ''
@@ -301,7 +301,7 @@ export const WebSearchTool = buildTool({
         continue
       }
 
-      // Track tool use ID when server_tool_use starts
+      
       if (
         event.type === 'stream_event' &&
         event.event?.type === 'content_block_start'
@@ -316,7 +316,7 @@ export const WebSearchTool = buildTool({
         }
       }
 
-      // Accumulate JSON for current tool use
+      
       if (
         currentToolUseId &&
         event.type === 'stream_event' &&
@@ -328,12 +328,12 @@ export const WebSearchTool = buildTool({
 
           
           try {
-            // Look for a complete query field
+            
             const queryMatch = currentToolUseJson.match(
               /"query"\s*:\s*"((?:[^"\\]|\\.)*)"/,
             )
             if (queryMatch && queryMatch[1]) {
-              // The regex properly handles escaped characters
+              
               const query = jsonParse('"' + queryMatch[1] + '"')
 
               if (
@@ -354,19 +354,19 @@ export const WebSearchTool = buildTool({
               }
             }
           } catch {
-            // Ignore parsing errors for partial JSON
+            
           }
         }
       }
 
-      // Yield progress when search results come in
+      
       if (
         event.type === 'stream_event' &&
         event.event?.type === 'content_block_start'
       ) {
         const contentBlock = event.event.content_block
         if (contentBlock && contentBlock.type === 'web_search_tool_result') {
-          // Get the actual query that was used for this search
+          
           const toolUseId = contentBlock.tool_use_id
           const actualQuery = toolUseQueries.get(toolUseId) || query
           const content = contentBlock.content
@@ -386,7 +386,7 @@ export const WebSearchTool = buildTool({
       }
     }
 
-    // Process the final result
+    
     const endTime = performance.now()
     const durationSeconds = (endTime - startTime) / 1000
 
@@ -410,10 +410,10 @@ export const WebSearchTool = buildTool({
         return
       }
       if (typeof result === 'string') {
-        // Text summary
+        
         formattedOutput += result + '\n\n'
       } else {
-        // Search result with links
+        
         if (result.content?.length > 0) {
           formattedOutput += `Links: ${jsonStringify(result.content)}\n\n`
         } else {

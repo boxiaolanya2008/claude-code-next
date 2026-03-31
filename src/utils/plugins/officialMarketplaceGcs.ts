@@ -12,10 +12,8 @@ import { errorMessage, getErrnoCode } from '../errors.js'
 
 type SafeString = AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
 
-// `latest` has Cache-Control: max-age=300 so CDN staleness is bounded.
-
 const GCS_BASE =
-  'https://downloads.claude.ai/claude-code-releases/plugins/claude-plugins-official'
+  'https://downloads.claude.ai/claude-code-next-releases/plugins/claude-plugins-official'
 
 const ARC_PREFIX = 'marketplaces/claude-plugins-official/'
 
@@ -23,7 +21,7 @@ export async function fetchOfficialMarketplaceFromGcs(
   installLocation: string,
   marketplacesCacheDir: string,
 ): Promise<string | null> {
-  // Defense in depth: this function does `rm(installLocation, {recursive})`
+  
   
   
   
@@ -39,7 +37,7 @@ export async function fetchOfficialMarketplaceFromGcs(
     return null
   }
 
-  // Network + zip extraction competes for the event loop with scroll frames.
+  
   
   
   await waitForScrollIdle()
@@ -51,33 +49,33 @@ export async function fetchOfficialMarketplaceFromGcs(
   let errKind: string | undefined
 
   try {
-    // 1. Latest pointer — ~40 bytes, backend sets Cache-Control: no-cache,
-    //    max-age=300. Cheap enough to hit every startup.
+    
+    
     const latest = await axios.get(`${GCS_BASE}/latest`, {
       responseType: 'text',
       timeout: 10_000,
     })
     sha = String(latest.data).trim()
     if (!sha) {
-      // Empty /latest body — backend misconfigured. Bail (null), don't
-      // lock into a permanently-broken empty-sentinel state.
+      
+      
       throw new Error('latest pointer returned empty body')
     }
 
-    // 2. Sentinel check — `.gcs-sha` at the install root holds the last
-    //    extracted SHA. Matching means we already have this content.
+    
+    
     const sentinelPath = join(installLocation, '.gcs-sha')
     const currentSha = await readFile(sentinelPath, 'utf8').then(
       s => s.trim(),
-      () => null, // ENOENT — first fetch, proceed to download
+      () => null, 
     )
     if (currentSha === sha) {
       outcome = 'noop'
       return sha
     }
 
-    // 3. Download zip and extract to a staging dir, then atomic-swap into
-    //    place. Crash mid-extract leaves a .staging dir (next run rm's it)
+    
+    
     
     const zipResp = await axios.get(`${GCS_BASE}/${sha}.zip`, {
       responseType: 'arraybuffer',
@@ -104,7 +102,7 @@ export async function fetchOfficialMarketplaceFromGcs(
       await writeFile(dest, data)
       const mode = modes[arcPath]
       if (mode && mode & 0o111) {
-        // Only chmod when an exec bit is set — skip plain files to save syscalls.
+        
         
         
         await chmod(dest, mode & 0o777).catch(() => {})
@@ -128,7 +126,7 @@ export async function fetchOfficialMarketplaceFromGcs(
     )
     return null
   } finally {
-    // tengu_plugin_remote_fetch schema shared with the telemetry PR
+    
     
     
     logEvent('tengu_plugin_remote_fetch', {
@@ -143,8 +141,6 @@ export async function fetchOfficialMarketplaceFromGcs(
     })
   }
 }
-
-// Bounded set of errno codes we report by name. Anything else buckets as
 
 const KNOWN_FS_CODES = new Set([
   'ENOSPC',
@@ -171,7 +167,7 @@ export function classifyGcsError(e: unknown): string {
   if (code && /^E[A-Z]+$/.test(code) && !code.startsWith('ERR_')) {
     return KNOWN_FS_CODES.has(code) ? `fs_${code}` : 'fs_other'
   }
-  // fflate sets numeric .code (0-14) on inflate/unzip errors — catches
+  
   
   
   if (typeof (e as { code?: unknown })?.code === 'number') return 'zip_parse'

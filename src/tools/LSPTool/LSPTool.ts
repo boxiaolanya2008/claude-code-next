@@ -149,7 +149,7 @@ export const LSPTool = buildTool({
     return expandPath(filePath)
   },
   async validateInput(input: Input): Promise<ValidationResult> {
-    // First validate against the discriminated union for better type safety
+    
     const parseResult = lspToolInputSchema().safeParse(input)
     if (!parseResult.success) {
       return {
@@ -159,7 +159,7 @@ export const LSPTool = buildTool({
       }
     }
 
-    // Validate file exists and is a regular file
+    
     const fs = getFsImplementation()
     const absolutePath = expandPath(input.filePath)
 
@@ -228,10 +228,10 @@ export const LSPTool = buildTool({
       await waitForInitialization()
     }
 
-    // Get the LSP server manager
+    
     const manager = getLspServerManager()
     if (!manager) {
-      // Log this system-level failure for tracking
+      
       logError(
         new Error('LSP server manager not initialized when tool was called'),
       )
@@ -247,11 +247,11 @@ export const LSPTool = buildTool({
       }
     }
 
-    // Map operation to LSP method and prepare params
+    
     const { method, params } = getMethodAndParams(input, absolutePath)
 
     try {
-      // Ensure file is open in LSP server before making requests
+      
       
       
       if (!manager.isFileOpen(absolutePath)) {
@@ -273,11 +273,11 @@ export const LSPTool = buildTool({
         }
       }
 
-      // Send request to LSP server
+      
       let result = await manager.sendRequest(absolutePath, method, params)
 
       if (result === undefined) {
-        // Log for diagnostic purposes - helps track usage patterns and potential bugs
+        
         logForDebugging(
           `No LSP server available for file type ${path.extname(absolutePath)} for operation ${input.operation} on file ${input.filePath}`,
         )
@@ -292,8 +292,8 @@ export const LSPTool = buildTool({
         }
       }
 
-      // For incomingCalls and outgoingCalls, we need a two-step process:
-      // 1. First get CallHierarchyItem(s) from prepareCallHierarchy
+      
+      
       
       if (
         input.operation === 'incomingCalls' ||
@@ -311,7 +311,7 @@ export const LSPTool = buildTool({
           return { data: output }
         }
 
-        // Use the first call hierarchy item to request calls
+        
         const callMethod =
           input.operation === 'incomingCalls'
             ? 'callHierarchy/incomingCalls'
@@ -329,7 +329,7 @@ export const LSPTool = buildTool({
         }
       }
 
-      // Filter out gitignored files from location-based results
+      
       if (
         result &&
         Array.isArray(result) &&
@@ -339,7 +339,7 @@ export const LSPTool = buildTool({
           input.operation === 'workspaceSymbol')
       ) {
         if (input.operation === 'workspaceSymbol') {
-          // SymbolInformation has location.uri — filter by extracting locations
+          
           const symbols = result as SymbolInformation[]
           const locations = symbols
             .filter(s => s?.location?.uri)
@@ -353,7 +353,7 @@ export const LSPTool = buildTool({
             s => !s?.location?.uri || filteredUris.has(s.location.uri),
           )
         } else {
-          // Location[] or (Location | LocationLink)[]
+          
           const locations = (result as (Location | LocationLink)[]).map(
             toLocation,
           )
@@ -369,7 +369,7 @@ export const LSPTool = buildTool({
         }
       }
 
-      // Format the result based on operation type
+      
       const { formatted, resultCount, fileCount } = formatResult(
         input.operation,
         result,
@@ -465,7 +465,7 @@ function getMethodAndParams(
       return {
         method: 'workspace/symbol',
         params: {
-          query: '', // Empty query returns all symbols
+          query: '', 
         },
       }
     case 'goToImplementation':
@@ -485,7 +485,7 @@ function getMethodAndParams(
         },
       }
     case 'incomingCalls':
-      // For incoming/outgoing calls, we first need to prepare the call hierarchy
+      
       
       return {
         method: 'textDocument/prepareCallHierarchy',
@@ -505,9 +505,6 @@ function getMethodAndParams(
   }
 }
 
-/**
- * Counts the total number of symbols including nested children
- */
 function countSymbols(symbols: DocumentSymbol[]): number {
   let count = symbols.length
   for (const symbol of symbols) {
@@ -518,18 +515,12 @@ function countSymbols(symbols: DocumentSymbol[]): number {
   return count
 }
 
-/**
- * Counts unique files from an array of locations
- */
 function countUniqueFiles(locations: Location[]): number {
   return new Set(locations.map(loc => loc.uri)).size
 }
 
-/**
- * Extracts a file path from a file:// URI, decoding percent-encoded characters.
- */
 function uriToFilePath(uri: string): string {
-  let filePath = uri.replace(/^file:\/\//, '')
+  let filePath = uri.replace(/^file:\/\
   
   if (/^\/[A-Za-z]:/.test(filePath)) {
     filePath = filePath.slice(1)
@@ -537,15 +528,11 @@ function uriToFilePath(uri: string): string {
   try {
     filePath = decodeURIComponent(filePath)
   } catch {
-    // Use un-decoded path if malformed
+    
   }
   return filePath
 }
 
-/**
- * Filters out locations whose file paths are gitignored.
- * Uses `git check-ignore` with batched path arguments for efficiency.
- */
 async function filterGitIgnoredLocations<T extends Location>(
   locations: T[],
   cwd: string,
@@ -554,7 +541,7 @@ async function filterGitIgnoredLocations<T extends Location>(
     return locations
   }
 
-  // Collect unique file paths from URIs
+  
   const uriToPath = new Map<string, string>()
   for (const loc of locations) {
     if (loc.uri && !uriToPath.has(loc.uri)) {
@@ -567,7 +554,7 @@ async function filterGitIgnoredLocations<T extends Location>(
     return locations
   }
 
-  // Batch check paths with git check-ignore
+  
   
   const ignoredPaths = new Set<string>()
   const BATCH_SIZE = 50
@@ -603,16 +590,10 @@ async function filterGitIgnoredLocations<T extends Location>(
   })
 }
 
-/**
- * Checks if item is LocationLink (has targetUri) vs Location (has uri)
- */
 function isLocationLink(item: Location | LocationLink): item is LocationLink {
   return 'targetUri' in item
 }
 
-/**
- * Converts LocationLink to Location format for uniform handling
- */
 function toLocation(item: Location | LocationLink): Location {
   if (isLocationLink(item)) {
     return {
@@ -623,9 +604,6 @@ function toLocation(item: Location | LocationLink): Location {
   return item
 }
 
-/**
- * Formats LSP result based on operation type and extracts summary counts
- */
 function formatResult(
   operation: Input['operation'],
   result: unknown,
@@ -633,7 +611,7 @@ function formatResult(
 ): { formatted: string; resultCount: number; fileCount: number } {
   switch (operation) {
     case 'goToDefinition': {
-      // Handle both Location and LocationLink formats
+      
       const rawResults = Array.isArray(result)
         ? result
         : result
@@ -698,7 +676,7 @@ function formatResult(
       }
     }
     case 'documentSymbol': {
-      // LSP allows documentSymbol to return either DocumentSymbol[] or SymbolInformation[]
+      
       const symbols = (result as (DocumentSymbol | SymbolInformation)[]) || []
       
       const isDocumentSymbol =
@@ -746,7 +724,7 @@ function formatResult(
       }
     }
     case 'goToImplementation': {
-      // Handle both Location and LocationLink formats (same as goToDefinition)
+      
       const rawResults = Array.isArray(result)
         ? result
         : result
@@ -769,7 +747,7 @@ function formatResult(
 
       const validLocations = locations.filter(loc => loc && loc.uri)
       return {
-        // Reuse goToDefinition formatter since the result format is identical
+        
         formatted: formatGoToDefinitionResult(
           result as
             | Location
@@ -821,19 +799,11 @@ function formatResult(
   }
 }
 
-/**
- * Counts unique files from CallHierarchyItem array
- * Filters out items with undefined URIs
- */
 function countUniqueFilesFromCallItems(items: CallHierarchyItem[]): number {
   const validUris = items.map(item => item.uri).filter(uri => uri)
   return new Set(validUris).size
 }
 
-/**
- * Counts unique files from CallHierarchyIncomingCall array
- * Filters out calls with undefined URIs
- */
 function countUniqueFilesFromIncomingCalls(
   calls: CallHierarchyIncomingCall[],
 ): number {
@@ -841,10 +811,6 @@ function countUniqueFilesFromIncomingCalls(
   return new Set(validUris).size
 }
 
-/**
- * Counts unique files from CallHierarchyOutgoingCall array
- * Filters out calls with undefined URIs
- */
 function countUniqueFilesFromOutgoingCalls(
   calls: CallHierarchyOutgoingCall[],
 ): number {

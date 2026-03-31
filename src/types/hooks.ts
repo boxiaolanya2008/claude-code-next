@@ -23,11 +23,9 @@ export function isHookEvent(value: string): value is HookEvent {
   return HOOK_EVENTS.includes(value as HookEvent)
 }
 
-// Prompt elicitation protocol types. The `prompt` key acts as discriminator
-
 export const promptRequestSchema = lazySchema(() =>
   z.object({
-    prompt: z.string(), // request id
+    prompt: z.string(), 
     message: z.string(),
     options: z.array(
       z.object({
@@ -46,7 +44,6 @@ export type PromptResponse = {
   selected: string
 }
 
-// Sync hook response schema
 export const syncHookResponseSchema = lazySchema(() =>
   z.object({
     continue: z
@@ -166,7 +163,7 @@ export const syncHookResponseSchema = lazySchema(() =>
 )
 
 export const hookJSONOutputSchema = lazySchema(() => {
-  // Async hook response schema
+  
   const asyncHookResponseSchema = z.object({
     async: z.literal(true),
     asyncTimeout: z.number().optional(),
@@ -182,14 +179,12 @@ export function isSyncHookJSONOutput(
   return !('async' in json && json.async === true)
 }
 
-// Type guard function to check if response is async
 export function isAsyncHookJSONOutput(
   json: HookJSONOutput,
 ): json is AsyncHookJSONOutput {
   return 'async' in json && json.async === true
 }
 
-// Compile-time assertion that SDK and Zod types match
 import type { IsEqual } from 'type-fest'
 type Assert<T extends true> = T
 type _assertSDKTypesMatch = Assert<
@@ -203,16 +198,15 @@ export type HookCallbackContext = {
   ) => void
 }
 
-/** Hook that is a callback. */
 export type HookCallback = {
   type: 'callback'
   callback: (
     input: HookInput,
     toolUseID: string | null,
     abort: AbortSignal | undefined,
-    /** Hook index for SessionStart hooks to compute CLAUDE_ENV_FILE path */
+    
     hookIndex?: number,
-    /** Optional context for accessing app state */
+    
     context?: HookCallbackContext,
   ) => Promise<HookJSONOutput>
   

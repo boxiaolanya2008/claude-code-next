@@ -12,14 +12,6 @@ import { getDynamicTeamContext } from '../utils/teammate.js'
 
 type SetAppState = (f: (prevState: AppState) => AppState) => void
 
-/**
- * Hook that initializes swarm features when ENABLE_AGENT_SWARMS is true.
- *
- * Handles both:
- * - Resumed teammate sessions (from --resume or /resume) where teamName/agentName
- *   are stored in transcript messages
- * - Fresh spawns where context is read from environment variables
- */
 export function useSwarmInitialization(
   setAppState: SetAppState,
   initialMessages: Message[] | undefined,
@@ -28,7 +20,7 @@ export function useSwarmInitialization(
   useEffect(() => {
     if (!enabled) return
     if (isAgentSwarmsEnabled()) {
-      // Check if this is a resumed agent session (from --resume or /resume)
+      
       
       const firstMessage = initialMessages?.[0]
       const teamName =
@@ -41,7 +33,7 @@ export function useSwarmInitialization(
           : undefined
 
       if (teamName && agentName) {
-        // Resumed agent session - set up team context from stored info
+        
         initializeTeammateContextFromSession(setAppState, teamName, agentName)
 
         
@@ -57,7 +49,7 @@ export function useSwarmInitialization(
           })
         }
       } else {
-        // Fresh spawn or standalone session
+        
         
         
         const context = getDynamicTeamContext?.()

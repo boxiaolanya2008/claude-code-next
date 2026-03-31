@@ -19,11 +19,6 @@ type SystemDirectoriesOptions = {
   platform?: Platform
 }
 
-/**
- * Get cross-platform system directories
- * Handles differences between Windows, macOS, Linux, and WSL
- * @param options Optional overrides for testing (env, homedir, platform)
- */
 export function getSystemDirectories(
   options?: SystemDirectoriesOptions,
 ): SystemDirectories {
@@ -41,7 +36,7 @@ export function getSystemDirectories(
 
   switch (platform) {
     case 'windows': {
-      // Windows: Use USERPROFILE if available (handles localized folder names)
+      
       const userProfile = env.USERPROFILE || homeDir
       return {
         HOME: homeDir,
@@ -53,7 +48,7 @@ export function getSystemDirectories(
 
     case 'linux':
     case 'wsl': {
-      // Linux/WSL: Check XDG Base Directory specification first
+      
       return {
         HOME: homeDir,
         DESKTOP: env.XDG_DESKTOP_DIR || defaults.DESKTOP,
@@ -64,7 +59,7 @@ export function getSystemDirectories(
 
     case 'macos':
     default: {
-      // macOS and unknown platforms use standard paths
+      
       if (platform === 'unknown') {
         logForDebugging(`Unknown platform detected, using default paths`)
       }

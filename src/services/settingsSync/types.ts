@@ -13,8 +13,8 @@ export const UserSyncDataSchema = lazySchema(() =>
   z.object({
     userId: z.string(),
     version: z.number(),
-    lastModified: z.string(), // ISO 8601 timestamp
-    checksum: z.string(), // MD5 hash
+    lastModified: z.string(), 
+    checksum: z.string(), 
     content: UserSyncContentSchema(),
   }),
 )
@@ -29,9 +29,6 @@ export type SettingsSyncFetchResult = {
   skipRetry?: boolean
 }
 
-/**
- * Result from uploading user settings
- */
 export type SettingsSyncUploadResult = {
   success: boolean
   checksum?: string
@@ -39,9 +36,6 @@ export type SettingsSyncUploadResult = {
   error?: string
 }
 
-/**
- * Keys used for sync entries
- */
 export const SYNC_KEYS = {
   USER_SETTINGS: '~/.claude/settings.json',
   USER_MEMORY: '~/.claude/CLAUDE.md',

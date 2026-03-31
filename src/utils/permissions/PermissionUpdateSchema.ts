@@ -15,20 +15,17 @@ import {
 
 export type { PermissionUpdate, PermissionUpdateDestination }
 
-/**
- * PermissionUpdateDestination is where a new permission rule should be saved to.
- */
 export const permissionUpdateDestinationSchema = lazySchema(() =>
   z.enum([
     
     'userSettings',
-    // Project settings (shared per-directory)
+    
     'projectSettings',
-    // Local settings (gitignored)
+    
     'localSettings',
-    // In-memory for the current session only
+    
     'session',
-    // From the command line arguments
+    
     'cliArg',
   ]),
 )

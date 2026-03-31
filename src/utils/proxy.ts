@@ -26,10 +26,6 @@ export function _resetKeepAliveForTesting(): void {
   keepAliveDisabled = false
 }
 
-/**
- * Convert dns.LookupOptions.family to a numeric address family value
- * Handles: 0 | 4 | 6 | 'IPv4' | 'IPv6' | undefined
- */
 export function getAddressFamily(options: LookupOptions): 0 | 4 | 6 {
   switch (options.family) {
     case 0:
@@ -52,26 +48,10 @@ export function getProxyUrl(env: EnvLike = process.env): string | undefined {
   return env.https_proxy || env.HTTPS_PROXY || env.http_proxy || env.HTTP_PROXY
 }
 
-/**
- * Get the NO_PROXY environment variable value
- * Prefers lowercase over uppercase (no_proxy > NO_PROXY)
- * @param env Environment variables to check (defaults to process.env for production use)
- */
 export function getNoProxy(env: EnvLike = process.env): string | undefined {
   return env.no_proxy || env.NO_PROXY
 }
 
-/**
- * Check if a URL should bypass the proxy based on NO_PROXY environment variable
- * Supports:
- * - Exact hostname matches (e.g., "localhost")
- * - Domain suffix matches with leading dot (e.g., ".example.com")
- * - Wildcard "*" to bypass all
- * - Port-specific matches (e.g., "example.com:8080")
- * - IP addresses (e.g., "127.0.0.1")
- * @param urlString URL to check
- * @param noProxy NO_PROXY value (defaults to getNoProxy() for production use)
- */
 export function shouldBypassProxy(
   urlString: string,
   noProxy: string | undefined = getNoProxy(),
@@ -98,27 +78,23 @@ export function shouldBypassProxy(
         return hostWithPort === pattern
       }
 
-      // Check for domain suffix match (with or without leading dot)
+      
       if (pattern.startsWith('.')) {
-        // Pattern ".example.com" should match "sub.example.com" and "example.com"
+        
         
         const suffix = pattern
         return hostname === pattern.substring(1) || hostname.endsWith(suffix)
       }
 
-      // Check for exact hostname match or IP address
+      
       return hostname === pattern
     })
   } catch {
-    // If URL parsing fails, don't bypass proxy
+    
     return false
   }
 }
 
-/**
- * Create an HttpsProxyAgent with optional mTLS configuration
- * Skips local DNS resolution to let the proxy handle it
- */
 function createHttpsProxyAgent(
   proxyUrl: string,
   extra: HttpsProxyAgentOptions<string> = {},
@@ -135,10 +111,10 @@ function createHttpsProxyAgent(
     ...(caCerts && { ca: caCerts }),
   }
 
-  if (isEnvTruthy(process.env.CLAUDE_CODE_PROXY_RESOLVES_HOSTS)) {
-    // Skip local DNS resolution - let the proxy resolve hostnames
-    // This is needed for environments where DNS is not configured locally
-    // and instead handled by the proxy (as in sandboxes)
+  if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_PROXY_RESOLVES_HOSTS)) {
+    
+    
+    
     agentOptions.lookup = (hostname, options, callback) => {
       callback(null, hostname, getAddressFamily(options))
     }
@@ -147,11 +123,6 @@ function createHttpsProxyAgent(
   return new HttpsProxyAgent(proxyUrl, { ...agentOptions, ...extra })
 }
 
-/**
- * Axios instance with its own proxy agent. Same NO_PROXY/mTLS/CA
- * resolution as the global interceptor, but agent options stay
- * scoped to this instance.
- */
 export function createAxiosInstance(
   extra: HttpsProxyAgentOptions<string> = {},
 ): AxiosInstance {
@@ -178,18 +149,14 @@ export function createAxiosInstance(
   return instance
 }
 
-/**
- * Get or create a memoized proxy agent for the given URI
- * Now respects NO_PROXY environment variable
- */
 export const getProxyAgent = memoize((uri: string): undici.Dispatcher => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  
   const undiciMod = require('undici') as typeof undici
   const mtlsConfig = getMTLSConfig()
   const caCerts = getCACertificates()
 
-  // Use EnvHttpProxyAgent to respect NO_PROXY
-  // This agent automatically checks NO_PROXY for each request
+  
+  
   const proxyOptions: undici.EnvHttpProxyAgent.Options & {
     requestTls?: {
       cert?: string | Buffer
@@ -198,15 +165,15 @@ export const getProxyAgent = memoize((uri: string): undici.Dispatcher => {
       ca?: string | string[] | Buffer
     }
   } = {
-    // Override both HTTP and HTTPS proxy with the provided URI
+    
     httpProxy: uri,
     httpsProxy: uri,
     noProxy: process.env.NO_PROXY || process.env.no_proxy,
   }
 
-  // Set both connect and requestTls so TLS options apply to both paths:
-  // - requestTls: used by ProxyAgent for the TLS connection through CONNECT tunnels
-  // - connect: used by Agent for direct (no-proxy) connections
+  
+  
+  
   if (mtlsConfig || caCerts) {
     const tlsOpts = {
       ...(mtlsConfig && {
@@ -223,10 +190,6 @@ export const getProxyAgent = memoize((uri: string): undici.Dispatcher => {
   return new undiciMod.EnvHttpProxyAgent(proxyOptions)
 })
 
-/**
- * Get an HTTP agent configured for WebSocket proxy support
- * Returns undefined if no proxy is configured or URL should bypass proxy
- */
 export function getWebSocketProxyAgent(url: string): Agent | undefined {
   const proxyUrl = getProxyUrl()
 
@@ -234,7 +197,7 @@ export function getWebSocketProxyAgent(url: string): Agent | undefined {
     return undefined
   }
 
-  // Check if URL should bypass proxy
+  
   if (shouldBypassProxy(url)) {
     return undefined
   }
@@ -242,11 +205,6 @@ export function getWebSocketProxyAgent(url: string): Agent | undefined {
   return createHttpsProxyAgent(proxyUrl)
 }
 
-/**
- * Get the proxy URL for WebSocket connections under Bun.
- * Bun's native WebSocket supports a `proxy` string option instead of Node's `agent`.
- * Returns undefined if no proxy is configured or URL should bypass proxy.
- */
 export function getWebSocketProxyUrl(url: string): string | undefined {
   const proxyUrl = getProxyUrl()
 
@@ -261,17 +219,6 @@ export function getWebSocketProxyUrl(url: string): string | undefined {
   return proxyUrl
 }
 
-/**
- * Get fetch options for the Anthropic SDK with proxy and mTLS configuration
- * Returns fetch options with appropriate dispatcher for proxy and/or mTLS
- *
- * @param opts.forAnthropicAPI - Enables ANTHROPIC_UNIX_SOCKET tunneling. This
- *   env var is set by `claude ssh` on the remote CLI to route API calls through
- *   an ssh -R forwarded unix socket to a local auth proxy. It MUST NOT leak
- *   into non-Anthropic-API fetch paths (MCP HTTP/SSE transports, etc.) or those
- *   requests get misrouted to api.anthropic.com. Only the Anthropic SDK client
- *   should pass `true` here.
- */
 export function getProxyFetchOptions(opts?: { forAnthropicAPI?: boolean }): {
   tls?: TLSConfig
   dispatcher?: undici.Dispatcher
@@ -281,9 +228,9 @@ export function getProxyFetchOptions(opts?: { forAnthropicAPI?: boolean }): {
 } {
   const base = keepAliveDisabled ? ({ keepalive: false } as const) : {}
 
-  // ANTHROPIC_UNIX_SOCKET tunnels through the `claude ssh` auth proxy, which
-  // hardcodes the upstream to the Anthropic API. Scope to the Anthropic API
-  // client so MCP/SSE/other callers don't get their requests misrouted.
+  
+  
+  
   if (opts?.forAnthropicAPI) {
     const unixSocket = process.env.ANTHROPIC_UNIX_SOCKET
     if (unixSocket && typeof Bun !== 'undefined') {
@@ -301,14 +248,10 @@ export function getProxyFetchOptions(opts?: { forAnthropicAPI?: boolean }): {
     return { ...base, dispatcher: getProxyAgent(proxyUrl) }
   }
 
-  // Otherwise, use TLS options directly if available
+  
   return { ...base, ...getTLSFetchOptions() }
 }
 
-/**
- * Configure global HTTP agents for both axios and undici
- * This ensures all HTTP requests use the proxy and/or mTLS if configured
- */
 let proxyInterceptorId: number | undefined
 
 export function configureGlobalAgents(): void {
@@ -321,13 +264,13 @@ export function configureGlobalAgents(): void {
     proxyInterceptorId = undefined
   }
 
-  // Reset proxy-related defaults so reconfiguration is clean
+  
   axios.defaults.proxy = undefined
   axios.defaults.httpAgent = undefined
   axios.defaults.httpsAgent = undefined
 
   if (proxyUrl) {
-    // workaround for https://github.com/axios/axios/issues/4531
+    
     axios.defaults.proxy = false
 
     
@@ -335,19 +278,19 @@ export function configureGlobalAgents(): void {
 
     
     proxyInterceptorId = axios.interceptors.request.use(config => {
-      // Check if URL should bypass proxy based on NO_PROXY
+      
       if (config.url && shouldBypassProxy(config.url)) {
-        // Bypass proxy - use mTLS agent if configured, otherwise undefined
+        
         if (mtlsAgent) {
           config.httpsAgent = mtlsAgent
           config.httpAgent = mtlsAgent
         } else {
-          // Remove any proxy agents to use direct connection
+          
           delete config.httpsAgent
           delete config.httpAgent
         }
       } else {
-        // Use proxy agent
+        
         config.httpsAgent = proxyAgent
         config.httpAgent = proxyAgent
       }
@@ -360,13 +303,13 @@ export function configureGlobalAgents(): void {
       getProxyAgent(proxyUrl),
     )
   } else if (mtlsAgent) {
-    // No proxy but mTLS is configured
+    
     axios.defaults.httpsAgent = mtlsAgent
 
     
     const mtlsOptions = getTLSFetchOptions()
     if (mtlsOptions.dispatcher) {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      
       ;(require('undici') as typeof undici).setGlobalDispatcher(
         mtlsOptions.dispatcher,
       )
@@ -374,10 +317,6 @@ export function configureGlobalAgents(): void {
   }
 }
 
-/**
- * Get AWS SDK client configuration with proxy support
- * Returns configuration object that can be spread into AWS service client constructors
- */
 export async function getAWSClientProxyConfig(): Promise<object> {
   const proxyUrl = getProxyUrl()
 
@@ -404,9 +343,6 @@ export async function getAWSClientProxyConfig(): Promise<object> {
   }
 }
 
-/**
- * Clear proxy agent cache.
- */
 export function clearProxyCache(): void {
   getProxyAgent.cache.clear?.()
   logForDebugging('Cleared proxy agent cache')

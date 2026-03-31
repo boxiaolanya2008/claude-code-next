@@ -31,8 +31,8 @@ export function detectEncodingForResolvedPath(
     return 'utf8'
   }
 
-  // For non-empty files, default to utf8 since it's a superset of ascii
-  // and handles all Unicode characters properly
+  
+  
   return 'utf8'
 }
 
@@ -53,13 +53,6 @@ export function detectLineEndingsForString(content: string): LineEndingType {
   return crlfCount > lfCount ? 'CRLF' : 'LF'
 }
 
-/**
- * Like readFileSync but also returns the detected encoding and original line
- * ending style in one filesystem pass. Callers writing the file back (e.g.
- * FileEditTool) can reuse these instead of calling detectFileEncoding /
- * detectLineEndings separately, which would each redo safeResolvePath +
- * readSync(4KB).
- */
 export function readFileSyncWithMetadata(filePath: string): {
   content: string
   encoding: BufferEncoding
@@ -74,8 +67,8 @@ export function readFileSyncWithMetadata(filePath: string): {
 
   const encoding = detectEncodingForResolvedPath(resolvedPath)
   const raw = fs.readFileSync(resolvedPath, { encoding })
-  // Detect line endings from the raw head before CRLF normalization erases
-  // the distinction. 4096 code units is ≥ detectLineEndings's 4096-byte
+  
+  
   
   const lineEndings = detectLineEndingsForString(raw.slice(0, 4096))
   return {

@@ -74,10 +74,10 @@ export const TeamDeleteTool: Tool<InputSchema, Output> = buildTool({
     const teamName = appState.teamContext?.teamName
 
     if (teamName) {
-      // Read team config to check for active members
+      
       const teamFile = readTeamFile(teamName)
       if (teamFile) {
-        // Filter out the team lead - only count non-lead members
+        
         const nonLeadMembers = teamFile.members.filter(
           m => m.name !== TEAM_LEAD_NAME,
         )
@@ -114,12 +114,12 @@ export const TeamDeleteTool: Tool<InputSchema, Output> = buildTool({
       })
     }
 
-    // Clear team context and inbox from app state
+    
     setAppState(prev => ({
       ...prev,
       teamContext: undefined,
       inbox: {
-        messages: [], // Clear any queued messages
+        messages: [], 
       },
     }))
 

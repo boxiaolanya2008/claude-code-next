@@ -28,27 +28,10 @@ export function getChannelAllowlist(): ChannelAllowlistEntry[] {
   return parsed.success ? parsed.data : []
 }
 
-/**
- * Overall channels on/off. Checked before any per-server gating —
- * when false, --channels is a no-op and no handlers register.
- * Default false; GrowthBook 5-min refresh.
- */
 export function isChannelsEnabled(): boolean {
   return getFeatureValue_CACHED_MAY_BE_STALE('tengu_harbor', false)
 }
 
-/**
- * Pure allowlist check keyed off the connection's pluginSource — for UI
- * pre-filtering so the IDE only shows "Enable channel?" for servers that will
- * actually pass the gate. Not a security boundary: channel_enable still runs
- * the full gate. Matches the allowlist comparison inside gateChannelServer()
- * but standalone (no session/marketplace coupling — those are tautologies
- * when the entry is derived from pluginSource).
- *
- * Returns false for undefined pluginSource (non-plugin server — can never
- * match the {marketplace, plugin}-keyed ledger) and for @-less sources
- * (builtin/inline — same reason).
- */
 export function isChannelAllowlisted(
   pluginSource: string | undefined,
 ): boolean {

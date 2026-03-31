@@ -52,12 +52,6 @@ const teamMemPaths = feature('TEAMMEM')
   ? (require('../../memdir/teamMemPaths.js') as typeof import('../../memdir/teamMemPaths.js'))
   : null
 
-// Helpers
-
-/**
- * Returns true if a message is visible to the model (sent in API calls).
- * Excludes progress, system, and attachment messages.
- */
 function isModelVisibleMessage(message: Message): boolean {
   return message.type === 'user' || message.type === 'assistant'
 }
@@ -83,8 +77,8 @@ function countModelVisibleMessagesSince(
       n++
     }
   }
-  // If sinceUuid was not found (e.g., removed by context compaction),
-  // fall back to counting all model-visible messages rather than returning 0
+  
+  
   
   if (!foundStart) {
     return count(messages, isModelVisibleMessage)
@@ -92,15 +86,6 @@ function countModelVisibleMessagesSince(
   return n
 }
 
-/**
- * Returns true if any assistant message after the cursor UUID contains a
- * Write/Edit tool_use block targeting an auto-memory path.
- *
- * The main agent's prompt has full save instructions — when it writes
- * memories, the forked extraction is redundant. runExtraction skips the
- * agent and advances the cursor past this range, making the main agent
- * and the background agent mutually exclusive per turn.
- */
 function hasMemoryWritesSince(
   messages: Message[],
   sinceUuid: string | undefined,
@@ -130,10 +115,6 @@ function hasMemoryWritesSince(
   return false
 }
 
-// ============================================================================
-// Tool Permissions
-// ============================================================================
-
 function denyAutoMemTool(tool: Tool, reason: string) {
   logForDebugging(`[autoMem] denied ${tool.name}: ${reason}`)
   logEvent('tengu_auto_mem_tool_denied', {
@@ -146,16 +127,11 @@ function denyAutoMemTool(tool: Tool, reason: string) {
   }
 }
 
-/**
- * Creates a canUseTool function that allows Read/Grep/Glob (unrestricted),
- * read-only Bash commands, and Edit/Write only for paths within the
- * auto-memory directory. Shared by extractMemories and autoDream.
- */
 export function createAutoMemCanUseTool(memoryDir: string): CanUseToolFn {
   return async (tool: Tool, input: Record<string, unknown>) => {
-    // Allow REPL — when REPL mode is enabled (ant-default), primitive tools
-    // are hidden from the tool list so the forked agent calls REPL instead.
-    // REPL's VM context re-invokes this canUseTool for each inner primitive
+    
+    
+    
     
     
     
@@ -164,7 +140,7 @@ export function createAutoMemCanUseTool(memoryDir: string): CanUseToolFn {
       return { behavior: 'allow' as const, updatedInput: input }
     }
 
-    // Allow Read/Grep/Glob unrestricted — all inherently read-only
+    
     if (
       tool.name === FILE_READ_TOOL_NAME ||
       tool.name === GREP_TOOL_NAME ||
@@ -173,7 +149,7 @@ export function createAutoMemCanUseTool(memoryDir: string): CanUseToolFn {
       return { behavior: 'allow' as const, updatedInput: input }
     }
 
-    // Allow Bash only for commands that pass BashTool.isReadOnly.
+    
     
     if (tool.name === BASH_TOOL_NAME) {
       const parsed = tool.inputSchema.safeParse(input)
@@ -204,13 +180,6 @@ export function createAutoMemCanUseTool(memoryDir: string): CanUseToolFn {
   }
 }
 
-// ============================================================================
-// Extract file paths from agent output
-
-/**
- * Extract file_path from a tool_use block's input, if present.
- * Returns undefined when the block is not an Edit/Write tool use or has no file_path.
- */
 function getWrittenFilePath(block: {
   type: string
   name?: string
@@ -250,14 +219,10 @@ function extractWrittenPaths(agentMessages: Message[]): string[] {
   return uniq(paths)
 }
 
-// ============================================================================
-// Initialization & Closure-scoped State
-
 type AppendSystemMessageFn = (
   msg: Exclude<SystemMessage, SystemLocalCommandMessage>,
 ) => void
 
-/** The active extractor function, set by initExtractMemories(). */
 let extractor:
   | ((
       context: REPLHookContext,
@@ -267,14 +232,8 @@ let extractor:
 
 let drainer: (timeoutMs?: number) => Promise<void> = async () => {}
 
-/**
- * Initialize the memory extraction system.
- * Creates a fresh closure that captures all mutable state (cursor position,
- * overlap guard, pending context). Call once at startup alongside
- * initConfidenceRating/initPromptCoaching, or per-test in beforeEach.
- */
 export function initExtractMemories(): void {
-  // --- Closure-scoped mutable state ---
+  
 
   
 
@@ -396,10 +355,10 @@ export function initExtractMemories(): void {
         canUseTool,
         querySource: 'extract_memories',
         forkLabel: 'extract_memories',
-        // The extractMemories subagent does not need to record to transcript.
+        
         
         skipTranscript: true,
-        // Well-behaved extractions complete in 2-4 turns (read → write).
+        
         
         maxTurns: 5,
       })
@@ -438,7 +397,7 @@ export function initExtractMemories(): void {
         logForDebugging('[extractMemories] no memories saved this run')
       }
 
-      // Index file updates are mechanical — the agent touches MEMORY.md to add
+      
       
       const memoryPaths = writtenPaths.filter(
         p => basename(p) !== ENTRYPOINT_NAME,
@@ -473,7 +432,7 @@ export function initExtractMemories(): void {
         appendSystemMessage?.(msg)
       }
     } catch (error) {
-      // Extraction is best-effort — log but don't notify on error
+      
       logForDebugging(`[extractMemories] error: ${error}`)
       logEvent('tengu_extract_memories_error', {
         duration_ms: Date.now() - startTime,
@@ -481,10 +440,10 @@ export function initExtractMemories(): void {
     } finally {
       inProgress = false
 
-      // If a call arrived while we were running, run a trailing extraction
-      // with the latest stashed context. The trailing run will compute its
-      // newMessageCount relative to the cursor we just advanced — so it only
-      // picks up messages added between the two calls, not the full history.
+      
+      
+      
+      
       const trailing = pendingContext
       pendingContext = undefined
       if (trailing) {
@@ -500,13 +459,13 @@ export function initExtractMemories(): void {
     }
   }
 
-  // --- Public entry point (captured by extractor) ---
+  
 
   async function executeExtractMemoriesImpl(
     context: REPLHookContext,
     appendSystemMessage?: AppendSystemMessageFn,
   ): Promise<void> {
-    // Only run for the main agent, not subagents
+    
     if (context.toolUseContext.agentId) {
       return
     }
@@ -519,19 +478,19 @@ export function initExtractMemories(): void {
       return
     }
 
-    // Check auto-memory is enabled
+    
     if (!isAutoMemoryEnabled()) {
       return
     }
 
-    // Skip in remote mode
+    
     if (getIsRemoteMode()) {
       return
     }
 
-    // If an extraction is already in progress, stash this context for a
-    // trailing run (overwrites any previously stashed context — only the
-    // latest matters since it has the most messages).
+    
+    
+    
     if (inProgress) {
       logForDebugging(
         '[extractMemories] extraction in progress — stashing for trailing run',
@@ -558,21 +517,12 @@ export function initExtractMemories(): void {
     if (inFlightExtractions.size === 0) return
     await Promise.race([
       Promise.all(inFlightExtractions).catch(() => {}),
-      // eslint-disable-next-line no-restricted-syntax -- sleep() has no .unref(); timer must not block exit
+      
       new Promise<void>(r => setTimeout(r, timeoutMs).unref()),
     ])
   }
 }
 
-// ============================================================================
-// Public API
-// ============================================================================
-
-/**
- * Run memory extraction at the end of a query loop.
- * Called fire-and-forget from handleStopHooks, alongside prompt suggestion/coaching.
- * No-ops until initExtractMemories() has been called.
- */
 export async function executeExtractMemories(
   context: REPLHookContext,
   appendSystemMessage?: AppendSystemMessageFn,
@@ -580,12 +530,6 @@ export async function executeExtractMemories(
   await extractor?.(context, appendSystemMessage)
 }
 
-/**
- * Awaits all in-flight extractions (including trailing stashed runs) with a
- * soft timeout. Called by print.ts after the response is flushed but before
- * gracefulShutdownSync, so the forked agent completes before the 5s shutdown
- * failsafe kills it. No-op until initExtractMemories() has been called.
- */
 export async function drainPendingExtraction(
   timeoutMs?: number,
 ): Promise<void> {

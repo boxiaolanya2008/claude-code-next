@@ -31,12 +31,6 @@ export function getAddDirEnabledPlugins(): NonNullable<
   return result
 }
 
-/**
- * Returns a merged record of extraKnownMarketplaces from all --add-dir directories.
- *
- * Same priority rules as getAddDirEnabledPlugins: settings.local.json wins
- * within each dir, and callers spread standard settings on top.
- */
 export function getAddDirExtraMarketplaces(): Record<
   string,
   ExtraKnownMarketplace

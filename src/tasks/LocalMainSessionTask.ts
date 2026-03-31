@@ -46,9 +46,6 @@ export type LocalMainSessionTaskState = LocalAgentTaskState & {
   agentType: 'main-session'
 }
 
-/**
- * Default agent definition for main session tasks when no agent is specified.
- */
 const DEFAULT_MAIN_SESSION_AGENT: CustomAgentDefinition = {
   agentType: 'main-session',
   whenToUse: 'Main session query',
@@ -56,10 +53,6 @@ const DEFAULT_MAIN_SESSION_AGENT: CustomAgentDefinition = {
   getSystemPrompt: () => '',
 }
 
-/**
- * Generate a unique task ID for main session tasks.
- * Uses 's' prefix to distinguish from agent tasks ('a' prefix).
- */
 const TASK_ID_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz'
 
 function generateMainSessionTaskId(): string {
@@ -71,16 +64,6 @@ function generateMainSessionTaskId(): string {
   return id
 }
 
-/**
- * Register a backgrounded main session task.
- * Called when the user backgrounds the current session query.
- *
- * @param description - Description of the task
- * @param setAppState - State setter function
- * @param mainThreadAgentDefinition - Optional agent definition if running with --agent
- * @param existingAbortController - Optional abort controller to reuse (for backgrounding an active query)
- * @returns Object with task ID and abort signal for stopping the background query
- */
 export function registerMainSessionTask(
   description: string,
   setAppState: SetAppState,
@@ -104,7 +87,7 @@ export function registerMainSessionTask(
   const abortController = existingAbortController ?? createAbortController()
 
   const unregisterCleanup = registerCleanup(async () => {
-    // Clean up on process exit
+    
     setAppState(prev => {
       const { [taskId]: removed, ...rest } = prev.tasks
       return { ...prev, tasks: rest }
@@ -128,7 +111,7 @@ export function registerMainSessionTask(
     retrieved: false,
     lastReportedToolCount: 0,
     lastReportedTokenCount: 0,
-    isBackgrounded: true, // Already backgrounded
+    isBackgrounded: true, 
     pendingMessages: [],
     retain: false,
     diskLoaded: false,
@@ -151,10 +134,6 @@ export function registerMainSessionTask(
   return { taskId, abortSignal: abortController.signal }
 }
 
-/**
- * Complete the main session task and send notification.
- * Called when the backgrounded query finishes.
- */
 export function completeMainSessionTask(
   taskId: string,
   success: boolean,
@@ -168,7 +147,7 @@ export function completeMainSessionTask(
       return task
     }
 
-    // Track if task was backgrounded (for notification decision)
+    
     wasBackgrounded = task.isBackgrounded ?? true
     toolUseId = task.toolUseId
 
@@ -195,7 +174,7 @@ export function completeMainSessionTask(
       toolUseId,
     )
   } else {
-    // Foregrounded: no XML notification (TUI user is watching), but SDK
+    
     
     
     
@@ -208,9 +187,6 @@ export function completeMainSessionTask(
   }
 }
 
-/**
- * Enqueue a notification about the backgrounded session completing.
- */
 function enqueueMainSessionNotification(
   taskId: string,
   description: string,
@@ -218,7 +194,7 @@ function enqueueMainSessionNotification(
   setAppState: SetAppState,
   toolUseId?: string,
 ): void {
-  // Atomically check and set notified flag to prevent duplicate notifications.
+  
   let shouldEnqueue = false
   updateTaskState(taskId, setAppState, task => {
     if (task.notified) {
@@ -252,11 +228,6 @@ function enqueueMainSessionNotification(
   enqueuePendingNotification({ value: message, mode: 'task-notification' })
 }
 
-/**
- * Foreground a main session task - mark it as foregrounded so its output
- * appears in the main view. The background query keeps running.
- * Returns the task's accumulated messages, or undefined if task not found.
- */
 export function foregroundMainSessionTask(
   taskId: string,
   setAppState: SetAppState,
@@ -291,9 +262,6 @@ export function foregroundMainSessionTask(
   return taskMessages
 }
 
-/**
- * Check if a task is a main session task (vs a regular agent task).
- */
 export function isMainSessionTask(
   task: unknown,
 ): task is LocalMainSessionTaskState {
@@ -311,7 +279,6 @@ export function isMainSessionTask(
   )
 }
 
-// Max recent activities to keep for display
 const MAX_RECENT_ACTIVITIES = 5
 
 type ToolActivity = {
@@ -319,12 +286,6 @@ type ToolActivity = {
   input: Record<string, unknown>
 }
 
-/**
- * Start a fresh background session with the given messages.
- *
- * Spawns an independent query() call with the current messages and registers it
- * as a background task. The caller's foreground query continues running normally.
- */
 export function startBackgroundSession({
   messages,
   queryParams,
@@ -375,8 +336,8 @@ export function startBackgroundSession({
         ...queryParams,
       })) {
         if (abortSignal.aborted) {
-          // Aborted mid-stream — completeMainSessionTask won't be reached.
-          // chat:killAgents path already marked notified + emitted; stopTask path did not.
+          
+          
           let alreadyNotified = false
           updateTaskState(taskId, setAppState, task => {
             alreadyNotified = task.notified === true
@@ -400,9 +361,9 @@ export function startBackgroundSession({
 
         bgMessages.push(event)
 
-        // Per-message write (matches runAgent.ts pattern) — gives live
-        // TaskOutput progress and keeps the transcript file current even if
-        // /clear re-links the symlink mid-run.
+        
+        
+        
         void recordSidechainTranscript([event], taskId, lastRecordedUuid).catch(
           err => logForDebugging(`bg-session transcript write failed: ${err}`),
         )

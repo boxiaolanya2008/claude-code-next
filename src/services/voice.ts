@@ -25,8 +25,6 @@ function loadAudioNapi(): Promise<AudioNapi> {
   return audioNapiPromise
 }
 
-// ─── Constants ───────────────────────────────────────────────────────
-
 const RECORDING_SAMPLE_RATE = 16000
 const RECORDING_CHANNELS = 1
 
@@ -34,7 +32,7 @@ const SILENCE_DURATION_SECS = '2.0'
 const SILENCE_THRESHOLD = '3%'
 
 function hasCommand(cmd: string): boolean {
-  // Spawn the target directly instead of `which cmd`. On Termux/Android
+  
   
   
   
@@ -46,8 +44,6 @@ function hasCommand(cmd: string): boolean {
   })
   return result.error === undefined
 }
-
-// Probe whether arecord can actually open a capture device. hasCommand()
 
 type ArecordProbeResult = { ok: boolean; stderr: string }
 let arecordProbe: Promise<ArecordProbeResult> | null = null
@@ -100,8 +96,6 @@ function probeArecord(): Promise<ArecordProbeResult> {
 export function _resetArecordProbeForTesting(): void {
   arecordProbe = null
 }
-
-// cpal's ALSA backend writes to our process stderr when it can't find any
 
 let linuxAlsaCardsMemo: Promise<boolean> | null = null
 
@@ -170,13 +164,13 @@ export async function checkVoiceDependencies(): Promise<{
   missing: string[]
   installCommand: string | null
 }> {
-  // Native audio module (cpal) handles everything on macOS, Linux, and Windows
+  
   const napi = await loadAudioNapi()
   if (napi.isNativeAudioAvailable()) {
     return { available: true, missing: [], installCommand: null }
   }
 
-  // Windows has no supported fallback — native module is required
+  
   if (process.platform === 'win32') {
     return {
       available: false,
@@ -185,7 +179,7 @@ export async function checkVoiceDependencies(): Promise<{
     }
   }
 
-  // On Linux, arecord (ALSA utils) is a valid fallback recording backend
+  
   if (process.platform === 'linux' && hasCommand('arecord')) {
     return { available: true, missing: [], installCommand: null }
   }
@@ -204,14 +198,10 @@ export async function checkVoiceDependencies(): Promise<{
   }
 }
 
-// ─── Recording availability ──────────────────────────────────────────
-
 export type RecordingAvailability = {
   available: boolean
   reason: string | null
 }
-
-// Probe-record through the full fallback chain (native → arecord → SoX)
 
 export async function requestMicrophonePermission(): Promise<boolean> {
   const napi = await loadAudioNapi()
@@ -220,8 +210,8 @@ export async function requestMicrophonePermission(): Promise<boolean> {
   }
 
   const started = await startRecording(
-    _chunk => {}, // discard audio data — this is a permission probe only
-    () => {}, // ignore silence-detection end signal
+    _chunk => {}, 
+    () => {}, 
     { silenceDetection: false },
   )
   if (started) {
@@ -232,22 +222,22 @@ export async function requestMicrophonePermission(): Promise<boolean> {
 }
 
 export async function checkRecordingAvailability(): Promise<RecordingAvailability> {
-  // Remote environments have no local microphone
-  if (isRunningOnHomespace() || isEnvTruthy(process.env.CLAUDE_CODE_REMOTE)) {
+  
+  if (isRunningOnHomespace() || isEnvTruthy(process.env.CLAUDE_CODE_NEXT_REMOTE)) {
     return {
       available: false,
       reason:
-        'Voice mode requires microphone access, but no audio device is available in this environment.\n\nTo use voice mode, run Claude Code locally instead.',
+        'Voice mode requires microphone access, but no audio device is available in this environment.\n\nTo use voice mode, run Claude Code Next locally instead.',
     }
   }
 
-  // Native audio module (cpal) handles everything on macOS, Linux, and Windows
+  
   const napi = await loadAudioNapi()
   if (napi.isNativeAudioAvailable()) {
     return { available: true, reason: null }
   }
 
-  // Windows has no supported fallback
+  
   if (process.platform === 'win32') {
     return {
       available: false,
@@ -257,11 +247,11 @@ export async function checkRecordingAvailability(): Promise<RecordingAvailabilit
   }
 
   const wslNoAudioReason =
-    'Voice mode could not access an audio device in WSL.\n\nWSL2 with WSLg (Windows 11) provides audio via PulseAudio — if you are on Windows 10 or WSL1, run Claude Code in native Windows instead.'
+    'Voice mode could not access an audio device in WSL.\n\nWSL2 with WSLg (Windows 11) provides audio via PulseAudio — if you are on Windows 10 or WSL1, run Claude Code Next in native Windows instead.'
 
   
-  // the binary can exist while the device open() fails (WSL1, Win10-WSL2,
-  // headless Linux). WSL2+WSLg (Win11 default) works via PulseAudio RDP
+  
+  
   
   if (process.platform === 'linux' && hasCommand('arecord')) {
     const probe = await probeArecord()
@@ -275,18 +265,18 @@ export async function checkRecordingAvailability(): Promise<RecordingAvailabilit
     
   }
 
-  // Fallback: check for SoX
+  
   if (!hasCommand('rec')) {
-    // WSL without arecord AND without SoX: the generic "install SoX"
     
-    // but correct on WSL2+WSLg (SoX works via PulseAudio). Since we can't
-    // distinguish WSLg-vs-not without a backend to probe, show the WSLg
-    // guidance — it points WSL1 users at native Windows AND tells WSLg
-    // users their setup should work (they can install sox or alsa-utils).
-    // Known gap: WSL with SoX but NO arecord skips both this branch and
-    // the probe above — hasCommand('rec') lies the same way. We optimistically
-    // trust it (WSLg+SoX would work) rather than probeSox() for a near-zero
-    // population (WSL1 × minimal distro × SoX-but-not-alsa-utils).
+    
+    
+    
+    
+    
+    
+    
+    
+    
     if (getPlatform() === 'wsl') {
       return { available: false, reason: wslNoAudioReason }
     }
@@ -302,8 +292,6 @@ export async function checkRecordingAvailability(): Promise<RecordingAvailabilit
   return { available: true, reason: null }
 }
 
-// ─── Recording (native audio on macOS/Linux/Windows, SoX/arecord fallback on Linux) ─────────────
-
 let activeRecorder: ChildProcess | null = null
 let nativeRecordingActive = false
 
@@ -314,14 +302,14 @@ export async function startRecording(
 ): Promise<boolean> {
   logForDebugging(`[voice] startRecording called, platform=${process.platform}`)
 
-  // Try native audio module first (macOS, Linux, Windows via cpal)
+  
   const napi = await loadAudioNapi()
   const nativeAvailable =
     napi.isNativeAudioAvailable() &&
     (process.platform !== 'linux' || (await linuxHasAlsaCards()))
   const useSilenceDetection = options?.silenceDetection !== false
   if (nativeAvailable) {
-    // Ensure any previous recording is fully stopped
+    
     if (nativeRecordingActive || napi.isNativeRecordingActive()) {
       napi.stopNativeRecording()
       nativeRecordingActive = false
@@ -335,7 +323,7 @@ export async function startRecording(
           nativeRecordingActive = false
           onEnd()
         }
-        // In push-to-talk mode, ignore the native module's silence-triggered
+        
         
         
       },
@@ -344,16 +332,16 @@ export async function startRecording(
       nativeRecordingActive = true
       return true
     }
-    // Native recording failed — fall through to platform fallbacks
+    
   }
 
-  // Windows has no supported fallback
+  
   if (process.platform === 'win32') {
     logForDebugging('[voice] Windows native recording unavailable, no fallback')
     return false
   }
 
-  // On Linux, try arecord (ALSA utils) before SoX. Consult the probe so
+  
   
   
   
@@ -366,7 +354,7 @@ export async function startRecording(
     return startArecordRecording(onData, onEnd)
   }
 
-  // Fallback: SoX rec (Linux, or macOS if native module unavailable)
+  
   return startSoxRecording(onData, onEnd, options)
 }
 
@@ -381,9 +369,9 @@ function startSoxRecording(
   
   
   
-  // causing zero data flow until the process exits.
+  
   const args = [
-    '-q', // quiet
+    '-q', 
     '--buffer',
     '1024',
     '-t',
@@ -396,14 +384,14 @@ function startSoxRecording(
     '16',
     '-c',
     String(RECORDING_CHANNELS),
-    '-', // stdout
+    '-', 
   ]
 
   
   
   if (useSilenceDetection) {
     args.push(
-      'silence', // start/stop on silence
+      'silence', 
       '1',
       '0.1',
       SILENCE_THRESHOLD,
@@ -444,20 +432,20 @@ function startArecordRecording(
   onData: (chunk: Buffer) => void,
   onEnd: () => void,
 ): boolean {
-  // Record raw PCM: 16 kHz, 16-bit signed little-endian, mono, to stdout.
+  
   
   
   const args = [
     '-f',
-    'S16_LE', // signed 16-bit little-endian
+    'S16_LE', 
     '-r',
     String(RECORDING_SAMPLE_RATE),
     '-c',
     String(RECORDING_CHANNELS),
     '-t',
-    'raw', // raw PCM, no WAV header
-    '-q', // quiet — no progress output
-    '-', // write to stdout
+    'raw', 
+    '-q', 
+    '-', 
   ]
 
   const child = spawn('arecord', args, {

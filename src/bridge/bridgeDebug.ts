@@ -18,18 +18,18 @@ type BridgeFault = {
 }
 
 export type BridgeDebugHandle = {
-  /** Invoke the transport's permanent-close handler directly. Tests the
-   *  ws_closed → reconnectEnvironmentWithSession escalation (#22148). */
+  
+
   fireClose: (code: number) => void
-  /** Call reconnectEnvironmentWithSession() — same as SIGUSR2 but
-   *  reachable from the slash command. */
+  
+
   forceReconnect: () => void
-  /** Queue a fault for the next N calls to the named api method. */
+  
   injectFault: (fault: BridgeFault) => void
-  /** Abort the at-capacity sleep so an injected poll fault lands
-   *  immediately instead of up to 10min later. */
+  
+
   wakePollLoop: () => void
-  /** env/session IDs for the debug.log grep. */
+  
   describe: () => string
 }
 
@@ -56,13 +56,6 @@ export function injectBridgeFault(fault: BridgeFault): void {
   )
 }
 
-/**
- * Wrap a BridgeApiClient so each call first checks the fault queue. If a
- * matching fault is queued, throw the specified error instead of calling
- * through. Delegates everything else to the real client.
- *
- * Only called when USER_TYPE === 'ant' — zero overhead in external builds.
- */
 export function wrapApiForFaultInjection(
   api: BridgeApiClient,
 ): BridgeApiClient {
@@ -86,7 +79,7 @@ export function wrapApiForFaultInjection(
         fault.errorType,
       )
     }
-    // Transient: mimic an axios rejection (5xx / network). No .status on
+    
     
     throw new Error(`[injected transient] ${context} ${fault.status}`)
   }

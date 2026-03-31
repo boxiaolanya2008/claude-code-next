@@ -87,7 +87,7 @@ export const SandboxSettingsSchema = lazySchema(() =>
             'When false (default), a warning is shown and commands run unsandboxed. ' +
             'Intended for managed-settings deployments that require sandboxing as a hard gate.',
         ),
-      // Note: enabledPlatforms is an undocumented setting read via .passthrough()
+      
       
       
       

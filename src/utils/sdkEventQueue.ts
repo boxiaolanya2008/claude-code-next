@@ -29,11 +29,9 @@ type TaskProgressEvent = {
   summary?: string
   
   
-  // same fold as collectFromEvents + groupByPhase in PhaseProgress.tsx.
+  
   workflow_progress?: SdkWorkflowProgress[]
 }
-
-// Emitted when a foreground agent completes without being backgrounded.
 
 type TaskNotificationSdkEvent = {
   type: 'system'
@@ -49,8 +47,6 @@ type TaskNotificationSdkEvent = {
     duration_ms: number
   }
 }
-
-// Mirrors notifySessionStateChanged. The CCR bridge already receives this
 
 type SessionStateChangedEvent = {
   type: 'system'
@@ -68,7 +64,7 @@ const MAX_QUEUE_SIZE = 1000
 const queue: SdkEvent[] = []
 
 export function enqueueSdkEvent(event: SdkEvent): void {
-  // SDK events are only consumed (drained) in headless/streaming mode.
+  
   
   if (!getIsNonInteractiveSession()) {
     return
@@ -93,17 +89,6 @@ export function drainSdkEvents(): Array<
   }))
 }
 
-/**
- * Emit a task_notification SDK event for a task reaching a terminal state.
- *
- * registerTask() always emits task_started; this is the closing bookend.
- * Call this from any exit path that sets a task terminal WITHOUT going
- * through enqueuePendingNotification-with-<task-id> (print.ts parses that
- * XML into the same SDK event, so paths that do both would double-emit).
- * Paths that suppress the XML notification (notified:true pre-set, kill
- * paths, abort branches) must call this directly so SDK consumers
- * (Scuttle's bg-task dot, VS Code subagent panel) see the task close.
- */
 export function emitTaskTerminatedSdk(
   taskId: string,
   status: 'completed' | 'failed' | 'stopped',

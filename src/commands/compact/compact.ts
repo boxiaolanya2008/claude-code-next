@@ -50,7 +50,7 @@ export const call: LocalCommandCall = async (args, context) => {
   const customInstructions = args.trim()
 
   try {
-    // Try session memory compaction first if no custom instructions
+    
     
     if (!customInstructions) {
       const sessionMemoryResult = await trySessionMemoryCompaction(
@@ -80,7 +80,7 @@ export const call: LocalCommandCall = async (args, context) => {
       }
     }
 
-    // Reactive-only mode: route /compact through the reactive path.
+    
     
     if (reactiveCompact?.isReactiveOnlyMode()) {
       return await compactViaReactive(
@@ -91,7 +91,7 @@ export const call: LocalCommandCall = async (args, context) => {
       )
     }
 
-    // Fall back to traditional compaction
+    
     
     const microcompactResult = await microcompactMessages(messages, context)
     const messagesForCompact = microcompactResult.messages
@@ -151,9 +151,9 @@ async function compactViaReactive(
   context.setSDKStatus?.('compacting')
 
   try {
-    // Hooks and cache-param build are independent — run concurrently.
     
-    // pre-compact hooks spawn subprocesses. Neither depends on the other.
+    
+    
     const [hookResult, cacheSafeParams] = await Promise.all([
       executePreCompactHooks(
         { trigger: 'manual', customInstructions: customInstructions || null },
@@ -177,8 +177,8 @@ async function compactViaReactive(
     )
 
     if (!outcome.ok) {
-      // The outer catch in `call` translates these: aborted → "Compaction
-      // canceled." (via abortController.signal.aborted check), NOT_ENOUGH →
+      
+      
       
       switch (outcome.reason) {
         case 'too_few_groups':
@@ -192,7 +192,7 @@ async function compactViaReactive(
       }
     }
 
-    // Mirrors the post-success cleanup in tryReactiveCompact, minus
+    
     
     
     setLastSummarizedMessageId(undefined)

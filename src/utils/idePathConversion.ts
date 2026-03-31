@@ -3,10 +3,8 @@
 import { execFileSync } from 'child_process'
 
 export interface IDEPathConverter {
-  /**
-   * Convert path from IDE format to Claude's local format
-   * Used when reading workspace folders from IDE lockfile
-   */
+  
+
   toLocalPath(idePath: string): string
 
   
@@ -14,9 +12,6 @@ export interface IDEPathConverter {
   toIDEPath(localPath: string): string
 }
 
-/**
- * Converter for Windows IDE + WSL Claude scenario
- */
 export class WindowsToWSLConverter implements IDEPathConverter {
   constructor(private wslDistroName: string | undefined) {}
 
@@ -29,21 +24,21 @@ export class WindowsToWSLConverter implements IDEPathConverter {
         /^\\\\wsl(?:\.localhost|\$)\\([^\\]+)(.*)$/,
       )
       if (wslUncMatch && wslUncMatch[1] !== this.wslDistroName) {
-        // Different distro - wslpath will fail, so return original path
+        
         return windowsPath
       }
     }
 
     try {
-      // Use wslpath to convert Windows paths to WSL paths
+      
       const result = execFileSync('wslpath', ['-u', windowsPath], {
         encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'ignore'], // wslpath writes "wslpath: <errortext>" to stderr
+        stdio: ['pipe', 'pipe', 'ignore'], 
       }).trim()
 
       return result
     } catch {
-      // If wslpath fails, fall back to manual conversion
+      
       return windowsPath
         .replace(/\\/g, '/') 
         .replace(/^([A-Z]):/i, (_, letter) => `/mnt/${letter.toLowerCase()}`)
@@ -54,23 +49,20 @@ export class WindowsToWSLConverter implements IDEPathConverter {
     if (!wslPath) return wslPath
 
     try {
-      // Use wslpath to convert WSL paths to Windows paths
+      
       const result = execFileSync('wslpath', ['-w', wslPath], {
         encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'ignore'], // wslpath writes "wslpath: <errortext>" to stderr
+        stdio: ['pipe', 'pipe', 'ignore'], 
       }).trim()
 
       return result
     } catch {
-      // If wslpath fails, return the original path
+      
       return wslPath
     }
   }
 }
 
-/**
- * Check if distro names match for WSL UNC paths
- */
 export function checkWSLDistroMatch(
   windowsPath: string,
   wslDistroName: string,

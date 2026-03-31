@@ -13,19 +13,19 @@ export function extractGlobBaseDirectory(pattern: string): {
   baseDir: string
   relativePattern: string
 } {
-  // Find the first glob special character: *, ?, [, {
+  
   const globChars = /[*?[{]/
   const match = pattern.match(globChars)
 
   if (!match || match.index === undefined) {
-    // No glob characters - this is a literal path
+    
     
     const dir = dirname(pattern)
     const file = basename(pattern)
     return { baseDir: dir, relativePattern: file }
   }
 
-  // Get everything before the first glob character
+  
   const staticPrefix = pattern.slice(0, match.index)
 
   
@@ -35,7 +35,7 @@ export function extractGlobBaseDirectory(pattern: string): {
   )
 
   if (lastSepIndex === -1) {
-    // No path separator before the glob - pattern is relative to cwd
+    
     return { baseDir: '', relativePattern: pattern }
   }
 
@@ -48,8 +48,8 @@ export function extractGlobBaseDirectory(pattern: string): {
     baseDir = '/'
   }
 
-  // Handle Windows drive root paths (e.g., C:/*.txt)
-  // 'C:' means "current directory on drive C" (relative), not root
+  
+  
   
   if (getPlatform() === 'windows' && /^[A-Za-z]:$/.test(baseDir)) {
     baseDir = baseDir + sep
@@ -90,8 +90,8 @@ export async function glob(
   
   
   
-  const noIgnore = isEnvTruthy(process.env.CLAUDE_CODE_GLOB_NO_IGNORE || 'true')
-  const hidden = isEnvTruthy(process.env.CLAUDE_CODE_GLOB_HIDDEN || 'true')
+  const noIgnore = isEnvTruthy(process.env.CLAUDE_CODE_NEXT_GLOB_NO_IGNORE || 'true')
+  const hidden = isEnvTruthy(process.env.CLAUDE_CODE_NEXT_GLOB_HIDDEN || 'true')
   const args = [
     '--files',
     '--glob',
@@ -106,7 +106,7 @@ export async function glob(
     args.push('--glob', `!${pattern}`)
   }
 
-  // Exclude orphaned plugin version directories
+  
   for (const exclusion of await getGlobExclusionsForPluginCache(searchDir)) {
     args.push('--glob', exclusion)
   }

@@ -19,28 +19,18 @@ export type ChordResolveResult =
   | { type: 'chord_started'; pending: ParsedKeystroke[] }
   | { type: 'chord_cancelled' }
 
-/**
- * Resolve a key input to an action.
- * Pure function - no state, no side effects, just matching logic.
- *
- * @param input - The character input from Ink
- * @param key - The Key object from Ink with modifier flags
- * @param activeContexts - Array of currently active contexts (e.g., ['Chat', 'Global'])
- * @param bindings - All parsed bindings to search through
- * @returns The resolution result
- */
 export function resolveKey(
   input: string,
   key: Key,
   activeContexts: KeybindingContextName[],
   bindings: ParsedBinding[],
 ): ResolveResult {
-  // Find matching bindings (last one wins for user overrides)
+  
   let match: ParsedBinding | undefined
   const ctxSet = new Set(activeContexts)
 
   for (const binding of bindings) {
-    // Phase 1: Only single-keystroke bindings
+    
     if (binding.chord.length !== 1) continue
     if (!ctxSet.has(binding.context)) continue
 
@@ -60,25 +50,18 @@ export function resolveKey(
   return { type: 'match', action: match.action }
 }
 
-/**
- * Get display text for an action from bindings (e.g., "ctrl+t" for "app:toggleTodos").
- * Searches in reverse order so user overrides take precedence.
- */
 export function getBindingDisplayText(
   action: string,
   context: KeybindingContextName,
   bindings: ParsedBinding[],
 ): string | undefined {
-  // Find the last binding for this action in this context
+  
   const binding = bindings.findLast(
     b => b.action === action && b.context === context,
   )
   return binding ? chordToString(binding.chord) : undefined
 }
 
-/**
- * Build a ParsedKeystroke from Ink's input/key.
- */
 function buildKeystroke(input: string, key: Key): ParsedKeystroke | null {
   const keyName = getKeyName(input, key)
   if (!keyName) return null
@@ -98,12 +81,6 @@ function buildKeystroke(input: string, key: Key): ParsedKeystroke | null {
   }
 }
 
-/**
- * Compare two ParsedKeystrokes for equality. Collapses alt/meta into
- * one logical modifier — legacy terminals can't distinguish them (see
- * match.ts modifiersMatch), so "alt+k" and "meta+k" are the same key.
- * Super (cmd/win) is distinct — only arrives via kitty keyboard protocol.
- */
 export function keystrokesEqual(
   a: ParsedKeystroke,
   b: ParsedKeystroke,
@@ -117,9 +94,6 @@ export function keystrokesEqual(
   )
 }
 
-/**
- * Check if a chord prefix matches the beginning of a binding's chord.
- */
 function chordPrefixMatches(
   prefix: ParsedKeystroke[],
   binding: ParsedBinding,
@@ -134,9 +108,6 @@ function chordPrefixMatches(
   return true
 }
 
-/**
- * Check if a full chord matches a binding's chord.
- */
 function chordExactlyMatches(
   chord: ParsedKeystroke[],
   binding: ParsedBinding,
@@ -151,18 +122,6 @@ function chordExactlyMatches(
   return true
 }
 
-/**
- * Resolve a key with chord state support.
- *
- * This function handles multi-keystroke chord bindings like "ctrl+k ctrl+s".
- *
- * @param input - The character input from Ink
- * @param key - The Key object from Ink with modifier flags
- * @param activeContexts - Array of currently active contexts
- * @param bindings - All parsed bindings
- * @param pending - Current chord state (null if not in a chord)
- * @returns Resolution result with chord state
- */
 export function resolveKeyWithChordState(
   input: string,
   key: Key,
@@ -170,12 +129,12 @@ export function resolveKeyWithChordState(
   bindings: ParsedBinding[],
   pending: ParsedKeystroke[] | null,
 ): ChordResolveResult {
-  // Cancel chord on escape
+  
   if (key.escape && pending !== null) {
     return { type: 'chord_cancelled' }
   }
 
-  // Build current keystroke
+  
   const currentKeystroke = buildKeystroke(input, key)
   if (!currentKeystroke) {
     if (pending !== null) {
@@ -184,7 +143,7 @@ export function resolveKeyWithChordState(
     return { type: 'none' }
   }
 
-  // Build the full chord sequence to test
+  
   const testChord = pending
     ? [...pending, currentKeystroke]
     : [currentKeystroke]
@@ -214,13 +173,13 @@ export function resolveKeyWithChordState(
     }
   }
 
-  // If this keystroke could start a longer chord, prefer that
+  
   
   if (hasLongerChords) {
     return { type: 'chord_started', pending: testChord }
   }
 
-  // Check for exact matches (last one wins)
+  
   let exactMatch: ParsedBinding | undefined
   for (const binding of contextBindings) {
     if (chordExactlyMatches(testChord, binding)) {
@@ -235,7 +194,7 @@ export function resolveKeyWithChordState(
     return { type: 'match', action: exactMatch.action }
   }
 
-  // No match and no potential longer chords
+  
   if (pending !== null) {
     return { type: 'chord_cancelled' }
   }

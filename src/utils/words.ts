@@ -87,7 +87,7 @@ const ADJECTIVES = [
   'zany',
   'zesty',
   'zippy',
-  // Whimsical / magical
+  
   'breezy',
   'bubbly',
   'buzzing',
@@ -148,7 +148,7 @@ const ADJECTIVES = [
   'wobbly',
   'woolly',
   'zazzy',
-  // Programming concepts
+  
   'abstract',
   'adaptive',
   'agile',
@@ -316,7 +316,7 @@ const NOUNS = [
   'wave',
   'willow',
   'wind',
-  // Cute creatures
+  
   'alpaca',
   'axolotl',
   'badger',
@@ -407,7 +407,7 @@ const NOUNS = [
   'wren',
   'yeti',
   'zebra',
-  // Fun objects & concepts
+  
   'acorn',
   'anchor',
   'balloon',
@@ -523,7 +523,7 @@ const NOUNS = [
   'widget',
   'wreath',
   'zephyr',
-  // Computer scientists
+  
   'abelson',
   'adleman',
   'aho',
@@ -756,23 +756,16 @@ const VERBS = [
 ] as const
 
 function randomInt(max: number): number {
-  // Use crypto.randomBytes for better randomness than Math.random
+  
   const bytes = randomBytes(4)
   const value = bytes.readUInt32BE(0)
   return value % max
 }
 
-/**
- * Pick a random element from an array
- */
 function pickRandom<T>(array: readonly T[]): T {
   return array[randomInt(array.length)]!
 }
 
-/**
- * Generate a random word slug in the format "adjective-verb-noun"
- * Example: "gleaming-brewing-phoenix", "cosmic-pondering-lighthouse"
- */
 export function generateWordSlug(): string {
   const adjective = pickRandom(ADJECTIVES)
   const verb = pickRandom(VERBS)
@@ -780,10 +773,6 @@ export function generateWordSlug(): string {
   return `${adjective}-${verb}-${noun}`
 }
 
-/**
- * Generate a shorter random word slug in the format "adjective-noun"
- * Example: "graceful-unicorn", "cosmic-lighthouse"
- */
 export function generateShortWordSlug(): string {
   const adjective = pickRandom(ADJECTIVES)
   const noun = pickRandom(NOUNS)

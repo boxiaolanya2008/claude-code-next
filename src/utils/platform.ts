@@ -19,7 +19,7 @@ export const getPlatform = memoize((): Platform => {
     }
 
     if (process.platform === 'linux') {
-      // Check if running in WSL (Windows Subsystem for Linux)
+      
       try {
         const procVersion = getFsImplementation().readFileSync(
           '/proc/version',
@@ -32,15 +32,15 @@ export const getPlatform = memoize((): Platform => {
           return 'wsl'
         }
       } catch (error) {
-        // Error reading /proc/version, assume regular Linux
+        
         logError(error)
       }
 
-      // Regular Linux
+      
       return 'linux'
     }
 
-    // Unknown platform
+    
     return 'unknown'
   } catch (error) {
     logError(error)
@@ -49,7 +49,7 @@ export const getPlatform = memoize((): Platform => {
 })
 
 export const getWslVersion = memoize((): string | undefined => {
-  // Only check for WSL on Linux systems
+  
   if (process.platform !== 'linux') {
     return undefined
   }
@@ -64,13 +64,13 @@ export const getWslVersion = memoize((): string | undefined => {
       return wslVersionMatch[1]
     }
 
-    // If no explicit WSL version but contains Microsoft, assume WSL1
+    
     
     if (procVersion.toLowerCase().includes('microsoft')) {
       return '1'
     }
 
-    // Not WSL or unable to determine version
+    
     return undefined
   } catch (error) {
     logError(error)
@@ -108,7 +108,7 @@ export const getLinuxDistroInfo = memoize(
         }
       }
     } catch {
-      // /etc/os-release may not exist on all Linux systems
+      
     }
 
     return result
@@ -143,7 +143,7 @@ export async function detectVcs(dir?: string): Promise<string[]> {
       }
     }
   } catch {
-    // Directory may not be readable
+    
   }
 
   return [...detected]

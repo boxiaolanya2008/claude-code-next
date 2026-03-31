@@ -33,7 +33,6 @@ type ParsedPath = {
   prefix: string
 }
 
-// Cache configuration
 const CACHE_SIZE = 500
 const CACHE_TTL = 5 * 60 * 1000 
 
@@ -51,7 +50,7 @@ export function parsePartialPath(
   partialPath: string,
   basePath?: string,
 ): ParsedPath {
-  // Handle empty input
+  
   if (!partialPath) {
     const directory = basePath || getCwd()
     return { directory, prefix: '' }
@@ -65,28 +64,24 @@ export function parsePartialPath(
     return { directory: resolved, prefix: '' }
   }
 
-  // Split into directory and prefix
+  
   const directory = dirname(resolved)
   const prefix = basename(partialPath)
 
   return { directory, prefix }
 }
 
-/**
- * Scans a directory and returns subdirectories
- * Uses LRU cache to avoid repeated filesystem calls
- */
 export async function scanDirectory(
   dirPath: string,
 ): Promise<DirectoryEntry[]> {
-  // Check cache first
+  
   const cached = directoryCache.get(dirPath)
   if (cached) {
     return cached
   }
 
   try {
-    // Read directory contents
+    
     const fs = getFsImplementation()
     const entries = await fs.readdir(dirPath)
 
@@ -110,9 +105,6 @@ export async function scanDirectory(
   }
 }
 
-/**
- * Main function to get directory completion suggestions
- */
 export async function getDirectoryCompletions(
   partialPath: string,
   options: CompletionOptions = {},
@@ -134,16 +126,10 @@ export async function getDirectoryCompletions(
   }))
 }
 
-/**
- * Clears the directory cache
- */
 export function clearDirectoryCache(): void {
   directoryCache.clear()
 }
 
-/**
- * Checks if a string looks like a path (starts with path-like prefixes)
- */
 export function isPathLikeToken(token: string): boolean {
   return (
     token.startsWith('~/') ||
@@ -156,10 +142,6 @@ export function isPathLikeToken(token: string): boolean {
   )
 }
 
-/**
- * Scans a directory and returns both files and subdirectories
- * Uses LRU cache to avoid repeated filesystem calls
- */
 export async function scanDirectoryForPaths(
   dirPath: string,
   includeHidden = false,
@@ -182,7 +164,7 @@ export async function scanDirectoryForPaths(
         type: entry.isDirectory() ? ('directory' as const) : ('file' as const),
       }))
       .sort((a, b) => {
-        // Sort directories first, then alphabetically
+        
         if (a.type === 'directory' && b.type !== 'directory') return -1
         if (a.type !== 'directory' && b.type === 'directory') return 1
         return a.name.localeCompare(b.name)
@@ -197,9 +179,6 @@ export async function scanDirectoryForPaths(
   }
 }
 
-/**
- * Get path completion suggestions for files and directories
- */
 export async function getPathCompletions(
   partialPath: string,
   options: PathCompletionOptions = {},
@@ -229,7 +208,7 @@ export async function getPathCompletions(
   const hasSeparator = partialPath.includes('/') || partialPath.includes(sep)
   let dirPortion = ''
   if (hasSeparator) {
-    // Find the last separator (either / or platform-specific)
+    
     const lastSlash = partialPath.lastIndexOf('/')
     const lastSep = partialPath.lastIndexOf(sep)
     const lastSeparatorPos = Math.max(lastSlash, lastSep)
@@ -249,9 +228,6 @@ export async function getPathCompletions(
   })
 }
 
-/**
- * Clears both directory and path caches
- */
 export function clearPathCache(): void {
   directoryCache.clear()
   pathCache.clear()

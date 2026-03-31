@@ -3,8 +3,6 @@
 import { z } from 'zod/v4'
 import { lazySchema } from '../../utils/lazySchema.js'
 
-// Usage & Model Types
-
 export const ModelUsageSchema = lazySchema(() =>
   z.object({
     inputTokens: z.number(),
@@ -17,8 +15,6 @@ export const ModelUsageSchema = lazySchema(() =>
     maxOutputTokens: z.number(),
   }),
 )
-
-// Output Format Types
 
 export const OutputFormatTypeSchema = lazySchema(() => z.literal('json_schema'))
 
@@ -38,8 +34,6 @@ export const JsonSchemaOutputFormatSchema = lazySchema(() =>
 export const OutputFormatSchema = lazySchema(() =>
   JsonSchemaOutputFormatSchema(),
 )
-
-// Config Types
 
 export const ApiKeySourceSchema = lazySchema(() =>
   z.enum(['user', 'project', 'org', 'temporary', 'oauth']),
@@ -90,11 +84,9 @@ export const ThinkingConfigSchema = lazySchema(() =>
     ),
 )
 
-// MCP Server Config Types (serializable only)
-
 export const McpStdioServerConfigSchema = lazySchema(() =>
   z.object({
-    type: z.literal('stdio').optional(), // Optional for backwards compatibility
+    type: z.literal('stdio').optional(), 
     command: z.string(),
     args: z.array(z.string()).optional(),
     env: z.record(z.string(), z.string()).optional(),
@@ -219,8 +211,6 @@ export const McpSetServersResultSchema = lazySchema(() =>
     .describe('Result of a setMcpServers operation.'),
 )
 
-// Permission Types
-
 export const PermissionUpdateDestinationSchema = lazySchema(() =>
   z.enum([
     'userSettings',
@@ -298,7 +288,7 @@ export const PermissionResultSchema = lazySchema(() =>
   z.union([
     z.object({
       behavior: z.literal('allow'),
-      // Optional - may not be provided if hook sets permission without input modification
+      
       updatedInput: z.record(z.string(), z.unknown()).optional(),
       updatedPermissions: z.array(PermissionUpdateSchema()).optional(),
       toolUseID: z.string().optional(),
@@ -328,8 +318,6 @@ export const PermissionModeSchema = lazySchema(() =>
         "'dontAsk' - Don't prompt for permissions, deny if not pre-approved.",
     ),
 )
-
-// Hook Types
 
 export const HOOK_EVENTS = [
   'PreToolUse',
@@ -987,8 +975,6 @@ export const PromptResponseSchema = lazySchema(() =>
   }),
 )
 
-// Skill/Command Types
-
 export const SlashCommandSchema = lazySchema(() =>
   z
     .object({
@@ -1072,8 +1058,6 @@ export const AccountInfoSchema = lazySchema(() =>
     .describe("Information about the logged in user's account."),
 )
 
-// Agent Definition Types
-
 export const AgentMcpServerSpecSchema = lazySchema(() =>
   z.union([
     z.string(),
@@ -1156,8 +1140,6 @@ export const AgentDefinitionSchema = lazySchema(() =>
     ),
 )
 
-// Settings Types
-
 export const SettingSourceSchema = lazySchema(() =>
   z
     .enum(['user', 'project', 'local'])
@@ -1182,8 +1164,6 @@ export const SdkPluginConfigSchema = lazySchema(() =>
     .describe('Configuration for loading a plugin.'),
 )
 
-// Rewind Types
-
 export const RewindFilesResultSchema = lazySchema(() =>
   z
     .object({
@@ -1196,10 +1176,6 @@ export const RewindFilesResultSchema = lazySchema(() =>
     .describe('Result of a rewindFiles operation.'),
 )
 
-// External Type Placeholders
-
-//
-
 export const APIUserMessagePlaceholder = lazySchema(() => z.unknown())
 
 export const APIAssistantMessagePlaceholder = lazySchema(() => z.unknown())
@@ -1209,8 +1185,6 @@ export const RawMessageStreamEventPlaceholder = lazySchema(() => z.unknown())
 export const UUIDPlaceholder = lazySchema(() => z.string())
 
 export const NonNullableUsagePlaceholder = lazySchema(() => z.unknown())
-
-// SDK Message Types
 
 export const SDKAssistantMessageErrorSchema = lazySchema(() =>
   z.enum([
@@ -1419,7 +1393,7 @@ export const SDKSystemMessageSchema = lazySchema(() =>
     agents: z.array(z.string()).optional(),
     apiKeySource: ApiKeySourceSchema(),
     betas: z.array(z.string()).optional(),
-    claude_code_version: z.string(),
+    claude_code_next_version: z.string(),
     cwd: z.string(),
     tools: z.array(z.string()),
     mcp_servers: z.array(
@@ -1760,8 +1734,6 @@ export const SDKPromptSuggestionMessageSchema = lazySchema(() =>
       'Predicted next user prompt, emitted after each turn when promptSuggestions is enabled.',
     ),
 )
-
-// Session Listing Types
 
 export const SDKSessionInfoSchema = lazySchema(() =>
   z

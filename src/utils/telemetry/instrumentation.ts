@@ -84,7 +84,7 @@ function telemetryTimeout(ms: number, message: string): Promise<never> {
 
 export function bootstrapTelemetry() {
   if (process.env.USER_TYPE === 'ant') {
-    // Read from ANT_ prefixed variables that are defined at build time
+    
     if (process.env.ANT_OTEL_METRICS_EXPORTER) {
       process.env.OTEL_METRICS_EXPORTER = process.env.ANT_OTEL_METRICS_EXPORTER
     }
@@ -108,14 +108,12 @@ export function bootstrapTelemetry() {
     }
   }
 
-  // Set default tempoality to 'delta' because it's the more sane default
+  
   if (!process.env.OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE) {
     process.env.OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE = 'delta'
   }
 }
 
-// Per OTEL spec, "none" means "no automatically configured exporter for this signal".
-// https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#exporter-selection
 export function parseExporterTypes(value: string | undefined): string[] {
   return (value || '')
     .trim()
@@ -135,14 +133,14 @@ async function getOtlpReaders() {
   const exporters = []
   for (const exporterType of exporterTypes) {
     if (exporterType === 'console') {
-      // Custom console exporter that shows resource attributes
+      
       const consoleExporter = new ConsoleMetricExporter()
       const originalExport = consoleExporter.export.bind(consoleExporter)
 
       consoleExporter.export = (metrics, callback) => {
-        // Log resource attributes once at the start
+        
         if (metrics.resource && metrics.resource.attributes) {
-          // The console exporter is for debugging, so console output is intentional here
+          
 
           logForDebugging('\n=== Resource Attributes ===')
           logForDebugging(jsonStringify(metrics.resource.attributes))
@@ -162,8 +160,8 @@ async function getOtlpReaders() {
 
       switch (protocol) {
         case 'grpc': {
-          // Lazy-import to keep @grpc/grpc-js (~700KB) out of the telemetry chunk
-          // when the protocol is http/protobuf (ant default) or http/json.
+          
+          
           const { OTLPMetricExporter } = await import(
             '@opentelemetry/exporter-metrics-otlp-grpc'
           )
@@ -320,22 +318,22 @@ async function getOtlpTraceExporters() {
 }
 
 export function isTelemetryEnabled() {
-  return isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_TELEMETRY)
+  return isEnvTruthy(process.env.CLAUDE_CODE_NEXT_ENABLE_TELEMETRY)
 }
 
 function getBigQueryExportingReader() {
   const bigqueryExporter = new BigQueryMetricsExporter()
   return new PeriodicExportingMetricReader({
     exporter: bigqueryExporter,
-    exportIntervalMillis: 5 * 60 * 1000, // 5mins for BigQuery metrics exporter to reduce load
+    exportIntervalMillis: 5 * 60 * 1000, 
   })
 }
 
 function isBigQueryMetricsEnabled() {
-  // BigQuery metrics are enabled for:
-  // 1. API customers (excluding Claude.ai subscribers and Bedrock/Vertex)
-  // 2. Claude for Enterprise (C4E) users
-  // 3. Claude for Teams users
+  
+  
+  
+  
   const subscriptionType = getSubscriptionType()
   const isC4EOrTeamUser =
     isClaudeAISubscriber() &&
@@ -344,10 +342,6 @@ function isBigQueryMetricsEnabled() {
   return is1PApiCustomer() || isC4EOrTeamUser
 }
 
-/**
- * Initialize beta tracing - a separate code path for detailed debugging.
- * Uses BETA_TRACING_ENDPOINT instead of OTEL_EXPORTER_OTLP_ENDPOINT.
- */
 async function initializeBetaTracing(
   resource: ReturnType<typeof resourceFromAttributes>,
 ): Promise<void> {
@@ -369,7 +363,7 @@ async function initializeBetaTracing(
     url: `${endpoint}/v1/logs`,
   }
 
-  // Initialize trace exporter
+  
   const traceExporter = new OTLPTraceExporter(httpConfig)
   const spanProcessor = new BatchSpanProcessor(traceExporter, {
     scheduledDelayMillis: DEFAULT_TRACES_EXPORT_INTERVAL_MS,
@@ -383,7 +377,7 @@ async function initializeBetaTracing(
   trace.setGlobalTracerProvider(tracerProvider)
   setTracerProvider(tracerProvider)
 
-  // Initialize log exporter
+  
   const logExporter = new OTLPLogExporter(logHttpConfig)
   const loggerProvider = new LoggerProvider({
     resource,
@@ -397,14 +391,14 @@ async function initializeBetaTracing(
   logs.setGlobalLoggerProvider(loggerProvider)
   setLoggerProvider(loggerProvider)
 
-  // Initialize event logger
+  
   const eventLogger = logs.getLogger(
-    'com.anthropic.claude_code.events',
+    'com.anthropic.claude_code_next.events',
     MACRO.VERSION,
   )
   setEventLogger(eventLogger)
 
-  // Setup flush handlers - flush both logs AND traces
+  
   process.on('beforeExit', async () => {
     await loggerProvider?.forceFlush()
     await tracerProvider?.forceFlush()
@@ -420,10 +414,10 @@ export async function initializeTelemetry() {
   profileCheckpoint('telemetry_init_start')
   bootstrapTelemetry()
 
-  // Console exporters call console.dir on a timer (5s logs/traces, 60s
-  // metrics), writing pretty-printed objects to stdout. In stream-json
-  // mode stdout is the SDK message channel; the first line (`{`) breaks
-  // the SDK's line reader. Stripped here (not main.tsx) because init.ts
+  
+  
+  
+  
   
   
   
@@ -455,25 +449,25 @@ export async function initializeTelemetry() {
   
   const telemetryEnabled = isTelemetryEnabled()
   logForDebugging(
-    `[3P telemetry] isTelemetryEnabled=${telemetryEnabled} (CLAUDE_CODE_ENABLE_TELEMETRY=${process.env.CLAUDE_CODE_ENABLE_TELEMETRY})`,
+    `[3P telemetry] isTelemetryEnabled=${telemetryEnabled} (CLAUDE_CODE_NEXT_ENABLE_TELEMETRY=${process.env.CLAUDE_CODE_NEXT_ENABLE_TELEMETRY})`,
   )
   if (telemetryEnabled) {
     readers.push(...(await getOtlpReaders()))
   }
 
-  // Add BigQuery exporter (for API customers, C4E users, and internal users)
+  
   if (isBigQueryMetricsEnabled()) {
     readers.push(getBigQueryExportingReader())
   }
 
-  // Create base resource with service attributes
+  
   const platform = getPlatform()
   const baseAttributes: Record<string, string> = {
-    [ATTR_SERVICE_NAME]: 'claude-code',
+    [ATTR_SERVICE_NAME]: 'claude-code-next',
     [ATTR_SERVICE_VERSION]: MACRO.VERSION,
   }
 
-  // Add WSL-specific attributes if running on WSL
+  
   if (platform === 'wsl') {
     const wslVersion = getWslVersion()
     if (wslVersion) {
@@ -524,7 +518,7 @@ export async function initializeTelemetry() {
     
     const shutdownTelemetry = async () => {
       const timeoutMs = parseInt(
-        process.env.CLAUDE_CODE_OTEL_SHUTDOWN_TIMEOUT_MS || '2000',
+        process.env.CLAUDE_CODE_NEXT_OTEL_SHUTDOWN_TIMEOUT_MS || '2000',
       )
       try {
         endInteractionSpan()
@@ -553,12 +547,12 @@ export async function initializeTelemetry() {
           telemetryTimeout(timeoutMs, 'OpenTelemetry shutdown timeout'),
         ])
       } catch {
-        // Ignore shutdown errors
+        
       }
     }
     registerCleanup(shutdownTelemetry)
 
-    return meterProvider.getMeter('com.anthropic.claude_code', MACRO.VERSION)
+    return meterProvider.getMeter('com.anthropic.claude_code_next', MACRO.VERSION)
   }
 
   const meterProvider = new MeterProvider({
@@ -580,7 +574,7 @@ export async function initializeTelemetry() {
     if (logExporters.length > 0) {
       const loggerProvider = new LoggerProvider({
         resource,
-        // Add batch processors for each exporter
+        
         processors: logExporters.map(
           exporter =>
             new BatchLogRecordProcessor(exporter, {
@@ -598,7 +592,7 @@ export async function initializeTelemetry() {
 
       
       const eventLogger = logs.getLogger(
-        'com.anthropic.claude_code.events',
+        'com.anthropic.claude_code_next.events',
         MACRO.VERSION,
       )
       setEventLogger(eventLogger)
@@ -615,18 +609,18 @@ export async function initializeTelemetry() {
       })
 
       process.on('exit', () => {
-        // Final attempt to flush logs and traces
+        
         void loggerProvider?.forceFlush()
         void getTracerProvider()?.forceFlush()
       })
     }
   }
 
-  // Initialize tracing if enhanced telemetry is enabled (BETA)
+  
   if (telemetryEnabled && isEnhancedTelemetryEnabled()) {
     const traceExporters = await getOtlpTraceExporters()
     if (traceExporters.length > 0) {
-      // Create span processors for each exporter
+      
       const spanProcessors = traceExporters.map(
         exporter =>
           new BatchSpanProcessor(exporter, {
@@ -648,14 +642,14 @@ export async function initializeTelemetry() {
     }
   }
 
-  // Shutdown metrics and logs on exit (flushes and closes exporters)
+  
   const shutdownTelemetry = async () => {
     const timeoutMs = parseInt(
-      process.env.CLAUDE_CODE_OTEL_SHUTDOWN_TIMEOUT_MS || '2000',
+      process.env.CLAUDE_CODE_NEXT_OTEL_SHUTDOWN_TIMEOUT_MS || '2000',
     )
 
     try {
-      // End any active interaction span before shutdown
+      
       endInteractionSpan()
 
       const shutdownPromises = [meterProvider.shutdown()]
@@ -679,9 +673,9 @@ export async function initializeTelemetry() {
 OpenTelemetry telemetry flush timed out after ${timeoutMs}ms
 
 To resolve this issue, you can:
-1. Increase the timeout by setting CLAUDE_CODE_OTEL_SHUTDOWN_TIMEOUT_MS env var (e.g., 5000 for 5 seconds)
+1. Increase the timeout by setting CLAUDE_CODE_NEXT_OTEL_SHUTDOWN_TIMEOUT_MS env var (e.g., 5000 for 5 seconds)
 2. Check if your OpenTelemetry backend is experiencing scalability issues
-3. Disable OpenTelemetry by unsetting CLAUDE_CODE_ENABLE_TELEMETRY env var
+3. Disable OpenTelemetry by unsetting CLAUDE_CODE_NEXT_ENABLE_TELEMETRY env var
 
 Current timeout: ${timeoutMs}ms
 `,
@@ -692,16 +686,12 @@ Current timeout: ${timeoutMs}ms
     }
   }
 
-  // Always register shutdown (internal metrics are always enabled)
+  
   registerCleanup(shutdownTelemetry)
 
-  return meterProvider.getMeter('com.anthropic.claude_code', MACRO.VERSION)
+  return meterProvider.getMeter('com.anthropic.claude_code_next', MACRO.VERSION)
 }
 
-/**
- * Flush all pending telemetry data immediately.
- * This should be called before logout or org switching to prevent data leakage.
- */
 export async function flushTelemetry(): Promise<void> {
   const meterProvider = getMeterProvider()
   if (!meterProvider) {
@@ -709,7 +699,7 @@ export async function flushTelemetry(): Promise<void> {
   }
 
   const timeoutMs = parseInt(
-    process.env.CLAUDE_CODE_OTEL_FLUSH_TIMEOUT_MS || '5000',
+    process.env.CLAUDE_CODE_NEXT_OTEL_FLUSH_TIMEOUT_MS || '5000',
   )
 
   try {
@@ -740,7 +730,7 @@ export async function flushTelemetry(): Promise<void> {
         level: 'error',
       })
     }
-    // Don't throw - allow logout to continue even if flush fails
+    
   }
 }
 
@@ -758,20 +748,15 @@ function parseOtelHeadersEnvVar(): Record<string, string> {
   return headers
 }
 
-/**
- * Get configuration for OTLP exporters including:
- * - HTTP agent options (proxy, mTLS)
- * - Dynamic headers via otelHeadersHelper or static headers from env var
- */
 function getOTLPExporterConfig() {
   const proxyUrl = getProxyUrl()
   const mtlsConfig = getMTLSConfig()
   const settings = getSettings_DEPRECATED()
 
-  // Build base config
+  
   const config: Record<string, unknown> = {}
 
-  // Parse static headers from env var once (doesn't change at runtime)
+  
   const staticHeaders = parseOtelHeadersEnvVar()
 
   
@@ -785,10 +770,10 @@ function getOTLPExporterConfig() {
     config.headers = async (): Promise<Record<string, string>> => staticHeaders
   }
 
-  // Check if we should bypass proxy for OTEL endpoint
+  
   const otelEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT
   if (!proxyUrl || (otelEndpoint && shouldBypassProxy(otelEndpoint))) {
-    // No proxy configured or OTEL endpoint should bypass proxy
+    
     const caCerts = getCACertificates()
     if (mtlsConfig || caCerts) {
       config.httpAgentOptions = {
@@ -799,10 +784,10 @@ function getOTLPExporterConfig() {
     return config
   }
 
-  // Return an HttpAgentFactory function that creates our proxy agent
+  
   const caCerts = getCACertificates()
   const agentFactory = (_protocol: string) => {
-    // Create and return the proxy agent with mTLS and CA cert config
+    
     const proxyAgent =
       mtlsConfig || caCerts
         ? new HttpsProxyAgent(proxyUrl, {

@@ -21,7 +21,7 @@ import {
 } from './schemas.js'
 
 export type MarketplaceDiff = {
-  /** Declared in settings, absent from known_marketplaces.json */
+  
   missing: string[]
   
   sourceChanged: Array<{
@@ -33,13 +33,6 @@ export type MarketplaceDiff = {
   upToDate: string[]
 }
 
-/**
- * Compare declared intent (settings) against materialized state (JSON).
- *
- * Resolves relative directory/file paths in `declared` before comparing,
- * so project settings with `./path` match JSON's absolute path. Path
- * resolution reads `.git` to canonicalize worktree paths (memoized).
- */
 export function diffMarketplaces(
   declared: Record<string, DeclaredMarketplace>,
   materialized: KnownMarketplacesFile,
@@ -56,7 +49,7 @@ export function diffMarketplaces(
     if (!state) {
       missing.push(name)
     } else if (intent.sourceIsFallback) {
-      // Fallback: presence suffices. Don't compare sources — the declared source
+      
       
       
       
@@ -76,7 +69,7 @@ export function diffMarketplaces(
 }
 
 export type ReconcileOptions = {
-  /** Skip a declared marketplace. Used by zip-cache mode for unsupported source types. */
+  
   skip?: (name: string, source: MarketplaceSource) => boolean
   onProgress?: (event: ReconcileProgressEvent) => void
 }
@@ -100,10 +93,6 @@ export type ReconcileResult = {
   skipped: string[]
 }
 
-/**
- * Make known_marketplaces.json consistent with declared intent.
- * Idempotent. Additive only (never deletes). Does not touch AppState.
- */
 export async function reconcileMarketplaces(
   opts?: ReconcileOptions,
 ): Promise<ReconcileResult> {
@@ -153,8 +142,8 @@ export async function reconcileMarketplaces(
       skipped.push(item.name)
       continue
     }
-    // For sourceChanged local-path entries, skip if the declared path doesn't
-    // exist. Guards multi-checkout scenarios where normalizeSource can't
+    
+    
     
     
     
@@ -202,7 +191,7 @@ export async function reconcileMarketplaces(
     })
 
     try {
-      // addMarketplaceSource is source-idempotent — same source returns
+      
       
       
       
@@ -226,19 +215,6 @@ export async function reconcileMarketplaces(
   return { installed, updated, failed, upToDate: diff.upToDate, skipped }
 }
 
-/**
- * Resolve relative directory/file paths for stable comparison.
- * Settings declared at project scope may use project-relative paths;
- * JSON stores absolute paths.
- *
- * For git worktrees, resolve against the main checkout (canonical root)
- * instead of the worktree cwd. Project settings are checked into git,
- * so `./foo` means "relative to this repo" — but known_marketplaces.json is
- * user-global with one entry per marketplace name. Resolving against the
- * worktree cwd means each worktree session overwrites the shared entry with
- * its own absolute path, and deleting the worktree leaves a dead
- * installLocation. The canonical root is stable across all worktrees.
- */
 function normalizeSource(
   source: MarketplaceSource,
   projectRoot?: string,

@@ -35,9 +35,6 @@ export async function readZipCacheKnownMarketplaces(): Promise<KnownMarketplaces
   }
 }
 
-/**
- * Write known_marketplaces.json to the zip cache atomically.
- */
 export async function writeZipCacheKnownMarketplaces(
   data: KnownMarketplacesFile,
 ): Promise<void> {
@@ -46,8 +43,6 @@ export async function writeZipCacheKnownMarketplaces(
     jsonStringify(data, null, 2),
   )
 }
-
-// ── Marketplace JSON ──
 
 export async function readMarketplaceJson(
   marketplaceName: string,
@@ -74,9 +69,6 @@ export async function readMarketplaceJson(
   }
 }
 
-/**
- * Save a marketplace JSON to the zip cache from its install location.
- */
 export async function saveMarketplaceJsonToZipCache(
   marketplaceName: string,
   installLocation: string,
@@ -92,34 +84,24 @@ export async function saveMarketplaceJsonToZipCache(
   }
 }
 
-/**
- * Read marketplace.json content from a cloned marketplace directory or file.
- * For directory sources: checks .claude-plugin/marketplace.json, marketplace.json
- * For URL sources: the installLocation IS the marketplace JSON file itself.
- */
 async function readMarketplaceJsonContent(dir: string): Promise<string | null> {
   const candidates = [
     join(dir, '.claude-plugin', 'marketplace.json'),
     join(dir, 'marketplace.json'),
-    dir, // For URL sources, installLocation IS the marketplace JSON file
+    dir, 
   ]
   for (const candidate of candidates) {
     try {
       return await readFile(candidate, 'utf-8')
     } catch {
-      // ENOENT (doesn't exist) or EISDIR (directory) — try next
+      
     }
   }
   return null
 }
 
-/**
- * Sync marketplace data to zip cache for offline access.
- * Saves marketplace JSONs and merges with previously cached data
- * so ephemeral containers can access marketplaces without re-cloning.
- */
 export async function syncMarketplacesToZipCache(): Promise<void> {
-  // Read-only iteration — Safe variant so a corrupted config doesn't throw.
+  
   
   
   const knownMarketplaces = await loadKnownMarketplacesConfigSafe()
@@ -134,7 +116,7 @@ export async function syncMarketplacesToZipCache(): Promise<void> {
     }
   }
 
-  // Merge with previously cached data (ephemeral containers lose global config)
+  
   const zipCacheKnownMarketplaces = await readZipCacheKnownMarketplaces()
   const mergedKnownMarketplaces: KnownMarketplacesFile = {
     ...zipCacheKnownMarketplaces,

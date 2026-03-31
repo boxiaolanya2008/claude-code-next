@@ -34,7 +34,7 @@ function validateCommandForMode(
     }
   }
 
-  // In Accept Edits mode, auto-allow filesystem operations
+  
   if (
     toolPermissionContext.mode === 'acceptEdits' &&
     isFilesystemCommand(baseCmd)
@@ -55,25 +55,11 @@ function validateCommandForMode(
   }
 }
 
-/**
- * Checks if commands should be handled differently based on the current permission mode
- *
- * This is the main entry point for mode-based permission logic.
- * Currently handles Accept Edits mode for filesystem commands,
- * but designed to be extended for other modes.
- *
- * @param input - The bash command input
- * @param toolPermissionContext - Context containing mode and permissions
- * @returns
- * - 'allow' if the current mode permits auto-approval
- * - 'ask' if the command needs approval in current mode
- * - 'passthrough' if no mode-specific handling applies
- */
 export function checkPermissionMode(
   input: z.infer<typeof BashTool.inputSchema>,
   toolPermissionContext: ToolPermissionContext,
 ): PermissionResult {
-  // Skip if in bypass mode (handled elsewhere)
+  
   if (toolPermissionContext.mode === 'bypassPermissions') {
     return {
       behavior: 'passthrough',
@@ -81,7 +67,7 @@ export function checkPermissionMode(
     }
   }
 
-  // Skip if in dontAsk mode (handled in main permission flow)
+  
   if (toolPermissionContext.mode === 'dontAsk') {
     return {
       behavior: 'passthrough',
@@ -101,7 +87,7 @@ export function checkPermissionMode(
     }
   }
 
-  // No mode-specific handling needed
+  
   return {
     behavior: 'passthrough',
     message: 'No mode-specific validation required',

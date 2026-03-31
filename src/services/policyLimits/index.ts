@@ -39,7 +39,6 @@ function isNodeError(e: unknown): e is NodeJS.ErrnoException {
   return e instanceof Error
 }
 
-// Constants
 const CACHE_FILENAME = 'policy-limits.json'
 const FETCH_TIMEOUT_MS = 10000 
 const DEFAULT_MAX_RETRIES = 5
@@ -62,14 +61,6 @@ export function _resetPolicyLimitsForTesting(): void {
   loadingCompleteResolve = null
 }
 
-/**
- * Initialize the loading promise for policy limits
- * This should be called early (e.g., in init.ts) to allow other systems
- * to await policy limits loading even if loadPolicyLimits() hasn't been called yet.
- *
- * Only creates the promise if the user is eligible for policy limits.
- * Includes a timeout to prevent deadlocks if loadPolicyLimits() is never called.
- */
 export function initializePolicyLimitsLoadingPromise(): void {
   if (loadingCompletePromise) {
     return
@@ -92,23 +83,14 @@ export function initializePolicyLimitsLoadingPromise(): void {
   }
 }
 
-/**
- * Get the path to the policy limits cache file
- */
 function getCachePath(): string {
   return join(getClaudeConfigHomeDir(), CACHE_FILENAME)
 }
 
-/**
- * Get the policy limits API endpoint
- */
 function getPolicyLimitsEndpoint(): string {
-  return `${getOauthConfig().BASE_API_URL}/api/claude_code/policy_limits`
+  return `${getOauthConfig().BASE_API_URL}/api/claude_code_next/policy_limits`
 }
 
-/**
- * Recursively sort all keys in an object for consistent hashing
- */
 function sortKeysDeep(obj: unknown): unknown {
   if (Array.isArray(obj)) {
     return obj.map(sortKeysDeep)
@@ -125,9 +107,6 @@ function sortKeysDeep(obj: unknown): unknown {
   return obj
 }
 
-/**
- * Compute a checksum from restrictions content for HTTP caching
- */
 function computeChecksum(
   restrictions: PolicyLimitsResponse['restrictions'],
 ): string {
@@ -137,24 +116,18 @@ function computeChecksum(
   return `sha256:${hash}`
 }
 
-/**
- * Check if the current user is eligible for policy limits.
- *
- * IMPORTANT: This function must NOT call getSettings() or any function that calls
- * getSettings() to avoid circular dependencies during settings loading.
- */
 export function isPolicyLimitsEligible(): boolean {
-  // 3p provider users should not hit the policy limits endpoint
+  
   if (getAPIProvider() !== 'firstParty') {
     return false
   }
 
-  // Custom base URL users should not hit the policy limits endpoint
+  
   if (!isFirstPartyAnthropicBaseUrl()) {
     return false
   }
 
-  // Console users (API key) are eligible if we can get the actual key
+  
   try {
     const { key: apiKey } = getAnthropicApiKeyWithSource({
       skipRetrievingKeyFromApiKeyHelper: true,
@@ -163,21 +136,21 @@ export function isPolicyLimitsEligible(): boolean {
       return true
     }
   } catch {
-    // No API key available - continue to check OAuth
+    
   }
 
-  // For OAuth users, check if they have Claude.ai tokens
+  
   const tokens = getClaudeAIOAuthTokens()
   if (!tokens?.accessToken) {
     return false
   }
 
-  // Must have Claude.ai inference scope
+  
   if (!tokens.scopes?.includes(CLAUDE_AI_INFERENCE_SCOPE)) {
     return false
   }
 
-  // Only Team and Enterprise OAuth users are eligible — these orgs have
+  
   
   if (
     tokens.subscriptionType !== 'enterprise' &&
@@ -189,25 +162,17 @@ export function isPolicyLimitsEligible(): boolean {
   return true
 }
 
-/**
- * Wait for the initial policy limits loading to complete
- * Returns immediately if user is not eligible or loading has already completed
- */
 export async function waitForPolicyLimitsToLoad(): Promise<void> {
   if (loadingCompletePromise) {
     await loadingCompletePromise
   }
 }
 
-/**
- * Get auth headers for policy limits without calling getSettings()
- * Supports both API key and OAuth authentication
- */
 function getAuthHeaders(): {
   headers: Record<string, string>
   error?: string
 } {
-  // Try API key first (for Console users)
+  
   try {
     const { key: apiKey } = getAnthropicApiKeyWithSource({
       skipRetrievingKeyFromApiKeyHelper: true,
@@ -220,10 +185,10 @@ function getAuthHeaders(): {
       }
     }
   } catch {
-    // No API key available - continue to check OAuth
+    
   }
 
-  // Fall back to OAuth tokens (for Claude.ai users)
+  
   const oauthTokens = getClaudeAIOAuthTokens()
   if (oauthTokens?.accessToken) {
     return {
@@ -240,9 +205,6 @@ function getAuthHeaders(): {
   }
 }
 
-/**
- * Fetch policy limits with retry logic and exponential backoff
- */
 async function fetchWithRetry(
   cachedChecksum?: string,
 ): Promise<PolicyLimitsFetchResult> {
@@ -273,9 +235,6 @@ async function fetchWithRetry(
   return lastResult!
 }
 
-/**
- * Fetch policy limits (single attempt, no retries)
- */
 async function fetchPolicyLimits(
   cachedChecksum?: string,
 ): Promise<PolicyLimitsFetchResult> {
@@ -313,12 +272,12 @@ async function fetchPolicyLimits(
       logForDebugging('Policy limits: Using cached restrictions (304)')
       return {
         success: true,
-        restrictions: null, // Signal that cache is valid
+        restrictions: null, 
         etag: cachedChecksum,
       }
     }
 
-    // Handle 404 Not Found - no policy limits exist or feature not enabled
+    
     if (response.status === 404) {
       logForDebugging('Policy limits: No restrictions found (404)')
       return {
@@ -345,7 +304,7 @@ async function fetchPolicyLimits(
       restrictions: parsed.data.restrictions,
     }
   } catch (error) {
-    // 404 is handled above via validateStatus, so it won't reach here
+    
     const { kind, message } = classifyAxiosError(error)
     switch (kind) {
       case 'auth':
@@ -364,10 +323,6 @@ async function fetchPolicyLimits(
   }
 }
 
-/**
- * Load restrictions from cache file
- */
-// sync IO: called from sync context (getRestrictionsFromCache -> isPolicyAllowed)
 function loadCachedRestrictions(): PolicyLimitsResponse['restrictions'] | null {
   try {
     const content = fsReadFileSync(getCachePath(), 'utf-8')
@@ -383,9 +338,6 @@ function loadCachedRestrictions(): PolicyLimitsResponse['restrictions'] | null {
   }
 }
 
-/**
- * Save restrictions to cache file
- */
 async function saveCachedRestrictions(
   restrictions: PolicyLimitsResponse['restrictions'],
 ): Promise<void> {
@@ -404,10 +356,6 @@ async function saveCachedRestrictions(
   }
 }
 
-/**
- * Fetch and load policy limits with file caching
- * Fails open - returns null if fetch fails and no cache exists
- */
 async function fetchAndLoadPolicyLimits(): Promise<
   PolicyLimitsResponse['restrictions'] | null
 > {
@@ -433,7 +381,7 @@ async function fetchAndLoadPolicyLimits(): Promise<
       return null
     }
 
-    // Handle 304 Not Modified
+    
     if (result.restrictions === null && cachedRestrictions) {
       logForDebugging('Policy limits: Cache still valid (304 Not Modified)')
       sessionCache = cachedRestrictions
@@ -450,7 +398,7 @@ async function fetchAndLoadPolicyLimits(): Promise<
       return newRestrictions
     }
 
-    // Empty restrictions (404 response) - delete cached file if it exists
+    
     sessionCache = newRestrictions
     try {
       await unlink(getCachePath())
@@ -473,19 +421,8 @@ async function fetchAndLoadPolicyLimits(): Promise<
   }
 }
 
-/**
- * Policies that default to denied when essential-traffic-only mode is active
- * and the policy cache is unavailable. Without this, a cache miss or network
- * timeout would silently re-enable these features for HIPAA orgs.
- */
 const ESSENTIAL_TRAFFIC_DENY_ON_MISS = new Set(['allow_product_feedback'])
 
-/**
- * Check if a specific policy is allowed
- * Returns true if the policy is unknown, unavailable, or explicitly allowed (fail open).
- * Exception: policies in ESSENTIAL_TRAFFIC_DENY_ON_MISS fail closed when
- * essential-traffic-only mode is active and the cache is unavailable.
- */
 export function isPolicyAllowed(policy: string): boolean {
   const restrictions = getRestrictionsFromCache()
   if (!restrictions) {
@@ -495,18 +432,15 @@ export function isPolicyAllowed(policy: string): boolean {
     ) {
       return false
     }
-    return true // fail open
+    return true 
   }
   const restriction = restrictions[policy]
   if (!restriction) {
-    return true // unknown policy = allowed
+    return true 
   }
   return restriction.allowed
 }
 
-/**
- * Get restrictions synchronously from session cache or file
- */
 function getRestrictionsFromCache():
   | PolicyLimitsResponse['restrictions']
   | null {
@@ -527,11 +461,6 @@ function getRestrictionsFromCache():
   return null
 }
 
-/**
- * Load policy limits during CLI initialization
- * Fails open - if fetch fails, continues without restrictions
- * Also starts background polling to pick up changes mid-session
- */
 export async function loadPolicyLimits(): Promise<void> {
   if (isPolicyLimitsEligible() && !loadingCompletePromise) {
     loadingCompletePromise = new Promise(resolve => {
@@ -553,10 +482,6 @@ export async function loadPolicyLimits(): Promise<void> {
   }
 }
 
-/**
- * Refresh policy limits asynchronously (for auth state changes)
- * Used when login occurs
- */
 export async function refreshPolicyLimits(): Promise<void> {
   await clearPolicyLimitsCache()
 
@@ -568,9 +493,6 @@ export async function refreshPolicyLimits(): Promise<void> {
   logForDebugging('Policy limits: Refreshed after auth change')
 }
 
-/**
- * Clear all policy limits (session, persistent, and stop polling)
- */
 export async function clearPolicyLimitsCache(): Promise<void> {
   stopBackgroundPolling()
 
@@ -582,13 +504,10 @@ export async function clearPolicyLimitsCache(): Promise<void> {
   try {
     await unlink(getCachePath())
   } catch {
-    // Ignore errors (including ENOENT when file doesn't exist)
+    
   }
 }
 
-/**
- * Background polling callback
- */
 async function pollPolicyLimits(): Promise<void> {
   if (!isPolicyLimitsEligible()) {
     return
@@ -604,13 +523,10 @@ async function pollPolicyLimits(): Promise<void> {
       logForDebugging('Policy limits: Changed during background poll')
     }
   } catch {
-    // Don't fail closed for background polling
+    
   }
 }
 
-/**
- * Start background polling for policy limits
- */
 export function startBackgroundPolling(): void {
   if (pollingIntervalId !== null) {
     return
@@ -631,9 +547,6 @@ export function startBackgroundPolling(): void {
   }
 }
 
-/**
- * Stop background polling for policy limits
- */
 export function stopBackgroundPolling(): void {
   if (pollingIntervalId !== null) {
     clearInterval(pollingIntervalId)

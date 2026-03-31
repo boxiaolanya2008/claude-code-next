@@ -36,11 +36,6 @@ export function extractInboundAttachments(msg: unknown): InboundAttachment[] {
   return parsed.success ? parsed.data : []
 }
 
-/**
- * Strip path components and keep only filename-safe chars. file_name comes
- * from the network (web composer), so treat it as untrusted even though the
- * composer controls it.
- */
 function sanitizeFileName(name: string): string {
   const base = basename(name).replace(/[^a-zA-Z0-9._-]/g, '_')
   return base || 'attachment'
@@ -50,10 +45,6 @@ function uploadsDir(): string {
   return join(getClaudeConfigHomeDir(), 'uploads', getSessionId())
 }
 
-/**
- * Fetch + write one attachment. Returns the absolute path on success,
- * undefined on any failure.
- */
 async function resolveOne(att: InboundAttachment): Promise<string | undefined> {
   const token = getBridgeAccessToken()
   if (!token) {
@@ -63,7 +54,7 @@ async function resolveOne(att: InboundAttachment): Promise<string | undefined> {
 
   let data: Buffer
   try {
-    // getOauthConfig() (via getBridgeBaseUrl) throws on a non-allowlisted
+    
     
     
     
@@ -84,7 +75,7 @@ async function resolveOne(att: InboundAttachment): Promise<string | undefined> {
     return undefined
   }
 
-  // uuid-prefix makes collisions impossible across messages and within one
+  
   
   const safeName = sanitizeFileName(att.file_name)
   const prefix = (
@@ -105,10 +96,6 @@ async function resolveOne(att: InboundAttachment): Promise<string | undefined> {
   return outPath
 }
 
-/**
- * Resolve all attachments on an inbound message to a prefix string of
- * @path refs. Empty string if none resolved.
- */
 export async function resolveInboundAttachments(
   attachments: InboundAttachment[],
 ): Promise<string> {
@@ -122,12 +109,6 @@ export async function resolveInboundAttachments(
   return ok.map(p => `@"${p}"`).join(' ') + ' '
 }
 
-/**
- * Prepend @path refs to content, whichever form it's in.
- * Targets the LAST text block — processUserInputBase reads inputString
- * from processedBlocks[processedBlocks.length - 1], so putting refs in
- * block[0] means they're silently ignored for [text, image] content.
- */
 export function prependPathRefs(
   content: string | Array<ContentBlockParam>,
   prefix: string,
@@ -145,14 +126,10 @@ export function prependPathRefs(
       ]
     }
   }
-  // No text block — append one at the end so it's last.
+  
   return [...content, { type: 'text', text: prefix.trimEnd() }]
 }
 
-/**
- * Convenience: extract + resolve + prepend. No-op when the message has no
- * file_attachments field (fast path — no network, returns same reference).
- */
 export async function resolveAndPrepend(
   msg: unknown,
   content: string | Array<ContentBlockParam>,

@@ -43,13 +43,6 @@ function isDistroFamily(
   )
 }
 
-/**
- * Detects if the currently running Claude instance was installed via mise
- * (a polyglot tool version manager) by checking if the executable path
- * is within a mise installs directory.
- *
- * mise installs to: ~/.local/share/mise/installs/<tool>/<version>/
- */
 export function detectMise(): boolean {
   const execPath = process.execPath || process.argv[0] || ''
 
@@ -62,13 +55,6 @@ export function detectMise(): boolean {
   return false
 }
 
-/**
- * Detects if the currently running Claude instance was installed via asdf
- * (another polyglot tool version manager) by checking if the executable path
- * is within an asdf installs directory.
- *
- * asdf installs to: ~/.asdf/installs/<tool>/<version>/
- */
 export function detectAsdf(): boolean {
   const execPath = process.execPath || process.argv[0] || ''
 
@@ -81,29 +67,19 @@ export function detectAsdf(): boolean {
   return false
 }
 
-/**
- * Detects if the currently running Claude instance was installed via Homebrew
- * by checking if the executable path is within a Homebrew Caskroom directory.
- *
- * Note: We specifically check for Caskroom because npm can also be installed via
- * Homebrew, which would place npm global packages under the same Homebrew prefix
- * (e.g., /opt/homebrew/lib/node_modules). We need to distinguish between:
- * - Homebrew cask: /opt/homebrew/Caskroom/claude-code/...
- * - npm-global (via Homebrew's npm): /opt/homebrew/lib/node_modules/@anthropic-ai/...
- */
 export function detectHomebrew(): boolean {
   const platform = getPlatform()
 
-  // Homebrew is only for macOS and Linux
+  
   if (platform !== 'macos' && platform !== 'linux' && platform !== 'wsl') {
     return false
   }
 
-  // Get the path of the currently running executable
+  
   const execPath = process.execPath || process.argv[0] || ''
 
-  // Check if the executable is within a Homebrew Caskroom directory
-  // This is specific to Homebrew cask installations
+  
+  
   if (execPath.includes('/Caskroom/')) {
     logForDebugging(`Detected Homebrew cask installation: ${execPath}`)
     return true
@@ -112,26 +88,17 @@ export function detectHomebrew(): boolean {
   return false
 }
 
-/**
- * Detects if the currently running Claude instance was installed via winget
- * by checking if the executable path is within a WinGet directory.
- *
- * Winget installs to:
- * - User: %LOCALAPPDATA%\Microsoft\WinGet\Packages
- * - System: C:\Program Files\WinGet\Packages
- * And creates links at: %LOCALAPPDATA%\Microsoft\WinGet\Links\
- */
 export function detectWinget(): boolean {
   const platform = getPlatform()
 
-  // Winget is only for Windows
+  
   if (platform !== 'windows') {
     return false
   }
 
   const execPath = process.execPath || process.argv[0] || ''
 
-  // Check for WinGet paths (handles both forward and backslashes)
+  
   const wingetPatterns = [
     /Microsoft[/\\]WinGet[/\\]Packages/i,
     /Microsoft[/\\]WinGet[/\\]Links/i,
@@ -147,14 +114,6 @@ export function detectWinget(): boolean {
   return false
 }
 
-/**
- * Detects if the currently running Claude instance was installed via pacman
- * by querying pacman's database for file ownership.
- *
- * We gate on the Arch distro family before invoking pacman. On other distros
- * like Ubuntu/Debian, 'pacman' in PATH may resolve to the pacman game
- * (/usr/games/pacman) rather than the Arch package manager.
- */
 export const detectPacman = memoize(async (): Promise<boolean> => {
   const platform = getPlatform()
 

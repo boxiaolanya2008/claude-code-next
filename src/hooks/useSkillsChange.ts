@@ -16,12 +16,12 @@ export function useSkillsChange(
   const handleChange = useCallback(async () => {
     if (!cwd) return
     try {
-      // Clear all command caches to ensure fresh load
+      
       clearCommandsCache()
       const commands = await getCommands(cwd)
       onCommandsChange(commands)
     } catch (error) {
-      // Errors during reload are non-fatal - log and continue
+      
       if (error instanceof Error) {
         logError(error)
       }

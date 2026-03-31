@@ -40,7 +40,7 @@ export async function sendDirectMemberMessage(
     return { success: false, error: 'no_team_context' }
   }
 
-  // Find team member by name
+  
   const member = Object.values(teamContext.teammates ?? {}).find(
     t => t.name === recipientName,
   )

@@ -6,8 +6,6 @@ type InstalledAppLike = {
   readonly path: string
 }
 
-// ── Noise filtering ──────────────────────────────────────────────────────
-
 const PATH_ALLOWLIST: readonly string[] = [
   '/Applications/',
   '/System/Applications/',
@@ -28,7 +26,7 @@ const ALWAYS_KEEP_BUNDLE_IDS: ReadonlySet<string> = new Set([
   'com.google.Chrome',
   'com.microsoft.edgemac',
   'org.mozilla.firefox',
-  'company.thebrowser.Browser', // Arc
+  'company.thebrowser.Browser', 
   
   'com.tinyspeck.slackmacgap',
   'us.zoom.xos',
@@ -36,7 +34,7 @@ const ALWAYS_KEEP_BUNDLE_IDS: ReadonlySet<string> = new Set([
   'com.microsoft.teams',
   'com.apple.MobileSMS',
   'com.apple.mail',
-  // Productivity
+  
   'com.microsoft.Word',
   'com.microsoft.Excel',
   'com.microsoft.Powerpoint',
@@ -45,18 +43,18 @@ const ALWAYS_KEEP_BUNDLE_IDS: ReadonlySet<string> = new Set([
   'com.apple.iWork.Numbers',
   'com.apple.iWork.Keynote',
   'com.google.GoogleDocs',
-  // Notes / PM
+  
   'notion.id',
   'com.apple.Notes',
   'md.obsidian',
   'com.linear',
   'com.figma.Desktop',
-  // Dev
+  
   'com.microsoft.VSCode',
   'com.apple.Terminal',
   'com.googlecode.iterm2',
   'com.github.GitHubDesktop',
-  // System essentials the model genuinely targets
+  
   'com.apple.finder',
   'com.apple.iCal',
   'com.apple.systempreferences',
@@ -81,11 +79,6 @@ function isNoisyName(name: string): boolean {
   return NAME_PATTERN_BLOCKLIST.some(re => re.test(name))
 }
 
-/**
- * Length cap + trim + dedupe + sort. `applyCharFilter` — skip for trusted
- * bundle IDs (Apple/Google/MS; a localized "Réglages Système" with unusual
- * punctuation shouldn't be dropped), apply for anything attacker-installable.
- */
 function sanitizeCore(
   raw: readonly string[],
   applyCharFilter: boolean,
@@ -117,11 +110,6 @@ function sanitizeTrustedNames(raw: readonly string[]): string[] {
   return sanitizeCore(raw, false)
 }
 
-/**
- * Filter raw Spotlight results to user-facing apps, then sanitize. Always-keep
- * apps bypass path/name filter AND char allowlist (trusted vendors, not
- * attacker-installed); still length-capped, deduped, sorted.
- */
 export function filterAppsForDescription(
   installed: readonly InstalledAppLike[],
   homeDir: string | undefined,

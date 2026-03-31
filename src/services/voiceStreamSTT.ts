@@ -29,16 +29,12 @@ export const FINALIZE_TIMEOUTS_MS = {
   noData: 1_500,
 }
 
-// ─── Types ──────────────────────────────────────────────────────────
-
 export type VoiceStreamCallbacks = {
   onTranscript: (text: string, isFinal: boolean) => void
   onError: (error: string, opts?: { fatal?: boolean }) => void
   onClose: () => void
   onReady: (connection: VoiceStreamConnection) => void
 }
-
-// How finalize() resolved. `no_data_timeout` means zero server messages
 
 export type FinalizeSource =
   | 'post_closestream_endpoint'
@@ -54,7 +50,6 @@ export type VoiceStreamConnection = {
   isConnected: () => boolean
 }
 
-// The voice_stream endpoint returns transcript chunks and endpoint markers.
 type VoiceStreamTranscriptText = {
   type: 'TranscriptText'
   data: string
@@ -76,10 +71,8 @@ type VoiceStreamMessage =
   | VoiceStreamTranscriptError
   | { type: 'error'; message?: string }
 
-// ─── Availability ──────────────────────────────────────────────────────
-
 export function isVoiceStreamAvailable(): boolean {
-  // voice_stream uses the same OAuth as Claude Code — available when the
+  
   
   
   if (!isAnthropicAuthEnabled()) {
@@ -89,13 +82,11 @@ export function isVoiceStreamAvailable(): boolean {
   return tokens !== null && tokens.accessToken !== null
 }
 
-// ─── Connection ────────────────────────────────────────────────────────
-
 export async function connectVoiceStream(
   callbacks: VoiceStreamCallbacks,
   options?: { language?: string; keyterms?: string[] },
 ): Promise<VoiceStreamConnection | null> {
-  // Ensure OAuth token is fresh before connecting
+  
   await checkAndRefreshOAuthTokenIfNeeded()
 
   const tokens = getClaudeAIOAuthTokens()
@@ -104,9 +95,9 @@ export async function connectVoiceStream(
     return null
   }
 
-  // voice_stream is a private_api route, but /api/ws/ is also exposed on
   
-  // visibility.external: true). We target that host instead of claude.ai
+  
+  
   
   
   
@@ -147,7 +138,7 @@ export async function connectVoiceStream(
     logForDebugging('[voice_stream] Nova 3 gate enabled (tengu_cobalt_frost)')
   }
 
-  // Append keyterms as query params — the voice_stream proxy forwards
+  
   
   if (options?.keyterms?.length) {
     for (const term of options.keyterms) {
@@ -201,7 +192,7 @@ export async function connectVoiceStream(
         return
       }
       if (finalized) {
-        // After CloseStream has been sent, the server rejects further audio.
+        
         
         logForDebugging(
           `[voice_stream] Dropping audio chunk after CloseStream: ${String(audioChunk.length)} bytes`,
@@ -221,7 +212,7 @@ export async function connectVoiceStream(
     },
     finalize(): Promise<FinalizeSource> {
       if (finalizing || finalized) {
-        // Already finalized or WebSocket already closed — resolve immediately.
+        
         return Promise.resolve('ws_already_closed')
       }
       finalizing = true
@@ -249,7 +240,7 @@ export async function connectVoiceStream(
           
           
           
-          // centralize here. No-op when the close handler already did.
+          
           if (lastTranscriptText) {
             logForDebugging(
               `[voice_stream] Promoting unreported interim before ${source} resolve`,
@@ -262,7 +253,7 @@ export async function connectVoiceStream(
           resolve(source)
         }
 
-        // If the WebSocket is already closed, resolve immediately.
+        
         if (
           ws.readyState === WebSocket.CLOSED ||
           ws.readyState === WebSocket.CLOSING
@@ -271,12 +262,12 @@ export async function connectVoiceStream(
           return
         }
 
-        // Defer CloseStream to the next event-loop iteration so any audio
         
         
         
         
-        // causing audio to arrive after CloseStream.
+        
+        
         setTimeout(() => {
           finalized = true
           if (ws.readyState === WebSocket.OPEN) {
@@ -362,7 +353,7 @@ export async function connectVoiceStream(
           cancelNoDataTimer?.()
         }
         if (transcript) {
-          // Detect when the server has moved to a new speech segment.
+          
           
           
           
@@ -408,8 +399,8 @@ export async function connectVoiceStream(
         if (finalText) {
           callbacks.onTranscript(finalText, true)
         }
-        // When TranscriptEndpoint arrives after CloseStream was sent,
-        // the server has flushed its final transcript — nothing more is
+        
+        
         
         
         
@@ -453,8 +444,8 @@ export async function connectVoiceStream(
       clearInterval(keepaliveTimer)
       keepaliveTimer = null
     }
-    // If the server closed the connection before sending TranscriptEndpoint,
-    // promote the last interim transcript to final so no text is lost.
+    
+    
     if (lastTranscriptText) {
       logForDebugging(
         '[voice_stream] Promoting unreported interim transcript to final on close',
@@ -463,9 +454,9 @@ export async function connectVoiceStream(
       lastTranscriptText = ''
       callbacks.onTranscript(finalText, true)
     }
-    // During finalize, suppress onError — the session already delivered
     
-    // which would destroy the transcript before the finalize .then()
+    
+    
     
     
     

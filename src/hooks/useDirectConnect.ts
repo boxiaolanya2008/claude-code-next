@@ -69,7 +69,7 @@ export function useDirectConnect({
           setIsLoading(false)
         }
 
-        // Skip duplicate init messages (server sends one per turn)
+        
         if (sdkMessage.type === 'system' && sdkMessage.subtype === 'init') {
           if (hasReceivedInitRef.current) {
             return
@@ -117,7 +117,7 @@ export function useDirectConnect({
           permissionResult,
           permissionPromptStartTimeMs: Date.now(),
           onUserInteraction() {
-            // No-op for remote
+            
           },
           onAbort() {
             const response: RemotePermissionResponse = {
@@ -151,7 +151,7 @@ export function useDirectConnect({
             )
           },
           async recheckPermission() {
-            // No-op for remote
+            
           },
         }
 
@@ -165,12 +165,12 @@ export function useDirectConnect({
       onDisconnected: () => {
         logForDebugging('[useDirectConnect] Disconnected')
         if (!isConnectedRef.current) {
-          // Never connected — connection failure (e.g. auth rejected)
+          
           process.stderr.write(
             `\nFailed to connect to server at ${config.wsUrl}\n`,
           )
         } else {
-          // Was connected then lost — server process exited or network dropped
+          
           process.stderr.write('\nServer disconnected.\n')
         }
         isConnectedRef.current = false
@@ -208,7 +208,7 @@ export function useDirectConnect({
 
   
   const cancelRequest = useCallback(() => {
-    // Send interrupt signal to the server
+    
     managerRef.current?.sendInterrupt()
 
     setIsLoading(false)

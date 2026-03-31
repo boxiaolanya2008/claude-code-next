@@ -15,7 +15,7 @@ function getOauthConfigType(): OauthConfigType {
 }
 
 export function fileSuffixForOauthConfig(): string {
-  if (process.env.CLAUDE_CODE_CUSTOM_OAUTH_URL) {
+  if (process.env.CLAUDE_CODE_NEXT_CUSTOM_OAUTH_URL) {
     return '-custom-oauth'
   }
   switch (getOauthConfigType()) {
@@ -24,7 +24,7 @@ export function fileSuffixForOauthConfig(): string {
     case 'staging':
       return '-staging-oauth'
     case 'prod':
-      // No suffix for production config
+      
       return ''
   }
 }
@@ -42,7 +42,7 @@ export const CONSOLE_OAUTH_SCOPES = [
 export const CLAUDE_AI_OAUTH_SCOPES = [
   CLAUDE_AI_PROFILE_SCOPE,
   CLAUDE_AI_INFERENCE_SCOPE,
-  'user:sessions:claude_code',
+  'user:sessions:claude_code_next',
   'user:mcp_servers',
   'user:file_upload',
 ] as const
@@ -70,14 +70,13 @@ type OauthConfig = {
   MCP_PROXY_PATH: string
 }
 
-// Production OAuth configuration - Used in normal operation
 const PROD_OAUTH_CONFIG = {
   BASE_API_URL: 'https://api.anthropic.com',
   CONSOLE_AUTHORIZE_URL: 'https://platform.claude.com/oauth/authorize',
-  // Bounces through claude.com/cai
+  
 
 export const MCP_CLIENT_METADATA_URL =
-  'https://claude.ai/oauth/claude-code-client-metadata'
+  'https://claude.ai/oauth/claude-code-next-client-metadata'
 
 const STAGING_OAUTH_CONFIG =
   process.env.USER_TYPE === 'ant'
@@ -94,9 +93,9 @@ const STAGING_OAUTH_CONFIG =
         ROLES_URL:
           'https://api-staging.anthropic.com/api/oauth/claude_cli/roles',
         CONSOLE_SUCCESS_URL:
-          'https://platform.staging.ant.dev/buy_credits?returnUrl=/oauth/code/success%3Fapp%3Dclaude-code',
+          'https://platform.staging.ant.dev/buy_credits?returnUrl=/oauth/code/success%3Fapp%3Dclaude-code-next',
         CLAUDEAI_SUCCESS_URL:
-          'https://platform.staging.ant.dev/oauth/code/success?app=claude-code',
+          'https://platform.staging.ant.dev/oauth/code/success?app=claude-code-next',
         MANUAL_REDIRECT_URL:
           'https://platform.staging.ant.dev/oauth/code/callback',
         CLIENT_ID: '22422756-60c9-4084-8eb7-27705fd5cf9a',
@@ -105,8 +104,6 @@ const STAGING_OAUTH_CONFIG =
         MCP_PROXY_PATH: '/v1/mcp/{server_id}',
       } as const)
     : undefined
-
-// :4000 claude-ai frontend, :3000 Console frontend. Env vars let
 
 function getLocalOauthConfig(): OauthConfig {
   const api =
@@ -126,8 +123,8 @@ function getLocalOauthConfig(): OauthConfig {
     TOKEN_URL: `${api}/v1/oauth/token`,
     API_KEY_URL: `${api}/api/oauth/claude_cli/create_api_key`,
     ROLES_URL: `${api}/api/oauth/claude_cli/roles`,
-    CONSOLE_SUCCESS_URL: `${consoleBase}/buy_credits?returnUrl=/oauth/code/success%3Fapp%3Dclaude-code`,
-    CLAUDEAI_SUCCESS_URL: `${consoleBase}/oauth/code/success?app=claude-code`,
+    CONSOLE_SUCCESS_URL: `${consoleBase}/buy_credits?returnUrl=/oauth/code/success%3Fapp%3Dclaude-code-next`,
+    CLAUDEAI_SUCCESS_URL: `${consoleBase}/oauth/code/success?app=claude-code-next`,
     MANUAL_REDIRECT_URL: `${consoleBase}/oauth/code/callback`,
     CLIENT_ID: '22422756-60c9-4084-8eb7-27705fd5cf9a',
     OAUTH_FILE_SUFFIX: '-local-oauth',
@@ -135,8 +132,6 @@ function getLocalOauthConfig(): OauthConfig {
     MCP_PROXY_PATH: '/v1/toolbox/shttp/mcp/{server_id}',
   }
 }
-
-// Allowed base URLs for CLAUDE_CODE_CUSTOM_OAUTH_URL override.
 
 const ALLOWED_OAUTH_BASE_URLS = [
   'https://beacon.claude-ai.staging.ant.dev',
@@ -158,12 +153,12 @@ export function getOauthConfig(): OauthConfig {
 
   
   
-  const oauthBaseUrl = process.env.CLAUDE_CODE_CUSTOM_OAUTH_URL
+  const oauthBaseUrl = process.env.CLAUDE_CODE_NEXT_CUSTOM_OAUTH_URL
   if (oauthBaseUrl) {
     const base = oauthBaseUrl.replace(/\/$/, '')
     if (!ALLOWED_OAUTH_BASE_URLS.includes(base)) {
       throw new Error(
-        'CLAUDE_CODE_CUSTOM_OAUTH_URL is not an approved endpoint.',
+        'CLAUDE_CODE_NEXT_CUSTOM_OAUTH_URL is not an approved endpoint.',
       )
     }
     config = {
@@ -175,15 +170,15 @@ export function getOauthConfig(): OauthConfig {
       TOKEN_URL: `${base}/v1/oauth/token`,
       API_KEY_URL: `${base}/api/oauth/claude_cli/create_api_key`,
       ROLES_URL: `${base}/api/oauth/claude_cli/roles`,
-      CONSOLE_SUCCESS_URL: `${base}/oauth/code/success?app=claude-code`,
-      CLAUDEAI_SUCCESS_URL: `${base}/oauth/code/success?app=claude-code`,
+      CONSOLE_SUCCESS_URL: `${base}/oauth/code/success?app=claude-code-next`,
+      CLAUDEAI_SUCCESS_URL: `${base}/oauth/code/success?app=claude-code-next`,
       MANUAL_REDIRECT_URL: `${base}/oauth/code/callback`,
       OAUTH_FILE_SUFFIX: '-custom-oauth',
     }
   }
 
-  // Allow CLIENT_ID override via environment variable (e.g., for Xcode integration)
-  const clientIdOverride = process.env.CLAUDE_CODE_OAUTH_CLIENT_ID
+  
+  const clientIdOverride = process.env.CLAUDE_CODE_NEXT_OAUTH_CLIENT_ID
   if (clientIdOverride) {
     config = {
       ...config,

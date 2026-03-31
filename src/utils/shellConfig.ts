@@ -15,11 +15,6 @@ type ShellConfigOptions = {
   homedir?: string
 }
 
-/**
- * Get the paths to shell configuration files
- * Respects ZDOTDIR for zsh users
- * @param options Optional overrides for testing (env, homedir)
- */
 export function getShellConfigPaths(
   options?: ShellConfigOptions,
 ): Record<string, string> {
@@ -33,25 +28,19 @@ export function getShellConfigPaths(
   }
 }
 
-/**
- * Filter out installer-created claude aliases from an array of lines
- * Only removes aliases pointing to $HOME/.claude/local/claude
- * Preserves custom user aliases that point to other locations
- * Returns the filtered lines and whether our default installer alias was found
- */
 export function filterClaudeAliases(lines: string[]): {
   filtered: string[]
   hadAlias: boolean
 } {
   let hadAlias = false
   const filtered = lines.filter(line => {
-    // Check if this is a claude alias
+    
     if (CLAUDE_ALIAS_REGEX.test(line)) {
-      // Extract the alias target - handle spaces, quotes, and various formats
+      
       
       let match = line.match(/alias\s+claude\s*=\s*["']([^"']+)["']/)
       if (!match) {
-        // Try without quotes (capturing until end of line or comment)
+        
         match = line.match(/alias\s+claude\s*=\s*([^#\n]+)/)
       }
 
@@ -64,17 +53,13 @@ export function filterClaudeAliases(lines: string[]): {
           return false 
         }
       }
-      // Keep custom aliases that don't point to the installer location
+      
     }
     return true
   })
   return { filtered, hadAlias }
 }
 
-/**
- * Read a file and split it into lines
- * Returns null if file doesn't exist or can't be read
- */
 export async function readFileLines(
   filePath: string,
 ): Promise<string[] | null> {
@@ -87,9 +72,6 @@ export async function readFileLines(
   }
 }
 
-/**
- * Write lines back to a file
- */
 export async function writeFileLines(
   filePath: string,
   lines: string[],
@@ -103,11 +85,6 @@ export async function writeFileLines(
   }
 }
 
-/**
- * Check if a claude alias exists in any shell config file
- * Returns the alias target if found, null otherwise
- * @param options Optional overrides for testing (env, homedir)
- */
 export async function findClaudeAlias(
   options?: ShellConfigOptions,
 ): Promise<string | null> {
@@ -119,7 +96,7 @@ export async function findClaudeAlias(
 
     for (const line of lines) {
       if (CLAUDE_ALIAS_REGEX.test(line)) {
-        // Extract the alias target
+        
         const match = line.match(/alias\s+claude=["']?([^"'\s]+)/)
         if (match && match[1]) {
           return match[1]
@@ -131,11 +108,6 @@ export async function findClaudeAlias(
   return null
 }
 
-/**
- * Check if a claude alias exists and points to a valid executable
- * Returns the alias target if valid, null otherwise
- * @param options Optional overrides for testing (env, homedir)
- */
 export async function findValidClaudeAlias(
   options?: ShellConfigOptions,
 ): Promise<string | null> {
@@ -144,20 +116,20 @@ export async function findValidClaudeAlias(
 
   const home = options?.homedir ?? osHomedir()
 
-  // Expand ~ to home directory
+  
   const expandedPath = aliasTarget.startsWith('~')
     ? aliasTarget.replace('~', home)
     : aliasTarget
 
-  // Check if the target exists and is executable
+  
   try {
     const stats = await stat(expandedPath)
-    // Check if it's a file (could be executable or symlink)
+    
     if (stats.isFile() || stats.isSymbolicLink()) {
       return aliasTarget
     }
   } catch {
-    // Target doesn't exist or can't be accessed
+    
   }
 
   return null

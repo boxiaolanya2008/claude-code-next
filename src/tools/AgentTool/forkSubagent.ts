@@ -24,7 +24,6 @@ export function isForkSubagentEnabled(): boolean {
   return false
 }
 
-/** Synthetic agent type name used for analytics when the fork path fires. */
 export const FORK_SUBAGENT_TYPE = 'fork'
 
 export const FORK_AGENT = {
@@ -53,15 +52,13 @@ export function isInForkChild(messages: MessageType[]): boolean {
   })
 }
 
-/** Placeholder text used for all tool_result blocks in the fork prefix.
- * Must be identical across all fork children for prompt cache sharing. */
 const FORK_PLACEHOLDER_RESULT = 'Fork started — processing in background'
 
 export function buildForkedMessages(
   directive: string,
   assistantMessage: AssistantMessage,
 ): MessageType[] {
-  // Clone the assistant message to avoid mutating the original, keeping all
+  
   
   const fullAssistantMessage: AssistantMessage = {
     ...assistantMessage,
@@ -72,7 +69,7 @@ export function buildForkedMessages(
     },
   }
 
-  // Collect all tool_use blocks from the assistant message
+  
   const toolUseBlocks = assistantMessage.message.content.filter(
     (block): block is BetaToolUseBlock => block.type === 'tool_use',
   )
@@ -91,7 +88,7 @@ export function buildForkedMessages(
     ]
   }
 
-  // Build tool_result blocks for every tool_use, all with identical placeholder text
+  
   const toolResultBlocks = toolUseBlocks.map(block => ({
     type: 'tool_result' as const,
     tool_use_id: block.id,
@@ -106,7 +103,7 @@ export function buildForkedMessages(
   
   
   
-  // not a repeated teacher, so low-priority. If we ever care, use smooshIntoToolResult
+  
   
   const toolResultMessage = createUserMessage({
     content: [
@@ -150,11 +147,6 @@ Output format (plain text labels, not markdown headers):
 ${FORK_DIRECTIVE_PREFIX}${directive}`
 }
 
-/**
- * Notice injected into fork children running in an isolated worktree.
- * Tells the child to translate paths from the inherited context, re-read
- * potentially stale files, and that its changes are isolated.
- */
 export function buildWorktreeNotice(
   parentCwd: string,
   worktreeCwd: string,

@@ -155,15 +155,6 @@ export type QueryEngineConfig = {
   ) => { messages: Message[]; executed: boolean } | undefined
 }
 
-/**
- * QueryEngine owns the query lifecycle and session state for a conversation.
- * It extracts the core logic from ask() into a standalone class that can be
- * used by both the headless/SDK path and (in a future phase) the REPL.
- *
- * One QueryEngine per conversation. Each submitMessage() call starts a new
- * turn within the same conversation. State (messages, file cache, usage, etc.)
- * persists across turns.
- */
 export class QueryEngine {
   private config: QueryEngineConfig
   private mutableMessages: Message[]
@@ -290,7 +281,7 @@ export class QueryEngine {
       ),
     }
 
-    // When an SDK caller provides a custom system prompt AND has set
+    
     
     
     
@@ -317,7 +308,7 @@ export class QueryEngine {
 
     let processUserInputContext: ProcessUserInputContext = {
       messages: this.mutableMessages,
-      // Slash commands that mutate the message array (e.g. /force-snip)
+      
       
       
       
@@ -331,7 +322,7 @@ export class QueryEngine {
       handleElicitation: this.config.handleElicitation,
       options: {
         commands,
-        debug: false, // we use stdout, so don't want to clobber it
+        debug: false, 
         tools,
         verbose,
         mainLoopModel: initialMainLoopModel,
@@ -377,7 +368,7 @@ export class QueryEngine {
       setSDKStatus,
     }
 
-    // Handle orphaned permission (only once per engine lifetime)
+    
     if (orphanedPermission && !this.hasHandledOrphanedPermission) {
       this.hasHandledOrphanedPermission = true
       for await (const message of handleOrphanedPermission(
@@ -410,13 +401,12 @@ export class QueryEngine {
       querySource: 'sdk',
     })
 
-    // Push new messages, including user input and any attachments
+    
     this.mutableMessages.push(...messagesFromUserInput)
 
-    // Update params to reflect updates from processing /slash commands
+    
     const messages = [...this.mutableMessages]
 
-    // Persist the user's message(s) to transcript BEFORE entering the query
     
     
     
@@ -424,7 +414,8 @@ export class QueryEngine {
     
     
     
-    // even if no API response ever arrives.
+    
+    
     
     
     
@@ -437,26 +428,26 @@ export class QueryEngine {
       } else {
         await transcriptPromise
         if (
-          isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-          isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+          isEnvTruthy(process.env.CLAUDE_CODE_NEXT_EAGER_FLUSH) ||
+          isEnvTruthy(process.env.CLAUDE_CODE_NEXT_IS_COWORK)
         ) {
           await flushSessionStorage()
         }
       }
     }
 
-    // Filter messages that should be acknowledged after transcript
+    
     const replayableMessages = messagesFromUserInput.filter(
       msg =>
         (msg.type === 'user' &&
-          !msg.isMeta && // Skip synthetic caveat messages
-          !msg.toolUseResult && // Skip tool results (they'll be acked from query)
-          messageSelector().selectableUserMessagesFilter(msg)) || // Skip non-user-authored messages (task notifications, etc.)
-        (msg.type === 'system' && msg.subtype === 'compact_boundary'), // Always ack compact boundaries
+          !msg.isMeta && 
+          !msg.toolUseResult && 
+          messageSelector().selectableUserMessagesFilter(msg)) || 
+        (msg.type === 'system' && msg.subtype === 'compact_boundary'), 
     )
     const messagesToAck = replayUserMessages ? replayableMessages : []
 
-    // Update the ToolPermissionContext based on user input processing (as necessary)
+    
     setAppState(prev => ({
       ...prev,
       toolPermissionContext: {
@@ -470,8 +461,8 @@ export class QueryEngine {
 
     const mainLoopModel = modelFromUserInput ?? initialMainLoopModel
 
-    // Recreate after processing the prompt to pick up updated messages and
-    // model (from slash commands).
+    
+    
     processUserInputContext = {
       messages,
       setMessages: () => {},
@@ -510,10 +501,10 @@ export class QueryEngine {
     }
 
     headlessProfilerCheckpoint('before_skills_plugins')
-    // Cache-only: headless/SDK/CCR startup must not block on network for
-    // ref-tracked plugins. CCR populates the cache via CLAUDE_CODE_SYNC_PLUGIN_INSTALL
-    // (headlessPluginInstall) or CLAUDE_CODE_PLUGIN_SEED_DIR before this runs;
-    // SDK callers that need fresh source can call /reload-plugins.
+    
+    
+    
+    
     const [skills, { enabled: enabledPlugins }] = await Promise.all([
       getSlashCommandToolSkills(getCwd()),
       loadAllPluginsCacheOnly(),
@@ -525,7 +516,7 @@ export class QueryEngine {
       mcpClients,
       model: mainLoopModel,
       permissionMode: initialAppState.toolPermissionContext
-        .mode as PermissionMode, // TODO: avoid the cast
+        .mode as PermissionMode, 
       commands,
       agents,
       skills,
@@ -533,13 +524,13 @@ export class QueryEngine {
       fastMode: initialAppState.fastMode,
     })
 
-    // Record when system message is yielded for headless latency tracking
+    
     headlessProfilerCheckpoint('system_message_yielded')
 
     if (!shouldQuery) {
-      // Return the results of local slash commands.
-      // Use messagesFromUserInput (not replayableMessages) for command output
-      // because selectableUserMessagesFilter excludes local-command-stdout tags.
+      
+      
+      
       for (const msg of messagesFromUserInput) {
         if (
           msg.type === 'user' &&
@@ -563,10 +554,10 @@ export class QueryEngine {
           } as SDKUserMessageReplay
         }
 
-        // Local command output — yield as a synthetic assistant message so
-        // RC renders it as assistant-style text rather than a user bubble.
-        // Emitted as assistant (not the dedicated SDKLocalCommandOutputMessage
-        // system subtype) so mobile clients + session-ingress can parse it.
+        
+        
+        
+        
         if (
           msg.type === 'system' &&
           msg.subtype === 'local_command' &&
@@ -591,8 +582,8 @@ export class QueryEngine {
       if (persistSession) {
         await recordTranscript(messages)
         if (
-          isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-          isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+          isEnvTruthy(process.env.CLAUDE_CODE_NEXT_EAGER_FLUSH) ||
+          isEnvTruthy(process.env.CLAUDE_CODE_NEXT_IS_COWORK)
         ) {
           await flushSessionStorage()
         }
@@ -637,15 +628,15 @@ export class QueryEngine {
         })
     }
 
-    // Track current message usage (reset on each message_start)
+    
     let currentMessageUsage: NonNullableUsage = EMPTY_USAGE
     let turnCount = 1
     let hasAcknowledgedInitialMessages = false
-    // Track structured output from StructuredOutput tool calls
+    
     let structuredOutputFromTool: unknown
-    // Track the last stop_reason from assistant messages
+    
     let lastStopReason: string | null = null
-    // Reference-based watermark so error_during_execution's errors[] is
+    
     
     
     
@@ -667,13 +658,13 @@ export class QueryEngine {
       maxTurns,
       taskBudget,
     })) {
-      // Record assistant, user, and compact boundary messages
+      
       if (
         message.type === 'assistant' ||
         message.type === 'user' ||
         (message.type === 'system' && message.subtype === 'compact_boundary')
       ) {
-        // Before writing a compact boundary, flush any in-memory-only
+        
         
         
         
@@ -698,7 +689,7 @@ export class QueryEngine {
         }
         messages.push(message)
         if (persistSession) {
-          // Fire-and-forget for assistant messages. claude.ts yields one
+          
           
           
           
@@ -714,7 +705,7 @@ export class QueryEngine {
           }
         }
 
-        // Acknowledge initial user messages after first transcript recording
+        
         if (!hasAcknowledgedInitialMessages && messagesToAck.length > 0) {
           hasAcknowledgedInitialMessages = true
           for (const msgToAck of messagesToAck) {
@@ -739,12 +730,12 @@ export class QueryEngine {
 
       switch (message.type) {
         case 'tombstone':
-          // Tombstone messages are control signals for removing messages, skip them
+          
           break
         case 'assistant':
-          // Capture stop_reason if already set (synthetic messages). For
           
-          // the real value arrives via message_delta (handled below).
+          
+          
           if (message.message.stop_reason != null) {
             lastStopReason = message.message.stop_reason
           }
@@ -770,7 +761,7 @@ export class QueryEngine {
           break
         case 'stream_event':
           if (message.event.type === 'message_start') {
-            // Reset current message usage for new message
+            
             currentMessageUsage = EMPTY_USAGE
             currentMessageUsage = updateUsage(
               currentMessageUsage,
@@ -791,7 +782,7 @@ export class QueryEngine {
             }
           }
           if (message.event.type === 'message_stop') {
-            // Accumulate current message usage into total
+            
             this.totalUsage = accumulateUsage(
               this.totalUsage,
               currentMessageUsage,
@@ -817,16 +808,16 @@ export class QueryEngine {
             void recordTranscript(messages)
           }
 
-          // Extract structured output from StructuredOutput tool calls
+          
           if (message.attachment.type === 'structured_output') {
             structuredOutputFromTool = message.attachment.data
           }
-          // Handle max turns reached signal from query.ts
+          
           else if (message.attachment.type === 'max_turns_reached') {
             if (persistSession) {
               if (
-                isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-                isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+                isEnvTruthy(process.env.CLAUDE_CODE_NEXT_EAGER_FLUSH) ||
+                isEnvTruthy(process.env.CLAUDE_CODE_NEXT_IS_COWORK)
               ) {
                 await flushSessionStorage()
               }
@@ -855,7 +846,7 @@ export class QueryEngine {
             }
             return
           }
-          // Yield queued_command attachments as SDK user message replays
+          
           else if (
             replayUserMessages &&
             message.attachment.type === 'queued_command'
@@ -875,16 +866,16 @@ export class QueryEngine {
           }
           break
         case 'stream_request_start':
-          // Don't yield stream request start messages
+          
           break
         case 'system': {
-          // Snip boundary: replay on our store to remove zombie messages and
-          // stale markers. The yielded boundary is a signal, not data to push —
-          // the replay produces its own equivalent boundary. Without this,
-          // markers persist and re-trigger on every turn, and mutableMessages
-          // never shrinks (memory leak in long SDK sessions). The subtype
-          // check lives inside the injected callback so feature-gated strings
-          // stay out of this file (excluded-strings check).
+          
+          
+          
+          
+          
+          
+          
           const snipResult = this.config.snipReplay?.(
             message,
             this.mutableMessages,
@@ -897,13 +888,13 @@ export class QueryEngine {
             break
           }
           this.mutableMessages.push(message)
-          // Yield compact boundary messages to SDK
+          
           if (
             message.subtype === 'compact_boundary' &&
             message.compactMetadata
           ) {
-            // Release pre-compaction messages for GC. The boundary was just
-            // pushed so it's the last element. query.ts already uses
+            
+            
             
             
             const mutableBoundaryIdx = this.mutableMessages.length - 1
@@ -936,11 +927,11 @@ export class QueryEngine {
               uuid: message.uuid,
             }
           }
-          // Don't yield other system messages in headless mode
+          
           break
         }
         case 'tool_use_summary':
-          // Yield tool use summary messages to SDK
+          
           yield {
             type: 'tool_use_summary' as const,
             summary: message.summary,
@@ -951,12 +942,12 @@ export class QueryEngine {
           break
       }
 
-      // Check if USD budget has been exceeded
+      
       if (maxBudgetUsd !== undefined && getTotalCost() >= maxBudgetUsd) {
         if (persistSession) {
           if (
-            isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-            isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+            isEnvTruthy(process.env.CLAUDE_CODE_NEXT_EAGER_FLUSH) ||
+            isEnvTruthy(process.env.CLAUDE_CODE_NEXT_IS_COWORK)
           ) {
             await flushSessionStorage()
           }
@@ -979,12 +970,12 @@ export class QueryEngine {
             initialAppState.fastMode,
           ),
           uuid: randomUUID(),
-          errors: [`Reached maximum budget ($${maxBudgetUsd})`],
+          errors: [`Reached maximum budget (${maxBudgetUsd})`],
         }
         return
       }
 
-      // Check if structured output retry limit exceeded (only on user messages)
+      
       if (message.type === 'user' && jsonSchema) {
         const currentCalls = countToolCalls(
           this.mutableMessages,
@@ -998,8 +989,8 @@ export class QueryEngine {
         if (callsThisQuery >= maxRetries) {
           if (persistSession) {
             if (
-              isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-              isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+              isEnvTruthy(process.env.CLAUDE_CODE_NEXT_EAGER_FLUSH) ||
+              isEnvTruthy(process.env.CLAUDE_CODE_NEXT_IS_COWORK)
             ) {
               await flushSessionStorage()
             }
@@ -1031,19 +1022,19 @@ export class QueryEngine {
       }
     }
 
-    // Stop hooks yield progress/attachment messages AFTER the assistant
-    // response (via yield* handleStopHooks in query.ts). Since #23537 pushes
-    // those to `messages` inline, last(messages) can be a progress/attachment
-    // instead of the assistant — which makes textResult extraction below
-    // return '' and -p mode emit a blank line. Allowlist to assistant|user:
-    // isResultSuccessful handles both (user with all tool_result blocks is a
-    // valid successful terminal state).
+    
+    
+    
+    
+    
+    
+    
     const result = messages.findLast(
       m => m.type === 'assistant' || m.type === 'user',
     )
-    // Capture for the error_during_execution diagnostic — isResultSuccessful
-    // is a type predicate (message is Message), so inside the false branch
-    // `result` narrows to never and these accesses don't typecheck.
+    
+    
+    
     const edeResultType = result?.type ?? 'undefined'
     const edeLastContentType =
       result?.type === 'assistant'
@@ -1055,8 +1046,8 @@ export class QueryEngine {
     
     if (persistSession) {
       if (
-        isEnvTruthy(process.env.CLAUDE_CODE_EAGER_FLUSH) ||
-        isEnvTruthy(process.env.CLAUDE_CODE_IS_COWORK)
+        isEnvTruthy(process.env.CLAUDE_CODE_NEXT_EAGER_FLUSH) ||
+        isEnvTruthy(process.env.CLAUDE_CODE_NEXT_IS_COWORK)
       ) {
         await flushSessionStorage()
       }
@@ -1081,7 +1072,7 @@ export class QueryEngine {
           initialAppState.fastMode,
         ),
         uuid: randomUUID(),
-        // Diagnostic prefix: these are what isResultSuccessful() checks — if
+        
         
         
         
@@ -1100,7 +1091,7 @@ export class QueryEngine {
       return
     }
 
-    // Extract the text result based on message type
+    
     let textResult = ''
     let isApiError = false
 
@@ -1159,13 +1150,6 @@ export class QueryEngine {
   }
 }
 
-/**
- * Sends a single prompt to the Claude API and returns the response.
- * Assumes that claude is being used non-interactively -- will not
- * ask the user for permissions or further input.
- *
- * Convenience wrapper around QueryEngine for one-shot usage.
- */
 export async function* ask({
   commands,
   prompt,

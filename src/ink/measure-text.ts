@@ -5,8 +5,6 @@ type Output = {
   height: number
 }
 
-// Single-pass measurement: computes both width and height in one
-
 function measureText(text: string, maxWidth: number): Output {
   if (text.length === 0) {
     return {
@@ -15,7 +13,7 @@ function measureText(text: string, maxWidth: number): Output {
     }
   }
 
-  // Infinite or non-positive width means no wrapping — each line is one visual line.
+  
   
   const noWrap = maxWidth <= 0 || !Number.isFinite(maxWidth)
 

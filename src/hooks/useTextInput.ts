@@ -95,7 +95,7 @@ export function useTextInput({
   inlineGhostText,
   dim,
 }: UseTextInputProps): TextInputState {
-  // Pre-warm the modifiers module for Apple Terminal (has internal guard, safe to call multiple times)
+  
   if (env.terminal === 'Apple_Terminal') {
     prewarmModifiers()
   }
@@ -122,7 +122,7 @@ export function useTextInput({
   
   
   
-  // not dialog dismissal, and needs the double-press safety mechanism.
+  
   const handleEscape = useDoublePress(
     (show: boolean) => {
       if (!originalValue || !show) {
@@ -136,11 +136,11 @@ export function useTextInput({
       })
     },
     () => {
-      // Remove the "Esc again to clear" notification immediately
+      
       removeNotification('escape-again-to-clear')
       onClearInput?.()
       if (originalValue) {
-        // Track double-escape usage for feature discovery
+        
         
         if (originalValue.trim() !== '') {
           addToHistory(originalValue)
@@ -169,11 +169,11 @@ export function useTextInput({
 
   function handleCtrlD(): MaybeCursor {
     if (cursor.text === '') {
-      // When input is empty, handle double-press
+      
       handleEmptyCtrlD()
       return cursor
     }
-    // When input is not empty, delete forward like iPython
+    
     return cursor.del()
   }
 
@@ -250,16 +250,16 @@ export function useTextInput({
       cursor.offset > 0 &&
       cursor.text[cursor.offset - 1] === '\\'
     ) {
-      // Track that the user has used backslash+return
+      
       markBackslashReturnUsed()
       return cursor.backspace().insert('\n')
     }
-    // Meta+Enter or Shift+Enter inserts a newline
+    
     if (key.meta || key.shift) {
       return cursor.insert('\n')
     }
-    // Apple Terminal doesn't support custom Shift+Enter keybindings,
-    // so we use native macOS modifier detection to check if Shift is held
+    
+    
     if (env.terminal === 'Apple_Terminal' && isModifierPressed('shift')) {
       return cursor.insert('\n')
     }
@@ -271,14 +271,14 @@ export function useTextInput({
       onHistoryUp?.()
       return cursor
     }
-    // Try to move by wrapped lines first
+    
     const cursorUp = cursor.up()
     if (!cursorUp.equals(cursor)) {
       return cursorUp
     }
 
-    // If we can't move by wrapped lines and this is multiline input,
-    // try to move by logical lines (to handle paragraph boundaries)
+    
+    
     if (multiline) {
       const cursorUpLogical = cursor.upLogicalLine()
       if (!cursorUpLogical.equals(cursor)) {
@@ -286,7 +286,7 @@ export function useTextInput({
       }
     }
 
-    // Can't move up at all - trigger history navigation
+    
     onHistoryUp?.()
     return cursor
   }
@@ -295,14 +295,14 @@ export function useTextInput({
       onHistoryDown?.()
       return cursor
     }
-    // Try to move by wrapped lines first
+    
     const cursorDown = cursor.down()
     if (!cursorDown.equals(cursor)) {
       return cursorDown
     }
 
-    // If we can't move by wrapped lines and this is multiline input,
-    // try to move by logical lines (to handle paragraph boundaries)
+    
+    
     if (multiline) {
       const cursorDownLogical = cursor.downLogicalLine()
       if (!cursorDownLogical.equals(cursor)) {
@@ -310,7 +310,7 @@ export function useTextInput({
       }
     }
 
-    // Can't move down at all - trigger history navigation
+    
     onHistoryDown?.()
     return cursor
   }
@@ -319,8 +319,8 @@ export function useTextInput({
     switch (true) {
       case key.escape:
         return () => {
-          // Skip when a keybinding context (e.g. Autocomplete) owns escape.
-          // useKeybindings can't shield us via stopImmediatePropagation —
+          
+          
           
           
           
@@ -346,7 +346,7 @@ export function useTextInput({
       case key.end:
         return () => cursor.endOfLine()
       case key.pageDown:
-        // In fullscreen mode, PgUp/PgDn scroll the message viewport instead
+        
         
         if (isFullscreenEnvEnabled()) {
           return NOOP_HANDLER
@@ -359,12 +359,12 @@ export function useTextInput({
         return () => cursor.startOfLine()
       case key.wheelUp:
       case key.wheelDown:
-        // Mouse wheel events only exist when fullscreen mouse tracking is on.
+        
         
         
         return NOOP_HANDLER
       case key.return:
-        // Must come before key.meta so Option+Return inserts newline
+        
         return () => handleEnter(key)
       case key.meta:
         return handleMeta
@@ -381,14 +381,14 @@ export function useTextInput({
       default: {
         return function (input: string) {
           switch (true) {
-            // Home key
+            
             case input === '\x1b[H' || input === '\x1b[1~':
               return cursor.startOfLine()
             
             case input === '\x1b[F' || input === '\x1b[4~':
               return cursor.endOfLine()
             default: {
-              // Trailing \r after text is SSH-coalesced Enter ("o\r") —
+              
               
               
               
@@ -412,7 +412,7 @@ export function useTextInput({
     }
   }
 
-  // Check if this is a kill command (Ctrl+K, Ctrl+U, Ctrl+W, or Meta+Backspace/Delete)
+  
   function isKillKey(key: Key, input: string): boolean {
     if (key.ctrl && (input === 'k' || input === 'u' || input === 'w')) {
       return true
@@ -423,13 +423,13 @@ export function useTextInput({
     return false
   }
 
-  // Check if this is a yank command (Ctrl+Y or Alt+Y)
+  
   function isYankKey(key: Key, input: string): boolean {
     return (key.ctrl || key.meta) && input === 'y'
   }
 
   function onInput(input: string, key: Key): void {
-    // Note: Image paste shortcut (chat:imagePaste) is handled via useKeybindings in PromptInput
+    
 
     
     const filteredInput = inputFilter ? inputFilter(input, key) : input
@@ -439,7 +439,7 @@ export function useTextInput({
       return
     }
 
-    // Fix Issue #1853: Filter DEL characters that interfere with backspace in SSH/tmux
+    
     
     if (!key.backspace && !key.delete && input.includes('\x7f')) {
       const delCount = (input.match(/\x7f/g) || []).length
@@ -452,7 +452,7 @@ export function useTextInput({
           currentCursor.deleteTokenBefore() ?? currentCursor.backspace()
       }
 
-      // Update state once with the final result
+      
       if (!cursor.equals(currentCursor)) {
         if (cursor.text !== currentCursor.text) {
           onChange(currentCursor.text)
@@ -464,12 +464,12 @@ export function useTextInput({
       return
     }
 
-    // Reset kill accumulation for non-kill keys
+    
     if (!isKillKey(key, filteredInput)) {
       resetKillAccumulation()
     }
 
-    // Reset yank state for non-yank keys (breaks yank-pop chain)
+    
     if (!isYankKey(key, filteredInput)) {
       resetYankState()
     }
@@ -482,7 +482,7 @@ export function useTextInput({
         }
         setOffset(nextCursor.offset)
       }
-      // SSH-coalesced Enter: on slow links, "o" + Enter can arrive as one
+      
       
       
       
@@ -491,7 +491,7 @@ export function useTextInput({
         filteredInput.length > 1 &&
         filteredInput.endsWith('\r') &&
         !filteredInput.slice(0, -1).includes('\r') &&
-        // Backslash+CR is a stale VS Code Shift+Enter binding, not
+        
         
         filteredInput[filteredInput.length - 2] !== '\\'
       ) {
@@ -500,7 +500,7 @@ export function useTextInput({
     }
   }
 
-  // Prepare ghost text for rendering - validate insertPosition matches current
+  
   
   
   const ghostTextForRender =

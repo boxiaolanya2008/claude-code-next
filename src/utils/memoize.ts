@@ -26,20 +26,9 @@ type LRUMemoizedFunction<Args extends unknown[], Result> = {
   }
 }
 
-/**
- * Creates a memoized function that returns cached values while refreshing in parallel.
- * This implements a write-through cache pattern:
- * - If cache is fresh, return immediately
- * - If cache is stale, return the stale value but refresh it in the background
- * - If no cache exists, block and compute the value
- *
- * @param f The function to memoize
- * @param cacheLifetimeMs The lifetime of cached values in milliseconds
- * @returns A memoized version of the function
- */
 export function memoizeWithTTL<Args extends unknown[], Result>(
   f: (...args: Args) => Result,
-  cacheLifetimeMs: number = 5 * 60 * 1000, // Default 5 minutes
+  cacheLifetimeMs: number = 5 * 60 * 1000, 
 ): MemoizedFunction<Args, Result> {
   const cache = new Map<string, CacheEntry<Result>>()
 
@@ -59,19 +48,19 @@ export function memoizeWithTTL<Args extends unknown[], Result>(
       return value
     }
 
-    // If we have a stale cache entry and it's not already refreshing
+    
     if (
       cached &&
       now - cached.timestamp > cacheLifetimeMs &&
       !cached.refreshing
     ) {
-      // Mark as refreshing to prevent multiple parallel refreshes
+      
       cached.refreshing = true
 
-      // Schedule async refresh (non-blocking). Both .then and .catch are
-      // identity-guarded: a concurrent cache.clear() + cold-miss stores a
-      // newer entry while this microtask is queued. .then overwriting with
-      // the stale refresh's result is worse than .catch deleting (persists
+      
+      
+      
+      
       
       Promise.resolve()
         .then(() => {
@@ -98,7 +87,7 @@ export function memoizeWithTTL<Args extends unknown[], Result>(
     return cache.get(key)!.value
   }
 
-  // Add cache clear method
+  
   memoized.cache = {
     clear: () => cache.clear(),
   }
@@ -106,20 +95,9 @@ export function memoizeWithTTL<Args extends unknown[], Result>(
   return memoized
 }
 
-/**
- * Creates a memoized async function that returns cached values while refreshing in parallel.
- * This implements a write-through cache pattern for async functions:
- * - If cache is fresh, return immediately
- * - If cache is stale, return the stale value but refresh it in the background
- * - If no cache exists, block and compute the value
- *
- * @param f The async function to memoize
- * @param cacheLifetimeMs The lifetime of cached values in milliseconds
- * @returns A memoized version of the async function
- */
 export function memoizeWithTTLAsync<Args extends unknown[], Result>(
   f: (...args: Args) => Promise<Result>,
-  cacheLifetimeMs: number = 5 * 60 * 1000, // Default 5 minutes
+  cacheLifetimeMs: number = 5 * 60 * 1000, 
 ): ((...args: Args) => Promise<Result>) & { cache: { clear: () => void } } {
   const cache = new Map<string, CacheEntry<Result>>()
   
@@ -146,7 +124,7 @@ export function memoizeWithTTLAsync<Args extends unknown[], Result>(
         const result = await promise
         
         
-        // store it. clear() wipes inFlight too, so this check catches that.
+        
         if (inFlight.get(key) === promise) {
           cache.set(key, {
             value: result,
@@ -162,19 +140,19 @@ export function memoizeWithTTLAsync<Args extends unknown[], Result>(
       }
     }
 
-    // If we have a stale cache entry and it's not already refreshing
+    
     if (
       cached &&
       now - cached.timestamp > cacheLifetimeMs &&
       !cached.refreshing
     ) {
-      // Mark as refreshing to prevent multiple parallel refreshes
+      
       cached.refreshing = true
 
-      // Schedule async refresh (non-blocking). Both .then and .catch are
-      // identity-guarded against a concurrent cache.clear() + cold-miss
-      // storing a newer entry while this refresh is in flight. .then
-      // overwriting with the stale refresh's result is worse than .catch
+      
+      
+      
+      
       
       
       const staleEntry = cached
@@ -202,7 +180,7 @@ export function memoizeWithTTLAsync<Args extends unknown[], Result>(
     return cache.get(key)!.value
   }
 
-  // Add cache clear method. Also clear inFlight: clear() during a cold-miss
+  
   
   
   
@@ -219,18 +197,6 @@ export function memoizeWithTTLAsync<Args extends unknown[], Result>(
   }
 }
 
-/**
- * Creates a memoized function with LRU (Least Recently Used) eviction policy.
- * This prevents unbounded memory growth by evicting the least recently used entries
- * when the cache reaches its maximum size.
- *
- * Note: Cache size for memoized message processing functions
- * Chosen to prevent unbounded memory growth (was 300MB+ with lodash memoize)
- * while maintaining good cache hit rates for typical conversations.
- *
- * @param f The function to memoize
- * @returns A memoized version of the function with cache management methods
- */
 export function memoizeWithLRU<
   Args extends unknown[],
   Result extends NonNullable<unknown>,
@@ -255,12 +221,12 @@ export function memoizeWithLRU<
     return result
   }
 
-  // Add cache management methods
+  
   memoized.cache = {
     clear: () => cache.clear(),
     size: () => cache.size,
     delete: (key: string) => cache.delete(key),
-    // peek() avoids updating recency — we only want to observe, not promote
+    
     get: (key: string) => cache.peek(key),
     has: (key: string) => cache.has(key),
   }

@@ -64,18 +64,6 @@ type ChangeSummary = {
   commits: number
 }
 
-/**
- * Returns null when state cannot be reliably determined — callers that use
- * this as a safety gate must treat null as "unknown, assume unsafe"
- * (fail-closed). A silent 0/0 would let cleanupWorktree destroy real work.
- *
- * Null is returned when:
- * - git status or rev-list exit non-zero (lock file, corrupt index, bad ref)
- * - originalHeadCommit is undefined but git status succeeded — this is the
- *   hook-based-worktree-wrapping-git case (worktree.ts:525-532 doesn't set
- *   originalHeadCommit). We can see the working tree is git, but cannot count
- *   commits without a baseline, so we cannot prove the branch is clean.
- */
 async function countWorktreeChanges(
   worktreePath: string,
   originalHeadCommit: string | undefined,
@@ -92,8 +80,8 @@ async function countWorktreeChanges(
   const changedFiles = count(status.stdout.split('\n'), l => l.trim() !== '')
 
   if (!originalHeadCommit) {
-    // git status succeeded → this is a git repo, but without a baseline
-    // commit we cannot count commits. Fail-closed rather than claim 0.
+    
+    
     return null
   }
 
@@ -112,29 +100,22 @@ async function countWorktreeChanges(
   return { changedFiles, commits }
 }
 
-/**
- * Restore session state to reflect the original directory.
- * This is the inverse of the session-level mutations in EnterWorktreeTool.call().
- *
- * keepWorktree()/cleanupWorktree() handle process.chdir and currentWorktreeSession;
- * this handles everything above the worktree utility layer.
- */
 function restoreSessionToOriginalCwd(
   originalCwd: string,
   projectRootIsWorktree: boolean,
 ): void {
   setCwd(originalCwd)
-  // EnterWorktree sets originalCwd to the *worktree* path (intentional — see
-  // state.ts getProjectRoot comment). Reset to the real original.
+  
+  
   setOriginalCwd(originalCwd)
-  // --worktree startup sets projectRoot to the worktree; mid-session
-  // EnterWorktreeTool does not. Only restore when it was actually changed —
-  // otherwise we'd move projectRoot to wherever the user had cd'd before
-  // entering the worktree (session.originalCwd), breaking the "stable project
-  // identity" contract.
+  
+  
+  
+  
+  
   if (projectRootIsWorktree) {
     setProjectRoot(originalCwd)
-    // setup.ts's --worktree block called updateHooksConfigSnapshot() to re-read
+    
     
     
     updateHooksConfigSnapshot()
@@ -172,7 +153,7 @@ export const ExitWorktreeTool: Tool<InputSchema, Output> = buildTool({
     return input.action
   },
   async validateInput(input) {
-    // Scope guard: getCurrentWorktreeSession() is null unless EnterWorktree
+    
     
     
     
@@ -227,12 +208,12 @@ export const ExitWorktreeTool: Tool<InputSchema, Output> = buildTool({
   async call(input) {
     const session = getCurrentWorktreeSession()
     if (!session) {
-      // validateInput guards this, but the session is module-level mutable
+      
       
       throw new Error('Not in a worktree session')
     }
 
-    // Capture before keepWorktree/cleanupWorktree null out currentWorktreeSession.
+    
     const {
       originalCwd,
       worktreePath,
@@ -252,7 +233,7 @@ export const ExitWorktreeTool: Tool<InputSchema, Output> = buildTool({
     
     
     
-    // validateInput, so this only affects analytics + messaging.
+    
     const { changedFiles, commits } = (await countWorktreeChanges(
       worktreePath,
       originalHeadCommit,
@@ -283,7 +264,7 @@ export const ExitWorktreeTool: Tool<InputSchema, Output> = buildTool({
       }
     }
 
-    // action === 'remove'
+    
     if (tmuxSessionName) {
       await killTmuxSession(tmuxSessionName)
     }

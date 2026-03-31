@@ -5,11 +5,6 @@ type ActivityManagerOptions = {
   getActiveTimeCounter?: typeof getActiveTimeCounterImpl
 }
 
-/**
- * ActivityManager handles generic activity tracking for both user and CLI operations.
- * It automatically deduplicates overlapping activities and provides separate metrics
- * for user vs CLI active time.
- */
 export class ActivityManager {
   private activeOperations = new Set<string>()
 
@@ -39,26 +34,23 @@ export class ActivityManager {
     return ActivityManager.instance
   }
 
-  /**
-   * Reset the singleton instance (for testing purposes)
-   */
+  
+
   static resetInstance(): void {
     ActivityManager.instance = null
   }
 
-  /**
-   * Create a new instance with custom options (for testing purposes)
-   */
+  
+
   static createInstance(options?: ActivityManagerOptions): ActivityManager {
     ActivityManager.instance = new ActivityManager(options)
     return ActivityManager.instance
   }
 
-  /**
-   * Called when user interacts with the CLI (typing, commands, etc.)
-   */
+  
+
   recordUserActivity(): void {
-    // Don't record user time if CLI is active (CLI takes precedence)
+    
     if (!this.isCLIActive && this.lastUserActivityTime !== 0) {
       const now = this.getNow()
       const timeSinceLastActivity = (now - this.lastUserActivityTime) / 1000
@@ -68,7 +60,7 @@ export class ActivityManager {
         if (activeTimeCounter) {
           const timeoutSeconds = this.USER_ACTIVITY_TIMEOUT_MS / 1000
 
-          // Only record time if within the timeout window
+          
           if (timeSinceLastActivity < timeoutSeconds) {
             activeTimeCounter.add(timeSinceLastActivity, { type: 'user' })
           }
@@ -76,15 +68,14 @@ export class ActivityManager {
       }
     }
 
-    // Update the last user activity timestamp
+    
     this.lastUserActivityTime = this.getNow()
   }
 
-  /**
-   * Starts tracking CLI activity (tool execution, AI response, etc.)
-   */
+  
+
   startCLIActivity(operationId: string): void {
-    // If operation already exists, it likely means the previous one didn't clean up
+    
     
     
     if (this.activeOperations.has(operationId)) {
@@ -100,14 +91,13 @@ export class ActivityManager {
     }
   }
 
-  /**
-   * Stops tracking CLI activity
-   */
+  
+
   endCLIActivity(operationId: string): void {
     this.activeOperations.delete(operationId)
 
     if (this.activeOperations.size === 0) {
-      // Last operation ended - CLI becoming inactive
+      
       
       const now = this.getNow()
       const timeSinceLastRecord = (now - this.lastCLIRecordedTime) / 1000
@@ -124,9 +114,8 @@ export class ActivityManager {
     }
   }
 
-  /**
-   * Convenience method to track an async operation automatically (mainly for testing/debugging)
-   */
+  
+
   async trackOperation<T>(
     operationId: string,
     fn: () => Promise<T>,
@@ -139,9 +128,8 @@ export class ActivityManager {
     }
   }
 
-  /**
-   * Gets current activity states (mainly for testing/debugging)
-   */
+  
+
   getActivityStates(): {
     isUserActive: boolean
     isCLIActive: boolean
@@ -160,5 +148,4 @@ export class ActivityManager {
   }
 }
 
-// Export singleton instance
 export const activityManager = ActivityManager.getInstance()

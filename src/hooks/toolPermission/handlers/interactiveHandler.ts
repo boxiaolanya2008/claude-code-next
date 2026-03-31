@@ -40,20 +40,6 @@ type InteractivePermissionParams = {
   channelCallbacks?: ChannelPermissionCallbacks
 }
 
-/**
- * Handles the interactive (main-agent) permission flow.
- *
- * Pushes a ToolUseConfirm entry to the confirm queue with callbacks:
- * onAbort, onAllow, onReject, recheckPermission, onUserInteraction.
- *
- * Runs permission hooks and bash classifier checks asynchronously in the
- * background, racing them against user interaction. Uses a resolve-once
- * guard and `userInteracted` flag to prevent multiple resolutions.
- *
- * This function does NOT return a Promise -- it sets up callbacks that
- * eventually call `resolve()` to resolve the outer promise owned by
- * the caller.
- */
 function handleInteractivePermission(
   params: InteractivePermissionParams,
   resolve: (decision: PermissionDecision) => void,
@@ -106,7 +92,7 @@ function handleInteractivePermission(
         }
       : {}),
     onUserInteraction() {
-      // Called when user starts interacting with the permission dialog
+      
       
       
       
@@ -157,7 +143,7 @@ function handleInteractivePermission(
       feedback?: string,
       contentBlocks?: ContentBlockParam[],
     ) {
-      if (!claim()) return // atomic check-and-mark before await
+      if (!claim()) return 
 
       if (bridgeCallbacks && bridgeRequestId) {
         bridgeCallbacks.sendResponse(bridgeRequestId, {
@@ -211,7 +197,7 @@ function handleInteractivePermission(
         ctx.toolUseID,
       )
       if (freshResult.behavior === 'allow') {
-        // claim() (atomic check-and-mark), not isResolved() — the async
+        
         
         
         
@@ -256,7 +242,7 @@ function handleInteractivePermission(
     const unsubscribe = bridgeCallbacks.onResponse(
       bridgeRequestId,
       response => {
-        if (!claim()) return // Local user/hook/classifier already responded
+        if (!claim()) return 
         signal.removeEventListener('abort', unsubscribe)
         clearClassifierChecking(ctx.toolUseID)
         clearClassifierIndicator()
@@ -297,7 +283,6 @@ function handleInteractivePermission(
     signal.addEventListener('abort', unsubscribe, { once: true })
   }
 
-  // Channel permission relay — races alongside the bridge block above. Send a
   
   
   
@@ -311,7 +296,8 @@ function handleInteractivePermission(
   
   
   
-  // the subscription never fires and another racer wins. Graceful degradation
+  
+  
   
   if (
     (feature('KAIROS') || feature('KAIROS_CHANNELS')) &&
@@ -326,11 +312,11 @@ function handleInteractivePermission(
     )
 
     if (channelClients.length > 0) {
-      // Outbound is structured too (Kenneth's symmetry ask) — server owns
-      // message formatting for its platform (Telegram markdown, iMessage
-      // rich text, Discord embed). CC sends the RAW parts; server composes.
-      // The old callTool('send_message', {text,content,message}) triple-key
-      // hack is gone — no more guessing which arg name each plugin takes.
+      
+      
+      
+      
+      
       const params: ChannelPermissionRequestParams = {
         request_id: channelRequestId,
         tool_name: ctx.tool.name,
@@ -339,7 +325,7 @@ function handleInteractivePermission(
       }
 
       for (const client of channelClients) {
-        if (client.type !== 'connected') continue // refine for TS
+        if (client.type !== 'connected') continue 
         void client.client
           .notification({
             method: CHANNEL_PERMISSION_REQUEST_METHOD,
@@ -354,21 +340,21 @@ function handleInteractivePermission(
       }
 
       const channelSignal = ctx.toolUseContext.abortController.signal
-      // Wrap so BOTH the map delete AND the abort-listener teardown happen
-      // at every call site. The 6 channelUnsubscribe?.() sites after local/
-      // hook/classifier wins previously only deleted the map entry — the
-      // dead closure stayed registered on the session-scoped abort signal
-      // until the session ended. Not a functional bug (Map.delete is
-      // idempotent), but it held the closure alive.
+      
+      
+      
+      
+      
+      
       const mapUnsub = channelCallbacks.onResponse(
         channelRequestId,
         response => {
-          if (!claim()) return // Another racer won
-          channelUnsubscribe?.() // both: map delete + listener remove
+          if (!claim()) return 
+          channelUnsubscribe?.() 
           clearClassifierChecking(ctx.toolUseID)
           clearClassifierIndicator()
           ctx.removeFromQueue()
-          // Bridge is the other remote — tell it we're done.
+          
           if (bridgeCallbacks && bridgeRequestId) {
             bridgeCallbacks.cancelRequest(bridgeRequestId)
           }
@@ -407,9 +393,9 @@ function handleInteractivePermission(
     }
   }
 
-  // Skip hooks if they were already awaited in the coordinator branch above
+  
   if (!awaitAutomatedChecksBeforeDialog) {
-    // Execute PermissionRequest hooks asynchronously
+    
     
     void (async () => {
       if (isResolved()) return
@@ -430,15 +416,15 @@ function handleInteractivePermission(
     })()
   }
 
-  // Execute bash classifier check asynchronously (if applicable)
+  
   if (
     feature('BASH_CLASSIFIER') &&
     result.pendingClassifierCheck &&
     ctx.tool.name === BASH_TOOL_NAME &&
     !awaitAutomatedChecksBeforeDialog
   ) {
-    // UI indicator for "classifier running" — set here (not in
-    // toolExecution.ts) so commands that auto-allow via prefix rules
+    
+    
     
     setClassifierChecking(ctx.toolUseID)
     void executeAsyncClassifierCheck(
@@ -521,16 +507,14 @@ function handleInteractivePermission(
         },
       },
     ).catch(error => {
-      // Log classifier API errors for debugging but don't propagate them as interruptions
-      // These errors can be network failures, rate limits, or model issues - not user cancellations
+      
+      
       logForDebugging(`Async classifier check failed: ${errorMessage(error)}`, {
         level: 'error',
       })
     })
   }
 }
-
-// --
 
 export { handleInteractivePermission }
 export type { InteractivePermissionParams }

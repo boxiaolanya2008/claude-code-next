@@ -18,11 +18,6 @@ export function formatFileSize(sizeInBytes: number): string {
   return `${gb.toFixed(1).replace(/\.0$/, '')}GB`
 }
 
-/**
- * Formats milliseconds as seconds with 1 decimal place (e.g. `1234` → `"1.2s"`).
- * Unlike formatDuration, always keeps the decimal — use for sub-minute timings
- * where the fractional second is meaningful (TTFT, hook durations, etc.).
- */
 export function formatSecondsShort(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`
 }
@@ -32,11 +27,11 @@ export function formatDuration(
   options?: { hideTrailingZeros?: boolean; mostSignificantOnly?: boolean },
 ): string {
   if (ms < 60000) {
-    // Special case for 0
+    
     if (ms === 0) {
       return '0s'
     }
-    // For durations < 1s, show 1 decimal place (e.g., 0.5s)
+    
     if (ms < 1) {
       const s = (ms / 1000).toFixed(1)
       return `${s}s`
@@ -90,7 +85,6 @@ export function formatDuration(
   return `${seconds}s`
 }
 
-// `new Intl.NumberFormat` is expensive, so cache formatters for reuse
 let numberFormatterForConsistentDecimals: Intl.NumberFormat | null = null
 let numberFormatterForInconsistentDecimals: Intl.NumberFormat | null = null
 const getNumberFormatter = (
@@ -118,7 +112,7 @@ const getNumberFormatter = (
 }
 
 export function formatNumber(number: number): string {
-  // Only use minimumFractionDigits for numbers that will be shown in compact notation
+  
   const shouldUseConsistentDecimals = number >= 1000
 
   return getNumberFormatter(shouldUseConsistentDecimals)
@@ -167,12 +161,12 @@ export function formatRelativeTime(
           ? `${Math.abs(value)}${shortUnit} ago`
           : `in ${value}${shortUnit}`
       }
-      // For days and longer, use long style regardless of the style parameter
+      
       return getRelativeTimeFormat('long', numeric).format(value, unit)
     }
   }
 
-  // For values less than 1 second
+  
   if (style === 'narrow') {
     return diffInSeconds <= 0 ? '0s ago' : 'in 0s'
   }
@@ -185,17 +179,14 @@ export function formatRelativeTimeAgo(
 ): string {
   const { now = new Date(), ...restOptions } = options
   if (date > now) {
-    // For future dates, just return the relative time without "ago"
+    
     return formatRelativeTime(date, { ...restOptions, now })
   }
 
-  // For past dates, force numeric: 'always' to ensure we get "X units ago"
+  
   return formatRelativeTime(date, { ...restOptions, numeric: 'always', now })
 }
 
-/**
- * Formats log metadata for display (time, size or message count, branch, tag, PR)
- */
 export function formatLogMetadata(log: {
   modified: Date
   messageCount: number
@@ -247,7 +238,7 @@ export function formatResetTime(
 
   
   if (hoursUntilReset > 24) {
-    // Show date and time for resets more than a day away
+    
     const dateOptions: Intl.DateTimeFormatOptions = {
       month: 'short',
       day: 'numeric',
@@ -256,28 +247,28 @@ export function formatResetTime(
       hour12: showTime ? true : undefined,
     }
 
-    // Add year if it's not the current year
+    
     if (date.getFullYear() !== now.getFullYear()) {
       dateOptions.year = 'numeric'
     }
 
     const dateString = date.toLocaleString('en-US', dateOptions)
 
-    // Remove the space before AM/PM and make it lowercase
+    
     return (
       dateString.replace(/ ([AP]M)/i, (_match, ampm) => ampm.toLowerCase()) +
       (showTimezone ? ` (${getTimeZone()})` : '')
     )
   }
 
-  // For resets within 24 hours, show just the time (existing behavior)
+  
   const timeString = date.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: minutes === 0 ? undefined : '2-digit',
     hour12: true,
   })
 
-  // Remove the space before AM/PM and make it lowercase, then add timezone
+  
   return (
     timeString.replace(/ ([AP]M)/i, (_match, ampm) => ampm.toLowerCase()) +
     (showTimezone ? ` (${getTimeZone()})` : '')
@@ -293,7 +284,6 @@ export function formatResetText(
   return `${formatResetTime(Math.floor(dt.getTime() / 1000), showTimezone, showTime)}`
 }
 
-// Back-compat: truncate helpers moved to ./truncate.ts (needs ink/stringWidth)
 export {
   truncate,
   truncatePathMiddle,

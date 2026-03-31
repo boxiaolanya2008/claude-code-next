@@ -24,24 +24,21 @@ export function stripEmptyLines(content: string): string {
     startIndex++
   }
 
-  // Find the last non-empty line
+  
   let endIndex = lines.length - 1
   while (endIndex >= 0 && lines[endIndex]?.trim() === '') {
     endIndex--
   }
 
-  // If all lines are empty, return empty string
+  
   if (startIndex > endIndex) {
     return ''
   }
 
-  // Return the slice with non-empty lines
+  
   return lines.slice(startIndex, endIndex + 1).join('\n')
 }
 
-/**
- * Check if content is a base64 encoded image data URL
- */
 export function isImageOutput(content: string): boolean {
   return /^data:image\/[a-z0-9.+_-]+;base64,/i.test(content)
 }
@@ -56,10 +53,6 @@ export function parseDataUri(
   return { mediaType: match[1], data: match[2] }
 }
 
-/**
- * Build an image tool_result block from shell stdout containing a data URI.
- * Returns null if parse fails so callers can fall through to text handling.
- */
 export function buildImageToolResult(
   stdout: string,
   toolUseID: string,
@@ -81,8 +74,6 @@ export function buildImageToolResult(
     ],
   }
 }
-
-// Cap file reads to 20 MB — any image data URI larger than this is
 
 const MAX_IMAGE_FILE_SIZE = 20 * 1024 * 1024
 
@@ -154,13 +145,13 @@ export function resetCwdIfOutsideProject(
   const shouldMaintain = shouldMaintainProjectWorkingDir()
   if (
     shouldMaintain ||
-    // Fast path: originalCwd is unconditionally in allWorkingDirectories
+    
     
     
     (cwd !== originalCwd &&
       !pathInAllowedWorkingPath(cwd, toolPermissionContext))
   ) {
-    // Reset to original directory if maintaining project dir OR outside allowed working directory
+    
     setCwd(originalCwd)
     if (!shouldMaintain) {
       logEvent('tengu_bash_tool_reset_to_original_dir', {})
@@ -170,10 +161,6 @@ export function resetCwdIfOutsideProject(
   return false
 }
 
-/**
- * Creates a human-readable summary of structured content blocks.
- * Used to display MCP results with images and text in the UI.
- */
 export function createContentSummary(content: ContentBlockParam[]): string {
   const parts: string[] = []
   let textCount = 0

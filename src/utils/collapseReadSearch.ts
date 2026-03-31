@@ -56,10 +56,6 @@ export type SearchOrReadResult = {
   isBash?: boolean
 }
 
-/**
- * Extract the primary file/directory path from a tool_use input.
- * Handles both `file_path` (Read/Write/Edit) and `path` (Grep/Glob).
- */
 function getFilePathFromToolInput(toolInput: unknown): string | undefined {
   const input = toolInput as
     | { file_path?: string; path?: string; pattern?: string; glob?: string }
@@ -67,9 +63,6 @@ function getFilePathFromToolInput(toolInput: unknown): string | undefined {
   return input?.file_path ?? input?.path
 }
 
-/**
- * Check if a search tool use targets memory files by examining its path, pattern, and glob.
- */
 function isMemorySearch(toolInput: unknown): boolean {
   const input = toolInput as
     | { path?: string; pattern?: string; glob?: string; command?: string }
@@ -77,27 +70,24 @@ function isMemorySearch(toolInput: unknown): boolean {
   if (!input) {
     return false
   }
-  // Check if the search path targets a memory file or directory (Grep/Glob tools)
+  
   if (input.path) {
     if (isAutoManagedMemoryFile(input.path) || isMemoryDirectory(input.path)) {
       return true
     }
   }
-  // Check glob patterns that indicate memory file access
+  
   if (input.glob && isAutoManagedMemoryPattern(input.glob)) {
     return true
   }
-  // For shell commands (bash grep/rg, PowerShell Select-String, etc.),
-  // check if the command targets memory paths
+  
+  
   if (input.command && isShellCommandTargetingMemory(input.command)) {
     return true
   }
   return false
 }
 
-/**
- * Check if a Write or Edit tool use targets a memory file and should be collapsed.
- */
 function isMemoryWriteOrEdit(toolName: string, toolInput: unknown): boolean {
   if (toolName !== FILE_WRITE_TOOL_NAME && toolName !== FILE_EDIT_TOOL_NAME) {
     return false
@@ -106,7 +96,6 @@ function isMemoryWriteOrEdit(toolName: string, toolInput: unknown): boolean {
   return filePath !== undefined && isAutoManagedMemoryFile(filePath)
 }
 
-// ~5 lines × ~60 cols. Generous static cap — the renderer lets Ink wrap.
 const MAX_HINT_CHARS = 300
 
 function commandAsHint(command: string): string {
@@ -122,17 +111,12 @@ function commandAsHint(command: string): string {
     : cleaned
 }
 
-/**
- * Checks if a tool is a search/read operation using the tool's isSearchOrReadCommand method.
- * Also treats Write/Edit of memory files as collapsible.
- * Returns detailed information about whether it's a search or read operation.
- */
 export function getToolSearchOrReadInfo(
   toolName: string,
   toolInput: unknown,
   tools: Tools,
 ): SearchOrReadResult {
-  // REPL is absorbed silently — its inner tool calls are emitted as virtual
+  
   
   
   
@@ -148,7 +132,7 @@ export function getToolSearchOrReadInfo(
     }
   }
 
-  // Memory file writes/edits are collapsible
+  
   if (isMemoryWriteOrEdit(toolName, toolInput)) {
     return {
       isCollapsible: true,
@@ -161,7 +145,7 @@ export function getToolSearchOrReadInfo(
     }
   }
 
-  // Meta-operations absorbed silently: Snip (context cleanup) and ToolSearch
+  
   
   
   if (
@@ -179,7 +163,7 @@ export function getToolSearchOrReadInfo(
     }
   }
 
-  // Fallback to REPL primitives: in REPL mode, Bash/Read/Grep/etc. are
+  
   
   
   
@@ -197,16 +181,16 @@ export function getToolSearchOrReadInfo(
       isAbsorbedSilently: false,
     }
   }
-  // The tool's isSearchOrReadCommand method handles its own input validation via safeParse,
-  // so passing the raw input is safe. The type assertion is necessary because Tool[] uses
-  // the default generic which expects { [x: string]: any }, but we receive unknown at runtime.
+  
+  
+  
   const result = tool.isSearchOrReadCommand(
     toolInput as { [x: string]: unknown },
   )
   const isList = result.isList ?? false
   const isCollapsible = result.isSearch || result.isRead || isList
-  // Under fullscreen mode, non-search/read Bash commands are also collapsible
-  // as their own category — "Ran N bash commands" instead of breaking the group.
+  
+  
   return {
     isCollapsible:
       isCollapsible ||
@@ -224,10 +208,6 @@ export function getToolSearchOrReadInfo(
   }
 }
 
-/**
- * Check if a tool_use content block is a search/read operation.
- * Returns { isSearch, isRead, isREPL } if it's a collapsible search/read, null otherwise.
- */
 export function getSearchOrReadFromContent(
   content: { type: string; name?: string; input?: unknown } | undefined,
   tools: Tools,
@@ -259,9 +239,6 @@ export function getSearchOrReadFromContent(
   return null
 }
 
-/**
- * Checks if a tool is a search/read operation (for backwards compatibility).
- */
 function isToolSearchOrRead(
   toolName: string,
   toolInput: unknown,
@@ -270,10 +247,6 @@ function isToolSearchOrRead(
   return getToolSearchOrReadInfo(toolName, toolInput, tools).isCollapsible
 }
 
-/**
- * Get the tool name, input, and search/read info from a message if it's a collapsible tool use.
- * Returns null if the message is not a collapsible tool use.
- */
 function getCollapsibleToolInfo(
   msg: RenderableMessage,
   tools: Tools,
@@ -297,7 +270,7 @@ function getCollapsibleToolInfo(
     }
   }
   if (msg.type === 'grouped_tool_use') {
-    // For grouped tool uses, check the first message's input
+    
     const firstContent = msg.messages[0]?.message.content[0]
     const info = getSearchOrReadFromContent(
       firstContent
@@ -312,9 +285,6 @@ function getCollapsibleToolInfo(
   return null
 }
 
-/**
- * Check if a message is assistant text that should break a group.
- */
 function isTextBreaker(msg: RenderableMessage): boolean {
   if (msg.type === 'assistant') {
     const content = msg.message.content[0]
@@ -325,10 +295,6 @@ function isTextBreaker(msg: RenderableMessage): boolean {
   return false
 }
 
-/**
- * Check if a message is a non-collapsible tool use that should break a group.
- * This includes tool uses like Edit, Write, etc.
- */
 function isNonCollapsibleToolUse(
   msg: RenderableMessage,
   tools: Tools,
@@ -364,10 +330,6 @@ function isPreToolHookSummary(
   )
 }
 
-/**
- * Check if a message should be skipped (not break the group, just passed through).
- * This includes thinking blocks, redacted thinking, attachments, etc.
- */
 function shouldSkipMessage(msg: RenderableMessage): boolean {
   if (msg.type === 'assistant') {
     const content = msg.message.content[0]
@@ -376,20 +338,17 @@ function shouldSkipMessage(msg: RenderableMessage): boolean {
       return true
     }
   }
-  // Skip attachment messages
+  
   if (msg.type === 'attachment') {
     return true
   }
-  // Skip system messages
+  
   if (msg.type === 'system') {
     return true
   }
   return false
 }
 
-/**
- * Type predicate: Check if a message is a collapsible tool use.
- */
 function isCollapsibleToolUse(
   msg: RenderableMessage,
   tools: Tools,
@@ -411,10 +370,6 @@ function isCollapsibleToolUse(
   return false
 }
 
-/**
- * Type predicate: Check if a message is a tool result for collapsible tools.
- * Returns true if ALL tool results in the message are for tracked collapsible tools.
- */
 function isCollapsibleToolResult(
   msg: RenderableMessage,
   collapsibleToolUseIds: Set<string>,
@@ -433,9 +388,6 @@ function isCollapsibleToolResult(
   return false
 }
 
-/**
- * Get all tool use IDs from a single message (handles grouped tool uses).
- */
 function getToolUseIdsFromMessage(msg: RenderableMessage): string[] {
   if (msg.type === 'assistant') {
     const content = msg.message.content[0]
@@ -454,9 +406,6 @@ function getToolUseIdsFromMessage(msg: RenderableMessage): string[] {
   return []
 }
 
-/**
- * Get all tool use IDs from a collapsed read/search group.
- */
 export function getToolUseIdsFromCollapsedGroup(
   message: CollapsedReadSearchGroup,
 ): string[] {
@@ -467,9 +416,6 @@ export function getToolUseIdsFromCollapsedGroup(
   return ids
 }
 
-/**
- * Check if any tool in a collapsed group is in progress.
- */
 export function hasAnyToolInProgress(
   message: CollapsedReadSearchGroup,
   inProgressToolUseIDs: Set<string>,
@@ -479,11 +425,6 @@ export function hasAnyToolInProgress(
   )
 }
 
-/**
- * Get the underlying NormalizedMessage for display (timestamp/model).
- * Handles nested GroupedToolUseMessage within collapsed groups.
- * Returns a NormalizedAssistantMessage or NormalizedUserMessage (never GroupedToolUseMessage).
- */
 export function getDisplayMessageFromCollapsed(
   message: CollapsedReadSearchGroup,
 ): Exclude<CollapsibleMessage, { type: 'grouped_tool_use' }> {
@@ -494,9 +435,6 @@ export function getDisplayMessageFromCollapsed(
   return firstMsg
 }
 
-/**
- * Count the number of tool uses in a message (handles grouped tool uses).
- */
 function countToolUses(msg: RenderableMessage): number {
   if (msg.type === 'grouped_tool_use') {
     return msg.messages.length
@@ -504,10 +442,6 @@ function countToolUses(msg: RenderableMessage): number {
   return 1
 }
 
-/**
- * Extract file paths from read tool inputs in a message.
- * Returns an array of file paths (may have duplicates if same file is read multiple times in one grouped message).
- */
 function getFilePathsFromReadMessage(msg: RenderableMessage): string[] {
   const paths: string[] = []
 
@@ -534,11 +468,6 @@ function getFilePathsFromReadMessage(msg: RenderableMessage): string[] {
   return paths
 }
 
-/**
- * Scan a bash tool result for commit SHAs and PR URLs and push them into the
- * group accumulator. Called only for results whose tool_use_id was recorded
- * in bashCommands (non-search/read bash).
- */
 function scanBashResultForGitOps(
   msg: CollapsibleMessage,
   group: GroupAccumulator,
@@ -548,7 +477,7 @@ function scanBashResultForGitOps(
     | { stdout?: string; stderr?: string }
     | undefined
   if (!out?.stdout && !out?.stderr) return
-  // git push writes the ref update to stderr — scan both streams.
+  
   const combined = (out.stdout ?? '') + '\n' + (out.stderr ?? '')
   for (const c of msg.message.content) {
     if (c.type !== 'tool_result') continue
@@ -649,7 +578,7 @@ function createCollapsedGroup(
   group: GroupAccumulator,
 ): CollapsedReadSearchGroup {
   const firstMsg = group.messages[0]!
-  // When file-path-based reads exist, use unique file count (Set.size) only.
+  
   
   
   
@@ -658,7 +587,7 @@ function createCollapsedGroup(
       ? group.readFilePaths.size
       : group.readOperationCount
   
-  // so this count is safe to subtract from totalReadCount at readCount below.
+  
   
   
   const toolMemoryReadCount = group.memoryReadFilePaths.size
@@ -683,7 +612,7 @@ function createCollapsedGroup(
     : 0
   const result: CollapsedReadSearchGroup = {
     type: 'collapsed_read_search',
-    // Subtract memory + team memory counts so regular counts only reflect non-memory operations
+    
     searchCount: Math.max(
       0,
       group.searchCount - group.memorySearchCount - teamMemSearchCount,
@@ -693,8 +622,8 @@ function createCollapsedGroup(
       totalReadCount - toolMemoryReadCount - teamMemReadCount,
     ),
     listCount: group.listCount,
-    // REPL operations are intentionally not collapsed (see isCollapsible: false at line 32),
-    // so replCount in collapsed groups is always 0. The replCount field is kept for
+    
+    
     
     replCount: 0,
     memorySearchCount: group.memorySearchCount,
@@ -738,14 +667,6 @@ function createCollapsedGroup(
   return result
 }
 
-/**
- * Collapse consecutive Read/Search operations into summary groups.
- *
- * Rules:
- * - Groups consecutive search/read tool uses (Grep, Glob, Read, and Bash search/read commands)
- * - Includes their corresponding tool results in the group
- * - Breaks groups when assistant text appears
- */
 export function collapseReadSearchGroups(
   messages: RenderableMessage[],
   tools: Tools,
@@ -768,11 +689,11 @@ export function collapseReadSearchGroups(
 
   for (const msg of messages) {
     if (isCollapsibleToolUse(msg, tools)) {
-      // This is a collapsible tool use - type predicate narrows to CollapsibleMessage
+      
       const toolInfo = getCollapsibleToolInfo(msg, tools)!
 
       if (toolInfo.isMemoryWrite) {
-        // Memory file write/edit — check if it's team memory
+        
         const count = countToolUses(msg)
         if (
           feature('TEAMMEM') &&
@@ -784,12 +705,12 @@ export function collapseReadSearchGroups(
           currentGroup.memoryWriteCount += count
         }
       } else if (toolInfo.isAbsorbedSilently) {
-        // Snip/ToolSearch absorbed silently — no count, no summary text.
-        // Hidden from the default view but still shown in verbose mode
-        // (Ctrl+O) via the groupMessages iteration in CollapsedReadSearchContent.
+        
+        
+        
       } else if (toolInfo.mcpServerName) {
-        // MCP search/read — counted separately so the summary says
-        // "Queried slack N times" instead of "Read N files".
+        
+        
         const count = countToolUses(msg)
         currentGroup.mcpCallCount = (currentGroup.mcpCallCount ?? 0) + count
         currentGroup.mcpServerNames?.add(toolInfo.mcpServerName)
@@ -798,13 +719,13 @@ export function collapseReadSearchGroups(
           currentGroup.latestDisplayHint = `"${input.query}"`
         }
       } else if (isFullscreenEnvEnabled() && toolInfo.isBash) {
-        // Non-search/read Bash command — counted separately so the summary
-        // says "Ran N bash commands" instead of breaking the group.
+        
+        
         const count = countToolUses(msg)
         currentGroup.bashCount = (currentGroup.bashCount ?? 0) + count
         const input = toolInfo.input as { command?: string } | undefined
         if (input?.command) {
-          // Prefer the stripped `# comment` if present (it's what Claude wrote
+          
           
           currentGroup.latestDisplayHint =
             extractBashCommentLabel(input.command) ??
@@ -816,7 +737,7 @@ export function collapseReadSearchGroups(
           }
         }
       } else if (toolInfo.isList) {
-        // Directory-listing bash commands (ls, tree, du) — counted separately
+        
         
         currentGroup.listCount += countToolUses(msg)
         const input = toolInfo.input as { command?: string } | undefined
@@ -824,7 +745,7 @@ export function collapseReadSearchGroups(
           currentGroup.latestDisplayHint = commandAsHint(input.command)
         }
       } else if (toolInfo.isSearch) {
-        // Use the isSearch flag from the tool to properly categorize bash search commands
+        
         const count = countToolUses(msg)
         currentGroup.searchCount += count
         
@@ -837,7 +758,7 @@ export function collapseReadSearchGroups(
         } else if (isMemorySearch(toolInfo.input)) {
           currentGroup.memorySearchCount += count
         } else {
-          // Regular (non-memory) search — collect pattern for display
+          
           const input = toolInfo.input as { pattern?: string } | undefined
           if (input?.pattern) {
             currentGroup.nonMemSearchArgs.push(input.pattern)
@@ -845,7 +766,7 @@ export function collapseReadSearchGroups(
           }
         }
       } else {
-        // For reads, track unique file paths instead of counting operations
+        
         const filePaths = getFilePathsFromReadMessage(msg)
         for (const filePath of filePaths) {
           currentGroup.readFilePaths.add(filePath)
@@ -854,11 +775,11 @@ export function collapseReadSearchGroups(
           } else if (isAutoManagedMemoryFile(filePath)) {
             currentGroup.memoryReadFilePaths.add(filePath)
           } else {
-            // Non-memory file read — update display hint
+            
             currentGroup.latestDisplayHint = getDisplayPath(filePath)
           }
         }
-        // If no file paths found (e.g., Bash read commands like ls, cat), count the operations
+        
         if (filePaths.length === 0) {
           currentGroup.readOperationCount += countToolUses(msg)
           
@@ -869,7 +790,7 @@ export function collapseReadSearchGroups(
         }
       }
 
-      // Track tool use IDs for matching results
+      
       for (const id of getToolUseIdsFromMessage(msg)) {
         currentGroup.toolUseIds.add(id)
       }
@@ -882,7 +803,7 @@ export function collapseReadSearchGroups(
         scanBashResultForGitOps(msg, currentGroup)
       }
     } else if (currentGroup.messages.length > 0 && isPreToolHookSummary(msg)) {
-      // Absorb PreToolUse hook summaries into the group instead of deferring
+      
       currentGroup.hookCount += msg.hookCount
       currentGroup.hookTotalMs +=
         msg.totalDurationMs ??
@@ -893,7 +814,7 @@ export function collapseReadSearchGroups(
       msg.type === 'attachment' &&
       msg.attachment.type === 'relevant_memories'
     ) {
-      // Absorb auto-injected memory attachments so "recalled N memories"
+      
       
       
       
@@ -903,12 +824,12 @@ export function collapseReadSearchGroups(
       currentGroup.relevantMemories ??= []
       currentGroup.relevantMemories.push(...msg.attachment.memories)
     } else if (shouldSkipMessage(msg)) {
-      // Don't flush the group for skippable messages (thinking, attachments, system)
-      // If a group is in progress, defer these messages to output after the collapsed group
-      // This preserves the visual ordering where the collapsed badge appears at the position
-      // of the first tool use, not displaced by intervening skippable messages.
-      // Exception: nested_memory attachments are pushed through even during a group so
-      // ⎿ Loaded lines cluster tightly instead of being split by the badge's marginTop.
+      
+      
+      
+      
+      
+      
       if (
         currentGroup.messages.length > 0 &&
         !(msg.type === 'attachment' && msg.attachment.type === 'nested_memory')
@@ -918,15 +839,15 @@ export function collapseReadSearchGroups(
         result.push(msg)
       }
     } else if (isTextBreaker(msg)) {
-      // Assistant text breaks the group
+      
       flushGroup()
       result.push(msg)
     } else if (isNonCollapsibleToolUse(msg, tools)) {
-      // Non-collapsible tool use breaks the group
+      
       flushGroup()
       result.push(msg)
     } else {
-      // User messages with non-collapsible tool results break the group
+      
       flushGroup()
       result.push(msg)
     }
@@ -936,15 +857,6 @@ export function collapseReadSearchGroups(
   return result
 }
 
-/**
- * Generate a summary text for search/read/REPL counts.
- * @param searchCount Number of search operations
- * @param readCount Number of read operations
- * @param isActive Whether the group is still in progress (use present tense) or completed (use past tense)
- * @param replCount Number of REPL executions (optional)
- * @param memoryCounts Optional memory file operation counts
- * @returns Summary text like "Searching for 3 patterns, reading 2 files, REPL'd 5 times…"
- */
 export function getSearchReadSummaryText(
   searchCount: number,
   readCount: number,
@@ -1000,7 +912,7 @@ export function getSearchReadSummaryText(
         `${verb} ${memoryWriteCount} ${memoryWriteCount === 1 ? 'memory' : 'memories'}`,
       )
     }
-    // Team memory operations
+    
     if (feature('TEAMMEM') && teamMemOps) {
       teamMemOps.appendTeamMemorySummaryParts(memoryCounts, isActive, parts)
     }
@@ -1052,12 +964,6 @@ export function getSearchReadSummaryText(
   return isActive ? `${text}…` : text
 }
 
-/**
- * Summarize a list of recent tool activities into a compact description.
- * Rolls up trailing consecutive search/read operations using pre-computed
- * isSearch/isRead classifications from recording time. Falls back to the
- * last activity's description for non-collapsible tool uses.
- */
 export function summarizeRecentActivities(
   activities: readonly {
     activityDescription?: string
@@ -1068,7 +974,7 @@ export function summarizeRecentActivities(
   if (activities.length === 0) {
     return undefined
   }
-  // Count trailing search/read activities from the end of the list
+  
   let searchCount = 0
   let readCount = 0
   for (let i = activities.length - 1; i >= 0; i--) {
@@ -1085,8 +991,8 @@ export function summarizeRecentActivities(
   if (collapsibleCount >= 2) {
     return getSearchReadSummaryText(searchCount, readCount, true)
   }
-  // Fall back to most recent activity with a description (some tools like
-  // SendMessage don't implement getActivityDescription, so search backward)
+  
+  
   for (let i = activities.length - 1; i >= 0; i--) {
     if (activities[i]?.activityDescription) {
       return activities[i]!.activityDescription

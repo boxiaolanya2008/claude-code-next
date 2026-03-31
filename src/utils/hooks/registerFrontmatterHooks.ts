@@ -23,8 +23,8 @@ export function registerFrontmatterHooks(
       continue
     }
 
-    // For agents, convert Stop hooks to SubagentStop since that's what fires when an agent completes
-    // (executeStopHooks uses SubagentStop when called with an agentId)
+    
+    
     let targetEvent: HookEvent = event
     if (isAgent && event === 'Stop') {
       targetEvent = 'SubagentStop'

@@ -11,7 +11,7 @@ export function useCopyOnSelect(
   isActive: boolean,
   onCopied?: (text: string) => void,
 ): void {
-  // Tracks whether the *previous* notification had a visible selection with
+  
   
   
   
@@ -33,18 +33,18 @@ export function useCopyOnSelect(
         copiedRef.current = false
         return
       }
-      // No selection (cleared, or click-without-drag) — reset.
+      
       if (!has) {
         copiedRef.current = false
         return
       }
-      // Selection settled (drag finished OR multi-click). Already copied
+      
       
       
       if (copiedRef.current) return
 
-      // Default true: macOS users expect cmd+c to work. It can't — the
-      // terminal's Edit > Copy intercepts it before the pty sees it, and
+      
+      
       
       
       
@@ -65,14 +65,6 @@ export function useCopyOnSelect(
   }, [isActive, selection])
 }
 
-/**
- * Pipe the theme's selectionBg color into the Ink StylePool so the
- * selection overlay renders a solid blue bg instead of SGR-7 inverse.
- * Ink is theme-agnostic (layering: colorize.ts "theme resolution happens
- * at component layer, not here") — this is the bridge. Fires on mount
- * (before any mouse input is possible) and again whenever /theme flips,
- * so the selection color tracks the theme live.
- */
 export function useSelectionBgColor(selection: Selection): void {
   const [themeName] = useTheme()
   useEffect(() => {

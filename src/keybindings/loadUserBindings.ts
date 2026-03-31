@@ -28,9 +28,6 @@ export function isKeybindingCustomizationEnabled(): boolean {
   )
 }
 
-/**
- * Time in milliseconds to wait for file writes to stabilize.
- */
 const FILE_STABILITY_THRESHOLD_MS = 500
 
 const FILE_STABILITY_POLL_INTERVAL_MS = 200
@@ -58,9 +55,6 @@ function logCustomBindingsLoadedOncePerDay(userBindingCount: number): void {
   })
 }
 
-/**
- * Type guard to check if an object is a valid KeybindingBlock.
- */
 function isKeybindingBlock(obj: unknown): obj is KeybindingBlock {
   if (typeof obj !== 'object' || obj === null) return false
   const b = obj as Record<string, unknown>
@@ -71,34 +65,18 @@ function isKeybindingBlock(obj: unknown): obj is KeybindingBlock {
   )
 }
 
-/**
- * Type guard to check if an array contains only valid KeybindingBlocks.
- */
 function isKeybindingBlockArray(arr: unknown): arr is KeybindingBlock[] {
   return Array.isArray(arr) && arr.every(isKeybindingBlock)
 }
 
-/**
- * Get the path to the user keybindings file.
- */
 export function getKeybindingsPath(): string {
   return join(getClaudeConfigHomeDir(), 'keybindings.json')
 }
 
-/**
- * Parse default bindings (cached for performance).
- */
 function getDefaultParsedBindings(): ParsedBinding[] {
   return parseBindings(DEFAULT_BINDINGS)
 }
 
-/**
- * Load and parse keybindings from user config file.
- * Returns merged default + user bindings along with validation warnings.
- *
- * For external users, always returns default bindings only.
- * User customization is currently gated to Anthropic employees.
- */
 export async function loadKeybindings(): Promise<KeybindingsLoadResult> {
   const defaultBindings = getDefaultParsedBindings()
 
@@ -118,7 +96,7 @@ export async function loadKeybindings(): Promise<KeybindingsLoadResult> {
     if (typeof parsed === 'object' && parsed !== null && 'bindings' in parsed) {
       userBlocks = (parsed as { bindings: unknown }).bindings
     } else {
-      // Invalid format - missing bindings property
+      
       const errorMessage = 'keybindings.json must have a "bindings" array'
       const suggestion = 'Use format: { "bindings": [ ... ] }'
       logForDebugging(`[keybindings] Invalid keybindings.json: ${errorMessage}`)
@@ -135,7 +113,7 @@ export async function loadKeybindings(): Promise<KeybindingsLoadResult> {
       }
     }
 
-    // Validate structure - bindings must be an array of valid keybinding blocks
+    
     if (!isKeybindingBlockArray(userBlocks)) {
       const errorMessage = !Array.isArray(userBlocks)
         ? '"bindings" must be an array'
@@ -183,12 +161,12 @@ export async function loadKeybindings(): Promise<KeybindingsLoadResult> {
 
     return { bindings: mergedBindings, warnings }
   } catch (error) {
-    // File doesn't exist - use defaults (user can run /keybindings to create)
+    
     if (isENOENT(error)) {
       return { bindings: defaultBindings, warnings: [] }
     }
 
-    // Other error - log and return defaults with warning
+    
     logForDebugging(
       `[keybindings] Error loading ${userPath}: ${errorMessage(error)}`,
     )
@@ -205,10 +183,6 @@ export async function loadKeybindings(): Promise<KeybindingsLoadResult> {
   }
 }
 
-/**
- * Load keybindings synchronously (for initial render).
- * Uses cached value if available.
- */
 export function loadKeybindingsSync(): ParsedBinding[] {
   if (cachedBindings) {
     return cachedBindings
@@ -218,13 +192,6 @@ export function loadKeybindingsSync(): ParsedBinding[] {
   return result.bindings
 }
 
-/**
- * Load keybindings synchronously with validation warnings.
- * Uses cached values if available.
- *
- * For external users, always returns default bindings only.
- * User customization is currently gated to Anthropic employees.
- */
 export function loadKeybindingsSyncWithWarnings(): KeybindingsLoadResult {
   if (cachedBindings) {
     return { bindings: cachedBindings, warnings: cachedWarnings }
@@ -232,7 +199,7 @@ export function loadKeybindingsSyncWithWarnings(): KeybindingsLoadResult {
 
   const defaultBindings = getDefaultParsedBindings()
 
-  // Skip user config loading for external users
+  
   if (!isKeybindingCustomizationEnabled()) {
     cachedBindings = defaultBindings
     cachedWarnings = []
@@ -242,16 +209,16 @@ export function loadKeybindingsSyncWithWarnings(): KeybindingsLoadResult {
   const userPath = getKeybindingsPath()
 
   try {
-    // sync IO: called from sync context (React useState initializer)
+    
     const content = readFileSync(userPath, 'utf-8')
     const parsed: unknown = jsonParse(content)
 
-    // Extract bindings array from object wrapper format: { "bindings": [...] }
+    
     let userBlocks: unknown
     if (typeof parsed === 'object' && parsed !== null && 'bindings' in parsed) {
       userBlocks = (parsed as { bindings: unknown }).bindings
     } else {
-      // Invalid format - missing bindings property
+      
       cachedBindings = defaultBindings
       cachedWarnings = [
         {
@@ -264,7 +231,7 @@ export function loadKeybindingsSyncWithWarnings(): KeybindingsLoadResult {
       return { bindings: cachedBindings, warnings: cachedWarnings }
     }
 
-    // Validate structure - bindings must be an array of valid keybinding blocks
+    
     if (!isKeybindingBlockArray(userBlocks)) {
       const errorMessage = !Array.isArray(userBlocks)
         ? '"bindings" must be an array'
@@ -292,7 +259,7 @@ export function loadKeybindingsSyncWithWarnings(): KeybindingsLoadResult {
 
     logCustomBindingsLoadedOncePerDay(userParsed.length)
 
-    // Run validation - check for duplicate keys in raw JSON first
+    
     const duplicateKeyWarnings = checkDuplicateKeysInJson(content)
     cachedWarnings = [
       ...duplicateKeyWarnings,
@@ -306,23 +273,17 @@ export function loadKeybindingsSyncWithWarnings(): KeybindingsLoadResult {
 
     return { bindings: cachedBindings, warnings: cachedWarnings }
   } catch {
-    // File doesn't exist or error - use defaults (user can run /keybindings to create)
+    
     cachedBindings = defaultBindings
     cachedWarnings = []
     return { bindings: cachedBindings, warnings: cachedWarnings }
   }
 }
 
-/**
- * Initialize file watching for keybindings.json.
- * Call this once when the app starts.
- *
- * For external users, this is a no-op since user customization is disabled.
- */
 export async function initializeKeybindingWatcher(): Promise<void> {
   if (initialized || disposed) return
 
-  // Skip file watching for external users
+  
   if (!isKeybindingCustomizationEnabled()) {
     logForDebugging(
       '[keybindings] Skipping file watcher - user customization disabled',
@@ -347,7 +308,7 @@ export async function initializeKeybindingWatcher(): Promise<void> {
     return
   }
 
-  // Set initialized only after we've confirmed we can watch
+  
   initialized = true
 
   logForDebugging(`[keybindings] Watching for changes to ${userPath}`)
@@ -368,13 +329,10 @@ export async function initializeKeybindingWatcher(): Promise<void> {
   watcher.on('change', handleChange)
   watcher.on('unlink', handleDelete)
 
-  // Register cleanup
+  
   registerCleanup(async () => disposeKeybindingWatcher())
 }
 
-/**
- * Clean up the file watcher.
- */
 export function disposeKeybindingWatcher(): void {
   disposed = true
   if (watcher) {
@@ -384,10 +342,6 @@ export function disposeKeybindingWatcher(): void {
   keybindingsChanged.clear()
 }
 
-/**
- * Subscribe to keybinding changes.
- * The listener receives the new parsed bindings when the file changes.
- */
 export const subscribeToKeybindingChanges = keybindingsChanged.subscribe
 
 async function handleChange(path: string): Promise<void> {
@@ -398,7 +352,7 @@ async function handleChange(path: string): Promise<void> {
     cachedBindings = result.bindings
     cachedWarnings = result.warnings
 
-    // Notify all listeners with the full result
+    
     keybindingsChanged.emit(result)
   } catch (error) {
     logForDebugging(`[keybindings] Error reloading: ${errorMessage(error)}`)
@@ -408,7 +362,7 @@ async function handleChange(path: string): Promise<void> {
 function handleDelete(path: string): void {
   logForDebugging(`[keybindings] Detected deletion of ${path}`)
 
-  // Reset to defaults when file is deleted
+  
   const defaultBindings = getDefaultParsedBindings()
   cachedBindings = defaultBindings
   cachedWarnings = []
@@ -416,17 +370,10 @@ function handleDelete(path: string): void {
   keybindingsChanged.emit({ bindings: defaultBindings, warnings: [] })
 }
 
-/**
- * Get the cached keybinding warnings.
- * Returns empty array if no warnings or bindings haven't been loaded yet.
- */
 export function getCachedKeybindingWarnings(): KeybindingWarning[] {
   return cachedWarnings
 }
 
-/**
- * Reset internal state for testing.
- */
 export function resetKeybindingLoaderForTesting(): void {
   initialized = false
   disposed = false

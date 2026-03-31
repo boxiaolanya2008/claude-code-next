@@ -27,7 +27,6 @@ export function isSDKMessage(value: unknown): value is SDKMessage {
   )
 }
 
-/** Type predicate for control_response messages from the server. */
 export function isSDKControlResponse(
   value: unknown,
 ): value is SDKControlResponse {
@@ -40,7 +39,6 @@ export function isSDKControlResponse(
   )
 }
 
-/** Type predicate for control_request messages from the server. */
 export function isSDKControlRequest(
   value: unknown,
 ): value is SDKControlRequest {
@@ -54,13 +52,8 @@ export function isSDKControlRequest(
   )
 }
 
-/**
- * True for message types that should be forwarded to the bridge transport.
- * The server only wants user/assistant turns and slash-command system events;
- * everything else (tool_result, progress, etc.) is internal REPL chatter.
- */
 export function isEligibleBridgeMessage(m: Message): boolean {
-  // Virtual messages (REPL inner calls) are display-only — bridge/SDK
+  
   
   if ((m.type === 'user' || m.type === 'assistant') && m.isVirtual) {
     return false
@@ -72,19 +65,6 @@ export function isEligibleBridgeMessage(m: Message): boolean {
   )
 }
 
-/**
- * Extract title-worthy text from a Message for onUserMessage. Returns
- * undefined for messages that shouldn't title the session: non-user, meta
- * (nudges), tool results, compact summaries, non-human origins (task
- * notifications, channel messages), or pure display-tag content
- * (<ide_opened_file>, <session-start-hook>, etc.).
- *
- * Synthetic interrupts ([Request interrupted by user]) are NOT filtered here —
- * isSyntheticMessage lives in messages.ts (heavy import, pulls command
- * registry). The initialMessages path in initReplBridge checks it; the
- * writeMessages path reaching an interrupt as the *first* message is
- * implausible (an interrupt implies a prior prompt already flowed through).
- */
 export function extractTitleText(m: Message): string | undefined {
   if (m.type !== 'user' || m.isMeta || m.toolUseResult || m.isCompactSummary)
     return undefined
@@ -106,8 +86,6 @@ export function extractTitleText(m: Message): string | undefined {
   return clean || undefined
 }
 
-// ─── Ingress routing ─────────────────────────────────────────────────────────
-
 export function handleIngressMessage(
   data: string,
   recentPostedUUIDs: BoundedUUIDSet,
@@ -126,7 +104,7 @@ export function handleIngressMessage(
       return
     }
 
-    // control_request from the server (initialize, set_model, can_use_tool).
+    
     
     if (isSDKControlRequest(parsed)) {
       logForDebugging(
@@ -138,7 +116,7 @@ export function handleIngressMessage(
 
     if (!isSDKMessage(parsed)) return
 
-    // Check for UUID to detect echoes of our own messages
+    
     const uuid =
       'uuid' in parsed && typeof parsed.uuid === 'string'
         ? parsed.uuid
@@ -151,11 +129,11 @@ export function handleIngressMessage(
       return
     }
 
-    // Defensive dedup: drop inbound prompts we've already forwarded. The
-    // SSE seq-num carryover (lastTransportSequenceNum) is the primary fix
-    // for history-replay; this catches edge cases where that negotiation
-    // fails (server ignores from_sequence_num, transport died before
-    // receiving any frames, etc).
+    
+    
+    
+    
+    
     if (uuid && recentInboundUUIDs.has(uuid)) {
       logForDebugging(
         `[bridge:repl] Ignoring re-delivered inbound: type=${parsed.type} uuid=${uuid}`,
@@ -172,7 +150,7 @@ export function handleIngressMessage(
       logEvent('tengu_bridge_message_received', {
         is_repl: true,
       })
-      // Fire-and-forget — handler may be async (attachment resolution).
+      
       void onInboundMessage?.(parsed)
     } else {
       logForDebugging(
@@ -186,18 +164,11 @@ export function handleIngressMessage(
   }
 }
 
-// ─── Server-initiated control requests ───────────────────────────────────────
-
 export type ServerControlRequestHandlers = {
   transport: ReplBridgeTransport | null
   sessionId: string
-  /**
-   * When true, all mutable requests (interrupt, set_model, set_permission_mode,
-   * set_max_thinking_tokens) reply with an error instead of false-success.
-   * initialize still replies success — the server kills the connection otherwise.
-   * Used by the outbound-only bridge mode and the SDK's /bridge subpath so claude.ai sees a
-   * proper error instead of "action succeeded but nothing happened locally".
-   */
+  
+
   outboundOnly?: boolean
   onInterrupt?: () => void
   onSetModel?: (model: string | undefined) => void
@@ -254,7 +225,7 @@ export function handleServerControlRequest(
 
   switch (request.request.subtype) {
     case 'initialize':
-      // Respond with minimal capabilities — the REPL handles
+      
       
       response = {
         type: 'control_response',
@@ -296,13 +267,13 @@ export function handleServerControlRequest(
       break
 
     case 'set_permission_mode': {
-      // The callback returns a policy verdict so we can send an error
       
       
       
       
       
-      // so success would lie to the client.
+      
+      
       const verdict = onSetPermissionMode?.(request.request.mode) ?? {
         ok: false,
         error:
@@ -341,8 +312,8 @@ export function handleServerControlRequest(
       break
 
     default:
-      // Unknown subtype — respond with error so the server doesn't
-      // hang waiting for a reply that never comes.
+      
+      
       response = {
         type: 'control_response',
         response: {
@@ -360,12 +331,6 @@ export function handleServerControlRequest(
   )
 }
 
-// ─── Result message (for session archival on teardown) ───────────────────────
-
-/**
- * Build a minimal `SDKResultSuccess` message for session archival.
- * The server needs this event before a WS close to trigger archival.
- */
 export function makeResultMessage(sessionId: string): SDKResultSuccess {
   return {
     type: 'result',
@@ -385,17 +350,6 @@ export function makeResultMessage(sessionId: string): SDKResultSuccess {
   }
 }
 
-// ─── BoundedUUIDSet (echo-dedup ring buffer) ─────────────────────────────────
-
-/**
- * FIFO-bounded set backed by a circular buffer. Evicts the oldest entry
- * when capacity is reached, keeping memory usage constant at O(capacity).
- *
- * Messages are added in chronological order, so evicted entries are always
- * the oldest. The caller relies on external ordering (the hook's
- * lastWrittenIndexRef) as the primary dedup — this set is a secondary
- * safety net for echo filtering and race-condition dedup.
- */
 export class BoundedUUIDSet {
   private readonly capacity: number
   private readonly ring: (string | undefined)[]
@@ -409,7 +363,7 @@ export class BoundedUUIDSet {
 
   add(uuid: string): void {
     if (this.set.has(uuid)) return
-    // Evict the entry at the current write position (if occupied)
+    
     const evicted = this.ring[this.writeIdx]
     if (evicted !== undefined) {
       this.set.delete(evicted)

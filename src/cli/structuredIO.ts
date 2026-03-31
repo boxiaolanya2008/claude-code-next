@@ -91,7 +91,7 @@ function buildRequiresActionDetails(
   toolUseID: string,
   requestId: string,
 ): RequiresActionDetails {
-  // Per-tool summary methods may throw on malformed input; permission
+  
   
   let description: string
   try {
@@ -117,11 +117,6 @@ type PendingRequest<T> = {
   schema?: z.Schema
   request: SDKControlRequest
 }
-
-/**
- * Provides a structured way to read and write SDK messages from stdio,
- * capturing the SDK protocol.
- */
 
 const MAX_RESOLVED_TOOL_USE_IDS = 1000
 
@@ -150,7 +145,7 @@ export class StructuredIO {
   private onControlRequestSent?: (request: SDKControlRequest) => void
   private onControlRequestResolved?: (requestId: string) => void
 
-  // sendRequest() and print.ts both enqueue here; the drain loop is the
+  
   
   readonly outbound = new Stream<StdoutMessage>()
 
@@ -162,15 +157,13 @@ export class StructuredIO {
     this.structuredInput = this.read()
   }
 
-  /**
-   * Records a tool_use ID as resolved so that late/duplicate control_response
-   * messages for the same tool are ignored by the orphan handler.
-   */
+  
+
   private trackResolvedToolUseId(request: SDKControlRequest): void {
     if (request.request.subtype === 'can_use_tool') {
       this.resolvedToolUseIds.add(request.request.tool_use_id)
       if (this.resolvedToolUseIds.size > MAX_RESOLVED_TOOL_USE_IDS) {
-        // Evict the oldest entry (Sets iterate in insertion order)
+        
         const first = this.resolvedToolUseIds.values().next().value
         if (first !== undefined) {
           this.resolvedToolUseIds.delete(first)
@@ -179,21 +172,18 @@ export class StructuredIO {
     }
   }
 
-  /** Flush pending internal events. No-op for non-remote IO. Overridden by RemoteIO. */
+  
   flushInternalEvents(): Promise<void> {
     return Promise.resolve()
   }
 
-  /** Internal-event queue depth. Overridden by RemoteIO; zero otherwise. */
+  
   get internalEventsPending(): number {
     return 0
   }
 
-  /**
-   * Queue a user turn to be yielded before the next message from this.input.
-   * Works before iteration starts and mid-stream — read() re-checks
-   * prependedLines between each yielded message.
-   */
+  
+
   prependUserMessage(content: string): void {
     this.prependedLines.push(
       jsonStringify({
@@ -246,7 +236,7 @@ export class StructuredIO {
     }
     this.inputClosed = true
     for (const request of this.pendingRequests.values()) {
-      // Reject all pending requests if the input stream
+      
       request.reject(
         new Error('Tool permission stream closed before response received'),
       )
@@ -265,14 +255,8 @@ export class StructuredIO {
     this.unexpectedResponseCallback = callback
   }
 
-  /**
-   * Inject a control_response message to resolve a pending permission request.
-   * Used by the bridge to feed permission responses from claude.ai into the
-   * SDK permission flow.
-   *
-   * Also sends a control_cancel_request to the SDK consumer so its canUseTool
-   * callback is aborted via the signal — otherwise the callback hangs.
-   */
+  
+
   injectControlResponse(response: SDKControlResponse): void {
     const requestId = response.response?.request_id
     if (!requestId) return
@@ -301,22 +285,16 @@ export class StructuredIO {
     }
   }
 
-  /**
-   * Register a callback invoked whenever a can_use_tool control_request
-   * is written to stdout. Used by the bridge to forward permission
-   * requests to claude.ai.
-   */
+  
+
   setOnControlRequestSent(
     callback: ((request: SDKControlRequest) => void) | undefined,
   ): void {
     this.onControlRequestSent = callback
   }
 
-  /**
-   * Register a callback invoked when a can_use_tool control_response arrives
-   * from the SDK consumer (via stdin). Used by the bridge to cancel the
-   * stale permission prompt on claude.ai when the SDK consumer wins the race.
-   */
+  
+
   setOnControlRequestResolved(
     callback: ((requestId: string) => void) | undefined,
   ): void {
@@ -326,7 +304,7 @@ export class StructuredIO {
   private async processLine(
     line: string,
   ): Promise<StdinMessage | SDKMessage | undefined> {
-    // Skip empty lines (e.g. from double newlines in piped stdin)
+    
     if (!line) {
       return undefined
     }
@@ -335,11 +313,11 @@ export class StructuredIO {
         | StdinMessage
         | SDKMessage
       if (message.type === 'keep_alive') {
-        // Silently ignore keep-alive messages
+        
         return undefined
       }
       if (message.type === 'update_environment_variables') {
-        // Apply environment variable updates directly to process.env.
+        
         
         
         
@@ -353,7 +331,7 @@ export class StructuredIO {
         return undefined
       }
       if (message.type === 'control_response') {
-        // Close lifecycle for every control_response, including duplicates
+        
         
         
         
@@ -366,7 +344,7 @@ export class StructuredIO {
         }
         const request = this.pendingRequests.get(message.response.request_id)
         if (!request) {
-          // Check if this tool_use was already resolved through the normal
+          
           
           
           
@@ -415,7 +393,7 @@ export class StructuredIO {
         } else {
           request.resolve({})
         }
-        // Propagate control responses when replay is enabled
+        
         if (this.replayUserMessages) {
           return message
         }
@@ -448,7 +426,7 @@ export class StructuredIO {
       }
       return message
     } catch (error) {
-      // biome-ignore lint/suspicious/noConsole:: intentional console output
+      
       console.error(`Error parsing streaming input line: ${line}: ${error}`)
       
       process.exit(1)
@@ -489,7 +467,7 @@ export class StructuredIO {
       
       const request = this.pendingRequests.get(requestId)
       if (request) {
-        // Track the tool_use ID as resolved before rejecting, so that a
+        
         
         this.trackResolvedToolUseId(request.request)
         request.reject(new AbortError())
@@ -551,7 +529,7 @@ export class StructuredIO {
         return mainPermissionResult
       }
 
-      // Run PermissionRequest hooks in parallel with the SDK permission
+      
       
       
       
@@ -566,7 +544,7 @@ export class StructuredIO {
       parentSignal.addEventListener('abort', onParentAbort, { once: true })
 
       try {
-        // Start the hook evaluation (runs in background)
+        
         const hookPromise = executePermissionRequestHooksForSDK(
           tool.name,
           toolUseID,
@@ -605,13 +583,13 @@ export class StructuredIO {
 
         if (winner.source === 'hook') {
           if (winner.decision) {
-            // Hook decided — abort the pending SDK request.
+            
             
             sdkPromise.catch(() => {})
             hookAbortController.abort()
             return winner.decision
           }
-          // Hook passed through (no decision) — wait for the SDK prompt
+          
           const sdkResult = await sdkPromise
           return permissionPromptToolResultToPermissionDecision(
             sdkResult.result,
@@ -621,7 +599,7 @@ export class StructuredIO {
           )
         }
 
-        // SDK prompt responded first — use its result (hook still running
+        
         
         return permissionPromptToolResultToPermissionDecision(
           winner.result,
@@ -641,7 +619,7 @@ export class StructuredIO {
           toolUseContext,
         )
       } finally {
-        // Only transition back to 'running' if no other permission prompts
+        
         
         if (this.getPendingPermissionRequests().length === 0) {
           notifySessionStateChanged('running')
@@ -673,7 +651,7 @@ export class StructuredIO {
           )
           return result
         } catch (error) {
-          // biome-ignore lint/suspicious/noConsole:: intentional console output
+          
           console.error(`Error in hook callback ${callbackId}:`, error)
           return {}
         }
@@ -681,9 +659,8 @@ export class StructuredIO {
     }
   }
 
-  /**
-   * Sends an elicitation request to the SDK consumer and returns the response.
-   */
+  
+
   async handleElicitation(
     serverName: string,
     message: string,
@@ -713,14 +690,8 @@ export class StructuredIO {
     }
   }
 
-  /**
-   * Creates a SandboxAskCallback that forwards sandbox network permission
-   * requests to the SDK host as can_use_tool control_requests.
-   *
-   * This piggybacks on the existing can_use_tool protocol with a synthetic
-   * tool name so that SDK hosts (VS Code, CCR, etc.) can prompt the user
-   * for network access without requiring a new protocol subtype.
-   */
+  
+
   createSandboxAskCallback(): (hostPattern: {
     host: string
     port?: number
@@ -739,15 +710,14 @@ export class StructuredIO {
         )
         return result.behavior === 'allow'
       } catch {
-        // If the request fails (stream closed, abort, etc.), deny the connection
+        
         return false
       }
     }
   }
 
-  /**
-   * Sends an MCP message to an SDK server and waits for the response
-   */
+  
+
   async sendMcpMessage(
     serverName: string,
     message: JSONRPCMessage,
@@ -767,16 +737,12 @@ export class StructuredIO {
 }
 
 function exitWithMessage(message: string): never {
-  // biome-ignore lint/suspicious/noConsole:: intentional console output
+  
   console.error(message)
   
   process.exit(1)
 }
 
-/**
- * Execute PermissionRequest hooks and return a decision if one is made.
- * Returns undefined if no hook made a decision.
- */
 async function executePermissionRequestHooksForSDK(
   toolName: string,
   toolUseID: string,
@@ -834,7 +800,7 @@ async function executePermissionRequestHooksForSDK(
           },
         }
       } else {
-        // Hook denied the permission
+        
         return {
           behavior: 'deny',
           message:

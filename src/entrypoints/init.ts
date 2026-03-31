@@ -69,7 +69,7 @@ export const init = memoize(async (): Promise<void> => {
     applySafeConfigEnvironmentVariables()
 
     
-    // before any TLS connections. Bun caches the TLS cert store at boot
+    
     
     applyExtraCACertsFromConfig()
 
@@ -84,7 +84,7 @@ export const init = memoize(async (): Promise<void> => {
 
     
     
-    // the module cache by this point (firstPartyEventLogger imports it), so the
+    
     
     void Promise.all([
       import('../services/analytics/firstPartyEventLogger.js'),
@@ -159,7 +159,7 @@ export const init = memoize(async (): Promise<void> => {
     
     
     
-    if (isEnvTruthy(process.env.CLAUDE_CODE_REMOTE)) {
+    if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_REMOTE)) {
       try {
         const { initUpstreamProxy, getUpstreamProxyEnv } = await import(
           '../upstreamproxy/upstreamproxy.js'
@@ -177,7 +177,7 @@ export const init = memoize(async (): Promise<void> => {
       }
     }
 
-    // Set up git-bash if relevant
+    
     setShellIfWindows()
 
     
@@ -209,9 +209,9 @@ export const init = memoize(async (): Promise<void> => {
     profileCheckpoint('init_function_end')
   } catch (error) {
     if (error instanceof ConfigParseError) {
-      // Skip the interactive Ink dialog when we can't safely render it.
-      // The dialog breaks JSON consumers (e.g. desktop marketplace plugin
-      // manager running `plugin marketplace list --json` in a VM sandbox).
+      
+      
+      
       if (getIsNonInteractiveSession()) {
         process.stderr.write(
           `Configuration error in ${error.filePath}: ${error.message}\n`,
@@ -220,13 +220,13 @@ export const init = memoize(async (): Promise<void> => {
         return
       }
 
-      // Show the invalid config dialog with the error object and wait for it to complete
+      
       return import('../components/InvalidConfigDialog.js').then(m =>
         m.showInvalidConfigDialog({ error }),
       )
-      // Dialog itself handles process.exit, so we don't need additional cleanup here
+      
     } else {
-      // For non-config errors, rethrow them
+      
       throw error
     }
   }
@@ -234,7 +234,7 @@ export const init = memoize(async (): Promise<void> => {
 
 export function initializeTelemetryAfterTrust(): void {
   if (isEligibleForRemoteManagedSettings()) {
-    // For SDK/headless mode with beta tracing, initialize eagerly first
+    
     
     
     if (getIsNonInteractiveSession() && isBetaTracingEnabled()) {
@@ -275,30 +275,30 @@ export function initializeTelemetryAfterTrust(): void {
 
 async function doInitializeTelemetry(): Promise<void> {
   if (telemetryInitialized) {
-    // Already initialized, nothing to do
+    
     return
   }
 
-  // Set flag before init to prevent double initialization
+  
   telemetryInitialized = true
   try {
     await setMeterState()
   } catch (error) {
-    // Reset flag on failure so subsequent calls can retry
+    
     telemetryInitialized = false
     throw error
   }
 }
 
 async function setMeterState(): Promise<void> {
-  // Lazy-load instrumentation to defer ~400KB of OpenTelemetry + protobuf
+  
   const { initializeTelemetry } = await import(
     '../utils/telemetry/instrumentation.js'
   )
   
   const meter = await initializeTelemetry()
   if (meter) {
-    // Create factory function for attributed counters
+    
     const createAttributedCounter = (
       name: string,
       options: MetricOptions,
@@ -307,7 +307,7 @@ async function setMeterState(): Promise<void> {
 
       return {
         add(value: number, additionalAttributes: Attributes = {}) {
-          // Always fetch fresh telemetry attributes to ensure they're up to date
+          
           const currentAttributes = getTelemetryAttributes()
           const mergedAttributes = {
             ...currentAttributes,
@@ -320,9 +320,9 @@ async function setMeterState(): Promise<void> {
 
     setMeter(meter, createAttributedCounter)
 
-    // Increment session counter here because the startup telemetry path
-    // runs before this async initialization completes, so the counter
-    // would be null there.
+    
+    
+    
     getSessionCounter()?.add(1)
   }
 }

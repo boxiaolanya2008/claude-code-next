@@ -57,10 +57,6 @@ import {
   setSessionMemoryConfig,
 } from './sessionMemoryUtils.js'
 
-// Feature Gate and Config (Cached - Non-blocking)
-
-// These functions return cached values from disk immediately without blocking
-
 import { errorMessage, getErrnoCode } from '../../utils/errors.js'
 import {
   getDynamicConfig_CACHED_MAY_BE_STALE,
@@ -71,19 +67,12 @@ function isSessionMemoryGateEnabled(): boolean {
   return getFeatureValue_CACHED_MAY_BE_STALE('tengu_session_memory', false)
 }
 
-/**
- * Get session memory config from cache.
- * Returns immediately without blocking - value may be stale.
- */
 function getSessionMemoryRemoteConfig(): Partial<SessionMemoryConfig> {
   return getDynamicConfig_CACHED_MAY_BE_STALE<Partial<SessionMemoryConfig>>(
     'tengu_sm_config',
     {},
   )
 }
-
-// ============================================================================
-// Module State
 
 let lastMemoryMessageUuid: string | undefined
 
@@ -118,8 +107,8 @@ function countToolCallsSince(
 }
 
 export function shouldExtractMemory(messages: Message[]): boolean {
-  // Check if we've met the initialization threshold
-  // Uses total context window tokens (same as autocompact) for consistent behavior
+  
+  
   const currentTokenCount = tokenCountWithEstimation(messages)
   if (!isSessionMemoryInitialized()) {
     if (!hasMetInitializationThreshold(currentTokenCount)) {
@@ -128,7 +117,7 @@ export function shouldExtractMemory(messages: Message[]): boolean {
     markSessionMemoryInitialized()
   }
 
-  // Check if we've met the minimum tokens between updates threshold
+  
   
   const hasMetTokenThreshold = hasMetUpdateThreshold(currentTokenCount)
 
@@ -144,7 +133,7 @@ export function shouldExtractMemory(messages: Message[]): boolean {
   const hasToolCallsInLastTurn = hasToolCallsInLastAssistantTurn(messages)
 
   
-  // 1. Both thresholds are met (tokens AND tool calls), OR
+  
   
   
   
@@ -197,7 +186,7 @@ async function setupSessionMemoryFile(
     }
   }
 
-  // Drop any cached entry so FileReadTool's dedup doesn't return a
+  
   
   toolUseContext.readFileState.delete(memoryPath)
   const result = await FileReadTool.call(
@@ -218,13 +207,8 @@ async function setupSessionMemoryFile(
   return { memoryPath, currentMemory }
 }
 
-/**
- * Initialize session memory config from remote config (lazy initialization).
- * Memoized - only runs once per session, subsequent calls return immediately.
- * Uses cached config values - non-blocking.
- */
 const initSessionMemoryConfigIfNeeded = memoize((): void => {
-  // Load config from cache (non-blocking, may be stale)
+  
   const remoteConfig = getSessionMemoryRemoteConfig()
 
   
@@ -258,13 +242,13 @@ const extractSessionMemory = sequential(async function (
 
   
   if (querySource !== 'repl_main_thread') {
-    // Don't log this - it's expected for subagents, teammates, etc.
+    
     return
   }
 
-  // Check gate lazily when hook runs (cached, non-blocking)
+  
   if (!isSessionMemoryGateEnabled()) {
-    // Log gate failure once per session (ant-only)
+    
     if (process.env.USER_TYPE === 'ant' && !hasLoggedGateFailure) {
       hasLoggedGateFailure = true
       logEvent('tengu_session_memory_gate_disabled', {})
@@ -272,7 +256,7 @@ const extractSessionMemory = sequential(async function (
     return
   }
 
-  // Initialize config from remote (lazy, only once)
+  
   initSessionMemoryConfigIfNeeded()
 
   if (!shouldExtractMemory(messages)) {
@@ -333,7 +317,7 @@ const extractSessionMemory = sequential(async function (
 
 export function initSessionMemory(): void {
   if (getIsRemoteMode()) return
-  // Session memory is used for compaction, so respect auto-compact settings
+  
   const autoCompactEnabled = isAutoCompactEnabled()
 
   
@@ -347,7 +331,7 @@ export function initSessionMemory(): void {
     return
   }
 
-  // Register hook unconditionally - gate check happens lazily when hook runs
+  
   registerPostSamplingHook(extractSessionMemory)
 }
 
@@ -357,10 +341,6 @@ export type ManualExtractionResult = {
   error?: string
 }
 
-/**
- * Manually trigger session memory extraction, bypassing threshold checks.
- * Used by the /summary command.
- */
 export async function manuallyExtractSessionMemory(
   messages: Message[],
   toolUseContext: ToolUseContext,
@@ -371,20 +351,20 @@ export async function manuallyExtractSessionMemory(
   markExtractionStarted()
 
   try {
-    // Create isolated context for setup to avoid polluting parent's cache
+    
     const setupContext = createSubagentContext(toolUseContext)
 
-    // Set up file system and read current state with isolated context
+    
     const { memoryPath, currentMemory } =
       await setupSessionMemoryFile(setupContext)
 
-    // Create extraction message
+    
     const userPrompt = await buildSessionMemoryUpdatePrompt(
       currentMemory,
       memoryPath,
     )
 
-    // Get system prompt for cache-safe params
+    
     const { tools, mainLoopModel } = toolUseContext.options
     const [rawSystemPrompt, userContext, systemContext] = await Promise.all([
       getSystemPrompt(tools, mainLoopModel),
@@ -393,7 +373,7 @@ export async function manuallyExtractSessionMemory(
     ])
     const systemPrompt = asSystemPrompt(rawSystemPrompt)
 
-    // Run session memory extraction using runForkedAgent
+    
     await runForkedAgent({
       promptMessages: [createUserMessage({ content: userPrompt })],
       cacheSafeParams: {
@@ -409,13 +389,13 @@ export async function manuallyExtractSessionMemory(
       overrides: { readFileState: setupContext.readFileState },
     })
 
-    // Log manual extraction event
+    
     logEvent('tengu_session_memory_manual_extraction', {})
 
-    // Record the context size at extraction for tracking minimumTokensBetweenUpdate
+    
     recordExtractionTokenCount(tokenCountWithEstimation(messages))
 
-    // Update lastSummarizedMessageId after successful completion
+    
     updateLastSummarizedMessageIdIfSafe(messages)
 
     return { success: true, memoryPath }
@@ -429,11 +409,6 @@ export async function manuallyExtractSessionMemory(
   }
 }
 
-// Helper functions
-
-/**
- * Creates a canUseTool function that only allows Edit for the exact memory file.
- */
 export function createMemoryFileCanUseTool(memoryPath: string): CanUseToolFn {
   return async (tool: Tool, input: unknown) => {
     if (
@@ -458,10 +433,6 @@ export function createMemoryFileCanUseTool(memoryPath: string): CanUseToolFn {
   }
 }
 
-/**
- * Updates lastSummarizedMessageId after successful extraction.
- * Only sets it if the last message doesn't have tool calls (to avoid orphaned tool_results).
- */
 function updateLastSummarizedMessageIdIfSafe(messages: Message[]): void {
   if (!hasToolCallsInLastAssistantTurn(messages)) {
     const lastMessage = messages[messages.length - 1]

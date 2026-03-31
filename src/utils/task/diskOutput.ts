@@ -29,27 +29,17 @@ export function getTaskOutputDir(): string {
   return _taskOutputDir
 }
 
-/** Test helper — clears the memoized dir. */
 export function _resetTaskOutputDirForTest(): void {
   _taskOutputDir = undefined
 }
 
-/**
- * Ensure the task output directory exists
- */
 async function ensureOutputDir(): Promise<void> {
   await mkdir(getTaskOutputDir(), { recursive: true })
 }
 
-/**
- * Get the output file path for a task
- */
 export function getTaskOutputPath(taskId: string): string {
   return join(getTaskOutputDir(), `${taskId}.output`)
 }
-
-// Tracks fire-and-forget promises (initTaskOutput, initTaskOutputAsSymlink,
-// evictTaskOutput, #drain) so tests can drain before teardown. Prevents the
 
 const _pendingOps = new Set<Promise<unknown>>()
 function track<T>(p: Promise<T>): Promise<T> {
@@ -58,14 +48,6 @@ function track<T>(p: Promise<T>): Promise<T> {
   return p
 }
 
-/**
- * Encapsulates async disk writes for a single task's output.
- *
- * Uses a flat array as a write queue processed by a single drain loop,
- * so each chunk can be GC'd immediately after its write completes.
- * This avoids the memory retention problem of chained .then() closures
- * where every reaction captures its data until the whole chain resolves.
- */
 export class DiskTaskOutput {
   #path: string
   #fileHandle: FileHandle | null = null
@@ -83,7 +65,7 @@ export class DiskTaskOutput {
     if (this.#capped) {
       return
     }
-    // content.length (UTF-16 code units) undercounts UTF-8 bytes by at most ~3×.
+    
     
     this.#bytesWritten += content.length
     if (this.#bytesWritten > MAX_TASK_OUTPUT_BYTES) {
@@ -138,7 +120,7 @@ export class DiskTaskOutput {
           await fileHandle.close()
         }
       }
-      // you could have another .append() while we're waiting for the file to close, so we check the queue again before fully exiting
+      
       if (this.#queue.length) {
         continue
       }
@@ -148,18 +130,18 @@ export class DiskTaskOutput {
   }
 
   #writeAllChunks(): Promise<void> {
-    // This code is extremely precise.
-    // You **must not** add an await here!! That will cause memory to balloon as the queue grows.
-    // It's okay to add an `await` to the caller of this method (e.g. #drainAllChunks) because that won't cause Buffer[] to be kept alive in memory.
+    
+    
+    
     return this.#fileHandle!.appendFile(
-      // This variable needs to get GC'd ASAP.
+      
       this.#queueToBuffers(),
     )
   }
 
-  /** Keep this in a separate method so that GC doesn't keep it alive for any longer than it should. */
+  
   #queueToBuffers(): Buffer {
-    // Use .splice to in-place mutate the array, informing the GC it can free it.
+    
     const queue = this.#queue.splice(0, this.#queue.length)
 
     let totalLength = 0
@@ -180,11 +162,11 @@ export class DiskTaskOutput {
     try {
       await this.#drainAllChunks()
     } catch (e) {
-      // Transient fs errors (EMFILE on busy CI, EPERM on Windows pending-
       
       
       
-      // (queue is intact if open() failed), then log and give up.
+      
+      
       logError(e)
       if (this.#queue.length > 0) {
         try {
@@ -223,18 +205,10 @@ function getOrCreateOutput(taskId: string): DiskTaskOutput {
   return output
 }
 
-/**
- * Append output to a task's disk file asynchronously.
- * Creates the file if it doesn't exist.
- */
 export function appendTaskOutput(taskId: string, content: string): void {
   getOrCreateOutput(taskId).append(content)
 }
 
-/**
- * Wait for all pending writes for a task to complete.
- * Useful before reading output to ensure all data is flushed.
- */
 export async function flushTaskOutput(taskId: string): Promise<void> {
   const output = outputs.get(taskId)
   if (output) {
@@ -242,11 +216,6 @@ export async function flushTaskOutput(taskId: string): Promise<void> {
   }
 }
 
-/**
- * Evict a task's DiskTaskOutput from the in-memory map after flushing.
- * Unlike cleanupTaskOutput, this does not delete the output file on disk.
- * Call this when a task completes and its output has been consumed.
- */
 export function evictTaskOutput(taskId: string): Promise<void> {
   return track(
     (async () => {
@@ -259,10 +228,6 @@ export function evictTaskOutput(taskId: string): Promise<void> {
   )
 }
 
-/**
- * Get delta (new content) since last read.
- * Reads only from the byte offset, up to maxBytes — never loads the full file.
- */
 export async function getTaskOutputDelta(
   taskId: string,
   fromOffset: number,
@@ -291,10 +256,6 @@ export async function getTaskOutputDelta(
   }
 }
 
-/**
- * Get output for a task, reading the tail of the file.
- * Caps at maxBytes to avoid loading multi-GB files into memory.
- */
 export async function getTaskOutput(
   taskId: string,
   maxBytes: number = DEFAULT_MAX_READ_BYTES,
@@ -318,9 +279,6 @@ export async function getTaskOutput(
   }
 }
 
-/**
- * Get the current size (offset) of a task's output file.
- */
 export async function getTaskOutputSize(taskId: string): Promise<number> {
   try {
     return (await stat(getTaskOutputPath(taskId))).size
@@ -334,9 +292,6 @@ export async function getTaskOutputSize(taskId: string): Promise<number> {
   }
 }
 
-/**
- * Clean up a task's output file and write queue.
- */
 export async function cleanupTaskOutput(taskId: string): Promise<void> {
   const output = outputs.get(taskId)
   if (output) {
@@ -355,10 +310,6 @@ export async function cleanupTaskOutput(taskId: string): Promise<void> {
   }
 }
 
-/**
- * Initialize output file for a new task.
- * Creates an empty file to ensure the path exists.
- */
 export function initTaskOutput(taskId: string): Promise<string> {
   return track(
     (async () => {
@@ -382,10 +333,6 @@ export function initTaskOutput(taskId: string): Promise<string> {
   )
 }
 
-/**
- * Initialize output file as a symlink to another file (e.g., agent transcript).
- * Tries to create the symlink first; if a file already exists, removes it and retries.
- */
 export function initTaskOutputAsSymlink(
   taskId: string,
   targetPath: string,

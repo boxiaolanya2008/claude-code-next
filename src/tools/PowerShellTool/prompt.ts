@@ -24,14 +24,14 @@ export function getMaxTimeoutMs(): number {
 }
 
 function getBackgroundUsageNote(): string | null {
-  if (isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_BACKGROUND_TASKS)) {
+  if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_BACKGROUND_TASKS)) {
     return null
   }
   return `  - You can use the \`run_in_background\` parameter to run the command in the background. Only use this if you don't need the result immediately and are OK being notified when the command completes later. You do not need to check the output right away - you'll be notified when it finishes.`
 }
 
 function getSleepGuidance(): string | null {
-  if (isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_BACKGROUND_TASKS)) {
+  if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_BACKGROUND_TASKS)) {
     return null
   }
   return `  - Avoid unnecessary \`Start-Sleep\` commands:
@@ -43,11 +43,6 @@ function getSleepGuidance(): string | null {
     - If you must sleep, keep the duration short (1-5 seconds) to avoid blocking the user.`
 }
 
-/**
- * Version-specific syntax guidance. The model's training data covers both
- * editions but it can't tell which one it's targeting, so it either emits
- * pwsh-7 syntax on 5.1 (parser error → exit 1) or needlessly avoids && on 7.
- */
 function getEditionSection(edition: PowerShellEdition | null): string {
   if (edition === 'desktop') {
     return `PowerShell edition: Windows PowerShell 5.1 (powershell.exe)
@@ -63,7 +58,7 @@ function getEditionSection(edition: PowerShellEdition | null): string {
    - Ternary (\`$cond ? $a : $b\`), null-coalescing (\`??\`), and null-conditional (\`?.\`) operators are available.
    - Default file encoding is UTF-8 without BOM.`
   }
-  // Detection not yet resolved (first prompt build before any tool call) or
+  
   
   return `PowerShell edition: unknown — assume Windows PowerShell 5.1 for compatibility
    - Do NOT use \`&&\`, \`||\`, ternary \`?:\`, null-coalescing \`??\`, or null-conditional \`?.\`. These are PowerShell 7+ only and parser-error on 5.1.

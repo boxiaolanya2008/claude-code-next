@@ -128,7 +128,7 @@ function handleAcceptSession(
     return
   }
 
-  // Generate permission updates if path is provided
+  
   const suggestions = path
     ? generateSuggestions(path, operationType, toolPermissionContext)
     : []

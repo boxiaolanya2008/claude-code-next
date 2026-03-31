@@ -37,7 +37,7 @@ export function startBackgroundHousekeeping(): void {
 
   let needsCleanup = true
   async function runVerySlowOps(): Promise<void> {
-    // If the user did something in the last minute, don't make them wait for these slow operations to run.
+    
     if (
       getIsInteractive() &&
       getLastInteractionTime() > Date.now() - 1000 * 60
@@ -54,7 +54,7 @@ export function startBackgroundHousekeeping(): void {
       await cleanupOldMessageFilesInBackground()
     }
 
-    // If the user did something in the last minute, don't make them wait for these slow operations to run.
+    
     if (
       getIsInteractive() &&
       getLastInteractionTime() > Date.now() - 1000 * 60

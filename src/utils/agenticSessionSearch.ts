@@ -50,9 +50,6 @@ type AgenticSearchResult = {
   relevant_indices: number[]
 }
 
-/**
- * Extracts searchable text content from a message.
- */
 function extractMessageText(message: SerializedMessage): string {
   if (message.type !== 'user' && message.type !== 'assistant') {
     return ''
@@ -79,9 +76,6 @@ function extractMessageText(message: SerializedMessage): string {
   return ''
 }
 
-/**
- * Extracts a truncated transcript from session messages.
- */
 function extractTranscript(messages: SerializedMessage[]): string {
   if (messages.length === 0) return ''
 
@@ -106,11 +100,8 @@ function extractTranscript(messages: SerializedMessage[]): string {
     : text
 }
 
-/**
- * Checks if a log contains the query term in any searchable field.
- */
 function logContainsQuery(log: LogOption, queryLower: string): boolean {
-  // Check title
+  
   const title = getLogDisplayTitle(log).toLowerCase()
   if (title.includes(queryLower)) return true
 
@@ -138,10 +129,6 @@ function logContainsQuery(log: LogOption, queryLower: string): boolean {
   return false
 }
 
-/**
- * Performs an agentic search using Claude to find relevant sessions
- * based on semantic understanding of the query.
- */
 export async function agenticSessionSearch(
   query: string,
   logs: LogOption[],
@@ -173,7 +160,7 @@ export async function agenticSessionSearch(
     ]
   }
 
-  // Debug: log what data we have
+  
   logForDebugging(
     `Agentic search: ${logsToSearch.length}/${logs.length} logs, query="${query}", ` +
       `matching: ${matchingLogs.length}, with messages: ${count(logsToSearch, l => l.messages?.length > 0)}`,
@@ -212,27 +199,27 @@ export async function agenticSessionSearch(
         parts.push(`[custom title: ${log.customTitle}]`)
       }
 
-      // Tag
+      
       if (log.tag) {
         parts.push(`[tag: ${log.tag}]`)
       }
 
-      // Git branch
+      
       if (log.gitBranch) {
         parts.push(`[branch: ${log.gitBranch}]`)
       }
 
-      // Summary
+      
       if (log.summary) {
         parts.push(`- Summary: ${log.summary}`)
       }
 
-      // First prompt content (truncated)
+      
       if (log.firstPrompt && log.firstPrompt !== 'No prompt') {
         parts.push(`- First message: ${log.firstPrompt.slice(0, 300)}`)
       }
 
-      // Transcript excerpt (if messages are available)
+      
       if (log.messages && log.messages.length > 0) {
         const transcript = extractTranscript(log.messages)
         if (transcript) {
@@ -275,7 +262,7 @@ Find the sessions that are most relevant to this query.`
       return []
     }
 
-    // Debug: log the response
+    
     logForDebugging(`Agentic search response: ${textContent.text}`)
 
     

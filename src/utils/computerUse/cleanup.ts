@@ -42,14 +42,14 @@ export async function cleanupComputerUseAfterTurn(
     )
   }
 
-  // Zero-syscall pre-check so non-CU turns don't touch disk. Release is still
-  // idempotent (returns false if already released or owned by another session).
+  
+  
   if (!isLockHeldLocally()) return
 
-  // Unregister before lock release so the pump-retain drops as soon as the
-  // CU session ends. Idempotent — no-ops if registration failed at acquire.
-  // Swallow throws so a NAPI unregister error never prevents lock release —
-  // a held lock blocks the next CU session with "in use by another session".
+  
+  
+  
+  
   try {
     unregisterEscHotkey()
   } catch (err) {

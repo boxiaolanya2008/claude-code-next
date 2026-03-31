@@ -20,21 +20,6 @@ function shouldNotify(threshold: number): boolean {
   return process.env.NODE_ENV !== 'test' && !hasRecentInteraction(threshold)
 }
 
-// NOTE: User interaction tracking is now done in App.tsx's processKeysInBatch
-// function, which calls updateLastInteractionTime() when any input is received.
-// This avoids having a separate stdin 'data' listener that would compete with
-// the main 'readable' listener and cause dropped input characters.
-
-/**
- * Hook that manages desktop notifications after a timeout period.
- *
- * Shows a notification in two cases:
- * 1. Immediately if the app has been idle for longer than the threshold
- * 2. After the specified timeout if the user doesn't interact within that time
- *
- * @param message - The notification message to display
- * @param timeout - The timeout in milliseconds (defaults to 6000ms)
- */
 export function useNotifyAfterTimeout(
   message: string,
   notificationType: string,

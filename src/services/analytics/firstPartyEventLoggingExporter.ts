@@ -13,7 +13,7 @@ import {
   getIsNonInteractiveSession,
   getSessionId,
 } from '../../bootstrap/state.js'
-import { ClaudeCodeInternalEvent } from '../../types/generated/events_mono/claude_code/v1/claude_code_internal_event.js'
+import { ClaudeCodeInternalEvent } from '../../types/generated/events_mono/claude_code_next/v1/claude_code_next_internal_event.js'
 import { GrowthbookExperimentEvent } from '../../types/generated/events_mono/growthbook/v1/growthbook_experiment_event.js'
 import {
   getClaudeAIOAuthTokens,
@@ -42,7 +42,6 @@ function getStorageDir(): string {
   return path.join(getClaudeConfigHomeDir(), 'telemetry')
 }
 
-// API envelope - event_data is the JSON output from proto toJSON()
 type FirstPartyEventLoggingEvent = {
   event_type: 'ClaudeCodeInternalEvent' | 'GrowthbookExperimentEvent'
   event_data: unknown
@@ -52,21 +51,6 @@ type FirstPartyEventLoggingPayload = {
   events: FirstPartyEventLoggingEvent[]
 }
 
-/**
- * Exporter for 1st-party event logging to /api/event_logging/batch.
- *
- * Export cycles are controlled by OpenTelemetry's BatchLogRecordProcessor, which
- * triggers export() when either:
- * - Time interval elapses (default: 5 seconds via scheduledDelayMillis)
- * - Batch size is reached (default: 200 events via maxExportBatchSize)
- *
- * This exporter adds resilience on top:
- * - Append-only log for failed events (concurrency-safe)
- * - Quadratic backoff retry for failed events, dropped after maxAttempts
- * - Immediate retry of queued events when any export succeeds (endpoint is healthy)
- * - Chunking large event sets into smaller batches
- * - Auth fallback: retries without auth on 401 errors
- */
 export class FirstPartyEventLoggingExporter implements LogRecordExporter {
   private readonly endpoint: string
   private readonly timeout: number
@@ -99,15 +83,15 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
       maxAttempts?: number
       path?: string
       baseUrl?: string
-      // Injected killswitch probe. Checked per-POST so that disabling the
-      // firstParty sink also stops backoff retries (not just new emits).
-      // Passed in rather than imported to avoid a cycle with firstPartyEventLogger.ts.
+      
+      
+      
       isKilled?: () => boolean
       schedule?: (fn: () => Promise<void>, delayMs: number) => () => void
     } = {},
   ) {
-    // Default: prod, except when ANTHROPIC_BASE_URL is explicitly staging.
-    // Overridable via tengu_1p_event_batch_config.baseUrl.
+    
+    
     const baseUrl =
       options.baseUrl ||
       (process.env.ANTHROPIC_BASE_URL === 'https://api-staging.anthropic.com'
@@ -131,16 +115,16 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
         return () => clearTimeout(t)
       })
 
-    // Retry any failed events from previous runs of this session (in background)
+    
     void this.retryPreviousBatches()
   }
 
-  // Expose for testing
+  
   async getQueuedEventCount(): Promise<number> {
     return (await this.loadEventsFromCurrentBatch()).length
   }
 
-  // --- Storage helpers ---
+  
 
   private getCurrentBatchFilePath(): string {
     return path.join(
@@ -174,10 +158,10 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
         try {
           await unlink(filePath)
         } catch {
-          // File doesn't exist, nothing to delete
+          
         }
       } else {
-        // Ensure storage directory exists
+        
         await mkdir(getStorageDir(), { recursive: true })
         
         const content = events.map(e => jsonStringify(e)).join('\n') + '\n'
@@ -194,7 +178,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
   ): Promise<void> {
     if (events.length === 0) return
     try {
-      // Ensure storage directory exists
+      
       await mkdir(getStorageDir(), { recursive: true })
       
       const content = events.map(e => jsonStringify(e)).join('\n') + '\n'
@@ -208,11 +192,11 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
     try {
       await unlink(filePath)
     } catch {
-      // File doesn't exist or can't be deleted, ignore
+      
     }
   }
 
-  // --- Previous batch retry (startup) ---
+  
 
   private async retryPreviousBatches(): Promise<void> {
     try {
@@ -261,7 +245,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
         logForDebugging('1P event logging: previous batch retry succeeded')
       }
     } else {
-      // Save only the failed events back (not all original events)
+      
       await this.saveEventsToFile(filePath, failedEvents)
       if (process.env.USER_TYPE === 'ant') {
         logForDebugging(
@@ -305,10 +289,10 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
     resultCallback: (result: ExportResult) => void,
   ): Promise<void> {
     try {
-      // Filter for event logs only (by scope name)
+      
       const eventLogs = logs.filter(
         log =>
-          log.instrumentationScope?.name === 'com.anthropic.claude_code.events',
+          log.instrumentationScope?.name === 'com.anthropic.claude_code_next.events',
       )
 
       if (eventLogs.length === 0) {
@@ -316,7 +300,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
         return
       }
 
-      // Transform new logs (failed events are retried independently via backoff)
+      
       const events = this.transformLogsToEvents(eventLogs).events
 
       if (events.length === 0) {
@@ -334,7 +318,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
         return
       }
 
-      // Send events
+      
       const failedEvents = await this.sendEventsInBatches(events)
       this.attempts++
 
@@ -353,7 +337,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
         return
       }
 
-      // Success - reset backoff and immediately retry any queued events
+      
       this.resetBackoff()
       if ((await this.getQueuedEventCount()) > 0 && !this.isRetrying) {
         void this.retryFailedEvents()
@@ -376,7 +360,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
   private async sendEventsInBatches(
     events: FirstPartyEventLoggingEvent[],
   ): Promise<FirstPartyEventLoggingEvent[]> {
-    // Chunk events into batches
+    
     const batches: FirstPartyEventLoggingEvent[][] = []
     for (let i = 0; i < events.length; i += this.maxBatchSize) {
       batches.push(events.slice(i, i + this.maxBatchSize))
@@ -388,7 +372,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
       )
     }
 
-    // Send each batch with delay between them. On first failure, assume the
+    
     
     
     
@@ -440,12 +424,12 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
   }
 
   private scheduleBackoffRetry(): void {
-    // Don't schedule if already retrying or shutdown
+    
     if (this.cancelBackoff || this.isRetrying || this.isShutdown) {
       return
     }
 
-    // Quadratic backoff (matching Statsig SDK): base * attempts²
+    
     const delay = Math.min(
       this.baseBackoffDelayMs * this.attempts * this.attempts,
       this.maxBackoffDelayMs,
@@ -466,7 +450,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
   private async retryFailedEvents(): Promise<void> {
     const filePath = this.getCurrentBatchFilePath()
 
-    // Keep retrying while there are events and endpoint is healthy
+    
     while (!this.isShutdown) {
       const events = await this.loadEventsFromFile(filePath)
       if (events.length === 0) break
@@ -484,7 +468,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
 
       this.isRetrying = true
 
-      // Clear file before retry (we have events in memory now)
+      
       await this.deleteFile(filePath)
 
       if (process.env.USER_TYPE === 'ant') {
@@ -499,13 +483,13 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
       this.isRetrying = false
 
       if (failedEvents.length > 0) {
-        // Write failures back to disk
+        
         await this.saveEventsToFile(filePath, failedEvents)
         this.scheduleBackoffRetry()
-        return // Failed - wait for backoff
+        return 
       }
 
-      // Success - reset backoff and continue loop to drain any newly queued events
+      
       this.resetBackoff()
       if (process.env.USER_TYPE === 'ant') {
         logForDebugging('1P event logging: backoff retry succeeded')
@@ -525,20 +509,20 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
     payload: FirstPartyEventLoggingPayload,
   ): Promise<void> {
     if (this.isKilled()) {
-      // Throw so the caller short-circuits remaining batches and queues
-      // everything to disk. Zero network traffic while killed; the backoff
-      // timer keeps ticking and will resume POSTs as soon as the GrowthBook
-      // cache picks up the cleared flag.
+      
+      
+      
+      
       throw new Error('firstParty sink killswitch active')
     }
 
     const baseHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
       'User-Agent': getClaudeCodeUserAgent(),
-      'x-service-name': 'claude-code',
+      'x-service-name': 'claude-code-next',
     }
 
-    // Skip auth if trust hasn't been established yet
+    
     
     
     const hasTrust =
@@ -547,7 +531,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
       logForDebugging('1P event logging: Trust not accepted')
     }
 
-    // Skip auth when the OAuth token is expired or lacks user:profile
+    
     
     let shouldSkipAuth = this.skipAuth || !hasTrust
     if (!shouldSkipAuth && isClaudeAISubscriber()) {
@@ -564,7 +548,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
       }
     }
 
-    // Try with auth headers first (unless trust not established or token is known to be expired)
+    
     const authResult = shouldSkipAuth
       ? { headers: {}, error: 'trust not established or Oauth token expired' }
       : getAuthHeaders()
@@ -588,7 +572,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
       this.logSuccess(payload.events.length, useAuth, response.data)
       return
     } catch (error) {
-      // Handle 401 by retrying without auth
+      
       if (
         useAuth &&
         axios.isAxiosError(error) &&
@@ -637,7 +621,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
     for (const log of logs) {
       const attributes = log.attributes || {}
 
-      // Check if this is a GrowthBook experiment event
+      
       if (attributes.event_type === 'GrowthbookExperimentEvent') {
         const timestamp = this.hrTimeToDate(log.hrTime)
         const account_uuid = attributes.account_uuid as string | undefined
@@ -665,7 +649,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
         continue
       }
 
-      // Extract event name
+      
       const eventName =
         (attributes.event_name as string) || (log.body as string) || 'unknown'
 
@@ -678,7 +662,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
       >
 
       if (!coreMetadata) {
-        // Emit partial event if core metadata is missing
+        
         if (process.env.USER_TYPE === 'ant') {
           logForDebugging(
             `1P event logging: core_metadata missing for event ${eventName}`,
@@ -701,7 +685,7 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
         continue
       }
 
-      // Transform to 1P format
+      
       const formatted = to1PEventFormat(
         coreMetadata,
         userMetadata,

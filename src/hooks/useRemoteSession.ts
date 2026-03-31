@@ -61,15 +61,6 @@ type UseRemoteSessionResult = {
   disconnect: () => void
 }
 
-/**
- * Hook for managing a remote CCR session in the REPL.
- *
- * Handles:
- * - WebSocket connection to CCR
- * - Converting SDK messages to REPL messages
- * - Sending user input to CCR via HTTP POST
- * - Permission request/response flow via existing ToolUseConfirm queue
- */
 export function useRemoteSession({
   config,
   setMessages,
@@ -112,7 +103,7 @@ export function useRemoteSession({
 
   
   
-  // use a longer timeout and suppress spurious "unresponsive" warnings.
+  
   const isCompactingRef = useRef(false)
 
   const managerRef = useRef<RemoteSessionManager | null>(null)
@@ -124,7 +115,7 @@ export function useRemoteSession({
   
   
   
-  // the server may broadcast the POST directly to /subscribe, AND the worker
+  
   
   
   
@@ -141,7 +132,7 @@ export function useRemoteSession({
 
   
   useEffect(() => {
-    // Skip if not in remote mode
+    
     if (!config) {
       return
     }
@@ -171,7 +162,7 @@ export function useRemoteSession({
           responseTimeoutRef.current = null
         }
 
-        // Echo filter: drop user messages we already added locally before POST.
+        
         
         
         
@@ -186,7 +177,7 @@ export function useRemoteSession({
           )
           return
         }
-        // Handle init message - extract available slash commands
+        
         if (
           sdkMessage.type === 'system' &&
           sdkMessage.subtype === 'init' &&
@@ -198,7 +189,7 @@ export function useRemoteSession({
           onInit(sdkMessage.slash_commands)
         }
 
-        // Track remote subagent lifecycle for the "N in background" counter.
+        
         
         
         
@@ -216,7 +207,7 @@ export function useRemoteSession({
           if (sdkMessage.subtype === 'task_progress') {
             return
           }
-          // Track compaction state. The CLI emits status='compacting' at
+          
           
           
           
@@ -232,15 +223,15 @@ export function useRemoteSession({
           }
         }
 
-        // Check if session ended
+        
         if (isSessionEndMessage(sdkMessage)) {
           isCompactingRef.current = false
           setIsLoading(false)
         }
 
-        // Clear in-progress tool_use IDs when their tool_result arrives.
         
-        // convertSDKMessage returns {type:'ignored'} for user messages, so the
+        
+        
         
         
         
@@ -263,7 +254,7 @@ export function useRemoteSession({
           }
         }
 
-        // Convert SDK message to REPL message. In viewerOnly mode, the
+        
         
         
         
@@ -275,13 +266,13 @@ export function useRemoteSession({
         )
 
         if (converted.type === 'message') {
-          // When we receive a complete message, clear streaming tool uses
+          
           
           setStreamingToolUses?.(prev => (prev.length > 0 ? [] : prev))
 
           
           
-          // toolOrchestration.ts handles this, but remote sessions receive
+          
           
           if (
             setInProgressToolUseIDs &&
@@ -305,13 +296,13 @@ export function useRemoteSession({
           
           
         } else if (converted.type === 'stream_event') {
-          // Process streaming events to update UI in real-time
+          
           if (setStreamingToolUses && setStreamMode) {
             handleMessageFromStream(
               converted.event,
               message => setMessages(prev => [...prev, message]),
               () => {
-                // No-op for response length - remote sessions don't track this
+                
               },
               setStreamMode,
               setStreamingToolUses,
@@ -322,14 +313,14 @@ export function useRemoteSession({
             )
           }
         }
-        // 'ignored' messages are silently dropped
+        
       },
       onPermissionRequest: (request, requestId) => {
         logForDebugging(
           `[useRemoteSession] Permission request for tool: ${request.tool_name}`,
         )
 
-        // Look up the Tool object by name, or create a stub for unknown tools
+        
         const tool =
           findToolByName(toolsRef.current, request.tool_name) ??
           createToolStub(request.tool_name)
@@ -358,7 +349,7 @@ export function useRemoteSession({
           permissionResult,
           permissionPromptStartTimeMs: Date.now(),
           onUserInteraction() {
-            // No-op for remote — classifier runs on the container
+            
           },
           onAbort() {
             const response: RemotePermissionResponse = {
@@ -379,7 +370,7 @@ export function useRemoteSession({
             setToolUseConfirmQueue(queue =>
               queue.filter(item => item.toolUseID !== request.tool_use_id),
             )
-            // Resume loading indicator after approving
+            
             setIsLoading(true)
           },
           onReject(feedback?: string) {
@@ -393,12 +384,12 @@ export function useRemoteSession({
             )
           },
           async recheckPermission() {
-            // No-op for remote — permission state is on the container
+            
           },
         }
 
         setToolUseConfirmQueue(queue => [...queue, toolUseConfirm])
-        // Pause loading indicator while waiting for permission
+        
         setIsLoading(false)
       },
       onPermissionCancelled: (requestId, toolUseId) => {
@@ -418,12 +409,12 @@ export function useRemoteSession({
       onReconnecting: () => {
         logForDebugging('[useRemoteSession] Reconnecting')
         setConnStatus('reconnecting')
-        // WS gap = we may miss task_notification events. Clear rather than
-        // drift high forever. Undercounts tasks that span the gap; accepted.
+        
+        
         runningTaskIdsRef.current.clear()
         writeTaskCount()
-        // Same for tool_use IDs: missed tool_result during the gap would
-        // leave stale spinner state forever.
+        
+        
         setInProgressToolUseIDs?.(prev => (prev.size > 0 ? new Set() : prev))
       },
       onDisconnected: () => {
@@ -444,7 +435,7 @@ export function useRemoteSession({
 
     return () => {
       logForDebugging('[useRemoteSession] Cleanup - disconnecting')
-      // Clear any pending timeout
+      
       if (responseTimeoutRef.current) {
         clearTimeout(responseTimeoutRef.current)
         responseTimeoutRef.current = null
@@ -465,7 +456,7 @@ export function useRemoteSession({
     writeTaskCount,
   ])
 
-  // Send a user message to the remote session
+  
   const sendMessage = useCallback(
     async (
       content: RemoteMessageContent,
@@ -477,27 +468,27 @@ export function useRemoteSession({
         return false
       }
 
-      // Clear any existing timeout
+      
       if (responseTimeoutRef.current) {
         clearTimeout(responseTimeoutRef.current)
       }
 
       setIsLoading(true)
 
-      // Track locally-added message UUIDs so the WS echo can be filtered.
-      // Must record BEFORE the POST to close the race where the echo arrives
-      // before the POST promise resolves.
+      
+      
+      
       if (opts?.uuid) sentUUIDsRef.current.add(opts.uuid)
 
       const success = await manager.sendMessage(content, opts)
 
       if (!success) {
-        // No need to undo the pre-POST add — BoundedUUIDSet's ring evicts it.
+        
         setIsLoading(false)
         return false
       }
 
-      // Update the session title after the first message when no initial prompt was provided.
+      
       
       
       if (
@@ -514,8 +505,8 @@ export function useRemoteSession({
             ? content
             : extractTextContent(content, ' ')
         if (description) {
-          // generateSessionTitle never rejects (wraps body in try/catch,
-          // returns null on failure), so no .catch needed on this chain.
+          
+          
           void generateSessionTitle(
             description,
             new AbortController().signal,
@@ -528,7 +519,7 @@ export function useRemoteSession({
         }
       }
 
-      // Start timeout to detect stuck sessions. Skip in viewerOnly mode —
+      
       
       
       
@@ -564,13 +555,13 @@ export function useRemoteSession({
 
   
   const cancelRequest = useCallback(() => {
-    // Clear any pending timeout
+    
     if (responseTimeoutRef.current) {
       clearTimeout(responseTimeoutRef.current)
       responseTimeoutRef.current = null
     }
 
-    // Send interrupt signal to CCR. Skip in viewerOnly mode — Ctrl+C
+    
     
     if (!config?.viewerOnly) {
       managerRef.current?.cancelSession()
@@ -581,7 +572,7 @@ export function useRemoteSession({
 
   
   const disconnect = useCallback(() => {
-    // Clear any pending timeout
+    
     if (responseTimeoutRef.current) {
       clearTimeout(responseTimeoutRef.current)
       responseTimeoutRef.current = null
@@ -594,7 +585,7 @@ export function useRemoteSession({
   
   
   
-  // which in turn churns PromptInput's props and downstream memoization.
+  
   return useMemo(
     () => ({ isRemoteMode, sendMessage, cancelRequest, disconnect }),
     [isRemoteMode, sendMessage, cancelRequest, disconnect],

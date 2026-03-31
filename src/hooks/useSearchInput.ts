@@ -17,10 +17,8 @@ import { useTerminalSize } from './useTerminalSize.js'
 type UseSearchInputOptions = {
   isActive: boolean
   onExit: () => void
-  /** Esc + Ctrl+C abandon (distinct from onExit = Enter commit). When
-   *  provided: single-Esc calls this directly (no clear-first-then-exit
-   *  two-press). When absent: current behavior — Esc clears non-empty
-   *  query, exits on empty; Ctrl+C silently swallowed (no switch case). */
+  
+
   onCancel?: () => void
   onExitUp?: () => void
   columns?: number
@@ -52,13 +50,6 @@ function isYankKey(e: KeyboardEvent): boolean {
   return (e.ctrl || e.meta) && e.key === 'y'
 }
 
-// Special key names that fall through the explicit handlers above the
-
-// all early-return). Reject these so e.g. PageUp doesn't leak 'pageup'
-// as literal text. The length>=1 check below is intentionally loose —
-// batched input like stdin.write('abc') arrives as one multi-char e.key,
-// matching the old useInput(input) behavior where cursor.insert(input)
-// inserted the full chunk.
 const UNHANDLED_SPECIAL_KEYS = new Set([
   'pageup',
   'pagedown',
@@ -105,22 +96,22 @@ export function useSearchInput({
 
     const cursor = Cursor.fromText(query, effectiveColumns, cursorOffset)
 
-    // Check passthrough ctrl keys
+    
     if (e.ctrl && passthroughCtrlKeys.includes(e.key.toLowerCase())) {
       return
     }
 
-    // Reset kill accumulation for non-kill keys
+    
     if (!isKillKey(e)) {
       resetKillAccumulation()
     }
 
-    // Reset yank state for non-yank keys
+    
     if (!isYankKey(e)) {
       resetYankState()
     }
 
-    // Exit conditions
+    
     if (e.key === 'return' || e.key === 'down') {
       e.preventDefault()
       onExit()
@@ -146,11 +137,11 @@ export function useSearchInput({
       return
     }
 
-    // Backspace/Delete
+    
     if (e.key === 'backspace') {
       e.preventDefault()
       if (e.meta) {
-        // Meta+Backspace: kill word before
+        
         const { cursor: newCursor, killed } = cursor.deleteWordBefore()
         pushToKillRing(killed, 'prepend')
         setQueryState(newCursor.text)
@@ -158,8 +149,8 @@ export function useSearchInput({
         return
       }
       if (query.length === 0) {
-        // Backspace past the / — cancel (clear + snap back), not commit.
-        // less: same. vim: deletes the / and exits command mode.
+        
+        
         if (backspaceExitsOnEmpty) (onCancel ?? onExit)()
         return
       }
@@ -177,7 +168,7 @@ export function useSearchInput({
       return
     }
 
-    // Arrow keys with modifiers (word jump)
+    
     if (e.key === 'left' && (e.ctrl || e.meta || e.fn)) {
       e.preventDefault()
       const newCursor = cursor.prevWord()
@@ -191,7 +182,7 @@ export function useSearchInput({
       return
     }
 
-    // Plain arrow keys
+    
     if (e.key === 'left') {
       e.preventDefault()
       const newCursor = cursor.left()
@@ -205,7 +196,7 @@ export function useSearchInput({
       return
     }
 
-    // Home/End
+    
     if (e.key === 'home') {
       e.preventDefault()
       setCursorOffset(0)
@@ -217,7 +208,7 @@ export function useSearchInput({
       return
     }
 
-    // Ctrl key bindings
+    
     if (e.ctrl) {
       e.preventDefault()
       switch (e.key.toLowerCase()) {
@@ -287,7 +278,7 @@ export function useSearchInput({
         }
         case 'g':
         case 'c':
-          // Cancel (abandon search). ctrl+g is less's cancel key. Only
+          
           
           
           if (onCancel) {
@@ -298,7 +289,7 @@ export function useSearchInput({
       return
     }
 
-    // Meta key bindings
+    
     if (e.meta) {
       e.preventDefault()
       switch (e.key.toLowerCase()) {
@@ -332,12 +323,12 @@ export function useSearchInput({
       return
     }
 
-    // Tab: ignore
+    
     if (e.key === 'tab') {
       return
     }
 
-    // Regular character input. Accepts multi-char e.key so batched writes
+    
     
     
     if (e.key.length >= 1 && !UNHANDLED_SPECIAL_KEYS.has(e.key)) {
@@ -348,10 +339,10 @@ export function useSearchInput({
     }
   }
 
-  // Backward-compat bridge: existing consumers don't yet wire handleKeyDown
-  // to <Box onKeyDown>. Subscribe via useInput and adapt InputEvent →
-  // KeyboardEvent until all 11 call sites are migrated (separate PRs).
-  // TODO(onKeyDown-migration): remove once all consumers pass handleKeyDown.
+  
+  
+  
+  
   useInput(
     (_input, _key, event) => {
       handleKeyDown(new KeyboardEvent(event.keypress))

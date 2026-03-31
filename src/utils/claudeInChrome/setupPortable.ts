@@ -16,7 +16,6 @@ function getExtensionIds(): string[] {
     : [PROD_EXTENSION_ID]
 }
 
-// Must match ChromiumBrowser from common.ts
 export type ChromiumBrowser =
   | 'chrome'
   | 'brave'
@@ -33,7 +32,6 @@ export type BrowserPath = {
 
 type Logger = (message: string) => void
 
-// Browser detection order - must match BROWSER_DETECTION_ORDER from common.ts
 const BROWSER_DETECTION_ORDER: ChromiumBrowser[] = [
   'chrome',
   'brave',
@@ -50,7 +48,6 @@ type BrowserDataConfig = {
   windows: { path: string[]; useRoaming?: boolean }
 }
 
-// Must match CHROMIUM_BROWSERS dataPath from common.ts
 const CHROMIUM_BROWSERS: Record<ChromiumBrowser, BrowserDataConfig> = {
   chrome: {
     macos: ['Library', 'Application Support', 'Google', 'Chrome'],
@@ -89,10 +86,6 @@ const CHROMIUM_BROWSERS: Record<ChromiumBrowser, BrowserDataConfig> = {
   },
 }
 
-/**
- * Get all browser data paths to check for extension installation.
- * Portable version that uses process.platform directly.
- */
 export function getAllBrowserDataPathsPortable(): BrowserPath[] {
   const home = homedir()
   const paths: BrowserPath[] = []
@@ -133,16 +126,6 @@ export function getAllBrowserDataPathsPortable(): BrowserPath[] {
   return paths
 }
 
-/**
- * Detects if the Claude in Chrome extension is installed by checking the Extensions
- * directory across all supported Chromium-based browsers and their profiles.
- *
- * This is a portable version that can be used by both TUI and VS Code extension.
- *
- * @param browserPaths - Array of browser data paths to check (from getAllBrowserDataPaths)
- * @param log - Optional logging callback for debug messages
- * @returns Object with isInstalled boolean and the browser where the extension was found
- */
 export async function detectExtensionInstallationPortable(
   browserPaths: BrowserPath[],
   log?: Logger,
@@ -166,7 +149,7 @@ export async function detectExtensionInstallationPortable(
         withFileTypes: true,
       })
     } catch (e) {
-      // Browser not installed or path doesn't exist, continue to next browser
+      
       if (isFsInaccessible(e)) continue
       throw e
     }
@@ -184,7 +167,7 @@ export async function detectExtensionInstallationPortable(
       )
     }
 
-    // Check each profile for any of the extension IDs
+    
     for (const profile of profileDirs) {
       for (const extensionId of extensionIds) {
         const extensionPath = join(
@@ -201,7 +184,7 @@ export async function detectExtensionInstallationPortable(
           )
           return { isInstalled: true, browser }
         } catch {
-          // Extension not found in this profile, continue checking
+          
         }
       }
     }
@@ -211,9 +194,6 @@ export async function detectExtensionInstallationPortable(
   return { isInstalled: false, browser: null }
 }
 
-/**
- * Simple wrapper that returns just the boolean result
- */
 export async function isChromeExtensionInstalledPortable(
   browserPaths: BrowserPath[],
   log?: Logger,
@@ -222,10 +202,6 @@ export async function isChromeExtensionInstalledPortable(
   return result.isInstalled
 }
 
-/**
- * Convenience function that gets browser paths automatically.
- * Use this when you don't need to provide custom browser paths.
- */
 export function isChromeExtensionInstalled(log?: Logger): Promise<boolean> {
   const browserPaths = getAllBrowserDataPathsPortable()
   return isChromeExtensionInstalledPortable(browserPaths, log)

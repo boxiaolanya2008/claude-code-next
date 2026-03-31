@@ -90,7 +90,7 @@ async function initializeAgentMcpServers(
   tools: Tools
   cleanup: () => Promise<void>
 }> {
-  // If no agent-specific servers defined, return parent clients as-is
+  
   if (!agentDefinition.mcpServers?.length) {
     return {
       clients: parentClients,
@@ -99,7 +99,7 @@ async function initializeAgentMcpServers(
     }
   }
 
-  // When MCP is locked to plugin-only, skip frontmatter MCP servers for
+  
   
   
   
@@ -128,7 +128,7 @@ async function initializeAgentMcpServers(
     let isNewlyCreated = false
 
     if (typeof spec === 'string') {
-      // Reference by name - look up in existing MCP configs
+      
       
       name = spec
       config = getMcpConfigByName(spec)
@@ -140,8 +140,8 @@ async function initializeAgentMcpServers(
         continue
       }
     } else {
-      // Inline definition as { [name]: config }
-      // These are agent-specific servers that should be cleaned up
+      
+      
       const entries = Object.entries(spec)
       if (entries.length !== 1) {
         logForDebugging(
@@ -159,14 +159,14 @@ async function initializeAgentMcpServers(
       isNewlyCreated = true
     }
 
-    // Connect to the server
+    
     const client = await connectToServer(name, config)
     agentClients.push(client)
     if (isNewlyCreated) {
       newlyCreatedClients.push(client)
     }
 
-    // Fetch tools if connected
+    
     if (client.type === 'connected') {
       const tools = await fetchToolsForClient(client)
       agentTools.push(...tools)
@@ -181,7 +181,7 @@ async function initializeAgentMcpServers(
     }
   }
 
-  // Create cleanup function for agent-specific servers
+  
   
   
   const cleanup = async () => {
@@ -199,7 +199,7 @@ async function initializeAgentMcpServers(
     }
   }
 
-  // Return merged clients (parent + agent-specific) and agent tools
+  
   return {
     clients: [...parentClients, ...agentClients],
     tools: agentTools,
@@ -284,9 +284,8 @@ export async function* runAgent({
   
 
   onCacheSafeParams?: (params: CacheSafeParams) => void
-  /** Replacement state reconstructed from a resumed sidechain transcript so
-   * the same tool results are re-replaced (prompt cache stability). When
-   * omitted, createSubagentContext clones the parent's state. */
+  
+
   contentReplacementState?: ContentReplacementState
   
 
@@ -304,13 +303,13 @@ export async function* runAgent({
 
   onQueryProgress?: () => void
 }): AsyncGenerator<Message, void> {
-  // Track subagent usage for feature discovery
+  
 
   const appState = toolUseContext.getAppState()
   const permissionMode = appState.toolPermissionContext.mode
   
   
-  // so session-scoped writes (hooks, bash tasks) must go through this instead.
+  
   const rootSetAppState =
     toolUseContext.setAppStateForTasks ?? toolUseContext.setAppState
 
@@ -329,20 +328,20 @@ export async function* runAgent({
     setAgentTranscriptSubdir(agentId, transcriptSubdir)
   }
 
-  // Register agent in Perfetto trace for hierarchy visualization
+  
   if (isPerfettoTracingEnabled()) {
     const parentId = toolUseContext.agentId ?? getSessionId()
     registerPerfettoAgent(agentId, agentDefinition.agentType, parentId)
   }
 
-  // Log API calls path for subagents (ant-only)
+  
   if (process.env.USER_TYPE === 'ant') {
     logForDebugging(
       `[Subagent ${agentDefinition.agentType}] API calls: ${getDisplayPath(getDumpPromptsPath(agentId))}`,
     )
   }
 
-  // Handle message forking for context sharing
+  
   
   const contextMessages: Message[] = forkContextMessages
     ? filterIncompleteToolCalls(forkContextMessages)
@@ -410,10 +409,10 @@ export async function* runAgent({
       }
     }
 
-    // Set flag to auto-deny prompts for agents that can't show UI
-    // Use explicit canShowPermissionPrompts if provided, otherwise:
-    //   - bubble mode: always show prompts (bubbles to parent terminal)
-    //   - default: !isAsync (sync agents show prompts, async agents don't)
+    
+    
+    
+    
     const shouldAvoidPrompts =
       canShowPermissionPrompts !== undefined
         ? !canShowPermissionPrompts
@@ -427,7 +426,7 @@ export async function* runAgent({
       }
     }
 
-    // For background agents that can show prompts, await automated checks
+    
     
     
     
@@ -439,7 +438,7 @@ export async function* runAgent({
       }
     }
 
-    // Scope tool permissions: when allowedTools is provided, use them as session rules.
+    
     
     
     
@@ -447,15 +446,15 @@ export async function* runAgent({
       toolPermissionContext = {
         ...toolPermissionContext,
         alwaysAllowRules: {
-          // Preserve SDK-level permissions from --allowedTools
+          
           cliArg: state.toolPermissionContext.alwaysAllowRules.cliArg,
-          // Use the provided allowedTools as session-level permissions
+          
           session: [...allowedTools],
         },
       }
     }
 
-    // Override effort level if agent defines one
+    
     const effortValue =
       agentDefinition.effort !== undefined
         ? agentDefinition.effort
@@ -495,7 +494,7 @@ export async function* runAgent({
       )
 
   
-  // - Override takes precedence
+  
   
   
   const agentAbortController = override?.abortController
@@ -519,7 +518,7 @@ export async function* runAgent({
     }
   }
 
-  // Add SubagentStart hook context as a user message (consistent with SessionStart/UserPromptSubmit)
+  
   if (additionalContexts.length > 0) {
     const contextMessage = createAttachmentMessage({
       type: 'hook_additional_context',
@@ -531,13 +530,13 @@ export async function* runAgent({
     initialMessages.push(contextMessage)
   }
 
-  // Register agent's frontmatter hooks (scoped to agent lifecycle)
-  // Pass isAgent=true to convert Stop hooks to SubagentStop (since subagents trigger SubagentStop)
-  // Same admin-trusted gate for frontmatter hooks: under ["hooks"] alone
-  // (skills/agents not locked), user agents still load — block their
-  // frontmatter-hook REGISTRATION here where source is known, rather than
-  // blanket-blocking all session hooks at execution time (which would
-  // also kill plugin agents' hooks).
+  
+  
+  
+  
+  
+  
+  
   const hooksAllowedForThisAgent =
     !isRestrictedToPluginOnly('hooks') ||
     isSourceAdminTrusted(agentDefinition.source)
@@ -547,11 +546,11 @@ export async function* runAgent({
       agentId,
       agentDefinition.hooks,
       `agent '${agentDefinition.agentType}'`,
-      true, // isAgent - converts Stop to SubagentStop
+      true, 
     )
   }
 
-  // Preload skills from agent frontmatter
+  
   const skillsToPreload = agentDefinition.skills ?? []
   if (skillsToPreload.length > 0) {
     const allSkills = await getSkillToolCommands(getProjectRoot())
@@ -563,8 +562,8 @@ export async function* runAgent({
     }> = []
 
     for (const skillName of skillsToPreload) {
-      // Resolve the skill name, trying multiple strategies:
-      // 1. Exact match (hasCommand checks name, userFacingName, aliases)
+      
+      
       
       
       const resolvedName = resolveSkillName(
@@ -591,7 +590,7 @@ export async function* runAgent({
       validSkills.push({ skillName, skill })
     }
 
-    // Load all skill contents concurrently and add to initial messages
+    
     const { formatSkillLoadingMetadata } = await import(
       '../../utils/processUserInput/processSlashCommand.js'
     )
@@ -622,7 +621,7 @@ export async function* runAgent({
     }
   }
 
-  // Initialize agent-specific MCP servers (additive to parent's servers)
+  
   const {
     clients: mergedMcpClients,
     tools: agentMcpTools,
@@ -632,15 +631,15 @@ export async function* runAgent({
     toolUseContext.options.mcpClients,
   )
 
-  // Merge agent MCP tools with resolved agent tools, deduplicating by name.
-  // resolvedTools is already deduplicated (see resolveAgentTools), so skip
-  // the spread + uniqBy overhead when there are no agent-specific MCP tools.
+  
+  
+  
   const allTools =
     agentMcpTools.length > 0
       ? uniqBy([...resolvedTools, ...agentMcpTools], 'name')
       : resolvedTools
 
-  // Build agent-specific options
+  
   const agentOptions: ToolUseContext['options'] = {
     isNonInteractiveSession: useExactTools
       ? toolUseContext.options.isNonInteractiveSession
@@ -653,8 +652,8 @@ export async function* runAgent({
     debug: toolUseContext.options.debug,
     verbose: toolUseContext.options.verbose,
     mainLoopModel: resolvedAgentModel,
-    // For fork children (useExactTools), inherit thinking config to match the
-    // parent's API request prefix for prompt cache hits. For regular
+    
+    
     
     thinkingConfig: useExactTools
       ? toolUseContext.options.thinkingConfig
@@ -662,7 +661,7 @@ export async function* runAgent({
     mcpClients: mergedMcpClients,
     mcpResources: toolUseContext.options.mcpResources,
     agentDefinitions: toolUseContext.options.agentDefinitions,
-    // Fork children (useExactTools path) need querySource on context.options
+    
     
     
     
@@ -671,7 +670,7 @@ export async function* runAgent({
     ...(useExactTools && { querySource }),
   }
 
-  // Create subagent context using shared helper
+  
   
   
   const agentToolUseContext = createSubagentContext(toolUseContext, {
@@ -682,9 +681,9 @@ export async function* runAgent({
     readFileState: agentReadFileState,
     abortController: agentAbortController,
     getAppState: agentGetAppState,
-    // Sync agents share these callbacks with parent
+    
     shareSetAppState: !isAsync,
-    shareSetResponseLength: true, // Both sync and async contribute to response metrics
+    shareSetResponseLength: true, 
     criticalSystemReminder_EXPERIMENTAL:
       agentDefinition.criticalSystemReminder_EXPERIMENTAL,
     contentReplacementState,
@@ -695,7 +694,7 @@ export async function* runAgent({
     agentToolUseContext.preserveToolUseResults = true
   }
 
-  // Expose cache-safe params for background summarization (prompt cache sharing)
+  
   if (onCacheSafeParams) {
     onCacheSafeParams({
       systemPrompt: agentSystemPrompt,
@@ -706,7 +705,7 @@ export async function* runAgent({
     })
   }
 
-  // Record initial messages before the query loop starts, plus the agentType
+  
   
   
   void recordSidechainTranscript(initialMessages, agentId).catch(_err =>
@@ -744,9 +743,9 @@ export async function* runAgent({
         continue
       }
 
-      // Yield attachment messages (e.g., structured_output) without recording them
+      
       if (message.type === 'attachment') {
-        // Handle max turns reached signal from query.ts
+        
         if (message.attachment.type === 'max_turns_reached') {
           logForDebugging(
             `[Agent
@@ -767,7 +766,7 @@ export async function* runAgent({
       }
 
       if (isRecordableMessage(message)) {
-        // Record only the new message with correct parent (O(1) per message)
+        
         await recordSidechainTranscript(
           [message],
           agentId,
@@ -786,22 +785,22 @@ export async function* runAgent({
       throw new AbortError()
     }
 
-    // Run callback if provided (only built-in agents have callbacks)
+    
     if (isBuiltInAgent(agentDefinition) && agentDefinition.callback) {
       agentDefinition.callback()
     }
   } finally {
-    // Clean up agent-specific MCP servers (runs on normal completion, abort, or error)
+    
     await mcpCleanup()
     
     if (agentDefinition.hooks) {
       clearSessionHooks(rootSetAppState, agentId)
     }
-    // Clean up prompt cache tracking state for this agent
+    
     if (feature('PROMPT_CACHE_BREAK_DETECTION')) {
       cleanupAgentTracking(agentId)
     }
-    // Release cloned file state cache memory
+    
     agentToolUseContext.readFileState.clear()
     
     initialMessages.length = 0
@@ -832,16 +831,12 @@ export async function* runAgent({
         rootSetAppState,
       )
     }
-    /* eslint-enable @typescript-eslint/no-require-imports */
+    
   }
 }
 
-/**
- * Filters out assistant messages with incomplete tool calls (tool uses without results).
- * This prevents API errors when sending messages with orphaned tool calls.
- */
 export function filterIncompleteToolCalls(messages: Message[]): Message[] {
-  // Build a set of tool use IDs that have results
+  
   const toolUseIdsWithResults = new Set<string>()
 
   for (const message of messages) {
@@ -858,13 +853,13 @@ export function filterIncompleteToolCalls(messages: Message[]): Message[] {
     }
   }
 
-  // Filter out assistant messages that contain tool calls without results
+  
   return messages.filter(message => {
     if (message?.type === 'assistant') {
       const assistantMessage = message as AssistantMessage
       const content = assistantMessage.message.content
       if (Array.isArray(content)) {
-        // Check if this assistant message has any tool uses without results
+        
         const hasIncompleteToolCall = content.some(
           block =>
             block.type === 'tool_use' &&
@@ -875,7 +870,7 @@ export function filterIncompleteToolCalls(messages: Message[]): Message[] {
         return !hasIncompleteToolCall
       }
     }
-    // Keep all non-assistant messages and assistant messages without tool calls
+    
     return true
   })
 }
@@ -908,29 +903,18 @@ async function getAgentSystemPrompt(
   }
 }
 
-/**
- * Resolve a skill name from agent frontmatter to a registered command name.
- *
- * Plugin skills are registered with namespaced names (e.g., "my-plugin:my-skill")
- * but agents reference them with bare names (e.g., "my-skill"). This function
- * tries multiple resolution strategies:
- *
- * 1. Exact match via hasCommand (name, userFacingName, aliases)
- * 2. Prefix with agent's plugin name (e.g., "my-skill" → "my-plugin:my-skill")
- * 3. Suffix match — find any command whose name ends with ":skillName"
- */
 function resolveSkillName(
   skillName: string,
   allSkills: Command[],
   agentDefinition: AgentDefinition,
 ): string | null {
-  // 1. Direct match
+  
   if (hasCommand(skillName, allSkills)) {
     return skillName
   }
 
-  // 2. Try prefixing with the agent's plugin name
-  // Plugin agents have agentType like "pluginName:agentName"
+  
+  
   const pluginPrefix = agentDefinition.agentType.split(':')[0]
   if (pluginPrefix) {
     const qualifiedName = `${pluginPrefix}:${skillName}`
@@ -939,7 +923,7 @@ function resolveSkillName(
     }
   }
 
-  // 3. Suffix match — find a skill whose name ends with ":skillName"
+  
   const suffix = `:${skillName}`
   const match = allSkills.find(cmd => cmd.name.endsWith(suffix))
   if (match) {

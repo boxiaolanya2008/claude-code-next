@@ -15,7 +15,7 @@ export const KEYBINDING_CONTEXTS = [
   'ThemePicker',
   'Settings',
   'Tabs',
-  // New contexts for keybindings migration
+  
   'Attachments',
   'Footer',
   'MessageSelector',
@@ -49,9 +49,6 @@ export const KEYBINDING_CONTEXT_DESCRIPTIONS: Record<
   Plugin: 'When the plugin dialog is open',
 }
 
-/**
- * All valid keybinding action identifiers.
- */
 export const KEYBINDING_ACTIONS = [
   
   'app:interrupt',
@@ -64,11 +61,11 @@ export const KEYBINDING_ACTIONS = [
   'app:redraw',
   'app:globalSearch',
   'app:quickOpen',
-  // History navigation
+  
   'history:search',
   'history:previous',
   'history:next',
-  // Chat input actions
+  
   'chat:cancel',
   'chat:killAgents',
   'chat:cycleMode',
@@ -82,12 +79,12 @@ export const KEYBINDING_ACTIONS = [
   'chat:stash',
   'chat:imagePaste',
   'chat:messageActions',
-  // Autocomplete menu actions
+  
   'autocomplete:accept',
   'autocomplete:dismiss',
   'autocomplete:previous',
   'autocomplete:next',
-  // Confirmation dialog actions
+  
   'confirm:yes',
   'confirm:no',
   'confirm:previous',
@@ -97,29 +94,29 @@ export const KEYBINDING_ACTIONS = [
   'confirm:cycleMode',
   'confirm:toggle',
   'confirm:toggleExplanation',
-  // Tabs navigation actions
+  
   'tabs:next',
   'tabs:previous',
-  // Transcript viewer actions
+  
   'transcript:toggleShowAll',
   'transcript:exit',
-  // History search actions
+  
   'historySearch:next',
   'historySearch:accept',
   'historySearch:cancel',
   'historySearch:execute',
-  // Task/agent actions
+  
   'task:background',
-  // Theme picker actions
+  
   'theme:toggleSyntaxHighlighting',
-  // Help menu actions
+  
   'help:dismiss',
-  // Attachment navigation (select dialog image attachments)
+  
   'attachments:next',
   'attachments:previous',
   'attachments:remove',
   'attachments:exit',
-  // Footer indicator actions
+  
   'footer:up',
   'footer:down',
   'footer:next',
@@ -127,13 +124,13 @@ export const KEYBINDING_ACTIONS = [
   'footer:openSelected',
   'footer:clearSelection',
   'footer:close',
-  // Message selector (rewind) actions
+  
   'messageSelector:up',
   'messageSelector:down',
   'messageSelector:top',
   'messageSelector:bottom',
   'messageSelector:select',
-  // Diff dialog actions
+  
   'diff:dismiss',
   'diff:previousSource',
   'diff:nextSource',
@@ -141,24 +138,24 @@ export const KEYBINDING_ACTIONS = [
   'diff:viewDetails',
   'diff:previousFile',
   'diff:nextFile',
-  // Model picker actions (ant-only)
+  
   'modelPicker:decreaseEffort',
   'modelPicker:increaseEffort',
-  // Select component actions (distinct from confirm: to avoid collisions)
+  
   'select:next',
   'select:previous',
   'select:accept',
   'select:cancel',
-  // Plugin dialog actions
+  
   'plugin:toggle',
   'plugin:install',
-  // Permission dialog actions
+  
   'permission:toggleDebug',
-  // Settings config panel actions
+  
   'settings:search',
   'settings:retry',
   'settings:close',
-  // Voice actions
+  
   'voice:pushToTalk',
 ] as const
 
@@ -208,7 +205,7 @@ export const KeybindingsSchema = lazySchema(() =>
         .describe('Array of keybinding blocks by context'),
     })
     .describe(
-      'Claude Code keybindings configuration. Customize keyboard shortcuts by context.',
+      'Claude Code Next keybindings configuration. Customize keyboard shortcuts by context.',
     ),
 )
 

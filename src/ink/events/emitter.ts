@@ -11,7 +11,7 @@ export class EventEmitter extends NodeEventEmitter {
   }
 
   override emit(type: string | symbol, ...args: unknown[]): boolean {
-    // Delegate to node for `error`, since it's not treated like a normal event
+    
     if (type === 'error') {
       return super.emit(type, ...args)
     }

@@ -28,13 +28,6 @@ export function recordSkillUsage(skillName: string): void {
   })
 }
 
-/**
- * Calculates a usage score for a skill based on frequency and recency.
- * Higher scores indicate more frequently and recently used skills.
- *
- * The score uses exponential decay with a half-life of 7 days,
- * meaning usage from 7 days ago is worth half as much as usage today.
- */
 export function getSkillUsageScore(skillName: string): number {
   const config = getGlobalConfig()
   const usage = config.skillUsage?.[skillName]

@@ -92,7 +92,7 @@ export const GlobTool = buildTool({
     return rulePattern => matchWildcardPattern(rulePattern, pattern)
   },
   async validateInput({ path }): Promise<ValidationResult> {
-    // If path is provided, validate that it exists and is a directory
+    
     if (path) {
       const fs = getFsImplementation()
       const absolutePath = expandPath(path)
@@ -146,8 +146,8 @@ export const GlobTool = buildTool({
   renderToolUseMessage,
   renderToolUseErrorMessage,
   renderToolResultMessage,
-  // Reuses Grep's render (UI.tsx:65) — shows filenames.join. durationMs/
-  // numFiles are "Found 3 files in 12ms" chrome (under-count, fine).
+  
+  
   extractSearchText({ filenames }) {
     return filenames.join('\n')
   },
@@ -162,7 +162,7 @@ export const GlobTool = buildTool({
       abortController.signal,
       appState.toolPermissionContext,
     )
-    // Relativize paths under cwd to save tokens (same as GrepTool)
+    
     const filenames = files.map(toRelativePath)
     const output: Output = {
       filenames,

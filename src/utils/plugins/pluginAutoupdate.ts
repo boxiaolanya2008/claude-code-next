@@ -21,7 +21,6 @@ import { isMarketplaceAutoUpdate, type PluginScope } from './schemas.js'
 
 export type PluginAutoUpdateCallback = (updatedPlugins: string[]) => void
 
-// Store callback for plugin update notifications
 let pluginUpdateCallback: PluginAutoUpdateCallback | null = null
 
 let pendingNotification: string[] | null = null
@@ -42,10 +41,6 @@ export function onPluginsAutoUpdated(
   }
 }
 
-/**
- * Check if pending updates came from autoupdate (for notification purposes).
- * Returns the list of plugin names that have pending updates.
- */
 export function getAutoUpdatedPluginNames(): string[] {
   if (!hasPendingUpdates()) {
     return []
@@ -55,17 +50,13 @@ export function getAutoUpdatedPluginNames(): string[] {
   )
 }
 
-/**
- * Get the set of marketplaces that have autoUpdate enabled.
- * Returns the marketplace names that should be auto-updated.
- */
 async function getAutoUpdateEnabledMarketplaces(): Promise<Set<string>> {
   const config = await loadKnownMarketplacesConfig()
   const declared = getDeclaredMarketplaces()
   const enabled = new Set<string>()
 
   for (const [name, entry] of Object.entries(config)) {
-    // Settings-declared autoUpdate takes precedence over JSON state
+    
     const declaredAutoUpdate = declared[name]?.autoUpdate
     const autoUpdate =
       declaredAutoUpdate !== undefined
@@ -79,10 +70,6 @@ async function getAutoUpdateEnabledMarketplaces(): Promise<Set<string>> {
   return enabled
 }
 
-/**
- * Update a single plugin's installations.
- * Returns the plugin ID if any installation was updated, null otherwise.
- */
 async function updatePlugin(
   pluginId: string,
   installations: Array<{ scope: PluginScope; projectPath?: string }>,
@@ -115,27 +102,6 @@ async function updatePlugin(
   return wasUpdated ? pluginId : null
 }
 
-/**
- * Update all project-relevant installed plugins from the given marketplaces.
- *
- * Iterates installed_plugins.json, filters to plugins whose marketplace is in
- * the set, further filters each plugin's installations to those relevant to
- * the current project (user/managed scope, or project/local scope matching
- * cwd — see isInstallationRelevantToCurrentProject), then calls updatePluginOp
- * per installation. Already-up-to-date plugins are silently skipped.
- *
- * Called by:
- * - updatePlugins() below — background autoupdate path (autoUpdate-enabled
- *   marketplaces only; third-party marketplaces default autoUpdate: false)
- * - ManageMarketplaces.tsx applyChanges() — user-initiated /plugin marketplace
- *   update. Before #29512 this path only called refreshMarketplace() (git
- *   pull on the marketplace clone), so the loader would create the new
- *   version cache dir but installed_plugins.json stayed on the old version,
- *   and the orphan GC stamped the NEW dir with .orphaned_at on next startup.
- *
- * @param marketplaceNames - lowercase marketplace names to update plugins from
- * @returns plugin IDs that were actually updated (not already up-to-date)
- */
 export async function updatePluginsForMarketplaces(
   marketplaceNames: Set<string>,
 ): Promise<string[]> {
@@ -177,31 +143,12 @@ export async function updatePluginsForMarketplaces(
     .map(r => r.value)
 }
 
-/**
- * Update plugins from marketplaces that have autoUpdate enabled.
- * Returns the list of plugin IDs that were updated.
- */
 async function updatePlugins(
   autoUpdateEnabledMarketplaces: Set<string>,
 ): Promise<string[]> {
   return updatePluginsForMarketplaces(autoUpdateEnabledMarketplaces)
 }
 
-/**
- * Auto-update marketplaces and plugins in the background.
- *
- * This function:
- * 1. Checks which marketplaces have autoUpdate enabled
- * 2. Refreshes only those marketplaces (git pull/re-download)
- * 3. Updates installed plugins from those marketplaces
- * 4. If any plugins were updated, notifies via the registered callback
- *
- * Official Anthropic marketplaces have autoUpdate enabled by default,
- * but users can disable it per-marketplace in the UI.
- *
- * This function runs silently without blocking user interaction.
- * Called from main.tsx during startup as a background job.
- */
 export function autoUpdateMarketplacesAndPluginsInBackground(): void {
   void (async () => {
     if (shouldSkipPluginAutoupdate()) {
@@ -210,7 +157,7 @@ export function autoUpdateMarketplacesAndPluginsInBackground(): void {
     }
 
     try {
-      // Get marketplaces with autoUpdate enabled
+      
       const autoUpdateEnabledMarketplaces =
         await getAutoUpdateEnabledMarketplaces()
 
@@ -218,7 +165,7 @@ export function autoUpdateMarketplacesAndPluginsInBackground(): void {
         return
       }
 
-      // Refresh only marketplaces with autoUpdate enabled
+      
       const refreshResults = await Promise.allSettled(
         Array.from(autoUpdateEnabledMarketplaces).map(async name => {
           try {
@@ -248,10 +195,10 @@ export function autoUpdateMarketplacesAndPluginsInBackground(): void {
 
       if (updatedPlugins.length > 0) {
         if (pluginUpdateCallback) {
-          // Callback is already registered, invoke it immediately
+          
           pluginUpdateCallback(updatedPlugins)
         } else {
-          // Callback not yet registered (REPL not mounted), store for later delivery
+          
           pendingNotification = updatedPlugins
         }
       }

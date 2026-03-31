@@ -21,8 +21,8 @@ export function useDeclaredCursor({
   
   
   
-  //   1. A memo()ized active instance elsewhere (e.g. the search input in
-  //      a memo'd Footer) doesn't re-render this commit — an inactive
+  
+  
   
   
   

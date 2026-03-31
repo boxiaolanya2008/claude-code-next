@@ -33,14 +33,14 @@ export function getMaxTimeoutMs(): number {
 }
 
 function getBackgroundUsageNote(): string | null {
-  if (isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_BACKGROUND_TASKS)) {
+  if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_BACKGROUND_TASKS)) {
     return null
   }
   return "You can use the `run_in_background` parameter to run the command in the background. Only use this if you don't need the result immediately and are OK being notified when the command completes later. You do not need to check the output right away - you'll be notified when it finishes. You do not need to use '&' at the end of the command when using this parameter."
 }
 
 function getCommitAndPRInstructions(): string {
-  // Defense-in-depth: undercover instructions must survive even if the user
+  
   
   
   
@@ -54,7 +54,7 @@ function getCommitAndPRInstructions(): string {
 
   
   if (process.env.USER_TYPE === 'ant') {
-    const skillsSection = !isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)
+    const skillsSection = !isEnvTruthy(process.env.CLAUDE_CODE_NEXT_SIMPLE)
       ? `For git commits and pull requests, use the \`/commit\` and \`/commit-push-pr\` skills:
 - \`/commit\` - Create a git commit with staged changes
 - \`/commit-push-pr\` - Commit, push, and create a pull request
@@ -75,7 +75,7 @@ Use the gh command via the Bash tool for other GitHub-related tasks including wo
 - View comments on a Github PR: gh api repos/foo/bar/pulls/123/comments`
   }
 
-  // For external users, include full inline instructions
+  
   const { commit: commitAttribution, pr: prAttribution } = getAttributionTexts()
 
   return `# Committing changes with git
@@ -160,10 +160,6 @@ Important:
 - View comments on a Github PR: gh api repos/foo/bar/pulls/123/comments`
 }
 
-// SandboxManager merges config from multiple sources (settings layers, defaults,
-// CLI flags) without deduping, so paths like ~/.cache appear 3× in allowOnly.
-// Dedup here before inlining into the prompt — affects only what the model sees,
-// not sandbox enforcement. Saves ~150-200 tokens/request when sandbox is enabled.
 function dedup<T>(arr: T[] | undefined): T[] | undefined {
   if (!arr || arr.length === 0) return arr
   return [...new Set(arr)]
@@ -273,8 +269,8 @@ function getSimpleSandboxSection(): string {
 }
 
 export function getSimplePrompt(): string {
-  // Ant-native builds alias find/grep to embedded bfs/ugrep in Claude's shell,
-  // so we don't steer away from them (and Glob/Grep tools are removed).
+  
+  
   const embedded = hasEmbeddedSearchTools()
 
   const toolPreferenceItems = [

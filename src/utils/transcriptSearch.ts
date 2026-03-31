@@ -6,7 +6,6 @@ import {
 
 const SYSTEM_REMINDER_CLOSE = '</system-reminder>'
 
-// searching it yields phantom matches — /terr → in[terr]upted.
 const RENDERED_AS_SENTINEL = new Set([
   INTERRUPT_MESSAGE,
   INTERRUPT_MESSAGE_FOR_TOOL_USE,
@@ -35,17 +34,17 @@ function computeSearchText(msg: RenderableMessage): string {
           if (b.type === 'text') {
             if (!RENDERED_AS_SENTINEL.has(b.text)) parts.push(b.text)
           } else if (b.type === 'tool_result') {
-            // b.content is the MODEL-facing serialization (from each tool's
-            // mapToolResultToToolResultBlockParam) — adds system-reminders,
-            // <persisted-output> wrappers, backgroundInfo strings,
-            // CYBER_RISK_MITIGATION_REMINDER. The UI
-            // renders msg.toolUseResult (the tool's native Out) via
             
             
             
             
             
-            // Bash {stdout,stderr}, Grep {content,filenames}, Read
+            
+            
+            
+            
+            
+            
             
             
             
@@ -59,7 +58,7 @@ function computeSearchText(msg: RenderableMessage): string {
     case 'assistant': {
       const c = msg.message.content
       if (Array.isArray(c)) {
-        // text blocks + tool_use inputs. tool_use renders as "⏺ Bash(cmd)"
+        
         
         
         raw = c
@@ -73,13 +72,13 @@ function computeSearchText(msg: RenderableMessage): string {
       break
     }
     case 'attachment': {
-      // relevant_memories renders full m.content in transcript mode
+      
       
       
       if (msg.attachment.type === 'relevant_memories') {
         raw = msg.attachment.memories.map(m => m.content).join('\n')
       } else if (
-        // Mid-turn prompts — queued while an agent is running. Render via
+        
         
         
         msg.attachment.type === 'queued_command' &&
@@ -95,7 +94,7 @@ function computeSearchText(msg: RenderableMessage): string {
       break
     }
     case 'collapsed_read_search': {
-      // relevant_memories attachments are absorbed into collapse groups
+      
       
       
       if (msg.relevantMemories) {
@@ -104,10 +103,10 @@ function computeSearchText(msg: RenderableMessage): string {
       break
     }
     default:
-      // grouped_tool_use, system — no text content
+      
       break
   }
-  // Strip <system-reminder> anywhere — Claude context, not user-visible.
+  
   
   let t = raw
   let open = t.indexOf('<system-reminder>')
@@ -120,17 +119,13 @@ function computeSearchText(msg: RenderableMessage): string {
   return t
 }
 
-/** Tool invocation display: renderToolUseMessage shows input fields like
- *  command (Bash), pattern (Grep), file_path (Read/Edit), prompt (Agent).
- *  Same duck-type strategy as toolResultSearchText — known field names,
- *  unknown → empty. Under-count > phantom. */
 export function toolUseSearchText(input: unknown): string {
   if (!input || typeof input !== 'object') return ''
   const o = input as Record<string, unknown>
   const parts: string[] = []
   
   
-  // handled by under-count (the overlay matches it but we don't count it).
+  
   for (const k of [
     'command',
     'pattern',
@@ -140,13 +135,13 @@ export function toolUseSearchText(input: unknown): string {
     'description',
     'query',
     'url',
-    'skill', // SkillTool
+    'skill', 
   ]) {
     const v = o[k]
     if (typeof v === 'string') parts.push(v)
   }
-  // args[] (Tmux/TungstenTool), files[] (SendUserFile) — tool-use
-  // renders the joined array as the primary display. Under-count > skip.
+  
+  
   for (const k of ['args', 'files']) {
     const v = o[k]
     if (Array.isArray(v) && v.every(x => typeof x === 'string')) {
@@ -156,11 +151,6 @@ export function toolUseSearchText(input: unknown): string {
   return parts.join('\n')
 }
 
-/** Duck-type the tool's native Out for searchable text. Known shapes:
- *  {stdout,stderr} (Bash/Shell), {content} (Grep), {file:{content}} (Read),
- *  {filenames:[]} (Grep/Glob), {output} (generic). Falls back to concating
- *  all top-level string fields — crude but better than indexing model-chatter.
- *  Empty for unknown shapes: under-count > phantom. */
 export function toolResultSearchText(r: unknown): string {
   if (!r || typeof r !== 'object') return typeof r === 'string' ? r : ''
   const o = r as Record<string, unknown>
@@ -176,9 +166,9 @@ export function toolResultSearchText(r: unknown): string {
   ) {
     return (o.file as { content: string }).content
   }
-  // Known output-field names only. A blind walk would index metadata
   
-  // durationMs-as-string). Allowlist the fields tools actually render.
+  
+  
   
   const parts: string[] = []
   for (const k of ['content', 'output', 'result', 'text', 'message']) {

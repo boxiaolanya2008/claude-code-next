@@ -33,11 +33,6 @@ export function deriveReviewState(
   }
 }
 
-/**
- * Fetch PR status for the current branch using `gh pr view`.
- * Returns null on any failure (gh not installed, no PR, not in git repo, etc).
- * Also returns null if the PR's head branch is the default branch (e.g., main/master).
- */
 export async function fetchPrStatus(): Promise<PrStatus | null> {
   const isGit = await getIsGit()
   if (!isGit) return null
@@ -73,8 +68,8 @@ export async function fetchPrStatus(): Promise<PrStatus | null> {
       state: string
     }
 
-    // Don't show PR status for PRs from the default branch (e.g., main, master)
-    // This can happen when someone opens a PR from main to another branch
+    
+    
     if (
       data.headRefName === defaultBranch ||
       data.headRefName === 'main' ||
@@ -83,7 +78,7 @@ export async function fetchPrStatus(): Promise<PrStatus | null> {
       return null
     }
 
-    // Don't show PR status for merged or closed PRs — `gh pr view` returns
+    
     
     
     if (data.state === 'MERGED' || data.state === 'CLOSED') {

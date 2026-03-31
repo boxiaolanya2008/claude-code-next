@@ -49,7 +49,7 @@ export function validateAgent(
       errors.push(typeError)
     }
 
-    // Check for duplicates (excluding self for editing)
+    
     const duplicate = existingAgents.find(
       a => a.agentType === agent.agentType && a.source !== agent.source,
     )
@@ -60,7 +60,7 @@ export function validateAgent(
     }
   }
 
-  // Validate description
+  
   if (!agent.whenToUse) {
     errors.push('Description (description) is required')
   } else if (agent.whenToUse.length < 10) {
@@ -71,7 +71,7 @@ export function validateAgent(
     warnings.push('Description is very long (over 5000 characters)')
   }
 
-  // Validate tools
+  
   if (agent.tools !== undefined && !Array.isArray(agent.tools)) {
     errors.push('Tools must be an array')
   } else {
@@ -83,7 +83,7 @@ export function validateAgent(
       )
     }
 
-    // Check for invalid tools
+    
     const resolvedTools = resolveAgentTools(agent, availableTools, false)
 
     if (resolvedTools.invalidTools.length > 0) {
@@ -91,7 +91,7 @@ export function validateAgent(
     }
   }
 
-  // Validate system prompt
+  
   const systemPrompt = agent.getSystemPrompt()
   if (!systemPrompt) {
     errors.push('System prompt is required')

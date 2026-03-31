@@ -27,7 +27,7 @@ export function isSyntheticOutputToolEnabled(opts: {
 export const SyntheticOutputTool = buildTool({
   isMcp: false,
   isEnabled() {
-    // This tool is only created when conditions are met (see main.tsx where
+    
     
     return true
   },
@@ -56,20 +56,20 @@ export const SyntheticOutputTool = buildTool({
     return outputSchema()
   },
   async call(input) {
-    // The tool just validates and returns the input as the structured output
+    
     return {
       data: 'Structured output provided successfully',
       structured_output: input,
     }
   },
   async checkPermissions(input): Promise<PermissionResult> {
-    // Always allow this tool - it's just returning data
+    
     return {
       behavior: 'allow',
       updatedInput: input,
     }
   },
-  // Minimal UI implementations - this tool is for non-interactive SDK/CLI use
+  
   renderToolUseMessage(input: Record<string, unknown>) {
     const keys = Object.keys(input)
     if (keys.length === 0) return null
@@ -101,17 +101,8 @@ export const SyntheticOutputTool = buildTool({
 
 type CreateResult = { tool: Tool<InputSchema> } | { error: string }
 
-// Workflow scripts call agent({schema: BUGS_SCHEMA}) 30-80 times per run with
-// the same schema object reference. Without caching, each call does
-// new Ajv() + validateSchema() + compile() (~1.4ms of JIT codegen). Identity
-// cache brings 80-call workflows from ~110ms to ~4ms Ajv overhead.
 const toolCache = new WeakMap<object, CreateResult>()
 
-/**
- * Create a SyntheticOutputTool configured with the given JSON schema.
- * Returns {tool} on success or {error} with Ajv's diagnostic message
- * (e.g. "data/properties/bugs should be object") on invalid schema.
- */
 export function createSyntheticOutputTool(
   jsonSchema: Record<string, unknown>,
 ): CreateResult {

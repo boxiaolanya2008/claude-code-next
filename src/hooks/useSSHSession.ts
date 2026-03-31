@@ -66,7 +66,7 @@ export function useSSHSession({
           setIsLoading(false)
         }
 
-        // Skip duplicate init messages (one per turn from stream-json mode).
+        
         if (sdkMessage.type === 'system' && sdkMessage.subtype === 'init') {
           if (hasReceivedInitRef.current) return
           hasReceivedInitRef.current = true
@@ -182,7 +182,7 @@ export function useSSHSession({
           ? 'Remote session ended.'
           : 'SSH session failed before connecting.'
         
-        // post-connect only on nonzero exit — normal --verbose noise otherwise).
+        
         if (stderr && (!connected || exitCode !== 0)) {
           msg += `\nRemote stderr (exit ${exitCode ?? 'signal ' + session.proc.signalCode}):\n${stderr}`
         }

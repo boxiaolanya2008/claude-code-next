@@ -79,11 +79,6 @@ type StoredCostState = {
   modelUsage: { [modelName: string]: ModelUsage } | undefined
 }
 
-/**
- * Gets stored cost state from project config for a specific session.
- * Returns the cost data if the session ID matches, or undefined otherwise.
- * Use this to read costs BEFORE overwriting the config with saveCurrentSessionCosts().
- */
 export function getStoredSessionCosts(
   sessionId: string,
 ): StoredCostState | undefined {
@@ -94,7 +89,7 @@ export function getStoredSessionCosts(
     return undefined
   }
 
-  // Build model usage with context windows
+  
   let modelUsage: { [modelName: string]: ModelUsage } | undefined
   if (projectConfig.lastModelUsage) {
     modelUsage = Object.fromEntries(
@@ -122,11 +117,6 @@ export function getStoredSessionCosts(
   }
 }
 
-/**
- * Restores cost state from project config when resuming a session.
- * Only restores if the session ID matches the last saved session.
- * @returns true if cost state was restored, false otherwise
- */
 export function restoreCostStateForSession(sessionId: string): boolean {
   const data = getStoredSessionCosts(sessionId)
   if (!data) {
@@ -136,10 +126,6 @@ export function restoreCostStateForSession(sessionId: string): boolean {
   return true
 }
 
-/**
- * Saves the current session's costs to project config.
- * Call this before switching sessions to avoid losing accumulated costs.
- */
 export function saveCurrentSessionCosts(fpsMetrics?: FpsMetrics): void {
   saveCurrentProjectConfig(current => ({
     ...current,
@@ -175,7 +161,7 @@ export function saveCurrentSessionCosts(fpsMetrics?: FpsMetrics): void {
 }
 
 function formatCost(cost: number, maxDecimalPlaces: number = 4): string {
-  return `$${cost > 0.5 ? round(cost, 100).toFixed(2) : cost.toFixed(maxDecimalPlaces)}`
+  return `${cost > 0.5 ? round(cost, 100).toFixed(2) : cost.toFixed(maxDecimalPlaces)}`
 }
 
 function formatModelUsage(): string {
@@ -184,7 +170,7 @@ function formatModelUsage(): string {
     return 'Usage:                 0 input, 0 output, 0 cache read, 0 cache write'
   }
 
-  // Accumulate usage by short name
+  
   const usageByShortName: { [shortName: string]: ModelUsage } = {}
   for (const [model, usage] of Object.entries(modelUsageMap)) {
     const shortName = getCanonicalName(model)

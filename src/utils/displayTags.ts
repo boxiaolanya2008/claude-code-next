@@ -7,12 +7,6 @@ export function stripDisplayTags(text: string): string {
   return result || text
 }
 
-/**
- * Like stripDisplayTags but returns empty string when all content is tags.
- * Used by getLogDisplayTitle to detect command-only prompts (e.g. /clear)
- * so they can fall through to the next title fallback, and by extractTitleText
- * to skip pure-XML messages during bridge title derivation.
- */
 export function stripDisplayTagsAllowEmpty(text: string): string {
   return text.replace(XML_TAG_BLOCK_PATTERN, '').trim()
 }

@@ -21,7 +21,7 @@ export function migrateSonnet1mToSonnet45(): void {
     })
   }
 
-  // Also migrate the in-memory override if already set
+  
   const override = getMainLoopModelOverride()
   if (override === 'sonnet[1m]') {
     setMainLoopModelOverride('sonnet-4-5-20250929[1m]')

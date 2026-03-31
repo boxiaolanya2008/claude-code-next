@@ -38,8 +38,6 @@ export {
   Wrap,
 }
 
-// --
-
 export type Value = {
   unit: Unit
   value: number
@@ -70,12 +68,9 @@ function isDefined(n: number): boolean {
   return !isNaN(n)
 }
 
-// NaN-safe equality for layout-cache input comparison
 function sameFloat(a: number, b: number): boolean {
   return a === b || (a !== a && b !== b)
 }
-
-// --
 
 type Layout = {
   left: number
@@ -87,8 +82,6 @@ type Layout = {
   padding: [number, number, number, number]
   margin: [number, number, number, number]
 }
-
-// --
 
 type Style = {
   direction: Direction
@@ -152,8 +145,6 @@ function defaultStyle(): Style {
   }
 }
 
-// --
-
 const EDGE_LEFT = 0
 const EDGE_TOP = 1
 const EDGE_RIGHT = 2
@@ -163,10 +154,10 @@ function resolveEdge(
   edges: Value[],
   physicalEdge: number,
   ownerSize: number,
-  // For margin/position we allow auto; for padding/border auto resolves to 0
+  
   allowAuto = false,
 ): number {
-  // Precedence: specific edge > horizontal/vertical > all
+  
   let v = edges[physicalEdge]!
   if (v.unit === Unit.Undefined) {
     if (physicalEdge === EDGE_LEFT || physicalEdge === EDGE_RIGHT) {
@@ -178,7 +169,7 @@ function resolveEdge(
   if (v.unit === Unit.Undefined) {
     v = edges[Edge.All]!
   }
-  // Start/End map to Left/Right for LTR (Ink is always LTR)
+  
   if (v.unit === Unit.Undefined) {
     if (physicalEdge === EDGE_LEFT) v = edges[Edge.Start]!
     if (physicalEdge === EDGE_RIGHT) v = edges[Edge.End]!
@@ -209,8 +200,6 @@ function isMarginAuto(edges: Value[], physicalEdge: number): boolean {
   return resolveEdgeRaw(edges, physicalEdge).unit === Unit.Auto
 }
 
-// Setter helpers for the _hasAutoMargin / _hasPosition fast-path flags.
-
 function hasAnyAutoEdge(edges: Value[]): boolean {
   for (let i = 0; i < 9; i++) if (edges[i]!.unit === 3) return true
   return false
@@ -220,19 +209,17 @@ function hasAnyDefinedEdge(edges: Value[]): boolean {
   return false
 }
 
-// Hot path: resolve all 4 physical edges in one pass, writing into `out`.
-
 function resolveEdges4Into(
   edges: Value[],
   ownerSize: number,
   out: [number, number, number, number],
 ): void {
-  // Hoist fallbacks once — the 4 per-edge chains share these reads.
-  const eH = edges[6]! // Edge.Horizontal
-  const eV = edges[7]! // Edge.Vertical
-  const eA = edges[8]! // Edge.All
-  const eS = edges[4]! // Edge.Start
-  const eE = edges[5]! // Edge.End
+  
+  const eH = edges[6]! 
+  const eV = edges[7]! 
+  const eA = edges[8]! 
+  const eS = edges[4]! 
+  const eE = edges[5]! 
   const pctDenom = isNaN(ownerSize) ? NaN : ownerSize / 100
 
   
@@ -261,8 +248,6 @@ function resolveEdges4Into(
   if (v.unit === 0) v = eA
   out[3] = v.unit === 1 ? v.value : v.unit === 2 ? v.value * pctDenom : 0
 }
-
-// --
 
 function isRow(dir: FlexDirection): boolean {
   return dir === FlexDirection.Row || dir === FlexDirection.RowReverse
@@ -298,8 +283,6 @@ function trailingEdge(dir: FlexDirection): number {
   }
 }
 
-// --
-
 export type MeasureFunction = (
   width: number,
   widthMode: MeasureMode,
@@ -308,8 +291,6 @@ export type MeasureFunction = (
 ) => { width: number; height: number }
 
 export type Size = { width: number; height: number }
-
-// --
 
 export type Config = {
   pointScaleFactor: number
@@ -350,8 +331,6 @@ function createConfig(): Config {
   return config
 }
 
-// --
-
 export class Node {
   style: Style
   layout: Layout
@@ -390,7 +369,7 @@ export class Node {
   
   
   
-  // clean siblings skip straight through, only the dirty chain recomputes.
+  
   _lW = NaN
   _lH = NaN
   _lWM: MeasureMode = 0
@@ -440,7 +419,7 @@ export class Node {
   
   
   
-  // _cIn (aW,aH,wM,hM,oW,oH,fW,fH) and [i*2, i*2+2) in _cOut (w,h).
+  
   _cIn: Float64Array | null = null
   _cOut: Float64Array | null = null
   _cGen = -1
@@ -467,7 +446,7 @@ export class Node {
     _yogaLiveNodes++
   }
 
-  // -- Tree
+  
 
   insertChild(child: Node, index: number): void {
     child.parent = this
@@ -492,7 +471,7 @@ export class Node {
     return this.parent
   }
 
-  // -- Lifecycle
+  
 
   free(): void {
     this.parent = null
@@ -524,7 +503,7 @@ export class Node {
     this._fbBasis = NaN
   }
 
-  // -- Dirty tracking
+  
 
   markDirty(): void {
     this.isDirty_ = true
@@ -538,7 +517,7 @@ export class Node {
   }
   markLayoutSeen(): void {}
 
-  // -- Measure function
+  
 
   setMeasureFunc(fn: MeasureFunction | null): void {
     this.measureFunc = fn
@@ -549,7 +528,7 @@ export class Node {
     this.markDirty()
   }
 
-  // -- Computed layout getters
+  
 
   getComputedLeft(): number {
     return this.layout.left
@@ -598,7 +577,7 @@ export class Node {
     return this.layout.margin[physicalEdge(edge)]!
   }
 
-  // -- Style setters: dimensions
+  
 
   setWidth(v: number | 'auto' | string | undefined): void {
     this.style.width = parseDimension(v)
@@ -657,7 +636,7 @@ export class Node {
     this.markDirty()
   }
 
-  // -- Style setters: flex
+  
 
   setFlexDirection(dir: FlexDirection): void {
     this.style.flexDirection = dir
@@ -705,7 +684,7 @@ export class Node {
     this.markDirty()
   }
 
-  // -- Style setters: alignment
+  
 
   setAlignItems(a: Align): void {
     this.style.alignItems = a
@@ -724,7 +703,7 @@ export class Node {
     this.markDirty()
   }
 
-  // -- Style setters: display / position / overflow
+  
 
   setDisplay(d: Display): void {
     this.style.display = d
@@ -761,10 +740,10 @@ export class Node {
     this.markDirty()
   }
   setBoxSizing(_: BoxSizing): void {
-    // Not implemented — Ink doesn't use content-box
+    
   }
 
-  // -- Style setters: spacing
+  
 
   setMargin(edge: Edge, v: number | 'auto' | string | undefined): void {
     const val = parseDimension(v)
@@ -811,7 +790,7 @@ export class Node {
     this.markDirty()
   }
 
-  // -- Style getters (partial — only what tests need)
+  
 
   getFlexDirection(): FlexDirection {
     return this.style.flexDirection
@@ -856,7 +835,7 @@ export class Node {
     return this.style.direction
   }
 
-  // -- Unused API stubs (present for API parity)
+  
 
   copyStyle(_: Node): void {}
   setDirtiedFunc(_: unknown): void {}
@@ -874,7 +853,7 @@ export class Node {
   }
   setAlwaysFormsContainingBlock(_: boolean): void {}
 
-  // -- Layout entry point
+  
 
   calculateLayout(
     ownerWidth: number | undefined,
@@ -897,7 +876,7 @@ export class Node {
       h,
       true,
     )
-    // Root's own position = margin + position insets (yoga applies position
+    
     
     
     const mar = this.layout.margin
@@ -934,9 +913,9 @@ function cacheWrite(
     node._cIn = new Float64Array(CACHE_SLOTS * 8)
     node._cOut = new Float64Array(CACHE_SLOTS * 2)
   }
-  // First write after a dirty clears stale entries from before the dirty.
   
-  // if wasDirty, the subtree changed since then → old dimensions invalid.
+  
+  
   
   
   
@@ -944,7 +923,7 @@ function cacheWrite(
     node._cN = 0
     node._cWr = 0
   }
-  // LRU write index wraps; _cN stays at CACHE_SLOTS so the read scan always
+  
   
   const i = node._cWr++ % CACHE_SLOTS
   if (node._cN < CACHE_SLOTS) node._cN = node._cWr
@@ -963,10 +942,6 @@ function cacheWrite(
   node._cGen = _generation
 }
 
-// Store computed layout.width/height into the single-slot cache output fields.
-
-// outputs must be committed HERE (after compute) so a cache hit can restore
-
 function commitCacheOutputs(node: Node, performLayout: boolean): void {
   if (performLayout) {
     node._lOutW = node.layout.width
@@ -976,8 +951,6 @@ function commitCacheOutputs(node: Node, performLayout: boolean): void {
     node._mOutH = node.layout.height
   }
 }
-
-// --
 
 let _generation = 0
 let _yogaNodesVisited = 0
@@ -1007,7 +980,7 @@ function layoutNode(
   ownerWidth: number,
   ownerHeight: number,
   performLayout: boolean,
-  // When true, ignore style dimension on this axis — the flex container
+  
   
   forceWidth = false,
   forceHeight = false,
@@ -1045,7 +1018,7 @@ function layoutNode(
       layout.height = node._lOutH
       return
     }
-    // Multi-entry cache: scan for matching inputs, restore cached w/h on hit.
+    
     
     
     
@@ -1092,7 +1065,7 @@ function layoutNode(
       return
     }
   }
-  // Commit cache inputs up front so every return path leaves a valid entry.
+  
   
   
   
@@ -1117,7 +1090,7 @@ function layoutNode(
     
     
     
-    // forcing recompute on the layout call.
+    
     if (wasDirty) node._hasM = false
   } else {
     node._mW = availableWidth
@@ -1136,7 +1109,7 @@ function layoutNode(
     if (wasDirty) node._hasL = false
   }
 
-  // Resolve padding/border/margin against ownerWidth (yoga uses ownerWidth for %)
+  
   
   
   
@@ -1174,11 +1147,11 @@ function layoutNode(
     hMode = MeasureMode.Exactly
   }
 
-  // Apply min/max constraints to the node's own dimensions
+  
   width = boundAxis(style, true, width, ownerWidth, ownerHeight)
   height = boundAxis(style, false, height, ownerWidth, ownerHeight)
 
-  // Measure-func leaf node
+  
   if (node.measureFunc && node.children.length === 0) {
     const innerW =
       wMode === MeasureMode.Undefined
@@ -1211,8 +1184,8 @@ function layoutNode(
             ownerHeight,
           )
     commitCacheOutputs(node, performLayout)
-    // Write cache even for dirty nodes — fresh-mounted items during virtual
-    // scroll are dirty on first layout, but the dirty chain's measure→layout
+    
+    
     
     
     
@@ -1231,7 +1204,7 @@ function layoutNode(
     return
   }
 
-  // Leaf node with no children and no measure func
+  
   if (node.children.length === 0) {
     node.layout.width =
       wMode === MeasureMode.Exactly
@@ -1262,7 +1235,7 @@ function layoutNode(
     return
   }
 
-  // Container with children — run flexbox algorithm
+  
   const mainAxis = style.flexDirection
   const crossAx = crossAxis(mainAxis)
   const isMainRow = isRow(mainAxis)
@@ -1327,8 +1300,8 @@ function layoutNode(
     for (const c of flowChildren) c._lineIndex = 0
     lines.push(flowChildren)
   } else {
-    // Line-break decisions use the min/max-clamped basis (flexbox spec §9.3.5:
-    // "hypothetical main size"), not the raw flex-basis.
+    
+    
     let lineStart = 0
     let lineLen = 0
     for (let i = 0; i < flowChildren.length; i++) {
@@ -1366,7 +1339,7 @@ function layoutNode(
     for (const c of line) {
       lineBasis += c._flexBasis + childMarginForAxis(c, mainAxis, ownerW)
     }
-    // Resolve flexible lengths against available inner main. For indefinite
+    
     
     let availMain = innerMainSize
     if (!isDefined(availMain)) {
@@ -1450,7 +1423,7 @@ function layoutNode(
       c._crossSize = isMainRow ? c.layout.height : c.layout.width
       lineCross = Math.max(lineCross, c._crossSize + cMarginCross)
     }
-    // Baseline layout: line cross size must fit maxAscent + maxDescent of
+    
     
     if (isBaseline) {
       let maxAscent = 0
@@ -1469,7 +1442,7 @@ function layoutNode(
         lineCross = maxAscent + maxDescent
       }
     }
-    // layoutNode(c) at line ~1117 above already resolved c.layout.margin[] via
+    
     
     
     const mainLead = leadingEdge(mainAxis)
@@ -1541,7 +1514,7 @@ function layoutNode(
 
   if (!performLayout) return
 
-  // STEP 5: Position lines (align-content) and children (justify-content +
+  
   
   const actualInnerMain =
     (isMainRow ? node.layout.width : node.layout.height) - mainPadBorder
@@ -1555,7 +1528,7 @@ function layoutNode(
   const mainContainerSize = isMainRow ? node.layout.width : node.layout.height
   const crossLead = pad[crossLeadEdgePhys]! + bor[crossLeadEdgePhys]!
 
-  // Align-content: distribute free cross space among lines. Single-line
+  
   
   
   let lineCrossOffset = crossLead
@@ -1600,8 +1573,8 @@ function layoutNode(
     }
   }
 
-  // For wrap-reverse, lines stack from the trailing cross edge. Walk lines in
-  // order but flip the cross position within the container.
+  
+  
   const wrapReverse = style.flexWrap === Wrap.WrapReverse
   const crossContainerSize = isMainRow ? node.layout.height : node.layout.width
   let lineCrossPos = lineCrossOffset
@@ -1659,7 +1632,7 @@ function layoutNode(
       }
     }
 
-    // Justify-content + auto margins for this line
+    
     let mainOffset = pad[mainLeadEdgePhys]! + bor[mainLeadEdgePhys]!
     let betweenMain = gapMain
     let numAutoMarginsMain = 0
@@ -1737,7 +1710,7 @@ function layoutNode(
         mCrossLead = autoCrossLead ? 0 : cLayoutMargin[crossLeadEdgePhys]!
         mCrossTrail = autoCrossTrail ? 0 : cLayoutMargin[crossTrailEdgePhys]!
       } else {
-        // Fast path: no auto margins — read resolved values directly.
+        
         mMainLead = cLayoutMargin[mainLeadEdgePhys]!
         mMainTrail = cLayoutMargin[mainTrailEdgePhys]!
         mCrossLead = cLayoutMargin[crossLeadEdgePhys]!
@@ -1757,7 +1730,7 @@ function layoutNode(
       } else if (autoCrossLead) {
         crossPos += Math.max(0, crossFree)
       } else if (autoCrossTrail) {
-        // stays at leading
+        
       } else {
         switch (childAlign) {
           case Align.FlexStart:
@@ -1771,7 +1744,7 @@ function layoutNode(
             if (!wrapReverse) crossPos += crossFree
             break
           case Align.Baseline:
-            // Row direction only (isBaselineLayout checked this). Position so
+            
             
             
             if (isBaseline) {
@@ -1786,7 +1759,7 @@ function layoutNode(
         }
       }
 
-      // Relative position offsets. Fast path: no position insets set →
+      
       
       let relX = 0
       let relY = 0
@@ -1831,7 +1804,7 @@ function layoutNode(
     lineCrossPos += lineCross + betweenLines
   }
 
-  // STEP 6: Absolute-positioned children
+  
   for (const c of absChildren) {
     layoutAbsoluteChild(
       node,
@@ -1910,7 +1883,7 @@ function layoutAbsoluteChild(
   } else if (isDefined(rRight)) {
     left = parentWidth - bor[2] - rRight - child.layout.width - mR
   } else if (mainRow) {
-    // Main axis — justify-content, flipped for reversed
+    
     const lead = pad[0] + bor[0]
     const trail = parentWidth - pad[2] - bor[2]
     left = reversed
@@ -1986,9 +1959,9 @@ function alignAbsolute(
   childSize: number,
   wrapReverse: boolean,
 ): number {
-  // Wrap-reverse flips the cross axis: flex-start/stretch go to trailing,
-  // flex-end goes to leading (yoga's absoluteLayoutChild flips the align value
-  // when the containing block has wrap-reverse).
+  
+  
+  
   switch (align) {
     case Align.Center:
       return leadEdge + (trailEdge - leadEdge - childSize) / 2
@@ -2008,8 +1981,8 @@ function computeFlexBasis(
   ownerWidth: number,
   ownerHeight: number,
 ): number {
-  // Same-generation cache hit: basis was computed THIS calculateLayout, so
-  // it's fresh regardless of isDirty_. Covers both clean children (scrolling
+  
+  
   
   
   
@@ -2044,7 +2017,7 @@ function computeFlexBasis(
     return b
   }
 
-  // Style dimension on main axis
+  
   const mainStyleDim = isMainRow ? cs.width : cs.height
   const mainOwner = isMainRow ? ownerWidth : ownerHeight
   const resolved = resolveValue(mainStyleDim, mainOwner)
@@ -2060,7 +2033,7 @@ function computeFlexBasis(
     return b
   }
 
-  // Need to measure the child to get its natural size
+  
   const crossStyleDim = isMainRow ? cs.height : cs.width
   const crossOwner = isMainRow ? ownerHeight : ownerWidth
   let crossConstraint = resolveValue(crossStyleDim, crossOwner)
@@ -2075,7 +2048,6 @@ function computeFlexBasis(
         : MeasureMode.AtMost
   }
 
-  // Upstream yoga (YGNodeComputeFlexBasisForChild) passes the available inner
   
   
   
@@ -2083,12 +2055,13 @@ function computeFlexBasis(
   
   
   
-  //   - Width only. Height is never constrained during basis measurement —
   
   
   
   
-  //     inflating the basis (breaks YGMinMaxDimensionTest flex_grow_in_at_most
+  
+  
+  
   
   let mainConstraint = NaN
   let mainConstraintMode: MeasureMode = MeasureMode.Undefined
@@ -2130,8 +2103,8 @@ function resolveFlexibleLengths(
   ownerW: number,
   ownerH: number,
 ): void {
-  // Multi-pass flex distribution per CSS flexbox spec §9.7 "Resolving Flexible
-  // Lengths": distribute free space, detect min/max violations, freeze all
+  
+  
   
   const n = children.length
   const frozen: boolean[] = new Array(n).fill(false)
@@ -2152,7 +2125,7 @@ function resolveFlexibleLengths(
       c._mainSize = c._flexBasis
     }
   }
-  // Iteratively distribute until no violations. Free space is recomputed each
+  
   
   
   const unclamped: number[] = new Array(n)
@@ -2188,7 +2161,7 @@ function resolveFlexibleLengths(
         if (scaled > remaining) remaining = scaled
       }
     }
-    // Compute targets + violations for all unfrozen children
+    
     let totalViolation = 0
     for (let i = 0; i < n; i++) {
       if (frozen[i]) continue
@@ -2208,7 +2181,7 @@ function resolveFlexibleLengths(
       c._mainSize = clamped
       totalViolation += clamped - t
     }
-    // Freeze per spec §9.7 step 5: if totalViolation is zero freeze all; if
+    
     
     if (totalViolation === 0) break
     let anyFrozen = false
@@ -2240,10 +2213,6 @@ function resolveChildAlign(parent: Node, child: Node): Align {
     : child.style.alignSelf
 }
 
-// Baseline of a node per CSS Flexbox §8.5 / yoga's YGBaseline. Leaf nodes
-// (no children) use their own height. Containers recurse into the first
-// baseline-aligned child on the first line (or the first flow child if none
-// are baseline-aligned), returning that child's baseline + its top offset.
 function calculateBaseline(node: Node): number {
   let baselineChild: Node | null = null
   for (const c of node.children) {
@@ -2262,8 +2231,6 @@ function calculateBaseline(node: Node): number {
   if (baselineChild === null) return node.layout.height
   return calculateBaseline(baselineChild) + baselineChild.layout.top
 }
-
-// A container uses baseline layout only for row direction, when either
 
 function isBaselineLayout(node: Node, flowChildren: Node[]): boolean {
   if (!isRow(node.style.flexDirection)) return false
@@ -2305,7 +2272,7 @@ function boundAxis(
   const maxU = maxV.unit
   
   
-  // nearly all with undefined min/max) — skipping 2× resolveValue + 2× isNaN
+  
   
   if (minU === 0 && maxU === 0) return value
   const owner = isWidth ? ownerWidth : ownerHeight
@@ -2347,10 +2314,10 @@ function zeroLayoutRecursive(node: Node): void {
 }
 
 function collectLayoutChildren(node: Node, flow: Node[], abs: Node[]): void {
-  // Partition a node's children into flow and absolute lists, flattening
-  // display:contents subtrees so their children are laid out as direct
-  // children of this node (per CSS display:contents spec — the box is removed
-  // from the layout tree but its children remain, lifted to the grandparent).
+  
+  
+  
+  
   for (const c of node.children) {
     const disp = c.style.display
     if (disp === Display.None) {
@@ -2364,8 +2331,8 @@ function collectLayoutChildren(node: Node, flow: Node[], abs: Node[]): void {
       c.layout.top = 0
       c.layout.width = 0
       c.layout.height = 0
-      // Recurse — nested display:contents lifts all the way up. The contents
-      // node's own margin/padding/position/dimensions are ignored.
+      
+      
       collectLayoutChildren(c, flow, abs)
     } else if (c.style.positionType === PositionType.Absolute) {
       abs.push(c)
@@ -2442,22 +2409,20 @@ function roundValue(
   } else if (forceFloor) {
     scaled = Math.floor(scaled)
   } else {
-    // Round half-up (>= 0.5 goes up), per upstream
+    
     scaled = Math.floor(scaled) + (frac >= 0.4999 ? 1 : 0)
   }
   return scaled / scale
 }
 
-// --
-
 function parseDimension(v: number | string | undefined): Value {
   if (v === undefined) return UNDEFINED_VALUE
   if (v === 'auto') return AUTO_VALUE
   if (typeof v === 'number') {
-    // WASM yoga's YGFloatIsUndefined treats NaN and ±Infinity as undefined.
-    // Ink passes height={Infinity} (e.g. LogSelector maxHeight default) and
-    // expects it to mean "unconstrained" — storing it as a literal point value
-    // makes the node height Infinity and breaks all downstream layout.
+    
+    
+    
+    
     return Number.isFinite(v) ? pointValue(v) : UNDEFINED_VALUE
   }
   if (typeof v === 'string' && v.endsWith('%')) {
@@ -2483,9 +2448,6 @@ function physicalEdge(edge: Edge): number {
       return EDGE_LEFT
   }
 }
-
-// --
-// Module API matching yoga-layout/load
 
 export type Yoga = {
   Config: {

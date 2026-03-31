@@ -36,10 +36,6 @@ export function clearTrackedMagicDocs(): void {
   trackedMagicDocs.clear()
 }
 
-/**
- * Detect if a file content contains a Magic Doc header
- * Returns an object with title and optional instructions, or null if not a magic doc
- */
 export function detectMagicDocHeader(
   content: string,
 ): { title: string; instructions?: string } | null {
@@ -71,12 +67,8 @@ export function detectMagicDocHeader(
   return { title }
 }
 
-/**
- * Register a file as a Magic Doc when it's read
- * Only registers once per file path - the hook always reads latest content
- */
 export function registerMagicDoc(filePath: string): void {
-  // Only register if not already tracked
+  
   if (!trackedMagicDocs.has(filePath)) {
     trackedMagicDocs.set(filePath, {
       path: filePath,
@@ -84,24 +76,18 @@ export function registerMagicDoc(filePath: string): void {
   }
 }
 
-/**
- * Create Magic Docs agent definition
- */
 function getMagicDocsAgent(): BuiltInAgentDefinition {
   return {
     agentType: 'magic-docs',
     whenToUse: 'Update Magic Docs',
-    tools: [FILE_EDIT_TOOL_NAME], // Only allow Edit
+    tools: [FILE_EDIT_TOOL_NAME], 
     model: 'sonnet',
     source: 'built-in',
     baseDir: 'built-in',
-    getSystemPrompt: () => '', // Will use override systemPrompt
+    getSystemPrompt: () => '', 
   }
 }
 
-/**
- * Update a single Magic Doc
- */
 async function updateMagicDoc(
   docInfo: MagicDocInfo,
   context: REPLHookContext,
@@ -119,7 +105,7 @@ async function updateMagicDoc(
     readFileState: clonedReadFileState,
   }
 
-  // Read the document; if deleted or unreadable, remove from tracking
+  
   let currentDoc = ''
   try {
     const result = await FileReadTool.call(
@@ -131,7 +117,7 @@ async function updateMagicDoc(
       currentDoc = output.file.content
     }
   } catch (e: unknown) {
-    // FileReadTool wraps ENOENT in a plain Error("File does not exist...") with
+    
     
     if (
       isFsInaccessible(e) ||
@@ -143,15 +129,15 @@ async function updateMagicDoc(
     throw e
   }
 
-  // Re-detect title and instructions from latest file content
+  
   const detected = detectMagicDocHeader(currentDoc)
   if (!detected) {
-    // File no longer has magic doc header, remove from tracking
+    
     trackedMagicDocs.delete(docInfo.path)
     return
   }
 
-  // Build update prompt with latest title and instructions
+  
   const userPrompt = await buildMagicDocsUpdatePrompt(
     currentDoc,
     docInfo.path,
@@ -182,7 +168,7 @@ async function updateMagicDoc(
     }
   }
 
-  // Run Magic Docs update using runAgent with forked context
+  
   for await (const _message of runAgent({
     agentDefinition: getMagicDocsAgent(),
     promptMessages: [createUserMessage({ content: userPrompt })],
@@ -198,13 +184,10 @@ async function updateMagicDoc(
     },
     availableTools: clonedToolUseContext.options.tools,
   })) {
-    // Just consume - let it run to completion
+    
   }
 }
 
-/**
- * Magic Docs post-sampling hook that updates all tracked Magic Docs
- */
 const updateMagicDocs = sequential(async function (
   context: REPLHookContext,
 ): Promise<void> {
@@ -214,7 +197,7 @@ const updateMagicDocs = sequential(async function (
     return
   }
 
-  // Only update when conversation is idle (no tool calls in last turn)
+  
   const hasToolCalls = hasToolCallsInLastAssistantTurn(messages)
   if (hasToolCalls) {
     return
@@ -232,7 +215,7 @@ const updateMagicDocs = sequential(async function (
 
 export async function initMagicDocs(): Promise<void> {
   if (process.env.USER_TYPE === 'ant') {
-    // Register listener to detect magic docs when files are read
+    
     registerFileReadListener((filePath: string, content: string) => {
       const result = detectMagicDocHeader(content)
       if (result) {

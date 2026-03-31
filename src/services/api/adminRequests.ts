@@ -54,11 +54,6 @@ export async function createAdminRequest(
   return response.data
 }
 
-/**
- * Get pending admin request of a specific type for the current user.
- *
- * Returns the pending request if one exists, otherwise null.
- */
 export async function getMyAdminRequests(
   requestType: AdminRequestType,
   statuses: AdminRequestStatus[],
@@ -87,9 +82,6 @@ type AdminRequestEligibilityResponse = {
   is_allowed: boolean
 }
 
-/**
- * Check if a specific admin request type is allowed for this org.
- */
 export async function checkAdminRequestEligibility(
   requestType: AdminRequestType,
 ): Promise<AdminRequestEligibilityResponse | null> {

@@ -1,7 +1,5 @@
 
 
-// as arbitrary network access (POST, uploads, etc.) to these domains could enable
-
 export const PREAPPROVED_HOSTS = new Set([
   
   'platform.claude.com',
@@ -10,115 +8,115 @@ export const PREAPPROVED_HOSTS = new Set([
   'github.com/anthropics',
   'agentskills.io',
 
-  // Top Programming Languages
-  'docs.python.org', // Python
-  'en.cppreference.com', // C/C++ reference
-  'docs.oracle.com', // Java
-  'learn.microsoft.com', // C#/.NET
-  'developer.mozilla.org', // JavaScript/Web APIs (MDN)
-  'go.dev', // Go
-  'pkg.go.dev', // Go docs
-  'www.php.net', // PHP
-  'docs.swift.org', // Swift
-  'kotlinlang.org', // Kotlin
-  'ruby-doc.org', // Ruby
-  'doc.rust-lang.org', // Rust
-  'www.typescriptlang.org', // TypeScript
+  
+  'docs.python.org', 
+  'en.cppreference.com', 
+  'docs.oracle.com', 
+  'learn.microsoft.com', 
+  'developer.mozilla.org', 
+  'go.dev', 
+  'pkg.go.dev', 
+  'www.php.net', 
+  'docs.swift.org', 
+  'kotlinlang.org', 
+  'ruby-doc.org', 
+  'doc.rust-lang.org', 
+  'www.typescriptlang.org', 
 
   
-  'react.dev', // React
-  'angular.io', // Angular
-  'vuejs.org', // Vue.js
-  'nextjs.org', // Next.js
-  'expressjs.com', // Express.js
-  'nodejs.org', // Node.js
-  'bun.sh', // Bun
-  'jquery.com', // jQuery
-  'getbootstrap.com', // Bootstrap
-  'tailwindcss.com', // Tailwind CSS
-  'd3js.org', // D3.js
-  'threejs.org', // Three.js
-  'redux.js.org', // Redux
-  'webpack.js.org', // Webpack
-  'jestjs.io', // Jest
-  'reactrouter.com', // React Router
+  'react.dev', 
+  'angular.io', 
+  'vuejs.org', 
+  'nextjs.org', 
+  'expressjs.com', 
+  'nodejs.org', 
+  'bun.sh', 
+  'jquery.com', 
+  'getbootstrap.com', 
+  'tailwindcss.com', 
+  'd3js.org', 
+  'threejs.org', 
+  'redux.js.org', 
+  'webpack.js.org', 
+  'jestjs.io', 
+  'reactrouter.com', 
 
   
-  'docs.djangoproject.com', // Django
-  'flask.palletsprojects.com', // Flask
-  'fastapi.tiangolo.com', // FastAPI
-  'pandas.pydata.org', // Pandas
-  'numpy.org', // NumPy
-  'www.tensorflow.org', // TensorFlow
-  'pytorch.org', // PyTorch
-  'scikit-learn.org', // Scikit-learn
-  'matplotlib.org', // Matplotlib
-  'requests.readthedocs.io', // Requests
-  'jupyter.org', // Jupyter
+  'docs.djangoproject.com', 
+  'flask.palletsprojects.com', 
+  'fastapi.tiangolo.com', 
+  'pandas.pydata.org', 
+  'numpy.org', 
+  'www.tensorflow.org', 
+  'pytorch.org', 
+  'scikit-learn.org', 
+  'matplotlib.org', 
+  'requests.readthedocs.io', 
+  'jupyter.org', 
 
   
-  'laravel.com', // Laravel
-  'symfony.com', // Symfony
-  'wordpress.org', // WordPress
+  'laravel.com', 
+  'symfony.com', 
+  'wordpress.org', 
 
   
-  'docs.spring.io', // Spring
-  'hibernate.org', // Hibernate
-  'tomcat.apache.org', // Tomcat
-  'gradle.org', // Gradle
-  'maven.apache.org', // Maven
+  'docs.spring.io', 
+  'hibernate.org', 
+  'tomcat.apache.org', 
+  'gradle.org', 
+  'maven.apache.org', 
 
   
-  'asp.net', // ASP.NET
-  'dotnet.microsoft.com', // .NET
-  'nuget.org', // NuGet
-  'blazor.net', // Blazor
+  'asp.net', 
+  'dotnet.microsoft.com', 
+  'nuget.org', 
+  'blazor.net', 
 
   
-  'reactnative.dev', // React Native
-  'docs.flutter.dev', // Flutter
-  'developer.apple.com', // iOS/macOS
-  'developer.android.com', // Android
+  'reactnative.dev', 
+  'docs.flutter.dev', 
+  'developer.apple.com', 
+  'developer.android.com', 
 
   
-  'keras.io', // Keras
-  'spark.apache.org', // Apache Spark
-  'huggingface.co', // Hugging Face
-  'www.kaggle.com', // Kaggle
+  'keras.io', 
+  'spark.apache.org', 
+  'huggingface.co', 
+  'www.kaggle.com', 
 
   
-  'www.mongodb.com', // MongoDB
-  'redis.io', // Redis
-  'www.postgresql.org', // PostgreSQL
-  'dev.mysql.com', // MySQL
-  'www.sqlite.org', // SQLite
-  'graphql.org', // GraphQL
-  'prisma.io', // Prisma
+  'www.mongodb.com', 
+  'redis.io', 
+  'www.postgresql.org', 
+  'dev.mysql.com', 
+  'www.sqlite.org', 
+  'graphql.org', 
+  'prisma.io', 
 
   
-  'docs.aws.amazon.com', // AWS
-  'cloud.google.com', // Google Cloud
-  'learn.microsoft.com', // Azure
-  'kubernetes.io', // Kubernetes
-  'www.docker.com', // Docker
-  'www.terraform.io', // Terraform
-  'www.ansible.com', // Ansible
-  'vercel.com/docs', // Vercel
-  'docs.netlify.com', // Netlify
-  'devcenter.heroku.com', // Heroku
+  'docs.aws.amazon.com', 
+  'cloud.google.com', 
+  'learn.microsoft.com', 
+  'kubernetes.io', 
+  'www.docker.com', 
+  'www.terraform.io', 
+  'www.ansible.com', 
+  'vercel.com/docs', 
+  'docs.netlify.com', 
+  'devcenter.heroku.com', 
 
   
-  'cypress.io', // Cypress
-  'selenium.dev', // Selenium
+  'cypress.io', 
+  'selenium.dev', 
 
   
-  'docs.unity.com', // Unity
-  'docs.unrealengine.com', // Unreal Engine
+  'docs.unity.com', 
+  'docs.unrealengine.com', 
 
   
-  'git-scm.com', // Git
-  'nginx.org', // Nginx
-  'httpd.apache.org', // Apache HTTP Server
+  'git-scm.com', 
+  'nginx.org', 
+  'httpd.apache.org', 
 ])
 
 const { HOSTNAME_ONLY, PATH_PREFIXES } = (() => {
@@ -144,7 +142,7 @@ export function isPreapprovedHost(hostname: string, pathname: string): boolean {
   const prefixes = PATH_PREFIXES.get(hostname)
   if (prefixes) {
     for (const p of prefixes) {
-      // Enforce path segment boundaries: "/anthropics" must not match
+      
       
       
       if (pathname === p || pathname.startsWith(p + '/')) return true

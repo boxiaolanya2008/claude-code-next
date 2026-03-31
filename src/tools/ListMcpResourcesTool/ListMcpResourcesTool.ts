@@ -76,7 +76,7 @@ export const ListMcpResourcesTool = buildTool({
       )
     }
 
-    // fetchResourcesForClient is LRU-cached (by server name) and already
+    
     
     
     
@@ -88,7 +88,7 @@ export const ListMcpResourcesTool = buildTool({
           const fresh = await ensureConnectedClient(client)
           return await fetchResourcesForClient(fresh)
         } catch (error) {
-          // One server's reconnect failure shouldn't sink the whole result.
+          
           logMCPError(client.name, errorMessage(error))
           return []
         }

@@ -30,13 +30,13 @@ function keyFromParsed(parsed: ParsedKey): string {
   if (parsed.ctrl) return name
 
   
-  // use the literal char. Browsers report e.key === '3', not 'Digit3'.
+  
   if (seq.length === 1) {
     const code = seq.charCodeAt(0)
     if (code >= 0x20 && code !== 0x7f) return seq
   }
 
-  // Special keys (arrows, F-keys, return, tab, escape, etc.): sequence is
+  
   
   
   return name || seq

@@ -43,7 +43,7 @@ export async function handleDeepLinkUri(uri: string): Promise<number> {
     lastFetchMs: lastFetch?.getTime(),
   })
   if (!launched) {
-    // biome-ignore lint/suspicious/noConsole: intentional error output
+    
     console.error(
       'Failed to open a terminal. Make sure a supported terminal emulator is installed.',
     )
@@ -53,16 +53,9 @@ export async function handleDeepLinkUri(uri: string): Promise<number> {
   return 0
 }
 
-/**
- * Handle the case where claude was launched as the app bundle's executable
- * by macOS (via URL scheme). Uses the NAPI module to receive the URL from
- * the Apple Event, then handles it normally.
- *
- * @returns exit code (0 = success, 1 = error, null = not a URL launch)
- */
 export async function handleUrlSchemeLaunch(): Promise<number | null> {
-  // LaunchServices overwrites __CFBundleIdentifier with the launching bundle's
-  // ID. This is a precise positive signal — it's set to our exact bundle ID
+  
+  
   
   
   
@@ -78,21 +71,11 @@ export async function handleUrlSchemeLaunch(): Promise<number | null> {
     }
     return await handleDeepLinkUri(url)
   } catch {
-    // NAPI module not available, or handleDeepLinkUri rejected — not a URL launch
+    
     return null
   }
 }
 
-/**
- * Resolve the working directory for the launched Claude instance.
- * Precedence: explicit cwd > repo lookup (MRU clone) > home.
- * A repo that isn't cloned locally is not an error — fall through to home
- * so a web link referencing a repo the user doesn't have still opens Claude.
- *
- * Returns the resolved cwd, and the repo slug if (and only if) the MRU
- * lookup hit — so the launched instance can show which clone was selected
- * and its git freshness.
- */
 async function resolveCwd(action: {
   cwd?: string
   repo?: string

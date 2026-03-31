@@ -27,10 +27,6 @@ export function addArgumentsToPrompt(
   return substituteArguments(prompt, jsonInput)
 }
 
-/**
- * Create a StructuredOutput tool configured for hook responses.
- * Reusable by agent hooks and background verification.
- */
 export function createStructuredOutputTool(): Tool {
   return {
     ...SyntheticOutputTool,
@@ -56,10 +52,6 @@ export function createStructuredOutputTool(): Tool {
   }
 }
 
-/**
- * Register a function hook that enforces structured output via SyntheticOutputTool.
- * Used by ask.tsx, execAgentHook.ts, and background verification.
- */
 export function registerStructuredOutputEnforcement(
   setAppState: SetAppState,
   sessionId: string,
@@ -68,7 +60,7 @@ export function registerStructuredOutputEnforcement(
     setAppState,
     sessionId,
     'Stop',
-    '', // No matcher - applies to all stops
+    '', 
     messages => hasSuccessfulToolCall(messages, SYNTHETIC_OUTPUT_TOOL_NAME),
     `You MUST call the ${SYNTHETIC_OUTPUT_TOOL_NAME} tool to complete this request. Call this tool now.`,
     { timeout: 5000 },

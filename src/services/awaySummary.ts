@@ -20,10 +20,6 @@ function buildAwaySummaryPrompt(memory: string | null): string {
   return `${memoryBlock}The user stepped away and is coming back. Write exactly 1-3 short sentences. Start by stating the high-level task — what they are building or debugging, not implementation details. Next: the concrete next step. Skip status reports and commit recaps.`
 }
 
-/**
- * Generates a short session recap for the "while you were away" card.
- * Returns null on abort, empty transcript, or error.
- */
 export async function generateAwaySummary(
   messages: readonly Message[],
   signal: AbortSignal,

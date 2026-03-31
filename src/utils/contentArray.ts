@@ -4,7 +4,7 @@ export function insertBlockAfterToolResults(
   content: unknown[],
   block: unknown,
 ): void {
-  // Find position after the last tool_result block
+  
   let lastToolResultIndex = -1
   for (let i = 0; i < content.length; i++) {
     const item = content[i]
@@ -26,7 +26,7 @@ export function insertBlockAfterToolResults(
       content.push({ type: 'text', text: '.' })
     }
   } else {
-    // No tool_result blocks — insert before the last block
+    
     const insertIndex = Math.max(0, content.length - 1)
     content.splice(insertIndex, 0, block)
   }

@@ -36,19 +36,17 @@ import {
 import { createAgentId } from './uuid.js'
 
 export type CacheSafeParams = {
-  /** System prompt - must match parent for cache hits */
+  
   systemPrompt: SystemPrompt
   
   userContext: { [k: string]: string }
-  /** System context - appended to system prompt, affects cache */
+  
   systemContext: { [k: string]: string }
-  /** Tool use context containing tools, model, and other options */
+  
   toolUseContext: ToolUseContext
   
   forkContextMessages: Message[]
 }
-
-// Slot written by handleStopHooks after each turn so post-turn forks
 
 let lastCacheSafeParams: CacheSafeParams | null = null
 
@@ -61,7 +59,7 @@ export function getLastCacheSafeParams(): CacheSafeParams | null {
 }
 
 export type ForkedAgentParams = {
-  /** Messages to start the forked query loop with */
+  
   promptMessages: Message[]
   
   cacheSafeParams: CacheSafeParams
@@ -80,7 +78,7 @@ export type ForkedAgentParams = {
   maxTurns?: number
   
   onMessage?: (message: Message) => void
-  /** Skip sidechain transcript recording (e.g., for ephemeral work like speculation) */
+  
   skipTranscript?: boolean
   
 
@@ -88,21 +86,12 @@ export type ForkedAgentParams = {
 }
 
 export type ForkedAgentResult = {
-  /** All messages yielded during the query loop */
+  
   messages: Message[]
   
   totalUsage: NonNullableUsage
 }
 
-/**
- * Creates CacheSafeParams from REPLHookContext.
- * Use this helper when forking from a post-sampling hook context.
- *
- * To override specific fields (e.g., toolUseContext with cloned file state),
- * spread the result and override: `{ ...createCacheSafeParams(context), toolUseContext: clonedContext }`
- *
- * @param context - The REPLHookContext from the post-sampling hook
- */
 export function createCacheSafeParams(
   context: REPLHookContext,
 ): CacheSafeParams {
@@ -115,10 +104,6 @@ export function createCacheSafeParams(
   }
 }
 
-/**
- * Creates a modified getAppState that adds allowed tools to the permission context.
- * This is used by forked skill/command execution to grant tool permissions.
- */
 export function createGetAppStateWithAllowedTools(
   baseGetAppState: ToolUseContext['getAppState'],
   allowedTools: string[],
@@ -145,11 +130,8 @@ export function createGetAppStateWithAllowedTools(
   }
 }
 
-/**
- * Result from preparing a forked command context.
- */
 export type PreparedForkedContext = {
-  /** Skill content with args replaced */
+  
   skillContent: string
   
   modifiedGetAppState: ToolUseContext['getAppState']
@@ -159,16 +141,12 @@ export type PreparedForkedContext = {
   promptMessages: Message[]
 }
 
-/**
- * Prepares the context for executing a forked command/skill.
- * This handles the common setup that both SkillTool and slash commands need.
- */
 export async function prepareForkedCommandContext(
   command: PromptCommand,
   args: string,
   context: ToolUseContext,
 ): Promise<PreparedForkedContext> {
-  // Get skill content with $ARGUMENTS replaced
+  
   const skillPrompt = await command.getPromptForCommand(args, context)
   const skillContent = skillPrompt
     .map(block => (block.type === 'text' ? block.text : ''))
@@ -195,7 +173,7 @@ export async function prepareForkedCommandContext(
     throw new Error('No agent available for forked execution')
   }
 
-  // Prepare prompt messages
+  
   const promptMessages = [createUserMessage({ content: skillContent })]
 
   return {
@@ -206,9 +184,6 @@ export async function prepareForkedCommandContext(
   }
 }
 
-/**
- * Extracts result text from agent messages.
- */
 export function extractResultText(
   agentMessages: Message[],
   defaultText = 'Execution completed',
@@ -224,16 +199,8 @@ export function extractResultText(
   return textContent || defaultText
 }
 
-/**
- * Options for creating a subagent context.
- *
- * By default, all mutable state is isolated to prevent interference with the parent.
- * Use these options to:
- * - Override specific fields (e.g., custom options, agentId, messages)
- * - Explicitly opt-in to sharing specific callbacks (for interactive subagents)
- */
 export type SubagentContextOverrides = {
-  /** Override the options object (e.g., custom tools, model) */
+  
   options?: ToolUseContext['options']
   
   agentId?: AgentId
@@ -267,58 +234,19 @@ export type SubagentContextOverrides = {
   contentReplacementState?: ContentReplacementState
 }
 
-/**
- * Creates an isolated ToolUseContext for subagents.
- *
- * By default, ALL mutable state is isolated to prevent interference:
- * - readFileState: cloned from parent
- * - abortController: new controller linked to parent (parent abort propagates)
- * - getAppState: wrapped to set shouldAvoidPermissionPrompts
- * - All mutation callbacks (setAppState, etc.): no-op
- * - Fresh collections: nestedMemoryAttachmentTriggers, toolDecisions
- *
- * Callers can:
- * - Override specific fields via the overrides parameter
- * - Explicitly opt-in to sharing specific callbacks (shareSetAppState, etc.)
- *
- * @param parentContext - The parent's ToolUseContext to create subagent context from
- * @param overrides - Optional overrides and sharing options
- *
- * @example
- * // Full isolation (for background agents like session memory)
- * const ctx = createSubagentContext(parentContext)
- *
- * @example
- * 
- * const ctx = createSubagentContext(parentContext, {
- *   options: customOptions,
- *   agentId: newAgentId,
- *   messages: initialMessages,
- * })
- *
- * @example
- * 
- * const ctx = createSubagentContext(parentContext, {
- *   options: customOptions,
- *   agentId: newAgentId,
- *   shareSetAppState: true,
- *   shareSetResponseLength: true,
- *   shareAbortController: true,
- * })
- */
 export function createSubagentContext(
   parentContext: ToolUseContext,
   overrides?: SubagentContextOverrides,
 ): ToolUseContext {
-  // Determine abortController: explicit override > share parent's > new child
+  
   const abortController =
     overrides?.abortController ??
     (overrides?.shareAbortController
       ? parentContext.abortController
       : createChildAbortController(parentContext.abortController))
 
-  // Determine getAppState - wrap to set shouldAvoidPermissionPrompts unless sharing abortController
-  // (if sharing abortController, it's an interactive agent that CAN show UI)
+  
+  
   const getAppState: ToolUseContext['getAppState'] = overrides?.getAppState
     ? overrides.getAppState
     : overrides?.shareAbortController
@@ -338,7 +266,7 @@ export function createSubagentContext(
         }
 
   return {
-    // Mutable state - cloned by default to maintain isolation
+    
     
     readFileState: cloneFileStateCache(
       overrides?.readFileState ?? parentContext.readFileState,
@@ -346,10 +274,10 @@ export function createSubagentContext(
     nestedMemoryAttachmentTriggers: new Set<string>(),
     loadedNestedMemoryPaths: new Set<string>(),
     dynamicSkillDirTriggers: new Set<string>(),
-    // Per-subagent: tracks skills surfaced by discovery for was_discovered telemetry (SkillTool.ts:116)
+    
     discoveredSkillNames: new Set<string>(),
     toolDecisions: undefined,
-    // Budget decisions: override > clone of parent > undefined (feature off).
+    
     
     
     
@@ -366,26 +294,26 @@ export function createSubagentContext(
         ? cloneContentReplacementState(parentContext.contentReplacementState)
         : undefined),
 
-    // AbortController
+    
     abortController,
 
-    // AppState access
+    
     getAppState,
     setAppState: overrides?.shareSetAppState
       ? parentContext.setAppState
       : () => {},
-    // Task registration/kill must always reach the root store, even when
+    
     
     
     setAppStateForTasks:
       parentContext.setAppStateForTasks ?? parentContext.setAppState,
-    // Async subagents whose setAppState is a no-op need local denial tracking
+    
     
     localDenialTracking: overrides?.shareSetAppState
       ? parentContext.localDenialTracking
       : createDenialTrackingState(),
 
-    // Mutation callbacks - no-op by default
+    
     setInProgressToolUseIDs: () => {},
     setResponseLength: overrides?.shareSetResponseLength
       ? parentContext.setResponseLength
@@ -394,25 +322,25 @@ export function createSubagentContext(
       ? parentContext.pushApiMetricsEntry
       : undefined,
     updateFileHistoryState: () => {},
-    // Attribution is scoped and functional (prev => next) — safe to share even
+    
     
     updateAttributionState: parentContext.updateAttributionState,
 
-    // UI callbacks - undefined for subagents (can't control parent UI)
+    
     addNotification: undefined,
     setToolJSX: undefined,
     setStreamMode: undefined,
     setSDKStatus: undefined,
     openMessageSelector: undefined,
 
-    // Fields that can be overridden or copied from parent
+    
     options: overrides?.options ?? parentContext.options,
     messages: overrides?.messages ?? parentContext.messages,
-    // Generate new agentId for subagents (each subagent should have its own ID)
+    
     agentId: overrides?.agentId ?? createAgentId(),
     agentType: overrides?.agentType,
 
-    // Create new query tracking chain for subagent with incremented depth
+    
     queryTracking: {
       chainId: randomUUID(),
       depth: (parentContext.queryTracking?.depth ?? -1) + 1,
@@ -425,31 +353,6 @@ export function createSubagentContext(
   }
 }
 
-/**
- * Runs a forked agent query loop and tracks cache hit metrics.
- *
- * This function:
- * 1. Uses identical cache-safe params from parent to enable prompt caching
- * 2. Accumulates usage across all query iterations
- * 3. Logs tengu_fork_agent_query with full usage when complete
- *
- * @example
- * ```typescript
- * const result = await runForkedAgent({
- *   promptMessages: [createUserMessage({ content: userPrompt })],
- *   cacheSafeParams: {
- *     systemPrompt,
- *     userContext,
- *     systemContext,
- *     toolUseContext: clonedToolUseContext,
- *     forkContextMessages: messages,
- *   },
- *   canUseTool,
- *   querySource: 'session_memory',
- *   forkLabel: 'session_memory',
- * })
- * ```
- */
 export async function runForkedAgent({
   promptMessages,
   cacheSafeParams,
@@ -475,20 +378,20 @@ export async function runForkedAgent({
     forkContextMessages,
   } = cacheSafeParams
 
-  // Create isolated context to prevent mutation of parent state
+  
   const isolatedToolUseContext = createSubagentContext(
     toolUseContext,
     overrides,
   )
 
-  // Do NOT filterIncompleteToolCalls here — it drops the whole assistant on
-  // partial tool batches, orphaning the paired results (API 400). Dangling
-  // tool_uses are repaired downstream by ensureToolResultPairing in claude.ts,
-  // same as the main thread — identical post-repair prefix keeps the cache hit.
+  
+  
+  
+  
   const initialMessages: Message[] = [...forkContextMessages, ...promptMessages]
 
-  // Generate agent ID and record initial messages for transcript
-  // When skipTranscript is set, skip agent ID creation and all transcript I/O
+  
+  
   const agentId = skipTranscript ? undefined : createAgentId(forkLabel)
   let lastRecordedUuid: UUID | null = null
   if (agentId) {
@@ -497,14 +400,14 @@ export async function runForkedAgent({
         `Forked agent [${forkLabel}] failed to record initial transcript: ${err}`,
       ),
     )
-    // Track the last recorded message UUID for parent chain continuity
+    
     lastRecordedUuid =
       initialMessages.length > 0
         ? initialMessages[initialMessages.length - 1]!.uuid
         : null
   }
 
-  // Run the query loop with isolated context (cache-safe params preserved)
+  
   try {
     for await (const message of query({
       messages: initialMessages,
@@ -518,7 +421,7 @@ export async function runForkedAgent({
       maxTurns,
       skipCacheWrite,
     })) {
-      // Extract real usage from message_delta stream events (final usage per API call)
+      
       if (message.type === 'stream_event') {
         if (
           'event' in message &&
@@ -541,7 +444,7 @@ export async function runForkedAgent({
       outputMessages.push(message as Message)
       onMessage?.(message as Message)
 
-      // Record transcript for recordable message types (same pattern as runAgent.ts)
+      
       const msg = message as Message
       if (
         agentId &&
@@ -561,9 +464,9 @@ export async function runForkedAgent({
       }
     }
   } finally {
-    // Release cloned file state cache memory (same pattern as runAgent.ts)
+    
     isolatedToolUseContext.readFileState.clear()
-    // Release the cloned fork context messages
+    
     initialMessages.length = 0
   }
 
@@ -573,7 +476,7 @@ export async function runForkedAgent({
 
   const durationMs = Date.now() - startTime
 
-  // Log the fork query metrics with full NonNullableUsage
+  
   logForkAgentQueryEvent({
     forkLabel,
     querySource,
@@ -589,9 +492,6 @@ export async function runForkedAgent({
   }
 }
 
-/**
- * Logs the tengu_fork_agent_query event with full NonNullableUsage fields.
- */
 function logForkAgentQueryEvent({
   forkLabel,
   querySource,
@@ -607,7 +507,7 @@ function logForkAgentQueryEvent({
   totalUsage: NonNullableUsage
   queryTracking?: { chainId: string; depth: number }
 }): void {
-  // Calculate cache hit rate
+  
   const totalInputTokens =
     totalUsage.input_tokens +
     totalUsage.cache_creation_input_tokens +
@@ -618,7 +518,7 @@ function logForkAgentQueryEvent({
       : 0
 
   logEvent('tengu_fork_agent_query', {
-    // Metadata
+    
     forkLabel:
       forkLabel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     querySource:
@@ -626,7 +526,7 @@ function logForkAgentQueryEvent({
     durationMs,
     messageCount,
 
-    // NonNullableUsage fields
+    
     inputTokens: totalUsage.input_tokens,
     outputTokens: totalUsage.output_tokens,
     cacheReadInputTokens: totalUsage.cache_read_input_tokens,
@@ -638,10 +538,10 @@ function logForkAgentQueryEvent({
     cacheCreationEphemeral5mTokens:
       totalUsage.cache_creation.ephemeral_5m_input_tokens,
 
-    // Derived metrics
+    
     cacheHitRate,
 
-    // Query tracking
+    
     ...(queryTracking
       ? {
           queryChainId:

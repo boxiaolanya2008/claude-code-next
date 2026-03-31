@@ -1,7 +1,5 @@
 
 
-//   REPL (useScheduledTasks.ts): pass `getJitterConfig: getCronJitterConfig`
-
 import { z } from 'zod/v4'
 import { getFeatureValue_CACHED_WITH_REFRESH } from '../services/analytics/growthbook.js'
 import {
@@ -10,11 +8,7 @@ import {
 } from './cronTasks.js'
 import { lazySchema } from './lazySchema.js'
 
-// we want the fleet to converge within a minute, not on the next process
-
 const JITTER_CONFIG_REFRESH_MS = 60 * 1000
-
-// the refine; the shared ceiling keeps the individual bound explicit in the
 
 const HALF_HOUR_MS = 30 * 60 * 1000
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000

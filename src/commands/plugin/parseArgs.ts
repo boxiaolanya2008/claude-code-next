@@ -35,13 +35,13 @@ export function parsePluginArgs(args?: string): ParsedCommand {
         return { type: 'install' }
       }
 
-      // Check if it's in format plugin@marketplace
+      
       if (target.includes('@')) {
         const [plugin, marketplace] = target.split('@')
         return { type: 'install', plugin, marketplace }
       }
 
-      // Check if the target looks like a marketplace (URL or path)
+      
       const isMarketplace =
         target.startsWith('http://') ||
         target.startsWith('https://') ||
@@ -50,11 +50,11 @@ export function parsePluginArgs(args?: string): ParsedCommand {
         target.includes('\\')
 
       if (isMarketplace) {
-        // This is a marketplace URL/path, no plugin specified
+        
         return { type: 'install', marketplace: target }
       }
 
-      // Otherwise treat it as a plugin name
+      
       return { type: 'install', plugin: target }
     }
 
@@ -91,13 +91,13 @@ export function parsePluginArgs(args?: string): ParsedCommand {
         case 'list':
           return { type: 'marketplace', action: 'list' }
         default:
-          // No action specified, show marketplace menu
+          
           return { type: 'marketplace' }
       }
     }
 
     default:
-      // Unknown command, show menu
+      
       return { type: 'menu' }
   }
 }

@@ -52,14 +52,14 @@ export function createBufferedWriter({
     }
   }
 
-  // Detach the buffer synchronously so the caller never waits on writeFn.
+  
   
   
   
   
   function flushDeferred(): void {
     if (pendingOverflow) {
-      // A previous overflow write is still queued. Coalesce into it to
+      
       
       pendingOverflow.push(...buffer)
       buffer = []

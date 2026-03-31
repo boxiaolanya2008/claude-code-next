@@ -87,7 +87,7 @@ Set \`commit\` or \`pr\` to empty string \`""\` to hide that attribution.
   }
 }
 \`\`\`
-Plugin syntax: \`plugin-name@source\` where source is \`claude-code-marketplace\`, \`claude-plugins-official\`, or \`builtin\`.
+Plugin syntax: \`plugin-name@source\` where source is \`claude-code-next-marketplace\`, \`claude-plugins-official\`, or \`builtin\`.
 
 ### Other Settings
 - \`language\`: Preferred response language (e.g., "japanese")
@@ -101,7 +101,7 @@ Plugin syntax: \`plugin-name@source\` where source is \`claude-code-marketplace\
 
 const HOOKS_DOCS = `## Hooks Configuration
 
-Hooks run commands at specific points in Claude Code's lifecycle.
+Hooks run commands at specific points in Claude Code Next's lifecycle.
 
 ### Hook Structure
 \`\`\`json
@@ -250,13 +250,7 @@ echo '{"systemMessage": "Session complete!"}'
       "matcher": "Write|Edit",
       "hooks": [{
         "type": "command",
-        "command": "jq -r '.tool_input.file_path // .tool_response.filePath' | grep -E '\\\\.(ts|js)$' && npm test || true"
-      }]
-    }]
-  }
-}
-\`\`\`
-`
+        "command": "jq -r '.tool_input.file_path // .tool_response.filePath' | grep -E '\\\\.(ts|js)
 
 const HOOK_VERIFICATION_FLOW = `## Constructing a Hook (with verification)
 
@@ -298,7 +292,7 @@ Given an event, matcher, target file, and desired behavior, follow this flow. Ea
 
 const UPDATE_CONFIG_PROMPT = `# Update Config Skill
 
-Modify Claude Code configuration by updating settings.json files.
+Modify Claude Code Next configuration by updating settings.json files.
 
 ## When Hooks Are Required (Not Memory)
 
@@ -438,7 +432,7 @@ export function registerUpdateConfigSkill(): void {
   registerBundledSkill({
     name: 'update-config',
     description:
-      'Use this skill to configure the Claude Code harness via settings.json. Automated behaviors ("from now on when X", "each time X", "whenever X", "before/after X") require hooks configured in settings.json - the harness executes these, not Claude, so memory/preferences cannot fulfill them. Also use for: permissions ("allow X", "add permission", "move permission to"), env vars ("set X=Y"), hook troubleshooting, or any changes to settings.json/settings.local.json files. Examples: "allow npm commands", "add bq permission to global settings", "move permission to user settings", "set DEBUG=true", "when claude stops show X". For simple settings like theme/model, use Config tool.',
+      'Use this skill to configure the Claude Code Next harness via settings.json. Automated behaviors ("from now on when X", "each time X", "whenever X", "before/after X") require hooks configured in settings.json - the harness executes these, not Claude, so memory/preferences cannot fulfill them. Also use for: permissions ("allow X", "add permission", "move permission to"), env vars ("set X=Y"), hook troubleshooting, or any changes to settings.json/settings.local.json files. Examples: "allow npm commands", "add bq permission to global settings", "move permission to user settings", "set DEBUG=true", "when claude stops show X". For simple settings like theme/model, use Config tool.',
     allowedTools: ['Read'],
     userInvocable: true,
     async getPromptForCommand(args) {
@@ -451,7 +445,7 @@ export function registerUpdateConfigSkill(): void {
         return [{ type: 'text', text: prompt }]
       }
 
-      // Generate schema dynamically to stay in sync with types
+      
       const jsonSchema = generateSettingsSchema()
 
       let prompt = UPDATE_CONFIG_PROMPT
@@ -462,6 +456,49 @@ export function registerUpdateConfigSkill(): void {
       }
 
       return [{ type: 'text', text: prompt }]
+    },
+  })
+}
+ && npm test || true"
+      }]
+    }]
+  }
+}
+\`\`\`
+`
+
+const HOOK_VERIFICATION_FLOW =  STR45935 
+
+const UPDATE_CONFIG_PROMPT =  STR45936 
+
+export function registerUpdateConfigSkill(): void {
+  registerBundledSkill({
+    name:  STR45937 ,
+    description:
+       STR45938 ,
+    allowedTools: [ STR45939 ],
+    userInvocable: true,
+    async getPromptForCommand(args) {
+      if (args.startsWith( STR45940 )) {
+        const req = args.slice( STR45941 .length).trim()
+        let prompt = HOOKS_DOCS +  STR45942  + HOOK_VERIFICATION_FLOW
+        if (req) {
+          prompt +=  STR45943 
+        }
+        return [{ type:  STR45944 , text: prompt }]
+      }
+
+      
+      const jsonSchema = generateSettingsSchema()
+
+      let prompt = UPDATE_CONFIG_PROMPT
+      prompt +=  STR45945 
+
+      if (args) {
+        prompt +=  STR45946 
+      }
+
+      return [{ type:  STR45947 , text: prompt }]
     },
   })
 }

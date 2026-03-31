@@ -32,9 +32,9 @@ export function isBetaTracingEnabled(): boolean {
     return false
   }
 
-  // For external users, enable in SDK/headless mode OR when org is allowlisted.
   
-  // works from second run onward (same behavior as enhanced_telemetry_beta).
+  
+  
   if (process.env.USER_TYPE !== 'ant') {
     return (
       getIsNonInteractiveSession() ||
@@ -45,9 +45,6 @@ export function isBetaTracingEnabled(): boolean {
   return true
 }
 
-/**
- * Truncate content to fit within Honeycomb limits.
- */
 export function truncateContent(
   content: string,
   maxSize: number = MAX_CONTENT_SIZE,
@@ -64,29 +61,19 @@ export function truncateContent(
   }
 }
 
-/**
- * Generate a short hash (first 12 hex chars of SHA-256).
- */
 function shortHash(content: string): string {
   return createHash('sha256').update(content).digest('hex').slice(0, 12)
 }
 
-/**
- * Generate a hash for a system prompt.
- */
 function hashSystemPrompt(systemPrompt: string): string {
   return `sp_${shortHash(systemPrompt)}`
 }
 
-/**
- * Generate a hash for a message based on its content.
- */
 function hashMessage(message: APIMessage): string {
   const content = jsonStringify(message.message.content)
   return `msg_${shortHash(content)}`
 }
 
-// Regex to detect content wrapped in <system-reminder> tags
 const SYSTEM_REMINDER_REGEX =
   /^<system-reminder>\n?([\s\S]*?)\n?<\/system-reminder>$/
 
@@ -95,18 +82,11 @@ function extractSystemReminderContent(text: string): string | null {
   return match && match[1] ? match[1].trim() : null
 }
 
-/**
- * Result of formatting messages - separates regular content from system reminders.
- */
 interface FormattedMessages {
   contextParts: string[]
   systemReminders: string[]
 }
 
-/**
- * Format user messages for new_context display, separating system reminders.
- * Only handles user messages (assistant messages are filtered out before this is called).
- */
 function formatMessagesForContext(messages: UserMessage[]): FormattedMessages {
   const contextParts: string[] = []
   const systemReminders: string[] = []
@@ -152,7 +132,7 @@ function formatMessagesForContext(messages: UserMessage[]): FormattedMessages {
 }
 
 export interface LLMRequestNewContext {
-  /** System prompt (typically only on first request or if changed) */
+  
   systemPrompt?: string
   
   querySource?: string
@@ -160,10 +140,6 @@ export interface LLMRequestNewContext {
   tools?: string
 }
 
-/**
- * Add beta attributes to an interaction span.
- * Adds new_context with the user prompt.
- */
 export function addBetaInteractionAttributes(
   span: Span,
   userPrompt: string,
@@ -184,10 +160,6 @@ export function addBetaInteractionAttributes(
   })
 }
 
-/**
- * Add beta attributes to an LLM request span.
- * Handles system prompt logging and new_context computation.
- */
 export function addBetaLLMRequestAttributes(
   span: Span,
   newContext?: LLMRequestNewContext,
@@ -197,7 +169,7 @@ export function addBetaLLMRequestAttributes(
     return
   }
 
-  // Add system prompt info to the span
+  
   if (newContext?.systemPrompt) {
     const promptHash = hashSystemPrompt(newContext.systemPrompt)
     const preview = newContext.systemPrompt.slice(0, 500)
@@ -225,7 +197,7 @@ export function addBetaLLMRequestAttributes(
     }
   }
 
-  // Add tools info to the span
+  
   if (newContext?.tools) {
     try {
       const toolsArray = jsonParse(newContext.tools) as Record<
@@ -269,12 +241,12 @@ export function addBetaLLMRequestAttributes(
         }
       }
     } catch {
-      // If parsing fails, log the raw tools string
+      
       span.setAttribute('tools_parse_error', true)
     }
   }
 
-  // Add new_context using hash-based tracking (visible to all users)
+  
   if (messagesForAPI && messagesForAPI.length > 0 && newContext?.querySource) {
     const querySource = newContext.querySource
     const lastHash = lastReportedMessageHash.get(querySource)
@@ -289,16 +261,16 @@ export function addBetaLLMRequestAttributes(
           break
         }
       }
-      // If lastHash not found, startIndex stays 0 (send everything)
+      
     }
 
-    // Get new messages (filter out assistant messages - we only want user input/tool results)
+    
     const newMessages = messagesForAPI
       .slice(startIndex)
       .filter((m): m is UserMessage => m.type === 'user')
 
     if (newMessages.length > 0) {
-      // Format new messages, separating system reminders from regular content
+      
       const { contextParts, systemReminders } =
         formatMessagesForContext(newMessages)
 
@@ -318,7 +290,7 @@ export function addBetaLLMRequestAttributes(
         })
       }
 
-      // Set system_reminders as a separate attribute
+      
       if (systemReminders.length > 0) {
         const fullReminders = systemReminders.join('\n\n---\n\n')
         const { content: truncatedReminders, truncated: remindersTruncated } =
@@ -334,7 +306,7 @@ export function addBetaLLMRequestAttributes(
         })
       }
 
-      // Update last reported hash to the last message in the array
+      
       const lastMessage = messagesForAPI[messagesForAPI.length - 1]
       if (lastMessage) {
         lastReportedMessageHash.set(querySource, hashMessage(lastMessage))
@@ -343,10 +315,6 @@ export function addBetaLLMRequestAttributes(
   }
 }
 
-/**
- * Add beta attributes to endLLMRequestSpan.
- * Handles model_output and thinking_output truncation.
- */
 export function addBetaLLMResponseAttributes(
   endAttributes: Record<string, string | number | boolean>,
   metadata?: {
@@ -358,7 +326,7 @@ export function addBetaLLMResponseAttributes(
     return
   }
 
-  // Add model_output (text content) - visible to all users
+  
   if (metadata.modelOutput !== undefined) {
     const { content: modelOutput, truncated: outputTruncated } =
       truncateContent(metadata.modelOutput)
@@ -370,7 +338,7 @@ export function addBetaLLMResponseAttributes(
     }
   }
 
-  // Add thinking_output - ant-only
+  
   if (
     process.env.USER_TYPE === 'ant' &&
     metadata.thinkingOutput !== undefined
@@ -386,10 +354,6 @@ export function addBetaLLMResponseAttributes(
   }
 }
 
-/**
- * Add beta attributes to startToolSpan.
- * Adds tool_input with the serialized tool input.
- */
 export function addBetaToolInputAttributes(
   span: Span,
   toolName: string,
@@ -411,10 +375,6 @@ export function addBetaToolInputAttributes(
   })
 }
 
-/**
- * Add beta attributes to endToolSpan.
- * Adds new_context with the tool result.
- */
 export function addBetaToolResultAttributes(
   endAttributes: Record<string, string | number | boolean>,
   toolName: string | number | boolean,

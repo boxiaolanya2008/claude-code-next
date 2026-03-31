@@ -3,7 +3,7 @@ import { env } from '../env.js'
 
 export const COMPUTER_USE_MCP_SERVER_NAME = 'computer-use'
 
-export const CLI_HOST_BUNDLE_ID = 'com.anthropic.claude-code.cli-no-window'
+export const CLI_HOST_BUNDLE_ID = 'com.anthropic.claude-code-next.cli-no-window'
 
 const TERMINAL_BUNDLE_ID_FALLBACK: Readonly<Record<string, string>> = {
   'iTerm.app': 'com.googlecode.iterm2',
@@ -14,30 +14,12 @@ const TERMINAL_BUNDLE_ID_FALLBACK: Readonly<Record<string, string>> = {
   vscode: 'com.microsoft.VSCode',
 }
 
-/**
- * Bundle ID of the terminal emulator we're running inside, so `prepareDisplay`
- * can exempt it from hiding and `captureExcluding` can keep it out of
- * screenshots. Returns null when undetectable (ssh, cleared env, unknown
- * terminal) — caller must handle the null case.
- *
- * `__CFBundleIdentifier` is set by LaunchServices when a .app bundle spawns a
- * process and is inherited by children. It's the exact bundleId, no lookup
- * needed — handles terminals the fallback table doesn't know about. Under
- * tmux/screen it reflects the terminal that started the SERVER, which may
- * differ from the attached client. That's harmless here: we exempt A
- * terminal window, and the screenshots exclude it regardless.
- */
 export function getTerminalBundleId(): string | null {
   const cfBundleId = process.env.__CFBundleIdentifier
   if (cfBundleId) return cfBundleId
   return TERMINAL_BUNDLE_ID_FALLBACK[env.terminal ?? ''] ?? null
 }
 
-/**
- * Static capabilities for macOS CLI. `hostBundleId` is not here — it's added
- * by `executor.ts` per `ComputerExecutor.capabilities`. `buildComputerUseTools`
- * takes this shape (no `hostBundleId`, no `teachMode`).
- */
 export const CLI_CU_CAPABILITIES = {
   screenshotFiltering: 'native' as const,
   platform: 'darwin' as const,

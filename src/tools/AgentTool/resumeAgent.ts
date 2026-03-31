@@ -91,12 +91,12 @@ export async function resumeAgentBackground({
       )
     : undefined
   if (resumedWorktreePath) {
-    // Bump mtime so stale-worktree cleanup doesn't delete a just-resumed worktree (#22355)
+    
     const now = new Date()
     await fsp.utimes(resumedWorktreePath, now, now)
   }
 
-  // Skip filterDeniedAgents re-gating — original spawn already passed permission checks
+  
   let selectedAgent: AgentDefinition
   let isResumedFork = false
   if (meta?.agentType === FORK_AGENT.agentType) {
@@ -147,7 +147,7 @@ export async function resumeAgentBackground({
     }
   }
 
-  // Resolve model for analytics metadata (runAgent resolves its own internally)
+  
   const resolvedAgentModel = getAgentModel(
     selectedAgent.model,
     toolUseContext.options.mainLoopModel,
@@ -177,24 +177,24 @@ export async function resumeAgentBackground({
       isBuiltInAgent(selectedAgent),
     ),
     model: undefined,
-    // Fork resume: pass parent's system prompt (cache-identical prefix).
+    
     
     
     override: isResumedFork
       ? { systemPrompt: forkParentSystemPrompt }
       : undefined,
     availableTools: workerTools,
-    // Transcript already contains the parent context slice from the
+    
     
     forkContextMessages: undefined,
     ...(isResumedFork && { useExactTools: true }),
-    // Re-persist so metadata survives runAgent's writeAgentMetadata overwrite
+    
     worktreePath: resumedWorktreePath,
     description: meta?.description,
     contentReplacementState: resumedReplacementState,
   }
 
-  // Skip name-registry write — original entry persists from the initial spawn
+  
   const agentBackgroundTask = registerAsyncAgent({
     agentId,
     description: uiDescription,

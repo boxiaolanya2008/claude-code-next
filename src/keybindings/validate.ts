@@ -27,9 +27,6 @@ export type KeybindingWarning = {
   suggestion?: string
 }
 
-/**
- * Type guard to check if an object is a valid KeybindingBlock.
- */
 function isKeybindingBlock(obj: unknown): obj is KeybindingBlock {
   if (typeof obj !== 'object' || obj === null) return false
   const b = obj as Record<string, unknown>
@@ -40,17 +37,10 @@ function isKeybindingBlock(obj: unknown): obj is KeybindingBlock {
   )
 }
 
-/**
- * Type guard to check if an array contains only valid KeybindingBlocks.
- */
 function isKeybindingBlockArray(arr: unknown): arr is KeybindingBlock[] {
   return Array.isArray(arr) && arr.every(isKeybindingBlock)
 }
 
-/**
- * Valid context names for keybindings.
- * Must match KeybindingContextName in types.ts
- */
 const VALID_CONTEXTS: KeybindingContextName[] = [
   'Global',
   'Chat',
@@ -76,9 +66,6 @@ function isValidContext(value: string): value is KeybindingContextName {
   return (VALID_CONTEXTS as readonly string[]).includes(value)
 }
 
-/**
- * Validate a single keystroke string and return any parse errors.
- */
 function validateKeystroke(keystroke: string): KeybindingWarning | null {
   const parts = keystroke.toLowerCase().split('+')
 
@@ -95,7 +82,7 @@ function validateKeystroke(keystroke: string): KeybindingWarning | null {
     }
   }
 
-  // Try to parse and see if it fails
+  
   const parsed = parseKeystroke(keystroke)
   if (
     !parsed.key &&
@@ -115,9 +102,6 @@ function validateKeystroke(keystroke: string): KeybindingWarning | null {
   return null
 }
 
-/**
- * Validate a keybinding block from user config.
- */
 function validateBlock(
   block: unknown,
   blockIndex: number,
@@ -156,7 +140,7 @@ function validateBlock(
     contextName = rawContext
   }
 
-  // Validate bindings
+  
   if (typeof b.bindings !== 'object' || b.bindings === null) {
     warnings.push({
       type: 'parse_error',
@@ -168,14 +152,14 @@ function validateBlock(
 
   const bindings = b.bindings as Record<string, unknown>
   for (const [key, action] of Object.entries(bindings)) {
-    // Validate key syntax
+    
     const keyError = validateKeystroke(key)
     if (keyError) {
       keyError.context = contextName
       warnings.push(keyError)
     }
 
-    // Validate action
+    
     if (action !== null && typeof action !== 'string') {
       warnings.push({
         type: 'invalid_action',
@@ -185,7 +169,7 @@ function validateBlock(
         context: contextName,
       })
     } else if (typeof action === 'string' && action.startsWith('command:')) {
-      // Validate command binding format
+      
       if (!/^command:[a-zA-Z0-9:\-_]+$/.test(action)) {
         warnings.push({
           type: 'invalid_action',
@@ -196,7 +180,7 @@ function validateBlock(
           action,
         })
       }
-      // Command bindings must be in Chat context
+      
       if (contextName && contextName !== 'Chat') {
         warnings.push({
           type: 'invalid_action',
@@ -209,7 +193,7 @@ function validateBlock(
         })
       }
     } else if (action === 'voice:pushToTalk') {
-      // Hold detection needs OS auto-repeat. Bare letters print into the
+      
       
       
       const ks = parseChord(key)[0]
@@ -237,15 +221,6 @@ function validateBlock(
   return warnings
 }
 
-/**
- * Detect duplicate keys within the same bindings block in a JSON string.
- * JSON.parse silently uses the last value for duplicate keys,
- * so we need to check the raw string to warn users.
- *
- * Only warns about duplicates within the same context's bindings object.
- * Duplicates across different contexts are allowed (e.g., "enter" in Chat
- * and "enter" in Confirmation).
- */
 export function checkDuplicateKeysInJson(
   jsonString: string,
 ): KeybindingWarning[] {
@@ -281,7 +256,7 @@ export function checkDuplicateKeysInJson(
       keysByName.set(key, count)
 
       if (count === 2) {
-        // Only warn on the second occurrence
+        
         warnings.push({
           type: 'duplicate',
           severity: 'warning',
@@ -297,9 +272,6 @@ export function checkDuplicateKeysInJson(
   return warnings
 }
 
-/**
- * Validate user keybinding config and return all warnings.
- */
 export function validateUserConfig(userBlocks: unknown): KeybindingWarning[] {
   const warnings: KeybindingWarning[] = []
 
@@ -320,10 +292,6 @@ export function validateUserConfig(userBlocks: unknown): KeybindingWarning[] {
   return warnings
 }
 
-/**
- * Check for duplicate bindings within the same context.
- * Only checks user bindings (not default + user merged).
- */
 export function checkDuplicates(
   blocks: KeybindingBlock[],
 ): KeybindingWarning[] {
@@ -358,9 +326,6 @@ export function checkDuplicates(
   return warnings
 }
 
-/**
- * Check for reserved shortcuts that may not work.
- */
 export function checkReservedShortcuts(
   bindings: ParsedBinding[],
 ): KeybindingWarning[] {
@@ -389,10 +354,6 @@ export function checkReservedShortcuts(
   return warnings
 }
 
-/**
- * Parse user blocks into bindings for validation.
- * This is separate from the main parser to avoid importing it.
- */
 function getUserBindingsForValidation(
   userBlocks: KeybindingBlock[],
 ): ParsedBinding[] {
@@ -410,9 +371,6 @@ function getUserBindingsForValidation(
   return bindings
 }
 
-/**
- * Run all validations and return combined warnings.
- */
 export function validateBindings(
   userBlocks: unknown,
   _parsedBindings: ParsedBinding[],
@@ -431,7 +389,7 @@ export function validateBindings(
     warnings.push(...checkReservedShortcuts(userBindings))
   }
 
-  // Deduplicate warnings (same key+context+type)
+  
   const seen = new Set<string>()
   return warnings.filter(w => {
     const key = `${w.type}:${w.key}:${w.context}`
@@ -441,9 +399,6 @@ export function validateBindings(
   })
 }
 
-/**
- * Format a warning for display to the user.
- */
 export function formatWarning(warning: KeybindingWarning): string {
   const icon = warning.severity === 'error' ? '✗' : '⚠'
   let msg = `${icon} Keybinding ${warning.severity}: ${warning.message}`
@@ -455,9 +410,6 @@ export function formatWarning(warning: KeybindingWarning): string {
   return msg
 }
 
-/**
- * Format multiple warnings for display.
- */
 export function formatWarnings(warnings: KeybindingWarning[]): string {
   if (warnings.length === 0) return ''
 

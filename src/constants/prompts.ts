@@ -96,8 +96,8 @@ const skillSearchFeatureCheck = feature('EXPERIMENTAL_SKILL_SEARCH')
 import type { OutputStyleConfig } from './outputStyles.js'
 import { CYBER_RISK_INSTRUCTION } from './cyberRiskInstruction.js'
 
-export const CLAUDE_CODE_DOCS_MAP_URL =
-  'https://code.claude.com/docs/en/claude_code_docs_map.md'
+export const CLAUDE_CODE_NEXT_DOCS_MAP_URL =
+  'https://code.claude.com/docs/en/claude_code_next_docs_map.md'
 
 export const SYSTEM_PROMPT_DYNAMIC_BOUNDARY =
   '__SYSTEM_PROMPT_DYNAMIC_BOUNDARY__'
@@ -161,7 +161,7 @@ export function prependBullets(items: Array<string | string[]>): string[] {
 function getSimpleIntroSection(
   outputStyleConfig: OutputStyleConfig | null,
 ): string {
-  // eslint-disable-next-line custom-rules/prompt-spacing
+  
   return `
 You are an interactive agent that helps users ${outputStyleConfig !== null ? 'according to your "Output Style" below, which describes how you should respond to user queries.' : 'with software engineering tasks.'} Use the instructions below and the tools available to you to assist the user.
 
@@ -187,27 +187,27 @@ function getSimpleDoingTasksSection(): string {
     `Don't add features, refactor code, or make "improvements" beyond what was asked. A bug fix doesn't need surrounding code cleaned up. A simple feature doesn't need extra configurability. Don't add docstrings, comments, or type annotations to code you didn't change. Only add comments where the logic isn't self-evident.`,
     `Don't add error handling, fallbacks, or validation for scenarios that can't happen. Trust internal code and framework guarantees. Only validate at system boundaries (user input, external APIs). Don't use feature flags or backwards-compatibility shims when you can just change the code.`,
     `Don't create helpers, utilities, or abstractions for one-time operations. Don't design for hypothetical future requirements. The right amount of complexity is what the task actually requires—no speculative abstractions, but no half-finished implementations either. Three similar lines of code is better than a premature abstraction.`,
-    // @[MODEL LAUNCH]: Update comment writing for Capybara — remove or soften once the model stops over-commenting by default
+    
     ...(process.env.USER_TYPE === 'ant'
       ? [
           `Default to writing no comments. Only add one when the WHY is non-obvious: a hidden constraint, a subtle invariant, a workaround for a specific bug, behavior that would surprise a reader. If removing the comment wouldn't confuse a future reader, don't write it.`,
           `Don't explain WHAT the code does, since well-named identifiers already do that. Don't reference the current task, fix, or callers ("used by X", "added for the Y flow", "handles the case from issue #123"), since those belong in the PR description and rot as the codebase evolves.`,
           `Don't remove existing comments unless you're removing the code they describe or you know they're wrong. A comment that looks pointless to you may encode a constraint or a lesson from a past bug that isn't visible in the current diff.`,
-          // @[MODEL LAUNCH]: capy v8 thoroughness counterweight (PR #24302) — un-gate once validated on external via A/B
+          
           `Before reporting a task complete, verify it actually works: run the test, execute the script, check the output. Minimum complexity means no gold-plating, not skipping the finish line. If you can't verify (no test exists, can't run the code), say so explicitly rather than claiming success.`,
         ]
       : []),
   ]
 
   const userHelpSubitems = [
-    `/help: Get help with using Claude Code`,
+    `/help: Get help with using Claude Code Next`,
     `To give feedback, users should ${MACRO.ISSUES_EXPLAINER}`,
   ]
 
   const items = [
     `The user will primarily request you to perform software engineering tasks. These may include solving bugs, adding new functionality, refactoring code, explaining code, and more. When given an unclear or generic instruction, consider it in the context of these software engineering tasks and the current working directory. For example, if the user asks you to change "methodName" to snake case, do not reply with just "method_name", instead find the method in the code and modify the code.`,
     `You are highly capable and often allow users to complete ambitious tasks that would otherwise be too complex or take too long. You should defer to user judgement about whether a task is too large to attempt.`,
-    // @[MODEL LAUNCH]: capy v8 assertiveness counterweight (PR #24302) — un-gate once validated on external via A/B
+    
     ...(process.env.USER_TYPE === 'ant'
       ? [
           `If you notice the user's request is based on a misconception, or spot a bug adjacent to what they asked about, say so. You're a collaborator, not just an executor—users benefit from your judgment, not just your compliance.`,
@@ -220,7 +220,7 @@ function getSimpleDoingTasksSection(): string {
     `Be careful not to introduce security vulnerabilities such as command injection, XSS, SQL injection, and other OWASP top 10 vulnerabilities. If you notice that you wrote insecure code, immediately fix it. Prioritize writing safe, secure, and correct code.`,
     ...codeStyleSubitems,
     `Avoid backwards-compatibility hacks like renaming unused _vars, re-exporting types, adding // removed comments for removed code, etc. If you are certain that something is unused, you can delete it completely.`,
-    // @[MODEL LAUNCH]: False-claims mitigation for Capybara v8 (29-30% FC rate vs v4's 16.7%)
+    
     ...(process.env.USER_TYPE === 'ant'
       ? [
           `Report outcomes faithfully: if tests fail, say so with the relevant output; if you did not run a verification step, say that rather than implying it succeeded. Never claim "all tests pass" when output shows failures, never suppress or simplify failing checks (tests, lints, type errors) to manufacture a green result, and never characterize incomplete or broken work as done. Equally, when a check did pass or a task is complete, state it plainly — do not hedge confirmed results with unnecessary disclaimers, downgrade finished work to "partial," or re-verify things you already checked. The goal is an accurate report, not a defensive one.`,
@@ -228,7 +228,7 @@ function getSimpleDoingTasksSection(): string {
       : []),
     ...(process.env.USER_TYPE === 'ant'
       ? [
-          `If the user reports a bug, slowness, or unexpected behavior with Claude Code itself (as opposed to asking you to fix their own code), recommend the appropriate slash command: /issue for model-related problems (odd outputs, wrong tool choices, hallucinations, refusals), or /share to upload the full session transcript for product bugs, crashes, slowness, or general issues. Only recommend these when the user is describing a problem with Claude Code. After /share produces a ccshare link, if you have a Slack MCP tool available, offer to post the link to #claude-code-feedback (channel ID C07VBSHV7EV) for the user.`,
+          `If the user reports a bug, slowness, or unexpected behavior with Claude Code Next itself (as opposed to asking you to fix their own code), recommend the appropriate slash command: /issue for model-related problems (odd outputs, wrong tool choices, hallucinations, refusals), or /share to upload the full session transcript for product bugs, crashes, slowness, or general issues. Only recommend these when the user is describing a problem with Claude Code Next. After /share produces a ccshare link, if you have a Slack MCP tool available, offer to post the link to #claude-code-next-feedback (channel ID C07VBSHV7EV) for the user.`,
         ]
       : []),
     `If the user asks for help or wants to give feedback inform them of the following:`,
@@ -257,9 +257,9 @@ function getUsingYourToolsSection(enabledTools: Set<string>): string {
     enabledTools.has(n),
   )
 
-  // In REPL mode, Read/Write/Edit/Glob/Grep/Bash/Agent are hidden from direct
-  // use (REPL_ONLY_TOOLS). The "prefer dedicated tools over Bash" guidance is
-  // irrelevant — REPL's own prompt covers how to call them from scripts.
+  
+  
+  
   if (isReplModeEnabled()) {
     const items = [
       taskToolName
@@ -270,8 +270,8 @@ function getUsingYourToolsSection(enabledTools: Set<string>): string {
     return [`# Using your tools`, ...prependBullets(items)].join(`\n`)
   }
 
-  // Ant-native builds alias find/grep to embedded bfs/ugrep and remove the
-  // dedicated Glob/Grep tools, so skip guidance pointing at them.
+  
+  
   const embedded = hasEmbeddedSearchTools()
 
   const providedToolSubitems = [
@@ -305,17 +305,6 @@ function getAgentToolSection(): string {
     : `Use the ${AGENT_TOOL_NAME} tool with specialized agents when the task at hand matches the agent's description. Subagents are valuable for parallelizing independent queries or for protecting the main context window from excessive results, but they should not be used excessively when not needed. Importantly, avoid duplicating work that subagents are already doing - if you delegate research to a subagent, do not also perform the same searches yourself.`
 }
 
-/**
- * Guidance for the skill_discovery attachment ("Skills relevant to your
- * task:") and the DiscoverSkills tool. Shared between the main-session
- * getUsingYourToolsSection bullet and the subagent path in
- * enhanceSystemPromptWithEnvDetails — subagents receive skill_discovery
- * attachments (post #22830) but don't go through getSystemPrompt, so
- * without this they'd see the reminders with no framing.
- *
- * feature() guard is internal — external builds DCE the string literal
- * along with the DISCOVER_SKILLS_TOOL_NAME interpolation.
- */
 function getDiscoverSkillsGuidance(): string | null {
   if (
     feature('EXPERIMENTAL_SKILL_SEARCH') &&
@@ -326,15 +315,6 @@ function getDiscoverSkillsGuidance(): string | null {
   return null
 }
 
-/**
- * Session-variant guidance that would fragment the cacheScope:'global'
- * prefix if placed before SYSTEM_PROMPT_DYNAMIC_BOUNDARY. Each conditional
- * here is a runtime bit that would otherwise multiply the Blake2b prefix
- * hash variants (2^N). See PR #24490, #24171 for the same bug class.
- *
- * outputStyleConfig intentionally NOT moved here — identity framing lives
- * in the static intro pending eval.
- */
 function getSessionSpecificGuidanceSection(
   enabledTools: Set<string>,
   skillToolCommands: Command[],
@@ -354,8 +334,8 @@ function getSessionSpecificGuidanceSection(
     getIsNonInteractiveSession()
       ? null
       : `If you need the user to run a shell command themselves (e.g., an interactive login like \`gcloud auth login\`), suggest they type \`! <command>\` in the prompt — the \`!\` prefix runs the command in this session so its output lands directly in the conversation.`,
-    // isForkSubagentEnabled() reads getIsNonInteractiveSession() — must be
-    // post-boundary or it fragments the static prefix on session type.
+    
+    
     hasAgentTool ? getAgentToolSection() : null,
     ...(hasAgentTool &&
     areExplorePlanAgentsEnabled() &&
@@ -375,7 +355,7 @@ function getSessionSpecificGuidanceSection(
       : null,
     hasAgentTool &&
     feature('VERIFICATION_AGENT') &&
-    // 3P default: false — verification agent is ant-only A/B
+    
     getFeatureValue_CACHED_MAY_BE_STALE('tengu_hive_evidence', false)
       ? `The contract: when non-trivial implementation happens on your turn, independent adversarial verification must happen before you report completion \u2014 regardless of who did the implementing (you directly, a fork you spawned, or a subagent). You are the one reporting to the user; you own the gate. Non-trivial means: 3+ file edits, backend/API changes, or infrastructure changes. Spawn the ${AGENT_TOOL_NAME} tool with subagent_type="${VERIFICATION_AGENT_TYPE}". Your own checks, caveats, and a fork's self-checks do NOT substitute \u2014 only the verifier assigns a verdict; you cannot self-assign PARTIAL. Pass the original user request, all files changed (by anyone), the approach, and the plan file path if applicable. Flag concerns if you have them but do NOT share test results or claim things work. On FAIL: fix, resume the verifier with its findings plus your fix, repeat until PASS. On PASS: spot-check it \u2014 re-run 2-3 commands from its report, confirm every PASS has a Command run block with output that matches your re-run. If any PASS lacks a command block or diverges, resume the verifier with the specifics. On PARTIAL (from the verifier): report what passed and what could not be verified.`
       : null,
@@ -385,7 +365,6 @@ function getSessionSpecificGuidanceSection(
   return ['# Session-specific guidance', ...prependBullets(items)].join('\n')
 }
 
-// @[MODEL LAUNCH]: Remove this section when we launch numbat.
 function getOutputEfficiencySection(): string {
   if (process.env.USER_TYPE === 'ant') {
     return `# Communicating with the user
@@ -420,7 +399,7 @@ function getSimpleToneAndStyleSection(): string {
       ? null
       : `Your responses should be short and concise.`,
     `When referencing specific functions or pieces of code include the pattern file_path:line_number to allow the user to easily navigate to the source code location.`,
-    `When referencing GitHub issues or pull requests, use the owner/repo#123 format (e.g. anthropics/claude-code#100) so they render as clickable links.`,
+    `When referencing GitHub issues or pull requests, use the owner/repo#123 format (e.g. anthropics/claude-code-next#100) so they render as clickable links.`,
     `Do not use a colon before tool calls. Your tool calls may not be shown directly in the output, so text like "Let me read the file:" followed by a read tool call should just be "Let me read the file." with a period.`,
   ].filter(item => item !== null)
 
@@ -433,9 +412,9 @@ export async function getSystemPrompt(
   additionalWorkingDirectories?: string[],
   mcpClients?: MCPServerConnection[],
 ): Promise<string[]> {
-  if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
+  if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_SIMPLE)) {
     return [
-      `You are Claude Code, Anthropic's official CLI for Claude.\n\nCWD: ${getCwd()}\nDate: ${getSessionStartDate()}`,
+      `You are Claude Code Next, Anthropic's official CLI for Claude.\n\nCWD: ${getCwd()}\nDate: ${getSessionStartDate()}`,
     ]
   }
 
@@ -462,8 +441,8 @@ ${CYBER_RISK_INSTRUCTION}`,
       await loadMemoryPrompt(),
       envInfo,
       getLanguageSection(settings.language),
-      // When delta enabled, instructions are announced via persisted
-      // mcp_instructions_delta attachments (attachments.ts) instead.
+      
+      
       isMcpInstructionsDeltaEnabled()
         ? null
         : getMcpInstructionsSection(mcpClients),
@@ -491,11 +470,11 @@ ${CYBER_RISK_INSTRUCTION}`,
     systemPromptSection('output_style', () =>
       getOutputStyleSection(outputStyleConfig),
     ),
-    // When delta enabled, instructions are announced via persisted
-    // mcp_instructions_delta attachments (attachments.ts) instead of this
-    // per-turn recompute, which busts the prompt cache on late MCP connect.
-    // Gate check inside compute (not selecting between section variants)
-    // so a mid-session gate flip doesn't read a stale cached value.
+    
+    
+    
+    
+    
     DANGEROUS_uncachedSystemPromptSection(
       'mcp_instructions',
       () =>
@@ -510,8 +489,8 @@ ${CYBER_RISK_INSTRUCTION}`,
       'summarize_tool_results',
       () => SUMMARIZE_TOOL_RESULTS_SECTION,
     ),
-    // Numeric length anchors — research shows ~1.2% output token reduction vs
-    // qualitative "be concise". Ant-only to measure quality impact first.
+    
+    
     ...(process.env.USER_TYPE === 'ant'
       ? [
           systemPromptSection(
@@ -523,11 +502,11 @@ ${CYBER_RISK_INSTRUCTION}`,
       : []),
     ...(feature('TOKEN_BUDGET')
       ? [
-          // Cached unconditionally — the "When the user specifies..." phrasing
-          // makes it a no-op with no budget active. Was DANGEROUS_uncached
-          // (toggled on getCurrentTurnTokenBudget()), busting ~20K tokens per
-          // budget flip. Not moved to a tail attachment: first-response and
-          // budget-continuation paths don't see attachments (#21577).
+          
+          
+          
+          
+          
           systemPromptSection(
             'token_budget',
             () =>
@@ -544,7 +523,7 @@ ${CYBER_RISK_INSTRUCTION}`,
     await resolveSystemPromptSections(dynamicSections)
 
   return [
-    // --- Static content (cacheable) ---
+    
     getSimpleIntroSection(outputStyleConfig),
     getSimpleSystemSection(),
     outputStyleConfig === null ||
@@ -555,9 +534,9 @@ ${CYBER_RISK_INSTRUCTION}`,
     getUsingYourToolsSection(enabledTools),
     getSimpleToneAndStyleSection(),
     getOutputEfficiencySection(),
-    // === BOUNDARY MARKER - DO NOT MOVE OR REMOVE ===
+    
     ...(shouldUseGlobalCacheScope() ? [SYSTEM_PROMPT_DYNAMIC_BOUNDARY] : []),
-    // --- Dynamic content (registry-managed) ---
+    
     ...resolvedDynamicSections,
   ].filter(s => s !== null)
 }
@@ -595,17 +574,17 @@ export async function computeEnvInfo(
 ): Promise<string> {
   const [isGit, unameSR] = await Promise.all([getIsGit(), getUnameSR()])
 
-  // Undercover: keep ALL model names/IDs out of the system prompt so nothing
-  // internal can leak into public commits/PRs. This includes the public
-  // FRONTIER_MODEL_* constants — if those ever point at an unannounced model,
-  // we don't want them in context. Go fully dark.
-  //
-  // DCE: `process.env.USER_TYPE === 'ant'` is build-time --define. It MUST be
-  // inlined at each callsite (not hoisted to a const) so the bundler can
-  // constant-fold it to `false` in external builds and eliminate the branch.
+  
+  
+  
+  
+  
+  
+  
+  
   let modelDescription = ''
   if (process.env.USER_TYPE === 'ant' && isUndercover()) {
-    // suppress
+    
   } else {
     const marketingName = getMarketingNameForModel(modelId)
     modelDescription = marketingName
@@ -640,11 +619,11 @@ export async function computeSimpleEnvInfo(
 ): Promise<string> {
   const [isGit, unameSR] = await Promise.all([getIsGit(), getUnameSR()])
 
-  // Undercover: strip all model name/ID references. See computeEnvInfo.
-  // DCE: inline the USER_TYPE check at each site — do NOT hoist to a const.
+  
+  
   let modelDescription: string | null = null
   if (process.env.USER_TYPE === 'ant' && isUndercover()) {
-    // suppress
+    
   } else {
     const marketingName = getMarketingNameForModel(modelId)
     modelDescription = marketingName
@@ -682,10 +661,10 @@ export async function computeSimpleEnvInfo(
       : `The most recent Claude model family is Claude 4.5/4.6. Model IDs — Opus 4.6: '${CLAUDE_4_5_OR_4_6_MODEL_IDS.opus}', Sonnet 4.6: '${CLAUDE_4_5_OR_4_6_MODEL_IDS.sonnet}', Haiku 4.5: '${CLAUDE_4_5_OR_4_6_MODEL_IDS.haiku}'. When building AI applications, default to the latest and most capable Claude models.`,
     process.env.USER_TYPE === 'ant' && isUndercover()
       ? null
-      : `Claude Code is available as a CLI in the terminal, desktop app (Mac/Windows), web app (claude.ai/code), and IDE extensions (VS Code, JetBrains).`,
+      : `Claude Code Next is available as a CLI in the terminal, desktop app (Mac/Windows), web app (claude.ai/code), and IDE extensions (VS Code, JetBrains).`,
     process.env.USER_TYPE === 'ant' && isUndercover()
       ? null
-      : `Fast mode for Claude Code uses the same ${FRONTIER_MODEL_NAME} model with faster output. It does NOT switch to a different model. It can be toggled with /fast.`,
+      : `Fast mode for Claude Code Next uses the same ${FRONTIER_MODEL_NAME} model with faster output. It does NOT switch to a different model. It can be toggled with /fast.`,
   ].filter(item => item !== null)
 
   return [
@@ -695,7 +674,6 @@ export async function computeSimpleEnvInfo(
   ].join(`\n`)
 }
 
-// @[MODEL LAUNCH]: Add a knowledge cutoff date for the new model.
 function getKnowledgeCutoff(modelId: string): string | null {
   const canonical = getCanonicalName(modelId)
   if (canonical.includes('claude-sonnet-4-6')) {
@@ -729,7 +707,7 @@ function getShellInfoLine(): string {
 }
 
 export function getUnameSR(): string {
-  // os.type() and os.release() both wrap uname(3) on POSIX, producing output
+  
   
   
   
@@ -741,7 +719,7 @@ export function getUnameSR(): string {
   return `${osType()} ${osRelease()}`
 }
 
-export const DEFAULT_AGENT_PROMPT = `You are an agent for Claude Code, Anthropic's official CLI for Claude. Given the user's message, you should use the tools available to complete the task. Complete the task fully—don't gold-plate, but don't leave it half-done. When you complete the task, respond with a concise report covering what was done and any key findings — the caller will relay this to the user, so it only needs the essentials.`
+export const DEFAULT_AGENT_PROMPT = `You are an agent for Claude Code Next, Anthropic's official CLI for Claude. Given the user's message, you should use the tools available to complete the task. Complete the task fully—don't gold-plate, but don't leave it half-done. When you complete the task, respond with a concise report covering what was done and any key findings — the caller will relay this to the user, so it only needs the essentials.`
 
 export async function enhanceSystemPromptWithEnvDetails(
   existingSystemPrompt: string[],
@@ -755,11 +733,11 @@ export async function enhanceSystemPromptWithEnvDetails(
 - For clear communication with the user the assistant MUST avoid using emojis.
 - Do not use a colon before tool calls. Text like "Let me read the file:" followed by a read tool call should just be "Let me read the file." with a period.`
   
-  // no agentId guard since #22830) but don't go through getSystemPrompt —
-  // surface the same DiscoverSkills framing the main session gets. Gated on
-  // enabledToolNames when the caller provides it (runAgent.ts does).
-  // AgentTool.tsx:768 builds the prompt before assembleToolPool:830 so it
-  // omits this param — `?? true` preserves guidance there.
+  
+  
+  
+  
+  
   const discoverSkillsGuidance =
     feature('EXPERIMENTAL_SKILL_SEARCH') &&
     skillSearchFeatureCheck?.isSkillSearchEnabled() &&
@@ -776,10 +754,6 @@ export async function enhanceSystemPromptWithEnvDetails(
   ]
 }
 
-/**
- * Returns instructions for using the scratchpad directory if enabled.
- * The scratchpad is a per-session directory where Claude can write temporary files.
- */
 export function getScratchpadInstructions(): string | null {
   if (!isScratchpadEnabled()) {
     return null
@@ -829,12 +803,12 @@ const SUMMARIZE_TOOL_RESULTS_SECTION = `When working with tool results, write do
 function getBriefSection(): string | null {
   if (!(feature('KAIROS') || feature('KAIROS_BRIEF'))) return null
   if (!BRIEF_PROACTIVE_SECTION) return null
-  // Whenever the tool is available, the model is told to use it. The
-  // /brief toggle and --brief flag now only control the isBriefOnly
-  // display filter — they no longer gate model-facing behavior.
+  
+  
+  
   if (!briefToolModule?.isBriefEnabled()) return null
-  // When proactive is active, getProactiveSection() already appends the
-  // section inline. Skip here to avoid duplicating it in the system prompt.
+  
+  
   if (
     (feature('PROACTIVE') || feature('KAIROS')) &&
     proactiveModule?.isProactiveActive()

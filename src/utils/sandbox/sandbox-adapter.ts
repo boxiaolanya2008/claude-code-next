@@ -41,8 +41,6 @@ import {
 } from '../settings/settings.js'
 import type { SettingsJson } from '../settings/types.js'
 
-// Settings Converter
-
 import { BASH_TOOL_NAME } from 'src/tools/BashTool/toolName.js'
 import { FILE_EDIT_TOOL_NAME } from 'src/tools/FileEditTool/constants.js'
 import { FILE_READ_TOOL_NAME } from 'src/tools/FileReadTool/prompt.js'
@@ -72,67 +70,33 @@ function permissionRuleExtractPrefix(permissionRule: string): string | null {
   return match?.[1] ?? null
 }
 
-/**
- * Resolve Claude Code-specific path patterns for sandbox-runtime.
- *
- * Claude Code uses special path prefixes in permission rules:
- * - `//path` → absolute from filesystem root (becomes `/path`)
- * - `/path` → relative to settings file directory (becomes `$SETTINGS_DIR/path`)
- * - `~/path` → passed through (sandbox-runtime handles this)
- * - `./path` or `path` → passed through (sandbox-runtime handles this)
- *
- * This function only handles CC-specific conventions (`
- * Standard path patterns like `~/` and relative paths are passed through
- * for sandbox-runtime's normalizePathForSandbox to handle.
- *
- * @param pattern The path pattern from a permission rule
- * @param source The settings source this pattern came from (needed to resolve `/path` patterns)
- */
 export function resolvePathPatternForSandbox(
   pattern: string,
   source: SettingSource,
 ): string {
-  // Handle // prefix - absolute from root (CC-specific convention)
+  
   if (pattern.startsWith('
     return pattern.slice(1) 
   }
 
-  // Handle / prefix - relative to settings file directory (CC-specific convention)
   
-  if (pattern.startsWith('/') && !pattern.startsWith('//')) {
+  if (pattern.startsWith('/') && !pattern.startsWith('
     const root = getSettingsRootPathForSource(source)
     
     return resolve(root, pattern.slice(1))
   }
 
-  // Other patterns (~/path, ./path, path) pass through as-is
+  
   
   return pattern
 }
 
-/**
- * Resolve paths from sandbox.filesystem.* settings (allowWrite, denyWrite, etc).
- *
- * Unlike permission rules (Edit/Read), these settings use standard path semantics:
- * - `/path` → absolute path (as written, NOT settings-relative)
- * - `~/path` → expanded to home directory
- * - `./path` or `path` → relative to settings file directory
- * - `//path` → absolute (legacy permission-rule syntax, accepted for compat)
- *
- * Fix for #30067: resolvePathPatternForSandbox treats `/Users/foo/.cargo` as
- * settings-relative (permission-rule convention). Users reasonably expect
- * absolute paths in sandbox.filesystem.allowWrite to work as-is.
- *
- * Also expands `~` here rather than relying on sandbox-runtime, because
- * sandbox-runtime's getFsWriteConfig() does not call normalizePathForSandbox
- * on allowWrite paths (it only strips trailing glob suffixes).
- */
 export function resolveSandboxFilesystemPath(
   pattern: string,
   source: SettingSource,
 ): string {
-  // Legacy permission-rule escape: //path → /path. Kept for compat with
-  // users who worked around #30067 by writing //Users/foo/.cargo in config.
+  
+  
   if (pattern.startsWith('
   return expandPath(pattern, getSettingsRootPathForSource(source))
 }
@@ -156,7 +120,7 @@ function shouldAllowManagedReadPathsOnly(): boolean {
 }
 
 /**
- * Convert Claude Code settings format to SandboxRuntimeConfig format
+ * Convert Claude Code Next settings format to SandboxRuntimeConfig format
  * (Function exported for testing)
  *
  * @param settings Merged settings (used for sandbox config like network, ripgrep, etc.)
@@ -166,7 +130,6 @@ export function convertToSandboxRuntimeConfig(
 ): SandboxRuntimeConfig {
   const permissions = settings.permissions || {}
 
-  // Extract network domains from WebFetch rules
   const allowedDomains: string[] = []
   const deniedDomains: string[] = []
 
@@ -211,7 +174,6 @@ export function convertToSandboxRuntimeConfig(
     }
   }
 
-  // Extract filesystem paths from Edit and Read rules
   
   
   const allowWrite: string[] = ['.', getClaudeTempDir()]
@@ -236,7 +198,6 @@ export function convertToSandboxRuntimeConfig(
     denyWrite.push(resolve(cwd, '.claude', 'settings.local.json'))
   }
 
-  // Block writes to .claude/skills in both original and current working directories.
   
   
   
@@ -246,9 +207,8 @@ export function convertToSandboxRuntimeConfig(
     denyWrite.push(resolve(cwd, '.claude', 'skills'))
   }
 
-  // SECURITY: Git's is_git_directory() treats cwd as a bare repo if it has
-  // HEAD + objects/ + refs/. An attacker planting these (plus a config with
-  // core.fsmonitor) escapes the sandbox when Claude's unsandboxed git runs.
+  
+  
   
   
   
@@ -262,7 +222,7 @@ export function convertToSandboxRuntimeConfig(
     for (const gitFile of bareGitRepoFiles) {
       const p = resolve(dir, gitFile)
       try {
-        // eslint-disable-next-line custom-rules/no-sync-fs -- refreshConfig() must be sync
+        
         statSync(p)
         denyWrite.push(p)
       } catch {
@@ -271,7 +231,7 @@ export function convertToSandboxRuntimeConfig(
     }
   }
 
-  // If we detected a git worktree during initialize(), the main repo path is
+  
   
   
   
@@ -279,7 +239,7 @@ export function convertToSandboxRuntimeConfig(
     allowWrite.push(worktreeMainRepoPath)
   }
 
-  // Include directories added via --add-dir CLI flag or /add-dir command.
+  
   
   
   
@@ -292,7 +252,7 @@ export function convertToSandboxRuntimeConfig(
 
   
   
-  // so we need to know which source each rule came from
+  
   for (const source of SETTING_SOURCES) {
     const sourceSettings = getSettingsForSource(source)
 
@@ -318,9 +278,9 @@ export function convertToSandboxRuntimeConfig(
       }
     }
 
-    // Extract filesystem paths from sandbox.filesystem settings
     
-    // NOT the permission-rule convention (/path = settings-relative). #30067
+    
+    
     const fs = sourceSettings?.sandbox?.filesystem
     if (fs) {
       for (const p of fs.allowWrite || []) {
@@ -339,7 +299,7 @@ export function convertToSandboxRuntimeConfig(
       }
     }
   }
-  // Ripgrep config for sandbox. User settings take priority; otherwise pass our rg.
+  
   
   const { rgPath, rgArgs, argv0 } = ripgrepCommand()
   const ripgrepConfig = settings.sandbox?.ripgrep ?? {
@@ -372,9 +332,6 @@ export function convertToSandboxRuntimeConfig(
   }
 }
 
-// ============================================================================
-// Claude CLI-specific state
-
 let initializationPromise: Promise<void> | undefined
 let settingsSubscriptionCleanup: (() => void) | undefined
 
@@ -385,21 +342,15 @@ const bareGitRepoScrubPaths: string[] = []
 function scrubBareGitRepoFiles(): void {
   for (const p of bareGitRepoScrubPaths) {
     try {
-      // eslint-disable-next-line custom-rules/no-sync-fs -- cleanupAfterCommand must be sync (Shell.ts:367)
+      
       rmSync(p, { recursive: true })
       logForDebugging(`[Sandbox] scrubbed planted bare-repo file: ${p}`)
     } catch {
-      // ENOENT is the expected common case — nothing was planted
+      
     }
   }
 }
 
-/**
- * Detect if cwd is a git worktree and resolve the main repo path.
- * Called once during initialize() and cached for the session.
- * In a worktree, .git is a file (not a directory) containing "gitdir: ...".
- * If .git is a directory, readFile throws EISDIR and we return null.
- */
 async function detectWorktreeMainRepoPath(cwd: string): Promise<string | null> {
   const gitPath = join(cwd, '.git')
   try {
@@ -408,7 +359,7 @@ async function detectWorktreeMainRepoPath(cwd: string): Promise<string | null> {
     if (!gitdirMatch?.[1]) {
       return null
     }
-    // gitdir may be relative (rare, but git accepts it) — resolve against cwd
+    
     const gitdir = resolve(cwd, gitdirMatch[1].trim())
     
     
@@ -420,15 +371,11 @@ async function detectWorktreeMainRepoPath(cwd: string): Promise<string | null> {
     }
     return null
   } catch {
-    // Not in a worktree, .git is a directory (EISDIR), or can't read .git file
+    
     return null
   }
 }
 
-/**
- * Check if dependencies are available (memoized)
- * Returns { errors, warnings } - errors mean sandbox cannot run
- */
 const checkDependencies = memoize((): SandboxDependencyCheck => {
   const { rgPath, rgArgs } = ripgrepCommand()
   return BaseSandboxManager.checkDependencies({
@@ -465,24 +412,10 @@ function isSandboxRequired(): boolean {
   )
 }
 
-/**
- * Check if the current platform is supported for sandboxing (memoized)
- * Supports: macOS, Linux, and WSL2+ (WSL1 is not supported)
- */
 const isSupportedPlatform = memoize((): boolean => {
   return BaseSandboxManager.isSupportedPlatform()
 })
 
-/**
- * Check if the current platform is in the enabledPlatforms list.
- *
- * This is an undocumented setting that allows restricting sandbox to specific platforms.
- * When enabledPlatforms is not set, all supported platforms are allowed.
- *
- * Added to unblock NVIDIA enterprise rollout: they want to enable autoAllowBashIfSandboxed
- * but only on macOS initially, since Linux/WSL sandbox support is newer. This allows
- * setting enabledPlatforms: ["macos"] to disable sandbox (and auto-allow) on other platforms.
- */
 function isPlatformInEnabledList(): boolean {
   try {
     const settings = getInitialSettings()
@@ -502,14 +435,10 @@ function isPlatformInEnabledList(): boolean {
     return enabledPlatforms.includes(currentPlatform)
   } catch (error) {
     logForDebugging(`Failed to check enabledPlatforms: ${error}`)
-    return true // Default to enabled if we can't read settings
+    return true 
   }
 }
 
-/**
- * Check if sandboxing is enabled
- * This checks the user's enabled setting, platform support, and enabledPlatforms restriction
- */
 function isSandboxingEnabled(): boolean {
   if (!isSupportedPlatform()) {
     return false
@@ -519,7 +448,7 @@ function isSandboxingEnabled(): boolean {
     return false
   }
 
-  // Check if current platform is in the enabledPlatforms list (undocumented setting)
+  
   if (!isPlatformInEnabledList()) {
     return false
   }
@@ -527,22 +456,9 @@ function isSandboxingEnabled(): boolean {
   return getSandboxEnabledSetting()
 }
 
-/**
- * If the user explicitly enabled sandbox (sandbox.enabled: true in settings)
- * but it cannot actually run, return a human-readable reason. Otherwise
- * return undefined.
- *
- * Fix for #34044: previously isSandboxingEnabled() silently returned false
- * when dependencies were missing, giving users zero feedback that their
- * explicit security setting was being ignored. This is a security footgun —
- * users configure allowedDomains expecting enforcement, get none.
- *
- * Call this once at startup (REPL/print) and surface the reason if present.
- * Does not cover the case where the user never enabled sandbox (no noise).
- */
 function getSandboxUnavailableReason(): string | undefined {
-  // Only warn if user explicitly asked for sandbox. If they didn't enable
-  // it, missing deps are irrelevant.
+  
+  
   if (!getSandboxEnabledSetting()) {
     return undefined
   }
@@ -572,11 +488,8 @@ function getSandboxUnavailableReason(): string | undefined {
   return undefined
 }
 
-/**
- * Get glob patterns that won't work fully on Linux/WSL
- */
 function getLinuxGlobPatternWarnings(): string[] {
-  // Only return warnings on Linux/WSL (bubblewrap doesn't support globs)
+  
   const platform = getPlatform()
   if (platform !== 'linux' && platform !== 'wsl') {
     return []
@@ -585,7 +498,7 @@ function getLinuxGlobPatternWarnings(): string[] {
   try {
     const settings = getSettings_DEPRECATED()
 
-    // Only return warnings when sandboxing is enabled (check settings directly, not cached value)
+    
     if (!settings?.sandbox?.enabled) {
       return []
     }
@@ -593,13 +506,13 @@ function getLinuxGlobPatternWarnings(): string[] {
     const permissions = settings?.permissions || {}
     const warnings: string[] = []
 
-    // Helper to check if a path has glob characters (excluding trailing /**)
+    
     const hasGlobs = (path: string): boolean => {
       const stripped = path.replace(/\/\*\*$/, '')
       return /[*?[\]]/.test(stripped)
     }
 
-    // Check all permission rules
+    
     for (const ruleString of [
       ...(permissions.allow || []),
       ...(permissions.deny || []),
@@ -622,12 +535,9 @@ function getLinuxGlobPatternWarnings(): string[] {
   }
 }
 
-/**
- * Check if sandbox settings are locked by policy
- */
 function areSandboxSettingsLockedByPolicy(): boolean {
-  // Check if sandbox settings are explicitly set in any source that overrides localSettings
-  // These sources have higher priority than localSettings and would make local changes ineffective
+  
+  
   const overridingSources = ['flagSettings', 'policySettings'] as const
 
   for (const source of overridingSources) {
@@ -644,9 +554,6 @@ function areSandboxSettingsLockedByPolicy(): boolean {
   return false
 }
 
-/**
- * Set sandbox settings
- */
 async function setSandboxSettings(options: {
   enabled?: boolean
   autoAllowBashIfSandboxed?: boolean
@@ -654,8 +561,8 @@ async function setSandboxSettings(options: {
 }): Promise<void> {
   const existingSettings = getSettingsForSource('localSettings')
 
-  // Note: Memoized caches auto-invalidate when settings change because they use
-  // the settings object as the cache key (new settings object = cache miss)
+  
+  
 
   updateSettingsForSource('localSettings', {
     sandbox: {
@@ -671,24 +578,18 @@ async function setSandboxSettings(options: {
   })
 }
 
-/**
- * Get excluded commands (commands that should not be sandboxed)
- */
 function getExcludedCommands(): string[] {
   const settings = getSettings_DEPRECATED()
   return settings?.sandbox?.excludedCommands ?? []
 }
 
-/**
- * Wrap command with sandbox, optionally specifying the shell to use
- */
 async function wrapWithSandbox(
   command: string,
   binShell?: string,
   customConfig?: Partial<SandboxRuntimeConfig>,
   abortSignal?: AbortSignal,
 ): Promise<string> {
-  // If sandboxing is enabled, ensure initialization is complete
+  
   if (isSandboxingEnabled()) {
     if (initializationPromise) {
       await initializationPromise
@@ -705,24 +606,21 @@ async function wrapWithSandbox(
   )
 }
 
-/**
- * Initialize sandbox with log monitoring enabled by default
- */
 async function initialize(
   sandboxAskCallback?: SandboxAskCallback,
 ): Promise<void> {
-  // If already initializing or initialized, return the promise
+  
   if (initializationPromise) {
     return initializationPromise
   }
 
-  // Check if sandboxing is enabled in settings
+  
   if (!isSandboxingEnabled()) {
     return
   }
 
-  // Wrap the callback to enforce allowManagedDomainsOnly policy.
-  // This ensures all code paths (REPL, print/SDK) are covered.
+  
+  
   const wrappedCallback: SandboxAskCallback | undefined = sandboxAskCallback
     ? async (hostPattern: NetworkHostPattern) => {
         if (shouldAllowManagedSandboxDomainsOnly()) {
@@ -735,12 +633,12 @@ async function initialize(
       }
     : undefined
 
-  // Create the initialization promise synchronously (before any await) to prevent
-  // race conditions where wrapWithSandbox() is called before the promise is assigned.
+  
+  
   initializationPromise = (async () => {
     try {
-      // Resolve worktree main repo path once before building config.
-      // Worktree status doesn't change mid-session, so this is cached for all
+      
+      
       
       
       if (worktreeMainRepoPath === undefined) {
@@ -761,7 +659,7 @@ async function initialize(
         logForDebugging('Sandbox configuration updated from settings change')
       })
     } catch (error) {
-      // Clear the promise on error so initialization can be retried
+      
       initializationPromise = undefined
 
       
@@ -772,10 +670,6 @@ async function initialize(
   return initializationPromise
 }
 
-/**
- * Refresh sandbox config from current settings immediately
- * Call this after updating permissions to avoid race conditions
- */
 function refreshConfig(): void {
   if (!isSandboxingEnabled()) return
   const settings = getSettings_DEPRECATED()
@@ -783,11 +677,8 @@ function refreshConfig(): void {
   BaseSandboxManager.updateConfig(newConfig)
 }
 
-/**
- * Reset sandbox state and clear memoized values
- */
 async function reset(): Promise<void> {
-  // Clean up settings subscription
+  
   settingsSubscriptionCleanup?.()
   settingsSubscriptionCleanup = undefined
   worktreeMainRepoPath = undefined
@@ -802,10 +693,6 @@ async function reset(): Promise<void> {
   return BaseSandboxManager.reset()
 }
 
-/**
- * Add a command to the excluded commands list (commands that should not be sandboxed)
- * This is a Claude CLI-specific function that updates local settings.
- */
 export function addToExcludedCommands(
   command: string,
   permissionUpdates?: Array<{
@@ -834,14 +721,14 @@ export function addToExcludedCommands(
         rule => rule.toolName === BASH_TOOL_NAME,
       )
       if (firstBashRule?.ruleContent) {
-        // Extract pattern from Bash(command) or Bash(command:*) format
+        
         const prefix = permissionRuleExtractPrefix(firstBashRule.ruleContent)
         commandPattern = prefix || firstBashRule.ruleContent
       }
     }
   }
 
-  // Add to excludedCommands if not already present
+  
   if (!existingExcludedCommands.includes(commandPattern)) {
     updateSettingsForSource('localSettings', {
       sandbox: {
@@ -853,9 +740,6 @@ export function addToExcludedCommands(
 
   return commandPattern
 }
-
-// ============================================================================
-// Export interface and implementation
 
 export interface ISandboxManager {
   initialize(sandboxAskCallback?: SandboxAskCallback): Promise<void>
@@ -901,11 +785,8 @@ export interface ISandboxManager {
   reset(): Promise<void>
 }
 
-/**
- * Claude CLI sandbox manager - wraps sandbox-runtime with Claude-specific features
- */
 export const SandboxManager: ISandboxManager = {
-  // Custom implementations
+  
   initialize,
   isSandboxingEnabled,
   isSandboxEnabledInSettings: getSandboxEnabledSetting,
@@ -922,7 +803,7 @@ export const SandboxManager: ISandboxManager = {
   reset,
   checkDependencies,
 
-  // Forward to base sandbox manager
+  
   getFsReadConfig: BaseSandboxManager.getFsReadConfig,
   getFsWriteConfig: BaseSandboxManager.getFsWriteConfig,
   getNetworkRestrictionConfig: BaseSandboxManager.getNetworkRestrictionConfig,
@@ -945,9 +826,6 @@ export const SandboxManager: ISandboxManager = {
     scrubBareGitRepoFiles()
   },
 }
-
-// ============================================================================
-// Re-export types from sandbox-runtime
 
 export type {
   SandboxAskCallback,

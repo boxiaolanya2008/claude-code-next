@@ -87,12 +87,12 @@ export function buildAuthUrl({
     authUrl.searchParams.append('orgUUID', orgUUID)
   }
 
-  // Pre-populate email on the login form (standard OIDC parameter)
+  
   if (loginHint) {
     authUrl.searchParams.append('login_hint', loginHint)
   }
 
-  // Request a specific login method (e.g. 'sso', 'magic_link', 'google')
+  
   if (loginMethod) {
     authUrl.searchParams.append('login_method', loginMethod)
   }
@@ -147,7 +147,7 @@ export async function refreshOAuthToken(
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
     client_id: getOauthConfig().CLIENT_ID,
-    // Request specific scopes, defaulting to the full Claude AI set. The
+    
     
     
     
@@ -191,7 +191,7 @@ export async function refreshOAuthToken(
     
     
     
-    // the re-login path writes cached ?? wiped ?? null = cached; and if secure
+    
     
     const config = getGlobalConfig()
     const existing = getClaudeAIOAuthTokens()
@@ -377,7 +377,7 @@ export async function fetchProfileInfo(accessToken: string): Promise<{
       subscriptionType = 'team'
       break
     default:
-      // Return null for unknown organization types
+      
       subscriptionType = null
       break
   }
@@ -415,19 +415,15 @@ export async function fetchProfileInfo(accessToken: string): Promise<{
   return { ...result, rawProfile: profile }
 }
 
-/**
- * Gets the organization UUID from the OAuth access token
- * @returns The organization UUID or null if not authenticated
- */
 export async function getOrganizationUUID(): Promise<string | null> {
-  // Check global config first to avoid unnecessary API call
+  
   const globalConfig = getGlobalConfig()
   const orgUUID = globalConfig.oauthAccount?.organizationUuid
   if (orgUUID) {
     return orgUUID
   }
 
-  // Fall back to fetching from profile (requires user:profile scope)
+  
   const accessToken = getClaudeAIOAuthTokens()?.accessToken
   if (accessToken === undefined || !hasProfileScope()) {
     return null
@@ -440,19 +436,15 @@ export async function getOrganizationUUID(): Promise<string | null> {
   return profileOrgUUID
 }
 
-/**
- * Populate the OAuth account info if it has not already been cached in config.
- * @returns Whether or not the oauth account info was populated.
- */
 export async function populateOAuthAccountInfoIfNeeded(): Promise<boolean> {
-  // Check env vars first (synchronous, no network call needed).
   
   
   
-  // please reach out to #proj-cowork so the team can add additional env var fallbacks.
-  const envAccountUuid = process.env.CLAUDE_CODE_ACCOUNT_UUID
-  const envUserEmail = process.env.CLAUDE_CODE_USER_EMAIL
-  const envOrganizationUuid = process.env.CLAUDE_CODE_ORGANIZATION_UUID
+  
+  
+  const envAccountUuid = process.env.CLAUDE_CODE_NEXT_ACCOUNT_UUID
+  const envUserEmail = process.env.CLAUDE_CODE_NEXT_USER_EMAIL
+  const envOrganizationUuid = process.env.CLAUDE_CODE_NEXT_ORGANIZATION_UUID
   const hasEnvVars = Boolean(
     envAccountUuid && envUserEmail && envOrganizationUuid,
   )
@@ -466,7 +458,7 @@ export async function populateOAuthAccountInfoIfNeeded(): Promise<boolean> {
     }
   }
 
-  // Wait for any in-flight token refresh to complete first, since
+  
   
   await checkAndRefreshOAuthTokenIfNeeded()
 
@@ -542,7 +534,7 @@ export function storeOAuthAccountInfo({
     accountInfo.displayName = displayName
   }
   saveGlobalConfig(current => {
-    // For oauthAccount we need to compare content since it's an object
+    
     if (
       current.oauthAccount?.accountUuid === accountInfo.accountUuid &&
       current.oauthAccount?.emailAddress === accountInfo.emailAddress &&

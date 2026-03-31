@@ -125,7 +125,7 @@ export type ProjectConfig = {
     sessionId: string
     hookBased?: boolean
   }
-  /** Spawn mode for `claude remote-control` multi-session. Set by first-run dialog or `w` toggle. */
+  
   remoteControlSpawnMode?: 'same-dir' | 'worktree'
 }
 
@@ -167,7 +167,6 @@ export type AccountInfo = {
   subscriptionCreatedAt?: string
 }
 
-// TODO: 'emacs' is kept for backward compatibility - remove after a few releases
 export type EditorMode = 'emacs' | (typeof EDITOR_MODES)[number]
 
 export type DiffTool = 'terminal' | 'auto'
@@ -175,9 +174,8 @@ export type DiffTool = 'terminal' | 'auto'
 export type OutputStyle = string
 
 export type GlobalConfig = {
-  /**
-   * @deprecated Use settings.apiKeyHelper instead.
-   */
+  
+
   apiKeyHelper?: string
   projects?: Record<string, ProjectConfig>
   numStartups: number
@@ -201,9 +199,9 @@ export type GlobalConfig = {
   mcpServers?: Record<string, McpServerConfig>
   
   
-  // a connector the user has actually used is worth flagging when it breaks,
-  // but an org-configured connector that's been needs-auth since day one is
-  // something the user has demonstrably ignored and shouldn't nag about.
+  
+  
+  
   claudeAiMcpEverConnected?: string[]
   preferredNotifChannel: NotificationChannel
   
@@ -228,7 +226,7 @@ export type GlobalConfig = {
   showTurnDuration: boolean 
   
 
-  env: { [key: string]: string } // Environment variables to set for the CLI
+  env: { [key: string]: string } 
   hasSeenTasksHint?: boolean 
   hasUsedStash?: boolean 
   hasUsedBackgroundTask?: boolean 
@@ -258,7 +256,7 @@ export type GlobalConfig = {
     [tipId: string]: number 
   }
 
-  // /buddy companion soul — bones regenerated from userId on read. See src/buddy/.
+  
   companion?: import('../buddy/types.js').StoredCompanion
   companionMuted?: boolean
 
@@ -267,7 +265,7 @@ export type GlobalConfig = {
     lastShownTime?: number
   }
 
-  // Transcript share prompt tracking ("Don't ask again")
+  
   transcriptShareDismissed?: boolean
 
   
@@ -434,17 +432,17 @@ export type GlobalConfig = {
     [gateName: string]: boolean
   }
 
-  // Cached statsig dynamic configs
+  
   cachedDynamicConfigs?: { [configName: string]: unknown }
 
-  // Cached GrowthBook feature values
+  
   cachedGrowthBookFeatures?: { [featureName: string]: unknown }
 
-  // Local GrowthBook overrides (ant-only, set via /config Gates tab).
+  
   
   growthBookOverrides?: { [featureName: string]: unknown }
 
-  // Emergency tip tracking - stores the last shown tip to prevent re-showing
+  
   lastShownEmergencyTip?: string
 
   
@@ -494,24 +492,24 @@ export type GlobalConfig = {
     pairedDeviceName?: string
   }
 
-  // LSP plugin recommendation preferences
+  
   lspRecommendationDisabled?: boolean 
   lspRecommendationNeverPlugins?: string[] 
   lspRecommendationIgnoredCount?: number 
 
   
   
-  // top-level keys.
+  
   claudeCodeHints?: {
-    // Plugin IDs the user has already been prompted for. Show-once semantics:
-    // recorded regardless of yes/no response, never re-prompted. Capped at
+    
+    
     
     plugin?: string[]
     
     disabled?: boolean
   }
 
-  // Permission explainer configuration
+  
   permissionExplainerEnabled?: boolean 
 
   
@@ -562,17 +560,12 @@ export type GlobalConfig = {
     timestamp: number
   }
 
-  // Version of the last-applied migration set. When equal to
+  
   
   
   migrationVersion?: number
 }
 
-/**
- * Factory for a fresh default GlobalConfig. Used instead of deep-cloning a
- * shared constant — the nested containers (arrays, records) are all empty, so
- * a factory gives fresh refs at zero clone cost.
- */
 function createDefaultGlobalConfig(): GlobalConfig {
   return {
     numStartups: 0,
@@ -677,15 +670,15 @@ export function resetTrustDialogAcceptedCacheForTesting(): void {
 }
 
 export function checkHasTrustDialogAccepted(): boolean {
-  // Trust only transitions false→true during a session (never the reverse),
-  // so once true we can latch it. false is not cached — it gets re-checked
+  
+  
   
   
   return (_trustAccepted ||= computeTrustDialogAccepted())
 }
 
 function computeTrustDialogAccepted(): boolean {
-  // Check session-level trust (for home directory case where trust is not persisted)
+  
   
   
   if (getSessionTrustAccepted()) {
@@ -702,7 +695,7 @@ function computeTrustDialogAccepted(): boolean {
     return true
   }
 
-  // Now check from current working directory and its parents
+  
   
   let currentPath = normalizePathForConfigKey(getCwd())
 
@@ -724,13 +717,6 @@ function computeTrustDialogAccepted(): boolean {
   return false
 }
 
-/**
- * Check trust for an arbitrary directory (not the session cwd).
- * Walks up from `dir`, returning true if any ancestor has trust persisted.
- * Unlike checkHasTrustDialogAccepted, this does NOT consult session trust or
- * the memoized project path — use when the target dir differs from cwd (e.g.
- * /assistant installing into a user-typed path).
- */
 export function isPathTrusted(dir: string): boolean {
   const config = getGlobalConfig()
   let currentPath = normalizePathForConfigKey(resolve(dir))
@@ -742,7 +728,6 @@ export function isPathTrusted(dir: string): boolean {
   }
 }
 
-// We have to put this test code here because Jest doesn't support mocking ES modules :O
 const TEST_GLOBAL_CONFIG_FOR_TESTING: GlobalConfig = {
   ...DEFAULT_GLOBAL_CONFIG,
   autoUpdates: false,
@@ -755,13 +740,6 @@ export function isProjectConfigKey(key: string): key is ProjectConfigKey {
   return PROJECT_CONFIG_KEYS.includes(key as ProjectConfigKey)
 }
 
-/**
- * Detect whether writing `fresh` would lose auth/onboarding state that the
- * in-memory cache still has. This happens when `getConfig` hits a corrupted
- * or truncated file mid-write (from another process or a non-atomic fallback)
- * and returns DEFAULT_GLOBAL_CONFIG. Writing that back would permanently
- * wipe auth. See GH #3117.
- */
 function wouldLoseAuthState(fresh: {
   oauthAccount?: unknown
   hasCompletedOnboarding?: boolean
@@ -781,7 +759,7 @@ export function saveGlobalConfig(
 ): void {
   if (process.env.NODE_ENV === 'test') {
     const config = updater(TEST_GLOBAL_CONFIG_FOR_TESTING)
-    // Skip if no changes (same reference returned)
+    
     if (config === TEST_GLOBAL_CONFIG_FOR_TESTING) {
       return
     }
@@ -796,7 +774,7 @@ export function saveGlobalConfig(
       createDefaultGlobalConfig,
       current => {
         const config = updater(current)
-        // Skip if no changes (same reference returned)
+        
         if (config === current) {
           return current
         }
@@ -807,9 +785,9 @@ export function saveGlobalConfig(
         return written
       },
     )
-    // Only write-through if we actually wrote. If the auth-loss guard
-    // tripped (or the updater made no changes), the file is untouched and
-    // the cache is still valid -- touching it would corrupt the guard.
+    
+    
+    
     if (didWrite && written) {
       writeThroughGlobalConfigCache(written)
     }
@@ -817,10 +795,10 @@ export function saveGlobalConfig(
     logForDebugging(`Failed to save config with lock: ${error}`, {
       level: 'error',
     })
-    // Fall back to non-locked version on error. This fallback is a race
-    // window: if another process is mid-write (or the file got truncated),
-    // getConfig returns defaults. Refuse to write those over a good cached
-    // config to avoid wiping auth. See GH #3117.
+    
+    
+    
+    
     const currentConfig = getConfig(
       getGlobalClaudeFile(),
       createDefaultGlobalConfig,
@@ -834,7 +812,7 @@ export function saveGlobalConfig(
       return
     }
     const config = updater(currentConfig)
-    // Skip if no changes (same reference returned)
+    
     if (config === currentConfig) {
       return
     }
@@ -847,19 +825,15 @@ export function saveGlobalConfig(
   }
 }
 
-// Cache for global config
 let globalConfigCache: { config: GlobalConfig | null; mtime: number } = {
   config: null,
   mtime: 0,
 }
 
-// Tracking for config file operations (telemetry)
 let lastReadFileStats: { mtime: number; size: number } | null = null
 let configCacheHits = 0
 let configCacheMisses = 0
-// Session-total count of actual disk writes to the global config file.
-// Exposed for ant-only dev diagnostics (see inc-4552) so anomalous write
-// rates surface in the UI before they corrupt ~/.claude.json.
+
 let globalConfigWriteCount = 0
 
 export function getGlobalConfigWriteCount(): number {
@@ -881,23 +855,17 @@ function reportConfigCacheStats(): void {
   configCacheMisses = 0
 }
 
-// Register cleanup to report cache stats at session end
-// eslint-disable-next-line custom-rules/no-top-level-side-effects
 registerCleanup(async () => {
   reportConfigCacheStats()
 })
 
-/**
- * Migrates old autoUpdaterStatus to new installMethod and autoUpdates fields
- * @internal
- */
 function migrateConfigFields(config: GlobalConfig): GlobalConfig {
-  // Already migrated
+  
   if (config.installMethod !== undefined) {
     return config
   }
 
-  // autoUpdaterStatus is removed from the type but may exist in old configs
+  
   const legacy = config as GlobalConfig & {
     autoUpdaterStatus?:
       | 'migrated'
@@ -908,9 +876,9 @@ function migrateConfigFields(config: GlobalConfig): GlobalConfig {
       | 'not_configured'
   }
 
-  // Determine install method and auto-update preference from old field
+  
   let installMethod: InstallMethod = 'unknown'
-  let autoUpdates = config.autoUpdates ?? true // Default to enabled unless explicitly disabled
+  let autoUpdates = config.autoUpdates ?? true 
 
   switch (legacy.autoUpdaterStatus) {
     case 'migrated':
@@ -920,17 +888,17 @@ function migrateConfigFields(config: GlobalConfig): GlobalConfig {
       installMethod = 'native'
       break
     case 'disabled':
-      // When disabled, we don't know the install method
+      
       autoUpdates = false
       break
     case 'enabled':
     case 'no_permissions':
     case 'not_configured':
-      // These imply global installation
+      
       installMethod = 'global'
       break
     case undefined:
-      // No old status, keep defaults
+      
       break
   }
 
@@ -941,10 +909,6 @@ function migrateConfigFields(config: GlobalConfig): GlobalConfig {
   }
 }
 
-/**
- * Removes history field from projects (migrated to history.jsonl)
- * @internal
- */
 function removeProjectHistory(
   projects: Record<string, ProjectConfig> | undefined,
 ): Record<string, ProjectConfig> | undefined {
@@ -956,7 +920,7 @@ function removeProjectHistory(
   let needsCleaning = false
 
   for (const [path, projectConfig] of Object.entries(projects)) {
-    // history is removed from the type but may exist in old configs
+    
     const legacy = projectConfig as ProjectConfig & { history?: unknown }
     if (legacy.history !== undefined) {
       needsCleaning = true
@@ -970,7 +934,6 @@ function removeProjectHistory(
   return needsCleaning ? cleanedProjects : projects
 }
 
-// fs.watchFile poll interval for detecting writes from other instances (ms)
 const CONFIG_FRESHNESS_POLL_MS = 1000
 let freshnessWatcherStarted = false
 
@@ -982,16 +945,16 @@ function startGlobalConfigFreshnessWatcher(): void {
     file,
     { interval: CONFIG_FRESHNESS_POLL_MS, persistent: false },
     curr => {
-      // Our own writes fire this too — the write-through's Date.now()
-      // overshoot makes cache.mtime > file mtime, so we skip the re-read.
-      // Bun/Node also fire with curr.mtimeMs=0 when the file doesn't exist
+      
+      
+      
       
       if (curr.mtimeMs <= globalConfigCache.mtime) return
       void getFsImplementation()
         .readFile(file, { encoding: 'utf-8' })
         .then(content => {
-          // A write-through may have advanced the cache while we were reading;
-          // don't regress to the stale snapshot watchFile stat'd.
+          
+          
           if (curr.mtimeMs <= globalConfigCache.mtime) return
           const parsed = safeParseJSON(stripBOM(content))
           if (parsed === null || typeof parsed !== 'object') return
@@ -1013,8 +976,6 @@ function startGlobalConfigFreshnessWatcher(): void {
   })
 }
 
-// Write-through: what we just wrote IS the new config. cache.mtime overshoots
-
 function writeThroughGlobalConfigCache(config: GlobalConfig): void {
   globalConfigCache = { config, mtime: Date.now() }
   lastReadFileStats = null
@@ -1025,7 +986,7 @@ export function getGlobalConfig(): GlobalConfig {
     return TEST_GLOBAL_CONFIG_FOR_TESTING
   }
 
-  // Fast path: pure memory read. After startup, this always hits — our own
+  
   
   
   if (globalConfigCache.config) {
@@ -1033,7 +994,7 @@ export function getGlobalConfig(): GlobalConfig {
     return globalConfigCache.config
   }
 
-  // Slow path: startup load. Sync I/O here is acceptable because it runs
+  
   
   
   configCacheMisses++
@@ -1042,7 +1003,7 @@ export function getGlobalConfig(): GlobalConfig {
     try {
       stats = getFsImplementation().statSync(getGlobalClaudeFile())
     } catch {
-      // File doesn't exist
+      
     }
     const config = migrateConfigFields(
       getConfig(getGlobalClaudeFile(), createDefaultGlobalConfig),
@@ -1057,19 +1018,13 @@ export function getGlobalConfig(): GlobalConfig {
     startGlobalConfigFreshnessWatcher()
     return config
   } catch {
-    // If anything goes wrong, fall back to uncached behavior
+    
     return migrateConfigFields(
       getConfig(getGlobalClaudeFile(), createDefaultGlobalConfig),
     )
   }
 }
 
-/**
- * Returns the effective value of remoteControlAtStartup. Precedence:
- *   1. User's explicit config value (always wins — honors opt-out)
- *   2. CCR auto-connect default (ant-only build, GrowthBook-gated)
- *   3. false (Remote Control must be explicitly opted into)
- */
 export function getRemoteControlAtStartup(): boolean {
   const explicit = getGlobalConfig().remoteControlAtStartup
   if (explicit !== undefined) return explicit
@@ -1097,7 +1052,7 @@ function saveConfig<A extends object>(
   config: A,
   defaultConfig: A,
 ): void {
-  // Ensure the directory exists before writing the config file
+  
   const dir = dirname(file)
   const fs = getFsImplementation()
   
@@ -1123,12 +1078,6 @@ function saveConfig<A extends object>(
   }
 }
 
-/**
- * Returns true if a write was performed; false if the write was skipped
- * (no changes, or auth-loss guard tripped). Callers use this to decide
- * whether to invalidate the cache -- invalidating after a skipped write
- * destroys the good cached state the auth-loss guard depends on.
- */
 function saveConfigWithLock<A extends object>(
   file: string,
   createDefault: () => A,
@@ -1148,7 +1097,7 @@ function saveConfigWithLock<A extends object>(
     release = lockfile.lockSync(file, {
       lockfilePath: lockFilePath,
       onCompromised: err => {
-        // Default onCompromised throws from a setTimeout callback, which
+        
         
         
         logForDebugging(`Config lock compromised: ${err}`, { level: 'error' })
@@ -1164,7 +1113,7 @@ function saveConfigWithLock<A extends object>(
       })
     }
 
-    // Check for stale write - file changed since we last read it
+    
     
     if (lastReadFileStats && file === getGlobalClaudeFile()) {
       try {
@@ -1185,13 +1134,13 @@ function saveConfigWithLock<A extends object>(
         if (code !== 'ENOENT') {
           throw e
         }
-        // File doesn't exist yet, no stale check needed
+        
       }
     }
 
-    // Re-read the current config to get latest state. If the file is
-    // momentarily corrupted (concurrent writes, kill-during-write), this
-    // returns defaults -- we must not write those back over good config.
+    
+    
+    
     const currentConfig = getConfig(file, createDefault)
     if (file === getGlobalClaudeFile() && wouldLoseAuthState(currentConfig)) {
       logForDebugging(
@@ -1202,7 +1151,7 @@ function saveConfigWithLock<A extends object>(
       return false
     }
 
-    // Apply the merge function to get the updated config
+    
     const mergedConfig = mergeFn(currentConfig)
 
     
@@ -1210,7 +1159,7 @@ function saveConfigWithLock<A extends object>(
       return false
     }
 
-    // Filter out any values that match the defaults
+    
     const filteredConfig = pickBy(
       mergedConfig,
       (value, key) =>
@@ -1235,7 +1184,7 @@ function saveConfigWithLock<A extends object>(
         }
       }
 
-      // Check existing backups first -- skip creating a new one if a recent
+      
       
       
       
@@ -1259,7 +1208,7 @@ function saveConfigWithLock<A extends object>(
         fs.copyFileSync(file, backupPath)
       }
 
-      // Clean up old backups, keeping only the 5 most recent
+      
       const MAX_BACKUPS = 5
       
       const backupsForCleanup = shouldCreateBackup
@@ -1274,7 +1223,7 @@ function saveConfigWithLock<A extends object>(
         try {
           fs.unlinkSync(join(backupDir, oldBackup))
         } catch {
-          // Ignore cleanup errors
+          
         }
       }
     } catch (e) {
@@ -1284,10 +1233,10 @@ function saveConfigWithLock<A extends object>(
           level: 'error',
         })
       }
-      // No file to backup or backup failed, continue with write
+      
     }
 
-    // Write config file with secure permissions - mode only applies to new files
+    
     writeFileSyncAndFlush_DEPRECATED(
       file,
       jsonStringify(filteredConfig, null, 2),
@@ -1307,12 +1256,11 @@ function saveConfigWithLock<A extends object>(
   }
 }
 
-// Flag to track if config reading is allowed
 let configReadingAllowed = false
 
 export function enableConfigs(): void {
   if (configReadingAllowed) {
-    // Ensure this is idempotent
+    
     return
   }
 
@@ -1334,20 +1282,10 @@ export function enableConfigs(): void {
   })
 }
 
-/**
- * Returns the directory where config backup files are stored.
- * Uses ~/.claude/backups/ to keep the home directory clean.
- */
 function getConfigBackupDir(): string {
   return join(getClaudeConfigHomeDir(), 'backups')
 }
 
-/**
- * Find the most recent backup file for a given config file.
- * Checks ~/.claude/backups/ first, then falls back to the legacy location
- * (next to the config file) for backwards compatibility.
- * Returns the full path to the most recent backup, or null if none exist.
- */
 function findMostRecentBackup(file: string): string | null {
   const fs = getFsImplementation()
   const fileBase = basename(file)
@@ -1365,10 +1303,10 @@ function findMostRecentBackup(file: string): string | null {
       return join(backupDir, mostRecent)
     }
   } catch {
-    // Backup dir doesn't exist yet
+    
   }
 
-  // Fall back to legacy location (next to the config file)
+  
   const fileDir = dirname(file)
 
   try {
@@ -1377,21 +1315,21 @@ function findMostRecentBackup(file: string): string | null {
       .filter(f => f.startsWith(`${fileBase}.backup.`))
       .sort()
 
-    const mostRecent = backups.at(-1) // Timestamps sort lexicographically
+    const mostRecent = backups.at(-1) 
     if (mostRecent) {
       return join(fileDir, mostRecent)
     }
 
-    // Check for legacy backup file (no timestamp)
+    
     const legacyBackup = `${file}.backup`
     try {
       fs.statSync(legacyBackup)
       return legacyBackup
     } catch {
-      // Legacy backup doesn't exist
+      
     }
   } catch {
-    // Ignore errors reading directory
+    
   }
 
   return null
@@ -1402,7 +1340,7 @@ function getConfig<A>(
   createDefault: () => A,
   throwOnInvalid?: boolean,
 ): A {
-  // Log a warning if config is accessed before it's allowed
+  
   if (!configReadingAllowed && process.env.NODE_ENV !== 'test') {
     throw new Error('Config accessed before allowed.')
   }
@@ -1414,20 +1352,20 @@ function getConfig<A>(
       encoding: 'utf-8',
     })
     try {
-      // Strip BOM before parsing - PowerShell 5.x adds BOM to UTF-8 files
+      
       const parsedConfig = jsonParse(stripBOM(fileContent))
       return {
         ...createDefault(),
         ...parsedConfig,
       }
     } catch (error) {
-      // Throw a ConfigParseError with the file path and default config
+      
       const errorMessage =
         error instanceof Error ? error.message : String(error)
       throw new ConfigParseError(errorMessage, file, createDefault())
     }
   } catch (error) {
-    // Handle file not found - check for backup and return default
+    
     const errCode = getErrnoCode(error)
     if (errCode === 'ENOENT') {
       const backupPath = findMostRecentBackup(file)
@@ -1441,35 +1379,35 @@ function getConfig<A>(
       return createDefault()
     }
 
-    // Re-throw ConfigParseError if throwOnInvalid is true
+    
     if (error instanceof ConfigParseError && throwOnInvalid) {
       throw error
     }
 
-    // Log config parse errors so users know what happened
+    
     if (error instanceof ConfigParseError) {
       logForDebugging(
         `Config file corrupted, resetting to defaults: ${error.message}`,
         { level: 'error' },
       )
 
-      // Guard: logEvent → shouldSampleEvent → getGlobalConfig → getConfig
-      // causes infinite recursion when the config file is corrupted, because
-      // the sampling check reads a GrowthBook feature from global config.
-      // Only log analytics on the outermost call.
+      
+      
+      
+      
       if (!insideGetConfig) {
         insideGetConfig = true
         try {
-          // Log the error for monitoring
+          
           logError(error)
 
-          // Log analytics event for config corruption
+          
           let hasBackup = false
           try {
             fs.statSync(`${file}.backup`)
             hasBackup = true
           } catch {
-            // No backup
+            
           }
           logEvent('tengu_config_parse_error', {
             has_backup: hasBackup,
@@ -1483,11 +1421,11 @@ function getConfig<A>(
         `\nClaude configuration file at ${file} is corrupted: ${error.message}\n`,
       )
 
-      // Try to backup the corrupted config file (only if not already backed up)
+      
       const fileBase = basename(file)
       const corruptedBackupDir = getConfigBackupDir()
 
-      // Ensure backup directory exists
+      
       try {
         fs.mkdirSync(corruptedBackupDir)
       } catch (mkdirErr) {
@@ -1504,7 +1442,7 @@ function getConfig<A>(
       let corruptedBackupPath: string | undefined
       let alreadyBackedUp = false
 
-      // Check if current corrupted content matches any existing backup
+      
       const currentContent = fs.readFileSync(file, { encoding: 'utf-8' })
       for (const backup of existingCorruptedBackups) {
         try {
@@ -1517,7 +1455,7 @@ function getConfig<A>(
             break
           }
         } catch {
-          // Ignore read errors on backups
+          
         }
       }
 
@@ -1535,11 +1473,11 @@ function getConfig<A>(
             },
           )
         } catch {
-          // Ignore backup errors
+          
         }
       }
 
-      // Notify user about corrupted config and available backup
+      
       const backupPath = findMostRecentBackup(file)
       if (corruptedBackupPath) {
         process.stderr.write(
@@ -1563,18 +1501,17 @@ function getConfig<A>(
   }
 }
 
-// Memoized function to get the project path for config lookup
 export const getProjectPathForConfig = memoize((): string => {
   const originalCwd = getOriginalCwd()
   const gitRoot = findCanonicalGitRoot(originalCwd)
 
   if (gitRoot) {
-    // Normalize for consistent JSON keys (forward slashes on all platforms)
-    // This ensures paths like C:\Users\... and C:/Users/... map to the same key
+    
+    
     return normalizePathForConfigKey(gitRoot)
   }
 
-  // Not in a git repo
+  
   return normalizePathForConfigKey(resolve(originalCwd))
 })
 
@@ -1591,8 +1528,8 @@ export function getCurrentProjectConfig(): ProjectConfig {
   }
 
   const projectConfig = config.projects[absolutePath] ?? DEFAULT_PROJECT_CONFIG
-  // Not sure how this became a string
-  // TODO: Fix upstream
+  
+  
   if (typeof projectConfig.allowedTools === 'string') {
     projectConfig.allowedTools =
       (safeParseJSON(projectConfig.allowedTools) as string[]) ?? []
@@ -1606,7 +1543,7 @@ export function saveCurrentProjectConfig(
 ): void {
   if (process.env.NODE_ENV === 'test') {
     const config = updater(TEST_PROJECT_CONFIG_FOR_TESTING)
-    // Skip if no changes (same reference returned)
+    
     if (config === TEST_PROJECT_CONFIG_FOR_TESTING) {
       return
     }
@@ -1624,7 +1561,7 @@ export function saveCurrentProjectConfig(
         const currentProjectConfig =
           current.projects?.[absolutePath] ?? DEFAULT_PROJECT_CONFIG
         const newProjectConfig = updater(currentProjectConfig)
-        // Skip if no changes (same reference returned)
+        
         if (newProjectConfig === currentProjectConfig) {
           return current
         }
@@ -1646,7 +1583,7 @@ export function saveCurrentProjectConfig(
       level: 'error',
     })
 
-    // Same race window as saveGlobalConfig's fallback -- refuse to write
+    
     
     const config = getConfig(getGlobalClaudeFile(), createDefaultGlobalConfig)
     if (wouldLoseAuthState(config)) {
@@ -1680,12 +1617,6 @@ export function isAutoUpdaterDisabled(): boolean {
   return getAutoUpdaterDisabledReason() !== null
 }
 
-/**
- * Returns true if plugin autoupdate should be skipped.
- * This checks if the auto-updater is disabled AND the FORCE_AUTOUPDATE_PLUGINS
- * env var is not set to 'true'. The env var allows forcing plugin autoupdate
- * even when the auto-updater is otherwise disabled.
- */
 export function shouldSkipPluginAutoupdate(): boolean {
   return (
     isAutoUpdaterDisabled() &&
@@ -1770,7 +1701,7 @@ export function getMemoryPath(memoryType: MemoryType): string {
     case 'AutoMem':
       return getAutoMemEntrypoint()
   }
-  // TeamMem is only a valid MemoryType when feature('TEAMMEM') is true
+  
   if (feature('TEAMMEM')) {
     return teamMemPaths!.getTeamMemEntrypoint()
   }
@@ -1785,7 +1716,6 @@ export function getUserClaudeRulesDir(): string {
   return join(getClaudeConfigHomeDir(), 'rules')
 }
 
-// Exported for testing only
 export const _getConfigForTesting = getConfig
 export const _wouldLoseAuthStateForTesting = wouldLoseAuthState
 export function _setGlobalConfigCacheForTesting(

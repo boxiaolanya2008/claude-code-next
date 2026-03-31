@@ -38,7 +38,7 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
     warning: 'Note: may force-delete a branch',
   },
 
-  // Git — safety bypass
+  
   {
     pattern: /\bgit\s+(commit|push|merge)\b[^;&|\n]*--no-verify\b/,
     warning: 'Note: may skip safety hooks',
@@ -48,7 +48,7 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
     warning: 'Note: may rewrite the last commit',
   },
 
-  // File deletion (dangerous paths already handled by checkDangerousRemovalPaths)
+  
   {
     pattern:
       /(^|[;&|\n]\s*)rm\s+-[a-zA-Z]*[rR][a-zA-Z]*f|(^|[;&|\n]\s*)rm\s+-[a-zA-Z]*f[a-zA-Z]*[rR]/,
@@ -63,7 +63,7 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
     warning: 'Note: may force-remove files',
   },
 
-  // Database
+  
   {
     pattern: /\b(DROP|TRUNCATE)\s+(TABLE|DATABASE|SCHEMA)\b/i,
     warning: 'Note: may drop or truncate database objects',
@@ -73,7 +73,7 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
     warning: 'Note: may delete all rows from a database table',
   },
 
-  // Infrastructure
+  
   {
     pattern: /\bkubectl\s+delete\b/,
     warning: 'Note: may delete Kubernetes resources',

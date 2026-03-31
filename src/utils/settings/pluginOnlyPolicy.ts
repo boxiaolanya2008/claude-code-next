@@ -13,17 +13,6 @@ export function isRestrictedToPluginOnly(
   return false
 }
 
-/**
- * Sources that bypass strictPluginOnlyCustomization. Admin-trusted because:
- *   plugin — gated separately by strictKnownMarketplaces
- *   policySettings — from managed settings, admin-controlled by definition
- *   built-in / builtin / bundled — ship with the CLI, not user-authored
- *
- * Everything else (userSettings, projectSettings, localSettings, flagSettings,
- * mcp, undefined) is user-controlled and blocked when the relevant surface
- * is locked. Covers both AgentDefinition.source ('built-in' with hyphen) and
- * Command.source ('builtin' no hyphen, plus 'bundled').
- */
 const ADMIN_TRUSTED_SOURCES: ReadonlySet<string> = new Set([
   'plugin',
   'policySettings',

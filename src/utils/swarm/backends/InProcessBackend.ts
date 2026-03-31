@@ -35,23 +35,14 @@ export class InProcessBackend implements TeammateExecutor {
     this.context = context
   }
 
-  /**
-   * In-process backend is always available (no external dependencies).
-   */
+  
+
   async isAvailable(): Promise<boolean> {
     return true
   }
 
-  /**
-   * Spawns an in-process teammate.
-   *
-   * Uses spawnInProcessTeammate() to:
-   * 1. Create TeammateContext via createTeammateContext()
-   * 2. Create independent AbortController (not linked to parent)
-   * 3. Register teammate in AppState.tasks
-   * 4. Start agent execution via startInProcessTeammate()
-   * 5. Return spawn result with agentId, taskId, abortController
-   */
+  
+
   async spawn(config: TeammateSpawnConfig): Promise<TeammateSpawnResult> {
     if (!this.context) {
       logForDebugging(
@@ -85,7 +76,7 @@ export class InProcessBackend implements TeammateExecutor {
       result.teammateContext &&
       result.abortController
     ) {
-      // Start the agent loop in the background (fire-and-forget)
+      
       
       startInProcessTeammate({
         identity: {
@@ -99,7 +90,7 @@ export class InProcessBackend implements TeammateExecutor {
         taskId: result.taskId,
         prompt: config.prompt,
         teammateContext: result.teammateContext,
-        // Strip messages: the teammate never reads toolUseContext.messages
+        
         
         
         toolUseContext: { ...this.context, messages: [] },
@@ -125,11 +116,8 @@ export class InProcessBackend implements TeammateExecutor {
     }
   }
 
-  /**
-   * Sends a message to an in-process teammate.
-   *
-   * All teammates use file-based mailboxes for simplicity.
-   */
+  
+
   async sendMessage(agentId: string, message: TeammateMessage): Promise<void> {
     logForDebugging(
       `[InProcessBackend] sendMessage() to ${agentId}: ${message.text.substring(0, 50)}...`,
@@ -162,16 +150,8 @@ export class InProcessBackend implements TeammateExecutor {
     logForDebugging(`[InProcessBackend] sendMessage() completed for ${agentId}`)
   }
 
-  /**
-   * Gracefully terminates an in-process teammate.
-   *
-   * Sends a shutdown request message to the teammate and sets the
-   * shutdownRequested flag. The teammate processes the request and
-   * either approves (exits) or rejects (continues working).
-   *
-   * Unlike pane-based teammates, in-process teammates handle their own
-   * exit via the shutdown flow - no external killPane() is needed.
-   */
+  
+
   async terminate(agentId: string, reason?: string): Promise<boolean> {
     logForDebugging(
       `[InProcessBackend] terminate() called for ${agentId}: ${reason}`,
@@ -184,7 +164,7 @@ export class InProcessBackend implements TeammateExecutor {
       return false
     }
 
-    // Get current AppState to find the task
+    
     const state = this.context.getAppState()
     const task = findTeammateTaskByAgentId(agentId, state.tasks)
 
@@ -195,7 +175,7 @@ export class InProcessBackend implements TeammateExecutor {
       return false
     }
 
-    // Don't send another shutdown request if one is already pending
+    
     if (task.shutdownRequested) {
       logForDebugging(
         `[InProcessBackend] terminate(): shutdown already requested for ${agentId}`,
@@ -203,17 +183,17 @@ export class InProcessBackend implements TeammateExecutor {
       return true
     }
 
-    // Generate deterministic request ID
+    
     const requestId = `shutdown-${agentId}-${Date.now()}`
 
-    // Create shutdown request message
+    
     const shutdownRequest = createShutdownRequestMessage({
       requestId,
-      from: 'team-lead', // Terminate is always called by the leader
+      from: 'team-lead', 
       reason,
     })
 
-    // Send to teammate's mailbox
+    
     const teammateAgentName = task.identity.agentName
     await writeToMailbox(
       teammateAgentName,
@@ -235,12 +215,8 @@ export class InProcessBackend implements TeammateExecutor {
     return true
   }
 
-  /**
-   * Force kills an in-process teammate immediately.
-   *
-   * Uses the teammate's AbortController to cancel all async operations
-   * and updates the task state to 'killed'.
-   */
+  
+
   async kill(agentId: string): Promise<boolean> {
     logForDebugging(`[InProcessBackend] kill() called for ${agentId}`)
 
@@ -251,7 +227,7 @@ export class InProcessBackend implements TeammateExecutor {
       return false
     }
 
-    // Get current AppState to find the task
+    
     const state = this.context.getAppState()
     const task = findTeammateTaskByAgentId(agentId, state.tasks)
 
@@ -262,7 +238,7 @@ export class InProcessBackend implements TeammateExecutor {
       return false
     }
 
-    // Kill the teammate via the existing helper function
+    
     const killed = killInProcessTeammate(task.id, this.context.setAppState)
 
     logForDebugging(
@@ -272,12 +248,8 @@ export class InProcessBackend implements TeammateExecutor {
     return killed
   }
 
-  /**
-   * Checks if an in-process teammate is still active.
-   *
-   * Returns true if the teammate exists, has status 'running',
-   * and its AbortController has not been aborted.
-   */
+  
+
   async isActive(agentId: string): Promise<boolean> {
     logForDebugging(`[InProcessBackend] isActive() called for ${agentId}`)
 
@@ -288,7 +260,7 @@ export class InProcessBackend implements TeammateExecutor {
       return false
     }
 
-    // Get current AppState to find the task
+    
     const state = this.context.getAppState()
     const task = findTeammateTaskByAgentId(agentId, state.tasks)
 
@@ -299,7 +271,7 @@ export class InProcessBackend implements TeammateExecutor {
       return false
     }
 
-    // Check if task is running and not aborted
+    
     const isRunning = task.status === 'running'
     const isAborted = task.abortController?.signal.aborted ?? true
 
@@ -313,10 +285,6 @@ export class InProcessBackend implements TeammateExecutor {
   }
 }
 
-/**
- * Factory function to create an InProcessBackend instance.
- * Used by the registry (Task #8) to get backend instances.
- */
 export function createInProcessBackend(): InProcessBackend {
   return new InProcessBackend()
 }

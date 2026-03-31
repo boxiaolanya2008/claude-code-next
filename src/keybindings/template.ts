@@ -26,17 +26,13 @@ function filterReservedShortcuts(blocks: KeybindingBlock[]): KeybindingBlock[] {
     .filter(block => Object.keys(block.bindings).length > 0)
 }
 
-/**
- * Generate a template keybindings.json file content.
- * Creates a fully valid JSON file with all default bindings that users can customize.
- */
 export function generateKeybindingsTemplate(): string {
-  // Filter out reserved shortcuts that cannot be rebound
+  
   const bindings = filterReservedShortcuts(DEFAULT_BINDINGS)
 
   
   const config = {
-    $schema: 'https://www.schemastore.org/claude-code-keybindings.json',
+    $schema: 'https://www.schemastore.org/claude-code-next-keybindings.json',
     $docs: 'https://code.claude.com/docs/en/keybindings',
     bindings,
   }

@@ -11,7 +11,6 @@ import { createHyperlink } from './hyperlink.js'
 import { stripPromptXMLTags } from './messages.js'
 import type { ThemeName } from './theme.js'
 
-// causing styled text to shift right.
 const EOL = '\n'
 
 let markedConfigured = false
@@ -84,7 +83,7 @@ export function formatToken(
       return highlight.highlight(token.text, { language }) + EOL
     }
     case 'codespan': {
-      // inline code
+      
       return color('permission', theme)(token.text)
     }
     case 'em':
@@ -101,7 +100,7 @@ export function formatToken(
       )
     case 'heading':
       switch (token.depth) {
-        case 1: // h1
+        case 1: 
           return (
             chalk.bold.italic.underline(
               (token.tokens ?? [])
@@ -111,7 +110,7 @@ export function formatToken(
             EOL +
             EOL
           )
-        case 2: // h2
+        case 2: 
           return (
             chalk.bold(
               (token.tokens ?? [])
@@ -121,7 +120,7 @@ export function formatToken(
             EOL +
             EOL
           )
-        default: // h3+
+        default: 
           return (
             chalk.bold(
               (token.tokens ?? [])
@@ -137,24 +136,24 @@ export function formatToken(
     case 'image':
       return token.href
     case 'link': {
-      // Prevent mailto links from being displayed as clickable links
+      
       if (token.href.startsWith('mailto:')) {
-        // Extract email from mailto: link and display as plain text
+        
         const email = token.href.replace(/^mailto:/, '')
         return email
       }
-      // Extract display text from the link's child tokens
+      
       const linkText = (token.tokens ?? [])
         .map(_ => formatToken(_, theme, 0, null, token, highlight))
         .join('')
       const plainLinkText = stripAnsi(linkText)
-      // If the link has meaningful display text (different from the URL),
-      // show it as a clickable hyperlink. In terminals that support OSC 8,
-      // users see the text and can hover/click to see the URL.
+      
+      
+      
       if (plainLinkText && plainLinkText !== token.href) {
         return createHyperlink(token.href, linkText)
       }
-      // When the display text matches the URL (or is empty), just show the URL
+      
       return createHyperlink(token.href)
     }
     case 'list': {
@@ -190,10 +189,10 @@ export function formatToken(
       return EOL
     case 'text':
       if (parent?.type === 'link') {
-        // Already inside a markdown link — the link handler will wrap this
-        // in an OSC 8 hyperlink. Linkifying here would nest a second OSC 8
-        // sequence, and terminals honor the innermost one, overriding the
-        // link's actual href.
+        
+        
+        
+        
         return token.text
       }
       if (parent?.type === 'list_item') {
@@ -212,7 +211,7 @@ export function formatToken(
         )
       }
 
-      // Determine column widths based on displayed content (without formatting)
+      
       const columnWidths = tableToken.header.map((header, index) => {
         let maxWidth = stringWidth(getDisplayText(header.tokens))
         for (const row of tableToken.rows) {
@@ -240,13 +239,13 @@ export function formatToken(
       
       tableOutput += '|'
       columnWidths.forEach(width => {
-        // Always use dashes, don't show alignment colons in the output
-        const separator = '-'.repeat(width + 2) // +2 for spaces on each side
+        
+        const separator = '-'.repeat(width + 2) 
         tableOutput += separator + '|'
       })
       tableOutput += EOL
 
-      // Format data rows
+      
       tableToken.rows.forEach(row => {
         tableOutput += '| '
         row.forEach((cell, index) => {
@@ -266,22 +265,16 @@ export function formatToken(
       return tableOutput + EOL
     }
     case 'escape':
-      // Markdown escape: \) → ), \\ → \, etc.
+      
       return token.text
     case 'def':
     case 'del':
     case 'html':
-      // These token types are not rendered
+      
       return ''
   }
   return ''
 }
-
-// Matches owner/repo#NNN style GitHub issue/PR references. The qualified form
-// is unambiguous — bare #NNN was removed because it guessed the current repo
-// and was wrong whenever the assistant discussed a different one.
-// Owner segment disallows dots (GitHub usernames are alphanumerics + hyphens
-// only) so hostnames like docs.github.io/guide#42 don't false-positive. Repo
 
 const ISSUE_REF_PATTERN =
   /(^|[^\w./-])([A-Za-z0-9][\w-]*\/[A-Za-z0-9][\w.-]*)#(\d+)\b/g
@@ -352,11 +345,6 @@ function getListNumber(listDepth: number, orderedListNumber: number): string {
   }
 }
 
-/**
- * Pad `content` to `targetWidth` according to alignment. `displayWidth` is the
- * visible width of `content` (caller computes this, e.g. via stringWidth on
- * stripAnsi'd text, so ANSI codes in `content` don't affect padding).
- */
 export function padAligned(
   content: string,
   displayWidth: number,

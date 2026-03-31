@@ -18,23 +18,23 @@ export function useTeammateViewAutoExit(): void {
   const taskExists = task !== undefined
 
   useEffect(() => {
-    // Not viewing any teammate
+    
     if (!viewingAgentTaskId) {
       return
     }
 
-    // Task no longer exists in the map — evicted out from under us.
+    
     
     
     if (!taskExists) {
       exitTeammateView(setAppState)
       return
     }
-    // Status checks below are teammate-only (viewedTask is teammate-narrowed).
+    
     
     if (!viewedTask) return
 
-    // Auto-exit if teammate is killed, stopped, has error, or is no longer running
+    
     
     if (
       viewedStatus === 'killed' ||

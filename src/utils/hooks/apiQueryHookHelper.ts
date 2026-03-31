@@ -32,7 +32,7 @@ export type ApiQueryHookConfig<TResult> = {
     result: ApiQueryResult<TResult>,
     context: ApiQueryHookContext,
   ) => void
-  // Must be a function to ensure lazy loading (config is accessed before allowed)
+  
   
   getModel: (context: ApiQueryHookContext) => string
 }

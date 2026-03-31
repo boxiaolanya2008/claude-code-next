@@ -67,12 +67,12 @@ function checkDangerousRemovalPaths(
   args: string[],
   cwd: string,
 ): PermissionResult {
-  // Extract paths using the existing path extractor
+  
   const extractor = PATH_EXTRACTORS[command]
   const paths = extractor(args)
 
   for (const path of paths) {
-    // Expand tilde and resolve to absolute path
+    
     
     
     const cleanPath = expandTilde(path.replace(/^['"]|['"]$/g, ''))
@@ -89,35 +89,19 @@ function checkDangerousRemovalPaths(
           type: 'other',
           reason: `Dangerous ${command} operation on critical path: ${absolutePath}`,
         },
-        // Don't provide suggestions - we don't want to encourage saving dangerous commands
+        
         suggestions: [],
       }
     }
   }
 
-  // No dangerous paths found
+  
   return {
     behavior: 'passthrough',
     message: `No dangerous removals detected for ${command} command`,
   }
 }
 
-/**
- * SECURITY: Extract positional (non-flag) arguments, correctly handling the
- * POSIX `--` end-of-options delimiter.
- *
- * Most commands (rm, cat, touch, etc.) stop parsing options at `--` and treat
- * ALL subsequent arguments as positional, even if they start with `-`. Naive
- * `!arg.startsWith('-')` filtering drops these, causing path validation to be
- * silently skipped for attack payloads like:
- *
- *   rm -- -/../.claude/settings.local.json
- *
- * Here `-/../.claude/settings.local.json` starts with `-` so the naive filter
- * drops it, validation sees zero paths, returns passthrough, and the file is
- * deleted without a prompt. With `--` handling, the path IS extracted and
- * validated (blocked by isClaudeConfigFilePath / pathInAllowedWorkingPath).
- */
 function filterOutFlags(args: string[]): string[] {
   const result: string[] = []
   let afterDoubleDash = false
@@ -133,7 +117,6 @@ function filterOutFlags(args: string[]): string[] {
   return result
 }
 
-// Helper: Parse grep/rg style commands (pattern then paths)
 function parsePatternCommand(
   args: string[],
   flagsWithArgs: Set<string>,
@@ -160,14 +143,14 @@ function parsePatternCommand(
       if (flag && ['-e', '--regexp', '-f', '--file'].includes(flag)) {
         patternFound = true
       }
-      // Skip next arg if flag needs it
+      
       if (flag && flagsWithArgs.has(flag) && !arg.includes('=')) {
         i++
       }
       continue
     }
 
-    // First non-flag is pattern, rest are paths
+    
     if (!patternFound) {
       patternFound = true
       continue
@@ -178,27 +161,23 @@ function parsePatternCommand(
   return paths.length > 0 ? paths : defaults
 }
 
-/**
- * Extracts paths from command arguments for different path commands.
- * Each command has specific logic for how it handles paths and flags.
- */
 export const PATH_EXTRACTORS: Record<
   PathCommand,
   (args: string[]) => string[]
 > = {
-  // cd: special case - all args form one path
+  
   cd: args => (args.length === 0 ? [homedir()] : [args.join(' ')]),
 
-  // ls: filter flags, default to current dir
+  
   ls: args => {
     const paths = filterOutFlags(args)
     return paths.length > 0 ? paths : ['.']
   },
 
-  // find: collect paths until hitting a real flag, also check path-taking flags
   
   
-  // we conservatively collect all remaining args as paths to validate. This
+  
+  
   
   
   
@@ -236,12 +215,12 @@ export const PATH_EXTRACTORS: Record<
         continue
       }
 
-      // Handle flags
+      
       if (arg.startsWith('-')) {
-        // Global options don't stop collection
+        
         if (['-H', '-L', '-P'].includes(arg)) continue
 
-        // Mark that we've seen a non-global flag
+        
         foundNonGlobalFlag = true
 
         
@@ -255,7 +234,7 @@ export const PATH_EXTRACTORS: Record<
         continue
       }
 
-      // Only collect non-flag arguments before first non-global flag
+      
       if (!foundNonGlobalFlag) {
         paths.push(arg)
       }
@@ -263,7 +242,7 @@ export const PATH_EXTRACTORS: Record<
     return paths.length > 0 ? paths : ['.']
   },
 
-  // All simple commands: just filter out flags
+  
   mkdir: filterOutFlags,
   touch: filterOutFlags,
   rm: filterOutFlags,
@@ -292,7 +271,7 @@ export const PATH_EXTRACTORS: Record<
   sha1sum: filterOutFlags,
   md5sum: filterOutFlags,
 
-  // tr: special case - skip character sets
+  
   tr: args => {
     const hasDelete = args.some(
       a =>
@@ -304,7 +283,7 @@ export const PATH_EXTRACTORS: Record<
     return nonFlags.slice(hasDelete ? 1 : 2) 
   },
 
-  // grep: pattern then paths, defaults to stdin
+  
   grep: args => {
     const flags = new Set([
       '-e',
@@ -335,7 +314,7 @@ export const PATH_EXTRACTORS: Record<
     return paths
   },
 
-  // rg: pattern then paths, defaults to current dir
+  
   rg: args => {
     const flags = new Set([
       '-e',
@@ -363,7 +342,7 @@ export const PATH_EXTRACTORS: Record<
     return parsePatternCommand(args, flags, ['.'])
   },
 
-  // sed: processes files in-place or reads from stdin
+  
   sed: args => {
     const paths: string[] = []
     let skipNext = false
@@ -386,9 +365,9 @@ export const PATH_EXTRACTORS: Record<
         continue
       }
 
-      // Handle flags (only before `--`)
+      
       if (!afterDoubleDash && arg.startsWith('-')) {
-        // -f flag: next arg is a script file that needs validation
+        
         if (['-f', '--file'].includes(arg)) {
           const scriptFile = args[i + 1]
           if (scriptFile) {
@@ -397,32 +376,32 @@ export const PATH_EXTRACTORS: Record<
           }
           scriptFound = true
         }
-        // -e flag: next arg is expression, not a file
+        
         else if (['-e', '--expression'].includes(arg)) {
           skipNext = true
           scriptFound = true
         }
-        // Combined flags like -ie or -nf
+        
         else if (arg.includes('e') || arg.includes('f')) {
           scriptFound = true
         }
         continue
       }
 
-      // First non-flag is the script (if not already found via -e/-f)
+      
       if (!scriptFound) {
         scriptFound = true
         continue
       }
 
-      // Rest are file paths
+      
       paths.push(arg)
     }
 
     return paths
   },
 
-  // jq: filter then file paths (similar to grep)
+  
   
   
   jq: args => {
@@ -463,14 +442,14 @@ export const PATH_EXTRACTORS: Record<
         if (flag && ['-e', '--expression'].includes(flag)) {
           filterFound = true
         }
-        // Skip next arg if flag needs it
+        
         if (flag && flagsWithArgs.has(flag) && !arg.includes('=')) {
           i++
         }
         continue
       }
 
-      // First non-flag is filter, rest are file paths
+      
       if (!filterFound) {
         filterFound = true
         continue
@@ -478,27 +457,27 @@ export const PATH_EXTRACTORS: Record<
       paths.push(arg)
     }
 
-    // If no file paths, jq reads from stdin (no paths to validate)
+    
     return paths
   },
 
-  // git: handle subcommands that access arbitrary files outside the repository
+  
   git: args => {
-    // git diff --no-index is special - it explicitly compares files outside git's control
-    // This flag allows git diff to compare any two files on the filesystem, not just
-    // files within the repository, which is why it needs path validation
+    
+    
+    
     if (args.length >= 1 && args[0] === 'diff') {
       if (args.includes('--no-index')) {
-        // SECURITY: git diff --no-index accepts `--` before file paths.
-        // Use filterOutFlags which handles `--` correctly instead of naive
-        // startsWith('-') filtering, to catch paths like `-/../etc/passwd`.
+        
+        
+        
         const filePaths = filterOutFlags(args.slice(1))
-        return filePaths.slice(0, 2) // git diff --no-index expects exactly 2 paths
+        return filePaths.slice(0, 2) 
       }
     }
-    // Other git commands (add, rm, mv, show, etc.) operate within the repository context
-    // and are already constrained by git's own security model, so they don't need
-    // additional path validation
+    
+    
+    
     return []
   },
 }
@@ -583,11 +562,6 @@ export const COMMAND_OPERATION_TYPE: Record<PathCommand, FileOperationType> = {
   md5sum: 'read',
 }
 
-/**
- * Command-specific validators that run before path validation.
- * Returns true if the command is valid, false if it should be rejected.
- * Used to block commands with flags that could bypass path validation.
- */
 const COMMAND_VALIDATOR: Partial<
   Record<PathCommand, (args: string[]) => boolean>
 > = {
@@ -607,14 +581,14 @@ function validateCommandPaths(
   const paths = extractor(args)
   const operationType = operationTypeOverride ?? COMMAND_OPERATION_TYPE[command]
 
-  // SECURITY: Check command-specific validators (e.g., to block flags that could bypass path validation)
-  // Some commands like mv/cp have flags (--target-directory=PATH) that can bypass path extraction,
-  // so we block ALL flags for these commands to ensure security.
+  
+  
+  
   const validator = COMMAND_VALIDATOR[command]
   if (validator && !validator(args)) {
     return {
       behavior: 'ask',
-      message: `${command} with flags requires manual approval to ensure path safety. For security, Claude Code cannot automatically validate ${command} commands that use flags, as some flags like --target-directory=PATH can bypass path validation.`,
+      message: `${command} with flags requires manual approval to ensure path safety. For security, Claude Code Next cannot automatically validate ${command} commands that use flags, as some flags like --target-directory=PATH can bypass path validation.`,
       decisionReason: {
         type: 'other',
         reason: `${command} command with flags requires manual approval`,
@@ -622,17 +596,17 @@ function validateCommandPaths(
     }
   }
 
-  // SECURITY: Block write operations in compound commands containing 'cd'
-  // This prevents bypassing path safety checks via directory changes before operations.
-  // Example attack: cd .claude/ && mv test.txt settings.json
-  // This would bypass the check for .claude/settings.json because paths are resolved
-  // relative to the original CWD, not accounting for the cd's effect.
   
   
   
   
   
-  // - Relative paths (cd ../foo)
+  
+  
+  
+  
+  
+  
   
   
   
@@ -640,7 +614,7 @@ function validateCommandPaths(
   if (compoundCommandHasCd && operationType !== 'read') {
     return {
       behavior: 'ask',
-      message: `Commands that change directories and perform write operations require explicit approval to ensure paths are evaluated correctly. For security, Claude Code cannot automatically determine the final working directory when 'cd' is used in compound commands.`,
+      message: `Commands that change directories and perform write operations require explicit approval to ensure paths are evaluated correctly. For security, Claude Code Next cannot automatically determine the final working directory when 'cd' is used in compound commands.`,
       decisionReason: {
         type: 'other',
         reason:
@@ -669,7 +643,7 @@ function validateCommandPaths(
         decisionReason?.type === 'other' ||
         decisionReason?.type === 'safetyCheck'
           ? decisionReason.reason
-          : `${command} in '${resolvedPath}' was blocked. For security, Claude Code may only ${ACTION_VERBS[command]} the allowed working directories for this session: ${dirListStr}.`
+          : `${command} in '${resolvedPath}' was blocked. For security, Claude Code Next may only ${ACTION_VERBS[command]} the allowed working directories for this session: ${dirListStr}.`
 
       if (decisionReason?.type === 'rule') {
         return {
@@ -688,7 +662,7 @@ function validateCommandPaths(
     }
   }
 
-  // All paths are valid - return passthrough
+  
   return {
     behavior: 'passthrough',
     message: `Path validation passed for ${command} command`,
@@ -705,7 +679,7 @@ export function createPathChecker(
     context: ToolPermissionContext,
     compoundCommandHasCd?: boolean,
   ): PermissionResult => {
-    // First check normal path validation (which includes explicit deny rules)
+    
     const result = validateCommandPaths(
       command,
       args,
@@ -720,7 +694,7 @@ export function createPathChecker(
       return result
     }
 
-    // Check for dangerous removal paths AFTER explicit deny rules but BEFORE other results
+    
     
     
     
@@ -731,12 +705,12 @@ export function createPathChecker(
       }
     }
 
-    // If it's a passthrough, return it directly
+    
     if (result.behavior === 'passthrough') {
       return result
     }
 
-    // If it's an ask decision, add suggestions based on the operation type
+    
     if (result.behavior === 'ask') {
       const operationType =
         operationTypeOverride ?? COMMAND_OPERATION_TYPE[command]
@@ -745,14 +719,14 @@ export function createPathChecker(
       
       if (result.blockedPath) {
         if (operationType === 'read') {
-          // For read operations, suggest a Read rule for the directory (only if it exists)
+          
           const dirPath = getDirectoryForPath(result.blockedPath)
           const suggestion = createReadRuleSuggestion(dirPath, 'session')
           if (suggestion) {
             suggestions.push(suggestion)
           }
         } else {
-          // For write/create operations, suggest adding the directory
+          
           suggestions.push({
             type: 'addDirectories',
             directories: [getDirectoryForPath(result.blockedPath)],
@@ -761,7 +735,7 @@ export function createPathChecker(
         }
       }
 
-      // For write operations, also suggest enabling accept-edits mode
+      
       if (operationType === 'write' || operationType === 'create') {
         suggestions.push({
           type: 'setMode',
@@ -773,20 +747,15 @@ export function createPathChecker(
       result.suggestions = suggestions
     }
 
-    // Return the decision directly
+    
     return result
   }
 }
 
-/**
- * Parses command arguments using shell-quote, converting glob objects to strings.
- * This is necessary because shell-quote parses patterns like *.txt as glob objects,
- * but we need them as strings for path validation.
- */
 function parseCommandArguments(cmd: string): string[] {
-  const parseResult = tryParseShellCommand(cmd, env => `$${env}`)
+  const parseResult = tryParseShellCommand(cmd, env => `${env}`)
   if (!parseResult.success) {
-    // Malformed shell syntax, return empty array
+    
     return []
   }
   const parsed = parseResult.tokens
@@ -794,7 +763,7 @@ function parseCommandArguments(cmd: string): string[] {
 
   for (const arg of parsed) {
     if (typeof arg === 'string') {
-      // Include empty strings - they're valid arguments (e.g., grep "" /tmp/t)
+      
       extractedArgs.push(arg)
     } else if (
       typeof arg === 'object' &&
@@ -803,7 +772,7 @@ function parseCommandArguments(cmd: string): string[] {
       arg.op === 'glob' &&
       'pattern' in arg
     ) {
-      // shell-quote parses glob patterns as objects, but we need them as strings for validation
+      
       extractedArgs.push(String(arg.pattern))
     }
   }
@@ -811,28 +780,13 @@ function parseCommandArguments(cmd: string): string[] {
   return extractedArgs
 }
 
-/**
- * Validates a single command for path constraints and shell safety.
- *
- * This function:
- * 1. Parses the command arguments
- * 2. Checks if it's a path command (cd, ls, find)
- * 3. Validates for shell injection patterns
- * 4. Validates all paths are within allowed directories
- *
- * @param cmd - The command string to validate
- * @param cwd - Current working directory
- * @param toolPermissionContext - Context containing allowed directories
- * @param compoundCommandHasCd - Whether the full compound command contains a cd
- * @returns PermissionResult - 'passthrough' if not a path command, otherwise validation result
- */
 function validateSinglePathCommand(
   cmd: string,
   cwd: string,
   toolPermissionContext: ToolPermissionContext,
   compoundCommandHasCd?: boolean,
 ): PermissionResult {
-  // SECURITY: Strip wrapper commands (timeout, nice, nohup, time) before extracting
+  
   
   
   
@@ -848,7 +802,7 @@ function validateSinglePathCommand(
     }
   }
 
-  // Check if this is a path command we need to validate
+  
   const [baseCmd, ...args] = extractedArgs
   if (!baseCmd || !SUPPORTED_PATH_COMMANDS.includes(baseCmd as PathCommand)) {
     return {
@@ -857,8 +811,8 @@ function validateSinglePathCommand(
     }
   }
 
-  // For read-only sed commands (e.g., sed -n '1,10p' file.txt),
-  // validate file paths as read operations instead of write operations.
+  
+  
   
   
   const operationTypeOverride =
@@ -874,12 +828,6 @@ function validateSinglePathCommand(
   return pathChecker(args, cwd, toolPermissionContext, compoundCommandHasCd)
 }
 
-/**
- * Like validateSinglePathCommand but operates on AST-derived argv directly
- * instead of re-parsing the command string with shell-quote. Avoids the
- * shell-quote single-quote backslash bug that causes parseCommandArguments
- * to silently return [] and skip path validation.
- */
 function validateSinglePathCommandArgv(
   cmd: SimpleCommand,
   cwd: string,
@@ -900,7 +848,7 @@ function validateSinglePathCommandArgv(
       message: `Command '${baseCmd}' is not a path-restricted command`,
     }
   }
-  // sed read-only override: use .text for the allowlist check since
+  
   
   
   
@@ -922,7 +870,7 @@ function validateOutputRedirections(
   toolPermissionContext: ToolPermissionContext,
   compoundCommandHasCd?: boolean,
 ): PermissionResult {
-  // SECURITY: Block output redirections in compound commands containing 'cd'
+  
   
   
   
@@ -930,7 +878,7 @@ function validateOutputRedirections(
   if (compoundCommandHasCd && redirections.length > 0) {
     return {
       behavior: 'ask',
-      message: `Commands that change directories and write via output redirection require explicit approval to ensure paths are evaluated correctly. For security, Claude Code cannot automatically determine the final working directory when 'cd' is used in compound commands.`,
+      message: `Commands that change directories and write via output redirection require explicit approval to ensure paths are evaluated correctly. For security, Claude Code Next cannot automatically determine the final working directory when 'cd' is used in compound commands.`,
       decisionReason: {
         type: 'other',
         reason:
@@ -939,7 +887,7 @@ function validateOutputRedirections(
     }
   }
   for (const { target } of redirections) {
-    // /dev/null is always safe - it discards output
+    
     if (target === '/dev/null') {
       continue
     }
@@ -947,7 +895,7 @@ function validateOutputRedirections(
       target,
       cwd,
       toolPermissionContext,
-      'create', // Treat > and >> as create operations
+      'create', 
     )
 
     if (!allowed) {
@@ -964,7 +912,7 @@ function validateOutputRedirections(
           ? decisionReason.reason
           : decisionReason?.type === 'rule'
             ? `Output redirection to '${resolvedPath}' was blocked by a deny rule.`
-            : `Output redirection to '${resolvedPath}' was blocked. For security, Claude Code may only write to files in the allowed working directories for this session: ${dirListStr}.`
+            : `Output redirection to '${resolvedPath}' was blocked. For security, Claude Code Next may only write to files in the allowed working directories for this session: ${dirListStr}.`
 
       
       if (decisionReason?.type === 'rule') {
@@ -997,14 +945,6 @@ function validateOutputRedirections(
   }
 }
 
-/**
- * Checks path constraints for commands that access the filesystem (cd, ls, find).
- * Also validates output redirections to ensure they're within allowed directories.
- *
- * @returns
- * - 'ask' if any path command or redirection tries to access outside allowed directories
- * - 'passthrough' if no path commands were found or if all are within allowed directories
- */
 export function checkPathConstraints(
   input: z.infer<typeof BashTool.inputSchema>,
   cwd: string,
@@ -1013,9 +953,9 @@ export function checkPathConstraints(
   astRedirects?: Redirect[],
   astCommands?: SimpleCommand[],
 ): PermissionResult {
-  // SECURITY: Process substitution >(cmd) can execute commands that write to files
   
-  //   echo secret > >(tee .git/config)
+  
+  
   
   
   
@@ -1032,7 +972,7 @@ export function checkPathConstraints(
     }
   }
 
-  // SECURITY: When AST-derived redirects are available, use them directly
+  
   
   
   
@@ -1064,7 +1004,7 @@ export function checkPathConstraints(
     return redirectionResult
   }
 
-  // SECURITY: When AST-derived commands are available, iterate them with
+  
   
   
   
@@ -1096,18 +1036,13 @@ export function checkPathConstraints(
     }
   }
 
-  // Always return passthrough to let other permission checks handle the command
+  
   return {
     behavior: 'passthrough',
     message: 'All path commands validated successfully',
   }
 }
 
-/**
- * Convert AST-derived Redirect[] to the format expected by
- * validateOutputRedirections. Filters to output-only redirects (excluding
- * fd duplications like 2>&1) and maps operators to '>' | '>>'.
- */
 function astRedirectsToOutputRedirections(redirects: Redirect[]): {
   redirections: Array<{ target: string; operator: '>' | '>>' }>
   hasDangerousRedirection: boolean
@@ -1125,7 +1060,7 @@ function astRedirectsToOutputRedirections(redirects: Redirect[]): {
         redirections.push({ target: r.target, operator: '>>' })
         break
       case '>&':
-        // >&N (digits only) is fd duplication (e.g. 2>&1, >&10), not a file
+        
         
         if (!/^\d+$/.test(r.target)) {
           redirections.push({ target: r.target, operator: '>' })
@@ -1135,31 +1070,17 @@ function astRedirectsToOutputRedirections(redirects: Redirect[]): {
       case '<<':
       case '<&':
       case '<<<':
-        // input redirects — skip
+        
         break
     }
   }
-  // AST targets are fully resolved (no shell expansion) — checkSemantics
+  
   
   return { redirections, hasDangerousRedirection: false }
 }
 
-// ───────────────────────────────────────────────────────────────────────────
-
-// baseline classifier tests 30/30 pass, after deletion 22/30 fail. See
-
-// #21503. The expanded version lives here (the only prod consumer) instead.
-
-//   - SAFE_WRAPPER_PATTERNS in bashPermissions.ts (text-based stripSafeWrappers)
-
-// durations are 5/5s/10.5). Rejects $ ( ) ` | ; & and newlines that
-// previously matched via [^ \t]+ — `timeout -k$(id) 10 ls` must NOT strip.
 const TIMEOUT_FLAG_VALUE_RE = /^[A-Za-z0-9_.+-]+$/
 
-/**
- * Parse timeout's GNU flags (long + short, fused + space-separated) and
- * return the argv index of the DURATION token, or -1 if flags are unparseable.
- */
 function skipTimeoutFlags(a: readonly string[]): number {
   let i = 1
   while (i < a.length) {
@@ -1181,7 +1102,7 @@ function skipTimeoutFlags(a: readonly string[]): number {
     else if (arg === '--') {
       i++
       break
-    } // end-of-options marker
+    } 
     else if (arg.startsWith('--')) return -1
     else if (arg === '-v') i++
     else if (
@@ -1197,11 +1118,6 @@ function skipTimeoutFlags(a: readonly string[]): number {
   return i
 }
 
-/**
- * Parse stdbuf's flags (-i/-o/-e in fused/space-separated/long-= forms).
- * Returns argv index of wrapped COMMAND, or -1 if unparseable or no flags
- * consumed (stdbuf without flags is inert). Mirrors checkSemantics (ast.ts).
- */
 function skipStdbufFlags(a: readonly string[]): number {
   let i = 1
   while (i < a.length) {
@@ -1210,17 +1126,12 @@ function skipStdbufFlags(a: readonly string[]): number {
     else if (/^-[ioe]./.test(arg)) i++
     else if (/^--(input|output|error)=/.test(arg)) i++
     else if (arg.startsWith('-'))
-      return -1 // unknown flag: fail closed
+      return -1 
     else break
   }
   return i > 1 && i < a.length ? i : -1
 }
 
-/**
- * Parse env's VAR=val and safe flags (-i/-0/-v/-u NAME). Returns argv index
- * of wrapped COMMAND, or -1 if unparseable/no wrapped cmd. Rejects -S (argv
- * splitter), -C/-P (altwd/altpath). Mirrors checkSemantics (ast.ts).
- */
 function skipEnvFlags(a: readonly string[]): number {
   let i = 1
   while (i < a.length) {
@@ -1229,17 +1140,12 @@ function skipEnvFlags(a: readonly string[]): number {
     else if (arg === '-i' || arg === '-0' || arg === '-v') i++
     else if (arg === '-u' && a[i + 1]) i += 2
     else if (arg.startsWith('-'))
-      return -1 // -S/-C/-P/unknown: fail closed
+      return -1 
     else break
   }
   return i < a.length ? i : -1
 }
 
-/**
- * Argv-level counterpart to stripSafeWrappers (bashPermissions.ts). Strips
- * wrapper commands from AST-derived argv. Env vars are already separated
- * into SimpleCommand.envVars so no env-var stripping here.
- */
 export function stripWrappersFromArgv(argv: string[]): string[] {
   let a = argv
   for (;;) {
@@ -1247,32 +1153,32 @@ export function stripWrappersFromArgv(argv: string[]): string[] {
       a = a.slice(a[1] === '--' ? 2 : 1)
     } else if (a[0] === 'timeout') {
       const i = skipTimeoutFlags(a)
-      // SECURITY (PR #21503 round 3): unrecognized duration (`.5`, `+5`,
-      // `inf` — strtod formats GNU timeout accepts) → return a unchanged.
-      // Safe because checkSemantics (ast.ts) fails CLOSED on the same input
-      // and runs first in bashToolHasPermission, so we never reach here.
+      
+      
+      
+      
       if (i < 0 || !a[i] || !/^\d+(?:\.\d+)?[smhd]?$/.test(a[i]!)) return a
       a = a.slice(i + 1)
     } else if (a[0] === 'nice') {
-      // SECURITY (PR #21503 round 3): mirror checkSemantics — handle bare
-      // `nice cmd` and legacy `nice -N cmd`, not just `nice -n N cmd`.
-      // Previously only `-n N` was stripped: `nice rm /outside` →
-      // baseCmd='nice' → passthrough → /outside never path-validated.
+      
+      
+      
+      
       if (a[1] === '-n' && a[2] && /^-?\d+$/.test(a[2]))
         a = a.slice(a[3] === '--' ? 4 : 3)
       else if (a[1] && /^-\d+$/.test(a[1])) a = a.slice(a[2] === '--' ? 3 : 2)
       else a = a.slice(a[1] === '--' ? 2 : 1)
     } else if (a[0] === 'stdbuf') {
-      // SECURITY (PR #21503 round 3): PR-WIDENED. Pre-PR, `stdbuf -o0 -eL rm`
-      // was rejected by fragment check (old checkSemantics slice(2) left
-      // name='-eL'). Post-PR, checkSemantics strips both flags → name='rm'
-      // → passes. But stripWrappersFromArgv returned unchanged →
-      // baseCmd='stdbuf' → not in SUPPORTED_PATH_COMMANDS → passthrough.
+      
+      
+      
+      
+      
       const i = skipStdbufFlags(a)
       if (i < 0) return a
       a = a.slice(i)
     } else if (a[0] === 'env') {
-      // Same asymmetry: checkSemantics strips env, we didn't.
+      
       const i = skipEnvFlags(a)
       if (i < 0) return a
       a = a.slice(i)

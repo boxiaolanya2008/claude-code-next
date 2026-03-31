@@ -28,7 +28,7 @@ export function registerMcpAddCommand(mcp: Command): void {
   mcp
     .command('add <name> <commandOrUrl> [args...]')
     .description(
-      'Add an MCP server to Claude Code.\n\n' +
+      'Add an MCP server to Claude Code Next.\n\n' +
         'Examples:\n' +
         '  # Add HTTP server:\n' +
         '  claude mcp add --transport http sentry https://mcp.sentry.dev/mcp\n\n' +
@@ -73,7 +73,7 @@ export function registerMcpAddCommand(mcp: Command): void {
       ).hideHelp(!isXaaEnabled()),
     )
     .action(async (name, commandOrUrl, args, options) => {
-      // Commander.js handles -- natively: it consumes -- and everything after becomes args
+      
       const actualCommand = commandOrUrl
       const actualArgs = args
 
@@ -97,7 +97,7 @@ export function registerMcpAddCommand(mcp: Command): void {
         
         if (options.xaa && !isXaaEnabled()) {
           cliError(
-            'Error: --xaa requires CLAUDE_CODE_ENABLE_XAA=1 in your environment',
+            'Error: --xaa requires CLAUDE_CODE_NEXT_ENABLE_XAA=1 in your environment',
           )
         }
         const xaa = Boolean(options.xaa)
@@ -115,7 +115,7 @@ export function registerMcpAddCommand(mcp: Command): void {
           }
         }
 
-        // Check if transport was explicitly provided
+        
         const transportExplicit = options.transport !== undefined
 
         
@@ -242,7 +242,7 @@ export function registerMcpAddCommand(mcp: Command): void {
             )
           }
 
-          // Warn if this looks like a URL but transport wasn't explicitly specified
+          
           if (!transportExplicit && looksLikeUrl) {
             process.stderr.write(
               `\nWarning: The command "${actualCommand}" looks like a URL, but is being interpreted as a stdio server as --transport was not specified.\n`,

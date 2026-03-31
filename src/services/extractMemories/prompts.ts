@@ -31,10 +31,6 @@ function opener(newMessageCount: number, existingMemories: string): string {
   ].join('\n')
 }
 
-/**
- * Build the extraction prompt for auto-only memory (no team memory).
- * Four-type taxonomy, no scope guidance (single directory).
- */
 export function buildExtractAutoOnlyPrompt(
   newMessageCount: number,
   existingMemories: string,
@@ -81,11 +77,6 @@ export function buildExtractAutoOnlyPrompt(
   ].join('\n')
 }
 
-/**
- * Build the extraction prompt for combined auto + team memory.
- * Four-type taxonomy with per-type <scope> guidance (directory choice
- * is baked into each type block, no separate routing section needed).
- */
 export function buildExtractCombinedPrompt(
   newMessageCount: number,
   existingMemories: string,

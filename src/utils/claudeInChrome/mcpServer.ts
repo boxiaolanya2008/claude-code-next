@@ -23,7 +23,7 @@ import { getAllSocketPaths, getSecureSocketPath } from './common.js'
 
 const EXTENSION_DOWNLOAD_URL = 'https://claude.ai/chrome'
 const BUG_REPORT_URL =
-  'https://github.com/anthropics/claude-code/issues/new?labels=bug,claude-in-chrome'
+  'https://github.com/anthropics/claude-code-next/issues/new?labels=bug,claude-in-chrome'
 
 const SAFE_BRIDGE_STRING_KEYS = new Set([
   'bridge_status',
@@ -41,11 +41,6 @@ function isPermissionMode(raw: string): raw is PermissionMode {
   return PERMISSION_MODES.some(m => m === raw)
 }
 
-/**
- * Resolves the Chrome bridge URL based on environment and feature flag.
- * Bridge is used when the feature flag is enabled; ant users always get
- * bridge. API key / 3P users fall back to native messaging.
- */
 function getChromeBridgeUrl(): string | undefined {
   const bridgeEnabled =
     process.env.USER_TYPE === 'ant' ||
@@ -76,10 +71,6 @@ function isLocalBridge(): boolean {
   )
 }
 
-/**
- * Build the ClaudeForChromeContext used by both the subprocess MCP server
- * and the in-process path in the MCP client.
- */
 export function createChromeContext(
   env?: Record<string, string>,
 ): ClaudeForChromeContext {
@@ -104,14 +95,14 @@ export function createChromeContext(
     logger,
     socketPath: getSecureSocketPath(),
     getSocketPaths: getAllSocketPaths,
-    clientTypeId: 'claude-code',
+    clientTypeId: 'claude-code-next',
     onAuthenticationError: () => {
       logger.warn(
-        'Authentication error occurred. Please ensure you are logged into the Claude browser extension with the same claude.ai account as Claude Code.',
+        'Authentication error occurred. Please ensure you are logged into the Claude browser extension with the same claude.ai account as Claude Code Next.',
       )
     },
     onToolCallDisconnected: () => {
-      return `Browser extension is not connected. Please ensure the Claude browser extension is installed and running (${EXTENSION_DOWNLOAD_URL}), and that you are logged into claude.ai with the same account as Claude Code. If this is your first time connecting to Chrome, you may need to restart Chrome for the installation to take effect. If you continue to experience issues, please report a bug: ${BUG_REPORT_URL}`
+      return `Browser extension is not connected. Please ensure the Claude browser extension is installed and running (${EXTENSION_DOWNLOAD_URL}), and that you are logged into claude.ai with the same account as Claude Code Next. If this is your first time connecting to Chrome, you may need to restart Chrome for the installation to take effect. If you continue to experience issues, please report a bug: ${BUG_REPORT_URL}`
     },
     onExtensionPaired: (deviceId: string, name: string) => {
       saveGlobalConfig(config => {
@@ -147,7 +138,6 @@ export function createChromeContext(
       },
     }),
     ...(initialPermissionMode && { initialPermissionMode }),
-    // Wire inference for the browser_task tool — the chrome-mcp server runs
     
     
     
@@ -159,12 +149,13 @@ export function createChromeContext(
     
     
     
-    // @ant/claude-for-chrome-mcp@0.4.0 which isn't published yet. CI installs
-    // 0.3.0. The callAnthropicMessages field is also 0.4.0-only, but spreading
-    // an extra property into ClaudeForChromeContext is fine against either
-    // version — 0.3.0 sees an unknown field (allowed in spread), 0.4.0 sees a
-    // structurally-matching one. Once 0.4.0 is published, this can switch to
-    // the package's exported types and the dep can be bumped.
+    
+    
+    
+    
+    
+    
+    
     ...(process.env.USER_TYPE === 'ant' && {
       callAnthropicMessages: async (req: {
         model: string
@@ -178,9 +169,9 @@ export function createChromeContext(
         stop_reason: string | null
         usage?: { input_tokens: number; output_tokens: number }
       }> => {
-        // sideQuery handles OAuth attribution fingerprint, proxy, model betas.
         
-        // the CLI prefix would dilute the batching instructions.
+        
+        
         
         
         
@@ -223,7 +214,7 @@ export function createChromeContext(
       } = {}
       if (metadata) {
         for (const [key, value] of Object.entries(metadata)) {
-          // Rename 'status' to 'bridge_status' to avoid Datadog's reserved field
+          
           const safeKey = key === 'status' ? 'bridge_status' : key
           if (typeof value === 'boolean' || typeof value === 'number') {
             safeMetadata[safeKey] = value
@@ -231,8 +222,8 @@ export function createChromeContext(
             typeof value === 'string' &&
             SAFE_BRIDGE_STRING_KEYS.has(safeKey)
           ) {
-            // Only forward allowlisted string keys — fields like error_message
-            // could contain page content or user data
+            
+            
             safeMetadata[safeKey] =
               value as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
           }
@@ -251,8 +242,8 @@ export async function runClaudeInChromeMcpServer(): Promise<void> {
   const server = createClaudeForChromeMcpServer(context)
   const transport = new StdioServerTransport()
 
-  // Exit when parent process dies (stdin pipe closes).
-  // Flush analytics before exiting so final-batch events (e.g. disconnect) aren't lost.
+  
+  
   let exiting = false
   const shutdownAndExit = async (): Promise<void> => {
     if (exiting) {

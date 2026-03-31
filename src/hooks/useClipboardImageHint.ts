@@ -19,7 +19,7 @@ export function useClipboardImageHint(
   const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    // Only trigger on focus regain (was unfocused, now focused)
+    
     const wasFocused = lastFocusedRef.current
     lastFocusedRef.current = isFocused
 
@@ -27,12 +27,12 @@ export function useClipboardImageHint(
       return
     }
 
-    // Clear any pending check
+    
     if (checkTimeoutRef.current) {
       clearTimeout(checkTimeoutRef.current)
     }
 
-    // Small debounce to batch rapid focus changes
+    
     checkTimeoutRef.current = setTimeout(
       async (checkTimeoutRef, lastHintTimeRef, addNotification) => {
         checkTimeoutRef.current = null
@@ -43,7 +43,7 @@ export function useClipboardImageHint(
           return
         }
 
-        // Check if clipboard has an image (async osascript call)
+        
         if (await hasImageInClipboard()) {
           lastHintTimeRef.current = now
           addNotification({

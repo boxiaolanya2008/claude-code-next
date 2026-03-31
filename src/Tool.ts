@@ -111,12 +111,10 @@ export type SetToolJSXFn = (
   } | null,
 ) => void
 
-// Import tool permission types from centralized location to break import cycles
 import type { ToolPermissionRulesBySource } from './types/permissions.js'
 
 export type { ToolPermissionRulesBySource }
 
-// Apply DeepImmutable to the imported type
 export type ToolPermissionContext = DeepImmutable<{
   mode: PermissionMode
   additionalWorkingDirectories: Map<string, AdditionalWorkingDirectory>
@@ -178,20 +176,11 @@ export type ToolUseContext = {
   readFileState: FileStateCache
   getAppState(): AppState
   setAppState(f: (prev: AppState) => AppState): void
-  /**
-   * Always-shared setAppState for session-scoped infrastructure (background
-   * tasks, session hooks). Unlike setAppState, which is no-op for async agents
-   * (see createSubagentContext), this always reaches the root store so agents
-   * at any nesting depth can register/clean up infrastructure that outlives
-   * a single turn. Only set by createSubagentContext; main-thread contexts
-   * fall back to setAppState.
-   */
+  
+
   setAppStateForTasks?: (f: (prev: AppState) => AppState) => void
-  /**
-   * Optional handler for URL elicitations triggered by tool call errors (-32042).
-   * In print/SDK mode, this delegates to structuredIO.handleElicitation.
-   * In REPL mode, this is undefined and the queue-based UI path is used.
-   */
+  
+
   handleElicitation?: (
     serverName: string,
     params: ElicitRequestURLParams,
@@ -199,12 +188,12 @@ export type ToolUseContext = {
   ) => Promise<ElicitResult>
   setToolJSX?: SetToolJSXFn
   addNotification?: (notif: Notification) => void
-  /** Append a UI-only system message to the REPL message list. Stripped at the
-   *  normalizeMessagesForAPI boundary — the Exclude<> makes that type-enforced. */
+  
+
   appendSystemMessage?: (
     msg: Exclude<SystemMessage, SystemLocalCommandMessage>,
   ) => void
-  /** Send an OS-level notification (iTerm2, Kitty, Ghostty, bell, etc.) */
+  
   sendOSNotification?: (opts: {
     message: string
     notificationType: string
@@ -218,11 +207,11 @@ export type ToolUseContext = {
   discoveredSkillNames?: Set<string>
   userModified?: boolean
   setInProgressToolUseIDs: (f: (prev: Set<string>) => Set<string>) => void
-  /** Only wired in interactive (REPL) contexts; SDK/QueryEngine don't set this. */
+  
   setHasInterruptibleToolInProgress?: (v: boolean) => void
   setResponseLength: (f: (prev: number) => number) => void
-  /** Ant-only: push a new API metrics entry for OTPS tracking.
-   *  Called by subagent streaming when a new API request starts. */
+  
+
   pushApiMetricsEntry?: (ttftMs: number) => void
   setStreamMode?: (mode: SpinnerMode) => void
   onCompactProgress?: (event: CompactProgressEvent) => void
@@ -235,8 +224,8 @@ export type ToolUseContext = {
     updater: (prev: AttributionState) => AttributionState,
   ) => void
   setConversationId?: (id: UUID) => void
-  agentId?: AgentId // Only set for subagents; use getSessionId() for session ID. Hooks use this to distinguish subagent calls.
-  agentType?: string // Subagent type name. For the main thread's --agent type, hooks fall back to getMainThreadAgentType().
+  agentId?: AgentId 
+  agentType?: string 
   
 
   requireCanUseTool?: boolean
@@ -279,7 +268,6 @@ export type ToolUseContext = {
   renderedSystemPrompt?: SystemPrompt
 }
 
-// Re-export ToolProgressData from centralized location
 export type { ToolProgressData }
 
 export type Progress = ToolProgressData | HookProgress
@@ -319,7 +307,6 @@ export type ToolCallProgress<P extends ToolProgressData = ToolProgressData> = (
   progress: ToolProgress<P>,
 ) => void
 
-// Type for any schema that outputs an object with string keys
 export type AnyObject = z.ZodType<{ [key: string]: unknown }>
 
 export function toolMatchesName(
@@ -329,9 +316,6 @@ export function toolMatchesName(
   return tool.name === name || (tool.aliases?.includes(name) ?? false)
 }
 
-/**
- * Finds a tool by name or alias from a list of tools.
- */
 export function findToolByName(tools: Tools, name: string): Tool | undefined {
   return tools.find(t => toolMatchesName(t, name))
 }
@@ -341,10 +325,8 @@ export type Tool<
   Output = unknown,
   P extends ToolProgressData = ToolProgressData,
 > = {
-  /**
-   * Optional aliases for backwards compatibility when a tool is renamed.
-   * The tool can be looked up by any of these names in addition to its primary name.
-   */
+  
+
   aliases?: string[]
   
 
@@ -412,12 +394,8 @@ export type Tool<
 
   backfillObservableInput?(input: Record<string, unknown>): void
 
-  /**
-   * Determines if this tool is allowed to run with this input in the current context.
-   * It informs the model of why the tool use failed, and does not directly display any UI.
-   * @param input
-   * @param context
-   */
+  
+
   validateInput?(
     input: z.infer<Input>,
     context: ToolUseContext,
@@ -562,10 +540,6 @@ export type Tool<
   ): React.ReactNode | null
 }
 
-/**
- * A collection of tools. Use this type instead of `Tool[]` to make it easier
- * to track where tool sets are assembled, passed, and filtered across the codebase.
- */
 export type Tools = readonly Tool[]
 
 type DefaultableToolKeys =
@@ -592,20 +566,6 @@ type BuiltTool<D> = Omit<D, DefaultableToolKeys> & {
     : ToolDefaults[K]
 }
 
-/**
- * Build a complete `Tool` from a partial definition, filling in safe defaults
- * for the commonly-stubbed methods. All tool exports should go through this so
- * that defaults live in one place and callers never need `?.() ?? default`.
- *
- * Defaults (fail-closed where it matters):
- * - `isEnabled` → `true`
- * - `isConcurrencySafe` → `false` (assume not safe)
- * - `isReadOnly` → `false` (assume writes)
- * - `isDestructive` → `false`
- * - `checkPermissions` → `{ behavior: 'allow', updatedInput }` (defer to general permission system)
- * - `toAutoClassifierInput` → `''` (skip classifier — security-relevant tools must override)
- * - `userFacingName` → `name`
- */
 const TOOL_DEFAULTS = {
   isEnabled: () => true,
   isConcurrencySafe: (_input?: unknown) => false,
@@ -620,16 +580,12 @@ const TOOL_DEFAULTS = {
   userFacingName: (_input?: unknown) => '',
 }
 
-// The defaults type is the ACTUAL shape of TOOL_DEFAULTS (optional params so
-
 type ToolDefaults = typeof TOOL_DEFAULTS
-
-// constraint position is structural and never leaks into the return type.
 
 type AnyToolDef = ToolDef<any, any, any>
 
 export function buildTool<D extends AnyToolDef>(def: D): BuiltTool<D> {
-  // The runtime spread is straightforward; the `as` bridges the gap between
+  
   
   
   return {

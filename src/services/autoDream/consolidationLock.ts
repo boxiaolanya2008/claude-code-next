@@ -17,10 +17,6 @@ function lockPath(): string {
   return join(getAutoMemPath(), LOCK_FILE)
 }
 
-/**
- * mtime of the lock file = lastConsolidatedAt. 0 if absent.
- * Per-turn cost: one stat.
- */
 export async function readLastConsolidatedAt(): Promise<number> {
   try {
     const s = await stat(lockPath())
@@ -30,14 +26,6 @@ export async function readLastConsolidatedAt(): Promise<number> {
   }
 }
 
-/**
- * Acquire: write PID → mtime = now. Returns the pre-acquire mtime
- * (for rollback), or null if blocked / lost a race.
- *
- *   Success → do nothing. mtime stays at now.
- *   Failure → rollbackConsolidationLock(priorMtime) rewinds mtime.
- *   Crash   → mtime stuck, dead PID → next process reclaims.
- */
 export async function tryAcquireConsolidationLock(): Promise<number | null> {
   const path = lockPath()
 
@@ -49,7 +37,7 @@ export async function tryAcquireConsolidationLock(): Promise<number | null> {
     const parsed = parseInt(raw.trim(), 10)
     holderPid = Number.isFinite(parsed) ? parsed : undefined
   } catch {
-    // ENOENT — no prior lock.
+    
   }
 
   if (mtimeMs !== undefined && Date.now() - mtimeMs < HOLDER_STALE_MS) {
@@ -59,10 +47,10 @@ export async function tryAcquireConsolidationLock(): Promise<number | null> {
       )
       return null
     }
-    // Dead PID or unparseable body — reclaim.
+    
   }
 
-  // Memory dir may not exist yet.
+  
   await mkdir(getAutoMemPath(), { recursive: true })
   await writeFile(path, String(process.pid))
 
@@ -78,11 +66,6 @@ export async function tryAcquireConsolidationLock(): Promise<number | null> {
   return mtimeMs ?? 0
 }
 
-/**
- * Rewind mtime to pre-acquire after a failed fork. Clears the PID body —
- * otherwise our still-running process would look like it's holding.
- * priorMtime 0 → unlink (restore no-file).
- */
 export async function rollbackConsolidationLock(
   priorMtime: number,
 ): Promise<void> {
@@ -102,14 +85,6 @@ export async function rollbackConsolidationLock(
   }
 }
 
-/**
- * Session IDs with mtime after sinceMs. listCandidates handles UUID
- * validation (excludes agent-*.jsonl) and parallel stat.
- *
- * Uses mtime (sessions TOUCHED since), not birthtime (0 on ext4).
- * Caller excludes the current session. Scans per-cwd transcripts — it's
- * a skip-gate, so undercounting worktree sessions is safe.
- */
 export async function listSessionsTouchedSince(
   sinceMs: number,
 ): Promise<string[]> {
@@ -118,13 +93,9 @@ export async function listSessionsTouchedSince(
   return candidates.filter(c => c.mtime > sinceMs).map(c => c.sessionId)
 }
 
-/**
- * Stamp from manual /dream. Optimistic — fires at prompt-build time,
- * no post-skill completion hook. Best-effort.
- */
 export async function recordConsolidation(): Promise<void> {
   try {
-    // Memory dir may not exist yet (manual /dream before any auto-trigger).
+    
     await mkdir(getAutoMemPath(), { recursive: true })
     await writeFile(lockPath(), String(process.pid))
   } catch (e: unknown) {

@@ -63,7 +63,7 @@ export async function* runPostToolUseHooks<Input extends AnyObject, Output>(
       toolUseContext.abortController.signal,
     )) {
       try {
-        // Check if we were aborted during hook execution
+        
         
         if (
           result.message?.type === 'attachment' &&
@@ -87,8 +87,8 @@ export async function* runPostToolUseHooks<Input extends AnyObject, Output>(
           continue
         }
 
-        // For JSON {decision:"block"} hooks, executeHooks yields two results:
-        // {blockingError} and {message: hook_blocking_error attachment}. The
+        
+        
         
         
         
@@ -114,7 +114,7 @@ export async function* runPostToolUseHooks<Input extends AnyObject, Output>(
           }
         }
 
-        // If hook indicated to prevent continuation, yield a stop reason message
+        
         if (result.preventContinuation) {
           yield {
             message: createAttachmentMessage({
@@ -129,7 +129,7 @@ export async function* runPostToolUseHooks<Input extends AnyObject, Output>(
           return
         }
 
-        // If hooks provided additional context, add it as a message
+        
         if (result.additionalContexts && result.additionalContexts.length > 0) {
           yield {
             message: createAttachmentMessage({
@@ -142,7 +142,7 @@ export async function* runPostToolUseHooks<Input extends AnyObject, Output>(
           }
         }
 
-        // If hooks provided updatedMCPToolOutput, yield it if this is an MCP tool
+        
         if (result.updatedMCPToolOutput && isMcpTool(tool)) {
           toolOutput = result.updatedMCPToolOutput as Output
           yield {
@@ -220,7 +220,7 @@ export async function* runPostToolUseFailureHooks<Input extends AnyObject>(
       toolUseContext.abortController.signal,
     )) {
       try {
-        // Check if we were aborted during hook execution
+        
         if (
           result.message?.type === 'attachment' &&
           result.message.attachment.type === 'hook_cancelled'
@@ -242,7 +242,7 @@ export async function* runPostToolUseFailureHooks<Input extends AnyObject>(
           continue
         }
 
-        // Skip hook_blocking_error in result.message — blockingError path
+        
         
         if (
           result.message &&
@@ -266,7 +266,7 @@ export async function* runPostToolUseFailureHooks<Input extends AnyObject>(
           }
         }
 
-        // If hooks provided additional context, add it as a message
+        
         if (result.additionalContexts && result.additionalContexts.length > 0) {
           yield {
             message: createAttachmentMessage({
@@ -318,17 +318,6 @@ export async function* runPostToolUseFailureHooks<Input extends AnyObject>(
   }
 }
 
-/**
- * Resolve a PreToolUse hook's permission result into a final PermissionDecision.
- *
- * Encapsulates the invariant that hook 'allow' does NOT bypass settings.json
- * deny/ask rules — checkRuleBasedPermissions still applies (inc-4788 analog).
- * Also handles the requiresUserInteraction/requireCanUseTool guards and the
- * 'ask' forceDecision passthrough.
- *
- * Shared by toolExecution.ts (main query loop) and REPLTool/toolWrappers.ts
- * (REPL inner calls) so the permission semantics stay in lockstep.
- */
 export async function resolveHookPermissionDecision(
   hookPermissionResult: PermissionResult | undefined,
   tool: Tool,
@@ -369,7 +358,7 @@ export async function resolveHookPermissionDecision(
       }
     }
 
-    // Hook allow skips the interactive prompt, but deny/ask rules still apply.
+    
     const ruleCheck = await checkRuleBasedPermissions(
       tool,
       hookInput,
@@ -389,7 +378,7 @@ export async function resolveHookPermissionDecision(
       )
       return { decision: ruleCheck, input: hookInput }
     }
-    // ask rule — dialog required despite hook approval
+    
     logForDebugging(
       `Hook approved tool use for ${tool.name}, but ask rule requires prompt`,
     )
@@ -410,7 +399,7 @@ export async function resolveHookPermissionDecision(
     return { decision: hookPermissionResult, input }
   }
 
-  // No hook decision or 'ask' — normal permission flow, possibly with
+  
   
   const forceDecision =
     hookPermissionResult?.behavior === 'ask' ? hookPermissionResult : undefined
@@ -456,7 +445,7 @@ export async function* runPreToolUseHooks(
       type: 'additionalContext'
       message: MessageUpdateLazy<AttachmentMessage>
     }
-  // stop execution
+  
   | { type: 'stop' }
 > {
   const hookStartTime = Date.now()
@@ -470,7 +459,7 @@ export async function* runPreToolUseHooks(
       toolUseContext,
       appState.toolPermissionContext.mode,
       toolUseContext.abortController.signal,
-      undefined, // timeoutMs - use default
+      undefined, 
       toolUseContext.requestPrompt,
       tool.getToolUseSummary?.(processedInput),
     )) {
@@ -496,7 +485,7 @@ export async function* runPreToolUseHooks(
             },
           }
         }
-        // Check if hook wants to prevent continuation
+        
         if (result.preventContinuation) {
           yield {
             type: 'preventContinuation',
@@ -506,7 +495,7 @@ export async function* runPreToolUseHooks(
             yield { type: 'stopReason', stopReason: result.stopReason }
           }
         }
-        // Check for hook-defined permission behavior
+        
         if (result.permissionBehavior !== undefined) {
           logForDebugging(
             `Hook result has permissionBehavior=${result.permissionBehavior}`,
@@ -539,7 +528,7 @@ export async function* runPreToolUseHooks(
               },
             }
           } else {
-            // deny - updatedInput is irrelevant since tool won't run
+            
             yield {
               type: 'hookPermissionResult',
               hookPermissionResult: {
@@ -553,8 +542,8 @@ export async function* runPreToolUseHooks(
           }
         }
 
-        // Yield updatedInput for passthrough case (no permission decision)
-        // This allows hooks to modify input while letting normal permission flow continue
+        
+        
         if (result.updatedInput && result.permissionBehavior === undefined) {
           yield {
             type: 'hookUpdatedInput',
@@ -562,7 +551,7 @@ export async function* runPreToolUseHooks(
           }
         }
 
-        // If hooks provided additional context, add it as a message
+        
         if (result.additionalContexts && result.additionalContexts.length > 0) {
           yield {
             type: 'additionalContext',
@@ -578,7 +567,7 @@ export async function* runPreToolUseHooks(
           }
         }
 
-        // Check if we were aborted during hook execution
+        
         if (toolUseContext.abortController.signal.aborted) {
           logEvent('tengu_pre_tool_hooks_cancelled', {
             toolName: sanitizeToolNameForAnalytics(tool.name),

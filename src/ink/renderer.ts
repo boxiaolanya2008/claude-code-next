@@ -21,7 +21,7 @@ export type RenderOptions = {
   altScreen: boolean
   
   
-  // or reset to 0×0 (forceRedraw). Blitting from such a prevScreen would
+  
   
   prevFrameContaminated: boolean
 }
@@ -32,7 +32,7 @@ export default function createRenderer(
   node: DOMElement,
   stylePool: StylePool,
 ): Renderer {
-  // Reuse Output across frames so charCache (tokenize + grapheme clustering)
+  
   
   let output: Output | undefined
   return options => {
@@ -61,7 +61,7 @@ export default function createRenderer(
       computedWidth < 0
 
     if (!node.yogaNode || hasInvalidHeight || hasInvalidWidth) {
-      // Log to help diagnose root cause (visible with --debug flag)
+      
       if (node.yogaNode && (hasInvalidHeight || hasInvalidWidth)) {
         logForDebugging(
           `Invalid yoga dimensions: width=${computedWidth}, height=${computedHeight}, ` +
@@ -91,7 +91,7 @@ export default function createRenderer(
     
     
     
-    // overflow writes land at y >= screen.height and setCellAt drops
+    
     
     
     const height = options.altScreen ? terminalRows : yogaHeight
@@ -149,7 +149,7 @@ export default function createRenderer(
       screen: renderedScreen,
       viewport: {
         width: terminalWidth,
-        // Alt screen: fake viewport.height = rows + 1 so that
+        
         
         
         
@@ -161,7 +161,7 @@ export default function createRenderer(
       },
       cursor: {
         x: 0,
-        // In the alt screen, keep the cursor inside the viewport. When
+        
         
         
         
@@ -170,7 +170,7 @@ export default function createRenderer(
         y: options.altScreen
           ? Math.max(0, Math.min(screen.height, terminalRows) - 1)
           : screen.height,
-        // Hide cursor when there's dynamic output to render (only in TTY mode)
+        
         visible: !isTTY || screen.height === 0,
       },
     }

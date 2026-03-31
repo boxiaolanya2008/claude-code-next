@@ -17,7 +17,7 @@ import { jsonStringify, writeFileSync_DEPRECATED } from '../slowOperations.js'
 import { getBinaryName, getPlatform } from './installer.js'
 
 const GCS_BUCKET_URL =
-  'https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases'
+  'https://storage.googleapis.com/claude-code-next-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-next-releases'
 export const ARTIFACTORY_REGISTRY_URL =
   'https://artifactory.infra.ant.dev/artifactory/api/npm/npm-all/'
 
@@ -106,7 +106,7 @@ export async function getLatestVersionFromBinaryRepo(
 export async function getLatestVersion(
   channelOrVersion: string,
 ): Promise<string> {
-  // Direct version - match internal format too (e.g. 1.0.30-dev.shaf4937ce)
+  
   if (/^v?\d+\.\d+\.\d+(-\S+)?$/.test(channelOrVersion)) {
     const normalized = channelOrVersion.startsWith('v')
       ? channelOrVersion.slice(1)
@@ -123,7 +123,7 @@ export async function getLatestVersion(
     return normalized
   }
 
-  // ReleaseChannel validation
+  
   const channel = channelOrVersion as ReleaseChannel
   if (channel !== 'stable' && channel !== 'latest') {
     throw new Error(
@@ -131,14 +131,14 @@ export async function getLatestVersion(
     )
   }
 
-  // Route to appropriate source
+  
   if (process.env.USER_TYPE === 'ant') {
-    // Use Artifactory for ant users
+    
     const npmTag = channel === 'stable' ? 'stable' : 'latest'
     return getLatestVersionFromArtifactory(npmTag)
   }
 
-  // Use GCS for external users
+  
   return getLatestVersionFromBinaryRepo(channel, GCS_BUCKET_URL)
 }
 
@@ -202,7 +202,7 @@ export async function downloadVersionFromArtifactory(
     },
   }
 
-  // Create package-lock.json with integrity verification for platform-specific package
+  
   const packageLock = {
     name: 'claude-native-installer',
     version: '0.0.1',
@@ -262,13 +262,12 @@ export async function downloadVersionFromArtifactory(
   )
 }
 
-// Stall timeout: abort if no bytes received for this duration
 const DEFAULT_STALL_TIMEOUT_MS = 60000 
 const MAX_DOWNLOAD_RETRIES = 3
 
 function getStallTimeoutMs(): number {
   return (
-    Number(process.env.CLAUDE_CODE_STALL_TIMEOUT_MS_FOR_TESTING) ||
+    Number(process.env.CLAUDE_CODE_NEXT_STALL_TIMEOUT_MS_FOR_TESTING) ||
     DEFAULT_STALL_TIMEOUT_MS
   )
 }
@@ -280,10 +279,6 @@ class StallTimeoutError extends Error {
   }
 }
 
-/**
- * Common logic for downloading and verifying a binary.
- * Includes stall detection (aborts if no bytes for 60s) and retry logic.
- */
 async function downloadAndVerifyBinary(
   binaryUrl: string,
   expectedChecksum: string,
@@ -309,15 +304,15 @@ async function downloadAndVerifyBinary(
     }
 
     try {
-      // Start the stall timer before the request
+      
       resetStallTimer()
 
       const response = await axios.get(binaryUrl, {
-        timeout: 5 * 60000, // 5 minute total timeout
+        timeout: 5 * 60000, 
         responseType: 'arraybuffer',
         signal: controller.signal,
         onDownloadProgress: () => {
-          // Reset stall timer on each chunk of data received
+          
           resetStallTimer()
         },
         ...requestConfig,
@@ -336,7 +331,7 @@ async function downloadAndVerifyBinary(
         )
       }
 
-      // Write binary to disk
+      
       await writeFile(binaryPath, Buffer.from(response.data))
       await chmod(binaryPath, 0o755)
 
@@ -354,7 +349,7 @@ async function downloadAndVerifyBinary(
         lastError = toError(error)
       }
 
-      // Only retry on stall timeouts
+      
       if (isStallTimeout && attempt < MAX_DOWNLOAD_RETRIES) {
         logForDebugging(
           `Download stalled on attempt ${attempt}/${MAX_DOWNLOAD_RETRIES}, retrying...`,
@@ -364,12 +359,12 @@ async function downloadAndVerifyBinary(
         continue
       }
 
-      // Don't retry other errors (HTTP errors, checksum mismatches, etc.)
+      
       throw lastError
     }
   }
 
-  // Should not reach here, but just in case
+  
   throw lastError ?? new Error('Download failed after all retries')
 }
 
@@ -384,17 +379,17 @@ export async function downloadVersionFromBinaryRepo(
 ) {
   const fs = getFsImplementation()
 
-  // If we get here, we own the lock and can delete a partial download
+  
   await fs.rm(stagingPath, { recursive: true, force: true })
 
-  // Get platform
+  
   const platform = getPlatform()
   const startTime = Date.now()
 
-  // Log download attempt start
+  
   logEvent('tengu_binary_download_attempt', {})
 
-  // Fetch manifest to get checksum
+  
   let manifest
   try {
     const manifestResponse = await axios.get(
@@ -438,11 +433,11 @@ export async function downloadVersionFromBinaryRepo(
 
   const expectedChecksum = platformInfo.checksum
 
-  // Both GCS and generic bucket use identical layout: ${baseUrl}/${version}/${platform}/${binaryName}
+  
   const binaryName = getBinaryName(platform)
   const binaryUrl = `${baseUrl}/${version}/${platform}/${binaryName}`
 
-  // Write to staging
+  
   await fs.mkdir(stagingPath)
   const binaryPath = join(stagingPath, binaryName)
 
@@ -482,7 +477,7 @@ export async function downloadVersion(
   version: string,
   stagingPath: string,
 ): Promise<'npm' | 'binary'> {
-  // Test-fixture versions route to the private sentinel bucket. DCE'd in all
+  
   
   
   
@@ -494,24 +489,23 @@ export async function downloadVersion(
     await downloadVersionFromBinaryRepo(
       version,
       stagingPath,
-      'https://storage.googleapis.com/claude-code-ci-sentinel',
+      'https://storage.googleapis.com/claude-code-next-ci-sentinel',
       { headers: { Authorization: `Bearer ${stdout.trim()}` } },
     )
     return 'binary'
   }
 
   if (process.env.USER_TYPE === 'ant') {
-    // Use Artifactory for ant users
+    
     await downloadVersionFromArtifactory(version, stagingPath)
     return 'npm'
   }
 
-  // Use GCS for external users
+  
   await downloadVersionFromBinaryRepo(version, stagingPath, GCS_BUCKET_URL)
   return 'binary'
 }
 
-// Exported for testing
 export { StallTimeoutError, MAX_DOWNLOAD_RETRIES }
 export const STALL_TIMEOUT_MS = DEFAULT_STALL_TIMEOUT_MS
 export const _downloadAndVerifyBinaryForTesting = downloadAndVerifyBinary

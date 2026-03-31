@@ -40,7 +40,7 @@ export type FrameEvent = {
   
 
   phases?: {
-    /** createRenderer output: DOM → yoga layout → screen buffer */
+    
     renderer: number
     
     diff: number
@@ -87,7 +87,7 @@ export type Patch =
   | { type: 'cursorTo'; col: number }
   | { type: 'carriageReturn' }
   | { type: 'hyperlink'; uri: string }
-  // Pre-serialized style transition string from StylePool.transition() —
+  
   
   | { type: 'styleStr'; str: string }
 

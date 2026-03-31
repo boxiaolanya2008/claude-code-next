@@ -25,7 +25,7 @@ function validatePathWithinPlugin(
   pluginPath: string,
   relativePath: string,
 ): string | null {
-  // Resolve both paths to absolute paths
+  
   const resolvedPluginPath = resolve(pluginPath)
   const resolvedFilePath = resolve(pluginPath, relativePath)
 
@@ -40,23 +40,13 @@ function validatePathWithinPlugin(
   return resolvedFilePath
 }
 
-/**
- * Load LSP server configurations from a plugin.
- * Checks for:
- * 1. .lsp.json file in plugin directory
- * 2. manifest.lspServers field
- *
- * @param plugin - The loaded plugin
- * @param errors - Array to collect any errors encountered
- * @returns Record of server name to config, or undefined if no servers
- */
 export async function loadPluginLspServers(
   plugin: LoadedPlugin,
   errors: PluginError[] = [],
 ): Promise<Record<string, LspServerConfig> | undefined> {
   const servers: Record<string, LspServerConfig> = {}
 
-  // 1. Check for .lsp.json file in plugin directory
+  
   const lspJsonPath = join(plugin.path, '.lsp.json')
   try {
     const content = await readFile(lspJsonPath, 'utf-8')
@@ -79,7 +69,7 @@ export async function loadPluginLspServers(
       })
     }
   } catch (error) {
-    // .lsp.json is optional, ignore if it doesn't exist
+    
     if (!isENOENT(error)) {
       const _errorMsg =
         error instanceof Error
@@ -101,7 +91,7 @@ export async function loadPluginLspServers(
     }
   }
 
-  // 2. Check manifest.lspServers field
+  
   if (plugin.manifest.lspServers) {
     const manifestServers = await loadLspServersFromManifest(
       plugin.manifest.lspServers,
@@ -117,9 +107,6 @@ export async function loadPluginLspServers(
   return Object.keys(servers).length > 0 ? servers : undefined
 }
 
-/**
- * Load LSP servers from manifest declaration (handles multiple formats).
- */
 async function loadLspServersFromManifest(
   declaration:
     | string
@@ -131,12 +118,12 @@ async function loadLspServersFromManifest(
 ): Promise<Record<string, LspServerConfig> | undefined> {
   const servers: Record<string, LspServerConfig> = {}
 
-  // Normalize to array
+  
   const declarations = Array.isArray(declaration) ? declaration : [declaration]
 
   for (const decl of declarations) {
     if (typeof decl === 'string') {
-      // Validate path to prevent directory traversal
+      
       const validatedPath = validatePathWithinPlugin(pluginPath, decl)
       if (!validatedPath) {
         const securityMsg = `Security: Path traversal attempt blocked in plugin ${pluginName}: ${decl}`
@@ -153,7 +140,7 @@ async function loadLspServersFromManifest(
         continue
       }
 
-      // Load from file
+      
       try {
         const content = await readFile(validatedPath, 'utf-8')
         const parsed = jsonParse(content)
@@ -194,7 +181,7 @@ async function loadLspServersFromManifest(
         })
       }
     } else {
-      // Inline configs
+      
       for (const [serverName, config] of Object.entries(decl)) {
         const result = LspServerConfigSchema().safeParse(config)
         if (result.success) {
@@ -217,11 +204,6 @@ async function loadLspServersFromManifest(
   return Object.keys(servers).length > 0 ? servers : undefined
 }
 
-/**
- * Resolve environment variables for plugin LSP servers.
- * Handles ${CLAUDE_PLUGIN_ROOT}, ${user_config.X}, and general ${VAR}
- * substitution. Tracks missing environment variables for error reporting.
- */
 export function resolvePluginLspEnvironment(
   config: LspServerConfig,
   plugin: { path: string; source: string },
@@ -231,15 +213,15 @@ export function resolvePluginLspEnvironment(
   const allMissingVars: string[] = []
 
   const resolveValue = (value: string): string => {
-    // First substitute plugin-specific variables
+    
     let resolved = substitutePluginVariables(value, plugin)
 
-    // Then substitute user config variables if provided
+    
     if (userConfig) {
       resolved = substituteUserConfigVariables(resolved, userConfig)
     }
 
-    // Finally expand general environment variables
+    
     const { expanded, missingVars } = expandEnvVarsInString(resolved)
     allMissingVars.push(...missingVars)
 
@@ -248,17 +230,17 @@ export function resolvePluginLspEnvironment(
 
   const resolved = { ...config }
 
-  // Resolve command path
+  
   if (resolved.command) {
     resolved.command = resolveValue(resolved.command)
   }
 
-  // Resolve args
+  
   if (resolved.args) {
     resolved.args = resolved.args.map(arg => resolveValue(arg))
   }
 
-  // Resolve environment variables and add CLAUDE_PLUGIN_ROOT / CLAUDE_PLUGIN_DATA
+  
   const resolvedEnv: Record<string, string> = {
     CLAUDE_PLUGIN_ROOT: plugin.path,
     CLAUDE_PLUGIN_DATA: getPluginDataDir(plugin.source),
@@ -271,12 +253,12 @@ export function resolvePluginLspEnvironment(
   }
   resolved.env = resolvedEnv
 
-  // Resolve workspaceFolder if present
+  
   if (resolved.workspaceFolder) {
     resolved.workspaceFolder = resolveValue(resolved.workspaceFolder)
   }
 
-  // Log missing variables if any were found
+  
   if (allMissingVars.length > 0) {
     const uniqueMissingVars = [...new Set(allMissingVars)]
     const warnMsg = `Missing environment variables in plugin LSP config: ${uniqueMissingVars.join(', ')}`
@@ -287,10 +269,6 @@ export function resolvePluginLspEnvironment(
   return resolved
 }
 
-/**
- * Add plugin scope to LSP server configs
- * This adds a prefix to server names to avoid conflicts between plugins
- */
 export function addPluginScopeToLspServers(
   servers: Record<string, LspServerConfig>,
   pluginName: string,
@@ -298,11 +276,11 @@ export function addPluginScopeToLspServers(
   const scopedServers: Record<string, ScopedLspServerConfig> = {}
 
   for (const [name, config] of Object.entries(servers)) {
-    // Add plugin prefix to server name to avoid conflicts
+    
     const scopedName = `plugin:${pluginName}:${name}`
     scopedServers[scopedName] = {
       ...config,
-      scope: 'dynamic', // Use dynamic scope for plugin servers
+      scope: 'dynamic', 
       source: pluginName,
     }
   }
@@ -310,11 +288,6 @@ export function addPluginScopeToLspServers(
   return scopedServers
 }
 
-/**
- * Get LSP servers from a specific plugin with environment variable resolution and scoping
- * This function is called when the LSP servers need to be activated and ensures they have
- * the proper environment variables and scope applied
- */
 export async function getPluginLspServers(
   plugin: LoadedPlugin,
   errors: PluginError[] = [],
@@ -323,19 +296,19 @@ export async function getPluginLspServers(
     return undefined
   }
 
-  // Use cached servers if available
+  
   const servers =
     plugin.lspServers || (await loadPluginLspServers(plugin, errors))
   if (!servers) {
     return undefined
   }
 
-  // Resolve environment variables. Top-level manifest.userConfig values
-  // become available as ${user_config.KEY} in LSP command/args/env.
-  // Gate on manifest.userConfig — same rationale as buildMcpUserConfig:
-  // loadPluginOptions always returns {} so without this guard userConfig is
-  // truthy for every plugin and substituteUserConfigVariables throws on any
-  // unresolved ${user_config.X}. Also skips unneeded keychain reads.
+  
+  
+  
+  
+  
+  
   const userConfig = plugin.manifest.userConfig
     ? loadPluginOptions(getPluginStorageId(plugin))
     : undefined
@@ -349,13 +322,10 @@ export async function getPluginLspServers(
     )
   }
 
-  // Add plugin scope
+  
   return addPluginScopeToLspServers(resolvedServers, plugin.name)
 }
 
-/**
- * Extract all LSP servers from loaded plugins
- */
 export async function extractLspServersFromPlugins(
   plugins: LoadedPlugin[],
   errors: PluginError[] = [],
@@ -370,7 +340,7 @@ export async function extractLspServersFromPlugins(
       const scopedServers = addPluginScopeToLspServers(servers, plugin.name)
       Object.assign(allServers, scopedServers)
 
-      // Store the servers on the plugin for caching
+      
       plugin.lspServers = servers
 
       logForDebugging(

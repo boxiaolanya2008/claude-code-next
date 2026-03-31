@@ -11,10 +11,10 @@ export function getTransportForUrl(
   sessionId?: string,
   refreshHeaders?: () => Record<string, string>,
 ): Transport {
-  if (isEnvTruthy(process.env.CLAUDE_CODE_USE_CCR_V2)) {
-    // v2: SSE for reads, HTTP POST for writes
+  if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_USE_CCR_V2)) {
     
-    // derive the SSE stream URL by appending /worker/events/stream
+    
+    
     const sseUrl = new URL(url.href)
     if (sseUrl.protocol === 'wss:') {
       sseUrl.protocol = 'https:'
@@ -27,7 +27,7 @@ export function getTransportForUrl(
   }
 
   if (url.protocol === 'ws:' || url.protocol === 'wss:') {
-    if (isEnvTruthy(process.env.CLAUDE_CODE_POST_FOR_SESSION_INGRESS_V2)) {
+    if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_POST_FOR_SESSION_INGRESS_V2)) {
       return new HybridTransport(url, headers, sessionId, refreshHeaders)
     }
     return new WebSocketTransport(url, headers, sessionId, refreshHeaders)

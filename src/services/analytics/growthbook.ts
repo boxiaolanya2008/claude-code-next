@@ -42,10 +42,6 @@ export type GrowthBookUserAttributes = {
   github?: GitHubActionsMetadata
 }
 
-/**
- * Malformed feature response from API that uses "value" instead of "defaultValue".
- * This is a workaround until the API is fixed.
- */
 type MalformedFeatureDefinition = {
   value?: unknown
   defaultValue?: unknown
@@ -76,13 +72,12 @@ const loggedExposures = new Set<string>()
 
 let reinitializingPromise: Promise<unknown> | null = null
 
-// init.ts) and must survive auth-change resets.
 type GrowthBookRefreshListener = () => void | Promise<void>
 const refreshed = createSignal()
 
 function callSafe(listener: GrowthBookRefreshListener): void {
   try {
-    // Promise.resolve() normalizes sync returns and Promises so both
+    
     
     
     
@@ -95,20 +90,6 @@ function callSafe(listener: GrowthBookRefreshListener): void {
   }
 }
 
-/**
- * Register a callback to fire when GrowthBook feature values refresh.
- * Returns an unsubscribe function.
- *
- * If init has already completed with features by the time this is called
- * (remoteEvalFeatureValues is populated), the listener fires once on the
- * next microtask. This catch-up handles the race where GB's network response
- * lands before the REPL's useEffect commits — on external builds with fast
- * networks and MCP-heavy configs, init can finish in ~100ms while REPL mount
- * takes ~600ms (see #20951 external-build trace at 30.540 vs 31.046).
- *
- * Change detection is on the subscriber: the callback fires on every refresh;
- * use isEqual against your last-seen config to decide whether to act.
- */
 export function onGrowthBookRefresh(
   listener: GrowthBookRefreshListener,
 ): () => void {
@@ -116,7 +97,7 @@ export function onGrowthBookRefresh(
   const unsubscribe = refreshed.subscribe(() => callSafe(listener))
   if (remoteEvalFeatureValues.size > 0) {
     queueMicrotask(() => {
-      // Re-check: listener may have been removed, or resetGrowthBook may have
+      
       
       if (subscribed && remoteEvalFeatureValues.size > 0) {
         callSafe(listener)
@@ -129,14 +110,6 @@ export function onGrowthBookRefresh(
   }
 }
 
-/**
- * Parse env var overrides for GrowthBook features.
- * Set CLAUDE_INTERNAL_FC_OVERRIDES to a JSON object mapping feature keys to values
- * to bypass remote eval and disk cache. Useful for eval harnesses that need to
- * test specific feature flag configurations. Only active when USER_TYPE is 'ant'.
- *
- * Example: CLAUDE_INTERNAL_FC_OVERRIDES='{"my_feature": true, "my_config": {"key": "val"}}'
- */
 let envOverrides: Record<string, unknown> | null = null
 let envOverridesParsed = false
 
@@ -164,39 +137,22 @@ function getEnvOverrides(): Record<string, unknown> | null {
   return envOverrides
 }
 
-/**
- * Check if a feature has an env-var override (CLAUDE_INTERNAL_FC_OVERRIDES).
- * When true, _CACHED_MAY_BE_STALE will return the override without touching
- * disk or network — callers can skip awaiting init for that feature.
- */
 export function hasGrowthBookEnvOverride(feature: string): boolean {
   const overrides = getEnvOverrides()
   return overrides !== null && feature in overrides
 }
 
-/**
- * Local config overrides set via /config Gates tab (ant-only). Checked after
- * env-var overrides — env wins so eval harnesses remain deterministic. Unlike
- * getEnvOverrides this is not memoized: the user can change overrides at
- * runtime, and getGlobalConfig() is already memory-cached (pointer-chase)
- * until the next saveGlobalConfig() invalidates it.
- */
 function getConfigOverrides(): Record<string, unknown> | undefined {
   if (process.env.USER_TYPE !== 'ant') return undefined
   try {
     return getGlobalConfig().growthBookOverrides
   } catch {
-    // getGlobalConfig() throws before configReadingAllowed is set (early
+    
     
     return undefined
   }
 }
 
-/**
- * Enumerate all known GrowthBook features and their current resolved values
- * (not including overrides). In-memory payload first, disk cache fallback —
- * same priority as the getters. Used by the /config Gates tab.
- */
 export function getAllGrowthBookFeatures(): Record<string, unknown> {
   if (remoteEvalFeatureValues.size > 0) {
     return Object.fromEntries(remoteEvalFeatureValues)
@@ -208,13 +164,6 @@ export function getGrowthBookConfigOverrides(): Record<string, unknown> {
   return getConfigOverrides() ?? {}
 }
 
-/**
- * Set or clear a single config override. Pass undefined to clear.
- * Fires onGrowthBookRefresh listeners so systems that bake gate values into
- * long-lived objects (useMainLoopModel, useSkillsChange, etc.) rebuild —
- * otherwise overriding e.g. tengu_ant_model_override wouldn't actually
- * change the model until the next periodic refresh.
- */
 export function setGrowthBookConfigOverride(
   feature: string,
   value: unknown,
@@ -236,7 +185,7 @@ export function setGrowthBookConfigOverride(
       return { ...c, growthBookOverrides: { ...current, [feature]: value } }
     })
     
-    // so firing on a no-op write is fine.
+    
     refreshed.emit()
   } catch (e) {
     logError(e)
@@ -262,12 +211,8 @@ export function clearGrowthBookConfigOverrides(): void {
   }
 }
 
-/**
- * Log experiment exposure for a feature if it has experiment data.
- * Deduplicates within a session - each feature is logged at most once.
- */
 function logExposureForFeature(feature: string): void {
-  // Skip if already logged this session (dedup)
+  
   if (loggedExposures.has(feature)) {
     return
   }
@@ -286,23 +231,12 @@ function logExposureForFeature(feature: string): void {
   }
 }
 
-/**
- * Process a remote eval payload from the GrowthBook server and populate
- * local caches. Called after both initial client.init() and after
- * client.refreshFeatures() so that _BLOCKS_ON_INIT callers see fresh values
- * across the process lifetime, not just init-time snapshots.
- *
- * Without this running on refresh, remoteEvalFeatureValues freezes at its
- * init-time snapshot and getDynamicConfig_BLOCKS_ON_INIT returns stale values
- * for the entire process lifetime — which broke the tengu_max_version_config
- * kill switch for long-running sessions.
- */
 async function processRemoteEvalPayload(
   gbClient: GrowthBook,
 ): Promise<boolean> {
-  // WORKAROUND: Transform remote eval response format
   
-  // TODO: Remove this once the API is fixed to return correct format
+  
+  
   const payload = gbClient.getPayload()
   
   
@@ -312,8 +246,8 @@ async function processRemoteEvalPayload(
     return false
   }
 
-  // Clear before rebuild so features removed between refreshes don't
-  // leave stale ghost entries that short-circuit getFeatureValueInternal.
+  
+  
   experimentDataByFeature.clear()
 
   const transformedFeatures: Record<string, MalformedFeatureDefinition> = {}
@@ -328,7 +262,7 @@ async function processRemoteEvalPayload(
       transformedFeatures[key] = f
     }
 
-    // Store experiment data for later logging when feature is accessed
+    
     if (f.source === 'experiment' && f.experimentResult) {
       const expResult = f.experimentResult as {
         variationId?: number
@@ -342,22 +276,22 @@ async function processRemoteEvalPayload(
       }
     }
   }
-  // Re-set the payload with transformed features
+  
   await gbClient.setPayload({
     ...payload,
     features: transformedFeatures,
   })
 
-  // WORKAROUND: Cache the evaluated values directly from remote eval response.
-  // The SDK's evalFeature() tries to re-evaluate rules locally, ignoring the
+  
+  
   
   
   remoteEvalFeatureValues.clear()
   for (const [key, feature] of Object.entries(transformedFeatures)) {
-    // Under remoteEval:true the server pre-evaluates. Whether the answer
     
-    // it's the authoritative value for this user. Guarding on both keeps
-    // syncRemoteEvalToDisk correct across a partial or full API migration.
+    
+    
+    
     const v = 'value' in feature ? feature.value : feature.defaultValue
     if (v !== undefined) {
       remoteEvalFeatureValues.set(key, v)
@@ -366,17 +300,6 @@ async function processRemoteEvalPayload(
   return true
 }
 
-/**
- * Write the complete remoteEvalFeatureValues map to disk. Called exactly
- * once per successful processRemoteEvalPayload — never from a failure path,
- * so init-timeout poisoning is structurally impossible (the .catch() at init
- * never reaches here).
- *
- * Wholesale replace (not merge): features deleted server-side are dropped
- * from disk on the next successful payload. Ant builds ⊇ external, so
- * switching builds is safe — the write is always a complete answer for this
- * process's SDK key.
- */
 function syncRemoteEvalToDisk(): void {
   const fresh = Object.fromEntries(remoteEvalFeatureValues)
   const config = getGlobalConfig()
@@ -389,26 +312,11 @@ function syncRemoteEvalToDisk(): void {
   }))
 }
 
-/**
- * Check if GrowthBook operations should be enabled
- */
 function isGrowthBookEnabled(): boolean {
-  // GrowthBook depends on 1P event logging.
+  
   return is1PEventLoggingEnabled()
 }
 
-/**
- * Hostname of ANTHROPIC_BASE_URL when it points at a non-Anthropic proxy.
- *
- * Enterprise-proxy deployments (Epic, Marble, etc.) typically use
- * apiKeyHelper auth, which means isAnthropicAuthEnabled() returns false and
- * organizationUUID/accountUUID/email are all absent from GrowthBook
- * attributes. Without this, there's no stable attribute to target them on
- * — only per-device IDs. See src/utils/auth.ts isAnthropicAuthEnabled().
- *
- * Returns undefined for unset/default (api.anthropic.com) so the attribute
- * is absent for direct-API users. Hostname only — no path/query/creds.
- */
 export function getApiBaseUrlHost(): string | undefined {
   const baseUrl = process.env.ANTHROPIC_BASE_URL
   if (!baseUrl) return undefined
@@ -421,14 +329,11 @@ export function getApiBaseUrlHost(): string | undefined {
   }
 }
 
-/**
- * Get user attributes for GrowthBook from CoreUserData
- */
 function getUserAttributes(): GrowthBookUserAttributes {
   const user = getUserForGrowthBook()
 
-  // For ants, always try to include email from OAuth config even if ANTHROPIC_API_KEY is set.
-  // This ensures GrowthBook targeting by email works regardless of auth method.
+  
+  
   let email = user.email
   if (!email && process.env.USER_TYPE === 'ant') {
     email = getGlobalConfig().oauthAccount?.emailAddress
@@ -457,9 +362,6 @@ function getUserAttributes(): GrowthBookUserAttributes {
   return attributes
 }
 
-/**
- * Get or create the GrowthBook client instance
- */
 const getGrowthBookClient = memoize(
   (): { client: GrowthBook; initialized: Promise<void> } | null => {
     if (!isGrowthBookEnabled()) {
@@ -475,10 +377,10 @@ const getGrowthBookClient = memoize(
     }
     const baseUrl =
       process.env.USER_TYPE === 'ant'
-        ? process.env.CLAUDE_CODE_GB_BASE_URL || 'https://api.anthropic.com/'
+        ? process.env.CLAUDE_CODE_NEXT_GB_BASE_URL || 'https://api.anthropic.com/'
         : 'https://api.anthropic.com/'
 
-    // Skip auth if trust hasn't been established yet
+    
     
     
     
@@ -495,19 +397,19 @@ const getGrowthBookClient = memoize(
     clientCreatedWithAuth = hasAuth
 
     
-    // not a later client if reinitialization happens before init completes
+    
     const thisClient = new GrowthBook({
       apiHost: baseUrl,
       clientKey,
       attributes,
       remoteEval: true,
-      // Re-fetch when user ID or org changes (org change = login to different org)
+      
       cacheKeyAttributes: ['id', 'organizationUUID'],
-      // Add auth headers if available
+      
       ...(authHeaders.error
         ? {}
         : { apiHostRequestHeaders: authHeaders.headers }),
-      // Debug logging for Ants
+      
       ...(process.env.USER_TYPE === 'ant'
         ? {
             log: (msg: string, ctx: Record<string, unknown>) => {
@@ -519,7 +421,7 @@ const getGrowthBookClient = memoize(
     client = thisClient
 
     if (!hasAuth) {
-      // No auth available yet — skip HTTP init, rely on disk-cached values.
+      
       
       return { client: thisClient, initialized: Promise.resolve() }
     }
@@ -527,7 +429,7 @@ const getGrowthBookClient = memoize(
     const initialized = thisClient
       .init({ timeout: 5000 })
       .then(async result => {
-        // Guard: if this client was replaced by a newer one, skip processing
+        
         if (client !== thisClient) {
           if (process.env.USER_TYPE === 'ant') {
             logForDebugging(
@@ -547,7 +449,7 @@ const getGrowthBookClient = memoize(
         
         
         
-        // this runs after.
+        
         if (client !== thisClient) return
 
         if (hadFeatures) {
@@ -562,7 +464,7 @@ const getGrowthBookClient = memoize(
           refreshed.emit()
         }
 
-        // Log what features were loaded
+        
         if (process.env.USER_TYPE === 'ant') {
           const features = thisClient.getFeatures()
           if (features) {
@@ -596,7 +498,7 @@ export const initializeGrowthBook = memoize(
       return null
     }
 
-    // Check if auth has become available since the client was created
+    
     
     
     if (!clientCreatedWithAuth) {
@@ -612,7 +514,7 @@ export const initializeGrowthBook = memoize(
               'GrowthBook: Auth became available after client creation, reinitializing',
             )
           }
-          // Use resetGrowthBook to properly destroy old client and stop periodic refresh
+          
           
           resetGrowthBook()
           clientWrapper = getGrowthBookClient()
@@ -638,7 +540,7 @@ async function getFeatureValueInternal<T>(
   defaultValue: T,
   logExposure: boolean,
 ): Promise<T> {
-  // Check env var overrides first (for eval harnesses)
+  
   const overrides = getEnvOverrides()
   if (overrides && feature in overrides) {
     return overrides[feature] as T
@@ -657,7 +559,7 @@ async function getFeatureValueInternal<T>(
     return defaultValue
   }
 
-  // Use cached remote eval values if available (workaround for SDK bug)
+  
   let result: T
   if (remoteEvalFeatureValues.has(feature)) {
     result = remoteEvalFeatureValues.get(feature) as T
@@ -665,7 +567,7 @@ async function getFeatureValueInternal<T>(
     result = growthBookClient.getFeatureValue(feature, defaultValue) as T
   }
 
-  // Log experiment exposure using stored experiment data
+  
   if (logExposure) {
     logExposureForFeature(feature)
   }
@@ -678,10 +580,6 @@ async function getFeatureValueInternal<T>(
   return result
 }
 
-/**
- * @deprecated Use getFeatureValue_CACHED_MAY_BE_STALE instead, which is non-blocking.
- * This function blocks on GrowthBook initialization which can slow down startup.
- */
 export async function getFeatureValue_DEPRECATED<T>(
   feature: string,
   defaultValue: T,
@@ -689,19 +587,11 @@ export async function getFeatureValue_DEPRECATED<T>(
   return getFeatureValueInternal(feature, defaultValue, true)
 }
 
-/**
- * Get a feature value from disk cache immediately. Pure read — disk is
- * populated by syncRemoteEvalToDisk on every successful payload (init +
- * periodic refresh), not by this function.
- *
- * This is the preferred method for startup-critical paths and sync contexts.
- * The value may be stale if the cache was written by a previous process.
- */
 export function getFeatureValue_CACHED_MAY_BE_STALE<T>(
   feature: string,
   defaultValue: T,
 ): T {
-  // Check env var overrides first (for eval harnesses)
+  
   const overrides = getEnvOverrides()
   if (overrides && feature in overrides) {
     return overrides[feature] as T
@@ -715,14 +605,14 @@ export function getFeatureValue_CACHED_MAY_BE_STALE<T>(
     return defaultValue
   }
 
-  // Log experiment exposure if data is available, otherwise defer until after init
+  
   if (experimentDataByFeature.has(feature)) {
     logExposureForFeature(feature)
   } else {
     pendingExposures.add(feature)
   }
 
-  // In-memory payload is authoritative once processRemoteEvalPayload has run.
+  
   
   
   
@@ -731,7 +621,7 @@ export function getFeatureValue_CACHED_MAY_BE_STALE<T>(
     return remoteEvalFeatureValues.get(feature) as T
   }
 
-  // Fall back to disk cache (survives across process restarts)
+  
   try {
     const cached = getGlobalConfig().cachedGrowthBookFeatures?.[feature]
     return cached !== undefined ? (cached as T) : defaultValue
@@ -740,12 +630,6 @@ export function getFeatureValue_CACHED_MAY_BE_STALE<T>(
   }
 }
 
-/**
- * @deprecated Disk cache is now synced on every successful payload load
- * (init + 20min/6h periodic refresh). The per-feature TTL never fetched
- * fresh data from the server — it only re-wrote in-memory state to disk,
- * which is now redundant. Use getFeatureValue_CACHED_MAY_BE_STALE directly.
- */
 export function getFeatureValue_CACHED_WITH_REFRESH<T>(
   feature: string,
   defaultValue: T,
@@ -754,23 +638,10 @@ export function getFeatureValue_CACHED_WITH_REFRESH<T>(
   return getFeatureValue_CACHED_MAY_BE_STALE(feature, defaultValue)
 }
 
-/**
- * Check a Statsig feature gate value via GrowthBook, with fallback to Statsig cache.
- *
- * **MIGRATION ONLY**: This function is for migrating existing Statsig gates to GrowthBook.
- * For new features, use `getFeatureValue_CACHED_MAY_BE_STALE()` instead.
- *
- * - Checks GrowthBook disk cache first
- * - Falls back to Statsig's cachedStatsigGates during migration
- * - The value may be stale if the cache hasn't been updated recently
- *
- * @deprecated Use getFeatureValue_CACHED_MAY_BE_STALE() for new code. This function
- * exists only to support migration of existing Statsig gates.
- */
 export function checkStatsigFeatureGate_CACHED_MAY_BE_STALE(
   gate: string,
 ): boolean {
-  // Check env var overrides first (for eval harnesses)
+  
   const overrides = getEnvOverrides()
   if (overrides && gate in overrides) {
     return Boolean(overrides[gate])
@@ -784,40 +655,28 @@ export function checkStatsigFeatureGate_CACHED_MAY_BE_STALE(
     return false
   }
 
-  // Log experiment exposure if data is available, otherwise defer until after init
+  
   if (experimentDataByFeature.has(gate)) {
     logExposureForFeature(gate)
   } else {
     pendingExposures.add(gate)
   }
 
-  // Return cached value immediately from disk
+  
   
   const config = getGlobalConfig()
   const gbCached = config.cachedGrowthBookFeatures?.[gate]
   if (gbCached !== undefined) {
     return Boolean(gbCached)
   }
-  // Fallback to Statsig cache for migration period
+  
   return config.cachedStatsigGates?.[gate] ?? false
 }
 
-/**
- * Check a security restriction gate, waiting for re-init if in progress.
- *
- * Use this for security-critical gates where we need fresh values after auth changes.
- *
- * Behavior:
- * - If GrowthBook is re-initializing (e.g., after login), waits for it to complete
- * - Otherwise, returns cached value immediately (Statsig cache first, then GrowthBook)
- *
- * Statsig cache is checked first as a safety measure for security-related checks:
- * if the Statsig cache indicates the gate is enabled, we honor it.
- */
 export async function checkSecurityRestrictionGate(
   gate: string,
 ): Promise<boolean> {
-  // Check env var overrides first (for eval harnesses)
+  
   const overrides = getEnvOverrides()
   if (overrides && gate in overrides) {
     return Boolean(overrides[gate])
@@ -831,46 +690,33 @@ export async function checkSecurityRestrictionGate(
     return false
   }
 
-  // If re-initialization is in progress, wait for it to complete
+  
   
   if (reinitializingPromise) {
     await reinitializingPromise
   }
 
-  // Check Statsig cache first - it may have correct value from previous logged-in session
+  
   const config = getGlobalConfig()
   const statsigCached = config.cachedStatsigGates?.[gate]
   if (statsigCached !== undefined) {
     return Boolean(statsigCached)
   }
 
-  // Then check GrowthBook cache
+  
   const gbCached = config.cachedGrowthBookFeatures?.[gate]
   if (gbCached !== undefined) {
     return Boolean(gbCached)
   }
 
-  // No cache - return false (don't block on init for uncached gates)
+  
   return false
 }
 
-/**
- * Check a boolean entitlement gate with fallback-to-blocking semantics.
- *
- * Fast path: if the disk cache already says `true`, return it immediately.
- * Slow path: if disk says `false`/missing, await GrowthBook init and fetch the
- * fresh server value (max ~5s). Disk is populated by syncRemoteEvalToDisk
- * inside init, so by the time the slow path returns, disk already has the
- * fresh value — no write needed here.
- *
- * Use for user-invoked features (e.g. /remote-control) that are gated on
- * subscription/org, where a stale `false` would unfairly block access but a
- * stale `true` is acceptable (the server is the real gatekeeper).
- */
 export async function checkGate_CACHED_OR_BLOCKING(
   gate: string,
 ): Promise<boolean> {
-  // Check env var overrides first (for eval harnesses)
+  
   const overrides = getEnvOverrides()
   if (overrides && gate in overrides) {
     return Boolean(overrides[gate])
@@ -884,10 +730,10 @@ export async function checkGate_CACHED_OR_BLOCKING(
     return false
   }
 
-  // Fast path: disk cache already says true — trust it
+  
   const cached = getGlobalConfig().cachedGrowthBookFeatures?.[gate]
   if (cached === true) {
-    // Log experiment exposure if data is available, otherwise defer
+    
     if (experimentDataByFeature.has(gate)) {
       logExposureForFeature(gate)
     } else {
@@ -896,29 +742,23 @@ export async function checkGate_CACHED_OR_BLOCKING(
     return true
   }
 
-  // Slow path: disk says false/missing — may be stale, fetch fresh
+  
   return getFeatureValueInternal(gate, false, true)
 }
 
-/**
- * Refresh GrowthBook after auth changes (login/logout).
- *
- * NOTE: This must destroy and recreate the client because GrowthBook's
- * apiHostRequestHeaders cannot be updated after client creation.
- */
 export function refreshGrowthBookAfterAuthChange(): void {
   if (!isGrowthBookEnabled()) {
     return
   }
 
   try {
-    // Reset the client completely to get fresh auth headers
+    
     
     resetGrowthBook()
 
     
     
-    // the init-callback notify never fires — subscribers stay synced to the
+    
     
     
     
@@ -929,7 +769,7 @@ export function refreshGrowthBookAfterAuthChange(): void {
     
     
     
-    // and .finally re-settles with the original rejection — the sync
+    
     
     reinitializingPromise = initializeGrowthBook()
       .catch(error => {
@@ -947,9 +787,6 @@ export function refreshGrowthBookAfterAuthChange(): void {
   }
 }
 
-/**
- * Reset GrowthBook client state (primarily for testing)
- */
 export function resetGrowthBook(): void {
   stopPeriodicGrowthBookRefresh()
   
@@ -975,21 +812,13 @@ export function resetGrowthBook(): void {
   envOverridesParsed = false
 }
 
-// Periodic refresh interval (matches Statsig's 6-hour interval)
 const GROWTHBOOK_REFRESH_INTERVAL_MS =
   process.env.USER_TYPE !== 'ant'
-    ? 6 * 60 * 60 * 1000 // 6 hours
-    : 20 * 60 * 1000 // 20 min (for ants)
+    ? 6 * 60 * 60 * 1000 
+    : 20 * 60 * 1000 
 let refreshInterval: ReturnType<typeof setInterval> | null = null
 let beforeExitListener: (() => void) | null = null
 
-/**
- * Light refresh - re-fetch features from server without recreating client.
- * Use this for periodic refresh when auth headers haven't changed.
- *
- * Unlike refreshGrowthBookAfterAuthChange() which destroys and recreates the client,
- * this preserves client state and just fetches fresh feature values.
- */
 export async function refreshGrowthBookFeatures(): Promise<void> {
   if (!isGrowthBookEnabled()) {
     return
@@ -1015,7 +844,7 @@ export async function refreshGrowthBookFeatures(): Promise<void> {
       return
     }
 
-    // Rebuild remoteEvalFeatureValues from the refreshed payload so that
+    
     
     
     const hadFeatures = await processRemoteEvalPayload(growthBookClient)
@@ -1027,10 +856,10 @@ export async function refreshGrowthBookFeatures(): Promise<void> {
       logForDebugging('GrowthBook: Light refresh completed')
     }
 
-    // Gate on hadFeatures: if the payload was empty/malformed,
-    // remoteEvalFeatureValues wasn't rebuilt — skip both the no-op disk
-    // write and the spurious subscriber churn (clearCommandMemoizationCaches
-    // + getCommands + 4× model re-renders).
+    
+    
+    
+    
     if (hadFeatures) {
       syncRemoteEvalToDisk()
       refreshed.emit()
@@ -1043,19 +872,12 @@ export async function refreshGrowthBookFeatures(): Promise<void> {
   }
 }
 
-/**
- * Set up periodic refresh of GrowthBook features.
- * Uses light refresh (refreshGrowthBookFeatures) to re-fetch without recreating client.
- *
- * Call this after initialization for long-running sessions to ensure
- * feature values stay fresh. Matches Statsig's 6-hour refresh interval.
- */
 export function setupPeriodicGrowthBookRefresh(): void {
   if (!isGrowthBookEnabled()) {
     return
   }
 
-  // Clear any existing interval to avoid duplicates
+  
   if (refreshInterval) {
     clearInterval(refreshInterval)
   }
@@ -1075,9 +897,6 @@ export function setupPeriodicGrowthBookRefresh(): void {
   }
 }
 
-/**
- * Stop periodic refresh (for testing or cleanup)
- */
 export function stopPeriodicGrowthBookRefresh(): void {
   if (refreshInterval) {
     clearInterval(refreshInterval)
@@ -1089,13 +908,6 @@ export function stopPeriodicGrowthBookRefresh(): void {
   }
 }
 
-// ============================================================================
-// Dynamic Config Functions
-
-/**
- * Get a dynamic config value - blocks until GrowthBook is initialized.
- * Prefer getFeatureValue_CACHED_MAY_BE_STALE for startup-critical paths.
- */
 export async function getDynamicConfig_BLOCKS_ON_INIT<T>(
   configName: string,
   defaultValue: T,
@@ -1103,13 +915,6 @@ export async function getDynamicConfig_BLOCKS_ON_INIT<T>(
   return getFeatureValue_DEPRECATED(configName, defaultValue)
 }
 
-/**
- * Get a dynamic config value from disk cache immediately. Pure read — see
- * getFeatureValue_CACHED_MAY_BE_STALE.
- * This is the preferred method for startup-critical paths and sync contexts.
- *
- * In GrowthBook, dynamic configs are just features with object values.
- */
 export function getDynamicConfig_CACHED_MAY_BE_STALE<T>(
   configName: string,
   defaultValue: T,

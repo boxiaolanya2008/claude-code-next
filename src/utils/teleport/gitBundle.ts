@@ -33,9 +33,6 @@ type BundleCreateResult =
   | { ok: true; size: number; scope: BundleScope }
   | { ok: false; error: string; failReason: BundleFailReason }
 
-// Bundle --all → HEAD → squashed-root. HEAD drops side branches/tags but
-
-// just the snapshot. Receiver needs refs/seed/root handling for that tier.
 async function _bundleWithFallback(
   gitRoot: string,
   bundlePath: string,
@@ -43,7 +40,7 @@ async function _bundleWithFallback(
   hasStash: boolean,
   signal: AbortSignal | undefined,
 ): Promise<BundleCreateResult> {
-  // --all picks up refs/seed/stash; HEAD needs it explicit.
+  
   const extra = hasStash ? ['refs/seed/stash'] : []
   const mkBundle = (base: string) =>
     execFileNoThrowWithCwd(
@@ -66,7 +63,7 @@ async function _bundleWithFallback(
     return { ok: true, size: allSize, scope: 'all' }
   }
 
-  // bundle create overwrites in place.
+  
   logForDebugging(
     `[gitBundle] --all bundle is ${(allSize / 1024 / 1024).toFixed(1)}MB (> ${(maxBytes / 1024 / 1024).toFixed(0)}MB), retrying HEAD-only`,
   )
@@ -84,7 +81,7 @@ async function _bundleWithFallback(
     return { ok: true, size: headSize, scope: 'head' }
   }
 
-  // Last resort: squash to a single parentless commit. Uses the stash tree
+  
   
   
   logForDebugging(
@@ -134,8 +131,6 @@ async function _bundleWithFallback(
   }
 }
 
-// Bundle the repo and upload to Files API; return file_id for
-
 export async function createAndUploadGitBundle(
   config: FilesApiConfig,
   opts?: { cwd?: string; signal?: AbortSignal },
@@ -146,7 +141,7 @@ export async function createAndUploadGitBundle(
     return { success: false, error: 'Not in a git repository' }
   }
 
-  // Sweep stale refs from a crashed prior run before --all bundles them.
+  
   
   for (const ref of ['refs/seed/stash', 'refs/seed/root']) {
     await execFileNoThrowWithCwd(gitExe(), ['update-ref', '-d', ref], {
@@ -154,7 +149,7 @@ export async function createAndUploadGitBundle(
     })
   }
 
-  // `git bundle create` refuses to create an empty bundle (exit 128), and
+  
   
   
   
@@ -175,14 +170,14 @@ export async function createAndUploadGitBundle(
     }
   }
 
-  // stash create writes a dangling commit — doesn't touch refs/stash or
-  // the working tree. Untracked files intentionally excluded.
+  
+  
   const stashResult = await execFileNoThrowWithCwd(
     gitExe(),
     ['stash', 'create'],
     { cwd: gitRoot, abortSignal: opts?.signal },
   )
-  // exit 0 + empty stdout = nothing to stash. Nonzero is rare; non-fatal.
+  
   const wipStashSha = stashResult.code === 0 ? stashResult.stdout.trim() : ''
   const hasWip = wipStashSha !== ''
   if (stashResult.code !== 0) {
@@ -191,7 +186,7 @@ export async function createAndUploadGitBundle(
     )
   } else if (hasWip) {
     logForDebugging(`[gitBundle] Captured WIP as stash ${wipStashSha}`)
-    // env-runner reads the SHA via bundle list-heads refs/seed/stash.
+    
     await execFileNoThrowWithCwd(
       gitExe(),
       ['update-ref', 'refs/seed/stash', wipStashSha],
@@ -201,7 +196,7 @@ export async function createAndUploadGitBundle(
 
   const bundlePath = generateTempFilePath('ccr-seed', '.bundle')
 
-  // git leaves a partial file on nonzero exit (e.g. empty-repo 128).
+  
   try {
     const maxBytes =
       getFeatureValue_CACHED_MAY_BE_STALE<number | null>(
@@ -231,7 +226,7 @@ export async function createAndUploadGitBundle(
       }
     }
 
-    // Fixed relativePath so CCR can locate it.
+    
     const upload = await uploadFile(bundlePath, '_source_seed.bundle', config, {
       signal: opts?.signal,
     })
@@ -268,8 +263,8 @@ export async function createAndUploadGitBundle(
     } catch {
       logForDebugging(`[gitBundle] Could not delete ${bundlePath} (non-fatal)`)
     }
-    // Always delete — also sweeps a stale ref from a crashed prior run.
-    // update-ref -d on a missing ref exits 0.
+    
+    
     for (const ref of ['refs/seed/stash', 'refs/seed/root']) {
       await execFileNoThrowWithCwd(gitExe(), ['update-ref', '-d', ref], {
         cwd: gitRoot,

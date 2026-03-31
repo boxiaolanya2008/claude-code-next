@@ -6,8 +6,6 @@ import { getClaudeConfigHomeDir } from './envUtils.js'
 import { errorMessage, getErrnoCode } from './errors.js'
 import { getPlatform } from './platform.js'
 
-// undefined = not yet loaded (need to check disk)
-
 let sessionEnvScript: string | null | undefined = undefined
 
 export async function getSessionEnvDirPath(): Promise<string> {
@@ -87,7 +85,7 @@ export async function getSessionEnvironmentScript(): Promise<string | null> {
     }
   }
 
-  // Load hook environment files from session directory
+  
   const sessionEnvDir = await getSessionEnvDirPath()
   try {
     const files = await readdir(sessionEnvDir)

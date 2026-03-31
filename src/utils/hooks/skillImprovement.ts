@@ -81,7 +81,7 @@ function createSkillImprovementHook() {
         return false
       }
 
-      // Only run every TURN_BATCH_SIZE user messages
+      
       const userCount = count(context.messages, m => m.type === 'user')
       if (userCount - lastAnalyzedCount < TURN_BATCH_SIZE) {
         return false
@@ -93,7 +93,7 @@ function createSkillImprovementHook() {
 
     buildMessages(context) {
       const projectSkill = findProjectSkill()!
-      // Only analyze messages since the last check — the skill definition
+      
       
       const newMessages = context.messages.slice(lastAnalyzedIndex)
       lastAnalyzedIndex = context.messages.length
@@ -152,7 +152,7 @@ Output <updates>[]</updates> if no updates are needed.`,
           updateCount: result.result
             .length as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           uuid: result.uuid as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          // _PROTO_skill_name routes to the privileged skill_name BQ column.
+          
           _PROTO_skill_name:
             skillName as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
         })
@@ -181,10 +181,6 @@ export function initSkillImprovement(): void {
   }
 }
 
-/**
- * Apply skill improvements by calling a side-channel LLM to rewrite the skill file.
- * Fire-and-forget — does not block the main conversation.
- */
 export async function applySkillImprovement(
   skillName: string,
   updates: SkillUpdate[],

@@ -58,16 +58,6 @@ type ExecaResultWithError = {
   signal?: string
 }
 
-/**
- * Extracts a human-readable error message from an execa result.
- *
- * Priority order:
- * 1. shortMessage - execa's human-readable error (e.g., "Command failed with exit code 1: ...")
- *    This is preferred because it already includes signal info when a process is killed,
- *    making it more informative than just the signal name.
- * 2. signal - the signal that killed the process (e.g., "SIGTERM")
- * 3. errorCode - fallback to just the numeric exit code
- */
 function getErrorMessage(
   result: ExecaResultWithError,
   errorCode: number,
@@ -81,9 +71,6 @@ function getErrorMessage(
   return String(errorCode)
 }
 
-/**
- * execFile, but always resolves (never throws)
- */
 export function execFileNoThrowWithCwd(
   file: string,
   args: string[],
@@ -104,7 +91,7 @@ export function execFileNoThrowWithCwd(
   },
 ): Promise<{ stdout: string; stderr: string; code: number; error?: string }> {
   return new Promise(resolve => {
-    // Use execa for cross-platform .bat/.cmd compatibility on Windows
+    
     execa(file, args, {
       maxBuffer,
       signal: abortSignal,
@@ -114,7 +101,7 @@ export function execFileNoThrowWithCwd(
       shell,
       stdin: finalStdin,
       input: finalInput,
-      reject: false, // Don't throw on non-zero exit codes
+      reject: false, 
     })
       .then(result => {
         if (result.failed) {

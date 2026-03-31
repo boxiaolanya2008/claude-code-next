@@ -147,7 +147,7 @@ export function stripImagesFromMessages(messages: Message[]): Message[] {
         hasMediaBlock = true
         return [{ type: 'text' as const, text: '[document]' }]
       }
-      // Also strip images/documents nested inside tool_result content arrays
+      
       if (block.type === 'tool_result' && Array.isArray(block.content)) {
         let toolHasMedia = false
         const newToolContent = block.content.map(item => {
@@ -183,15 +183,6 @@ export function stripImagesFromMessages(messages: Message[]): Message[] {
   })
 }
 
-/**
- * Strip attachment types that are re-injected post-compaction anyway.
- * skill_discovery/skill_listing are re-surfaced by resetSentSkillNames()
- * + the next turn's discovery signal, so feeding them to the summarizer
- * wastes tokens and pollutes the summary with stale skill suggestions.
- *
- * No-op when EXPERIMENTAL_SKILL_SEARCH is off (the attachment types
- * don't exist on external builds).
- */
 export function stripReinjectedAttachments(messages: Message[]): Message[] {
   if (feature('EXPERIMENTAL_SKILL_SEARCH')) {
     return messages.filter(
@@ -215,7 +206,7 @@ export function truncateHeadForPTLRetry(
   messages: Message[],
   ptlResponse: AssistantMessage,
 ): Message[] | null {
-  // Strip our own synthetic marker from a previous retry before grouping.
+  
   
   
   const input =
@@ -242,16 +233,16 @@ export function truncateHeadForPTLRetry(
     dropCount = Math.max(1, Math.floor(groups.length * 0.2))
   }
 
-  // Keep at least one group so there's something to summarize.
+  
   dropCount = Math.min(dropCount, groups.length - 1)
   if (dropCount < 1) return null
 
   const sliced = groups.slice(dropCount).flat()
-  // groupMessagesByApiRound puts the preamble in group 0 and starts every
-  // subsequent group with an assistant message. Dropping group 0 leaves an
-  // assistant-first sequence which the API rejects (first message must be
-  // role=user). Prepend a synthetic user marker — ensureToolResultPairing
-  // already handles any orphaned tool_results this creates.
+  
+  
+  
+  
+  
   if (sliced[0]?.type === 'assistant') {
     return [
       createUserMessage({ content: PTL_RETRY_MARKER, isMeta: true }),
@@ -280,11 +271,6 @@ export interface CompactionResult {
   compactionUsage?: ReturnType<typeof getTokenUsage>
 }
 
-/**
- * Diagnosis context passed from autoCompactIfNeeded into compactConversation.
- * Lets the tengu_compact event disambiguate same-chain loops (H2) from
- * cross-agent (H1/H5) and manual-vs-auto (H3) compactions without joins.
- */
 export type RecompactionInfo = {
   isRecompactionInChain: boolean
   turnsSincePreviousCompact: number
@@ -293,11 +279,6 @@ export type RecompactionInfo = {
   querySource?: QuerySource
 }
 
-/**
- * Build the base post-compact messages array from a CompactionResult.
- * This ensures consistent ordering across all compaction paths.
- * Order: boundaryMarker, summaryMessages, messagesToKeep, attachments, hookResults
- */
 export function buildPostCompactMessages(result: CompactionResult): Message[] {
   return [
     result.boundaryMarker,
@@ -308,15 +289,6 @@ export function buildPostCompactMessages(result: CompactionResult): Message[] {
   ]
 }
 
-/**
- * Annotate a compact boundary with relink metadata for messagesToKeep.
- * Preserved messages keep their original parentUuids on disk (dedup-skipped);
- * the loader uses this to patch head→anchor and anchor's-other-children→tail.
- *
- * `anchorUuid` = what sits immediately before keep[0] in the desired chain:
- *   - suffix-preserving (reactive/session-memory): last summary message
- *   - prefix-preserving (partial compact): the boundary itself
- */
 export function annotateBoundaryWithPreservedSegment(
   boundary: SystemCompactBoundaryMessage,
   anchorUuid: UUID,
@@ -337,11 +309,6 @@ export function annotateBoundaryWithPreservedSegment(
   }
 }
 
-/**
- * Merges user-supplied custom instructions with hook-provided instructions.
- * User instructions come first; hook instructions are appended.
- * Empty strings normalize to undefined.
- */
 export function mergeHookInstructions(
   userInstructions: string | undefined,
   hookInstructions: string | undefined,
@@ -351,10 +318,6 @@ export function mergeHookInstructions(
   return `${userInstructions}\n\n${hookInstructions}`
 }
 
-/**
- * Creates a compact version of a conversation by summarizing older messages
- * and preserving recent conversation history.
- */
 export async function compactConversation(
   messages: Message[],
   context: ToolUseContext,
@@ -454,7 +417,7 @@ export async function compactConversation(
       })
       messagesToSummarize = truncated
       
-      // not the messages param — thread the truncated set through both paths.
+      
       retryCacheSafeParams = {
         ...retryCacheSafeParams,
         forkContextMessages: truncated,
@@ -485,7 +448,7 @@ export async function compactConversation(
       throw new Error(summary)
     }
 
-    // Store the current file state before clearing
+    
     const preCompactReadFileState = cacheToObject(context.readFileState)
 
     
@@ -518,20 +481,20 @@ export async function compactConversation(
       postCompactFileAttachments.push(planAttachment)
     }
 
-    // Add plan mode instructions if currently in plan mode, so the model
+    
     
     const planModeAttachment = await createPlanModeAttachmentIfNeeded(context)
     if (planModeAttachment) {
       postCompactFileAttachments.push(planModeAttachment)
     }
 
-    // Add skill attachment if skills were invoked in this session
+    
     const skillAttachment = createSkillAttachmentIfNeeded(context.agentId)
     if (skillAttachment) {
       postCompactFileAttachments.push(skillAttachment)
     }
 
-    // Compaction ate prior delta attachments. Re-announce from the current
+    
     
     
     
@@ -596,7 +559,7 @@ export async function compactConversation(
 
     
     
-    // NOT the size of the resulting context. Kept for event-field continuity.
+    
     const compactionCallTotalTokens = tokenCountFromLastAPIResponse([
       summaryResponse,
     ])
@@ -620,7 +583,7 @@ export async function compactConversation(
 
     logEvent('tengu_compact', {
       preCompactTokenCount,
-      // Kept for continuity — semantically the compact API call's total usage
+      
       postCompactTokenCount: compactionCallTotalTokens,
       truePostCompactTokenCount,
       autoCompactThreshold: recompactionInfo?.autoCompactThreshold ?? -1,
@@ -650,9 +613,9 @@ export async function compactConversation(
           compactionUsage.output_tokens
         : 0,
       promptCacheSharingEnabled,
-      // analyzeContext walks every content block (~11ms on a 4.5K-message
-      // session) purely for this telemetry breakdown. Computed here, past
-      // the compaction-API await, so the sync walk doesn't starve the
+      
+      
+      
       
       
       ...(() => {
@@ -718,7 +681,7 @@ export async function compactConversation(
       compactionUsage,
     }
   } catch (error) {
-    // Only show the error notification for manual /compact.
+    
     
     
     if (!isAutoCompact) {
@@ -733,13 +696,6 @@ export async function compactConversation(
   }
 }
 
-/**
- * Performs a partial compaction around the selected message index.
- * Direction 'from': summarizes messages after the index, keeps earlier ones.
- *   Prompt cache for kept (earlier) messages is preserved.
- * Direction 'up_to': summarizes messages before the index, keeps later ones.
- *   Prompt cache is invalidated since the summary precedes the kept messages.
- */
 export async function partialCompactConversation(
   allMessages: Message[],
   pivotIndex: number,
@@ -754,7 +710,7 @@ export async function partialCompactConversation(
         ? allMessages.slice(0, pivotIndex)
         : allMessages.slice(pivotIndex)
     
-    // summary_B sits BEFORE kept, so a stale boundary_A in kept wins
+    
     
     
     
@@ -820,8 +776,8 @@ export async function partialCompactConversation(
       messagesSummarized: messagesToSummarize.length,
     }
 
-    // 'up_to' prefix hits cache directly; 'from' sends all (tail wouldn't cache).
-    // PTL retry breaks the cache prefix but unblocks the user (CC-1180).
+    
+    
     let apiMessages = direction === 'up_to' ? messagesToSummarize : allMessages
     let retryCacheSafeParams =
       direction === 'up_to'
@@ -886,12 +842,12 @@ export async function partialCompactConversation(
       throw new Error(summary)
     }
 
-    // Store the current file state before clearing
+    
     const preCompactReadFileState = cacheToObject(context.readFileState)
     context.readFileState.clear()
     context.loadedNestedMemoryPaths?.clear()
-    // Intentionally NOT resetting sentSkillNames — see compactConversation()
-    // for rationale (~4K tokens saved per compact event).
+    
+    
 
     const [fileAttachments, asyncAgentAttachments] = await Promise.all([
       createPostCompactFileAttachments(
@@ -912,7 +868,7 @@ export async function partialCompactConversation(
       postCompactFileAttachments.push(planAttachment)
     }
 
-    // Add plan mode instructions if currently in plan mode
+    
     const planModeAttachment = await createPlanModeAttachmentIfNeeded(context)
     if (planModeAttachment) {
       postCompactFileAttachments.push(planModeAttachment)
@@ -923,8 +879,8 @@ export async function partialCompactConversation(
       postCompactFileAttachments.push(skillAttachment)
     }
 
-    // Re-announce only what was in the summarized portion — messagesToKeep
-    // is scanned, so anything already announced there is skipped.
+    
+    
     for (const att of getDeferredToolsDeltaAttachment(
       context.options.tools,
       context.options.mainLoopModel,
@@ -975,7 +931,7 @@ export async function partialCompactConversation(
         compactionUsage?.cache_creation_input_tokens ?? 0,
     })
 
-    // Progress messages aren't loggable, so forkSessionImpl would null out
+    
     
     const lastPreCompactUuid =
       direction === 'up_to'
@@ -990,7 +946,7 @@ export async function partialCompactConversation(
       messagesToSummarize.length,
     )
     
-    // simpler than tracking which half each tool lived in.
+    
     const preCompactDiscovered = extractDiscoveredToolNames(allMessages)
     if (preCompactDiscovered.size > 0) {
       boundaryMarker.compactMetadata.preCompactDiscoveredTools = [
@@ -1119,7 +1075,7 @@ async function streamCompactSummary({
   preCompactTokenCount: number
   cacheSafeParams: CacheSafeParams
 }): Promise<AssistantMessage> {
-  // When prompt cache sharing is enabled, use forked agent to reuse the
+  
   
   
   
@@ -1149,13 +1105,13 @@ async function streamCompactSummary({
   try {
     if (promptCacheSharingEnabled) {
       try {
-        // DO NOT set maxOutputTokens here. The fork piggybacks on the main thread's
-        // prompt cache by sending identical cache-key params (system, tools, model,
-        // messages prefix, thinking config). Setting maxOutputTokens would clamp
-        // budget_tokens via Math.min(budget, maxOutputTokens-1) in claude.ts,
-        // creating a thinking config mismatch that invalidates the cache.
-        // The streaming fallback path (below) can safely set maxOutputTokensOverride
-        // since it doesn't share cache with the main thread.
+        
+        
+        
+        
+        
+        
+        
         const result = await runForkedAgent({
           promptMessages: [summaryRequest],
           cacheSafeParams,
@@ -1164,23 +1120,23 @@ async function streamCompactSummary({
           forkLabel: 'compact',
           maxTurns: 1,
           skipCacheWrite: true,
-          // Pass the compact context's abortController so user Esc aborts the
-          // fork — same signal the streaming fallback uses at
-          // `signal: context.abortController.signal` below.
+          
+          
+          
           overrides: { abortController: context.abortController },
         })
         const assistantMsg = getLastAssistantMessage(result.messages)
         const assistantText = assistantMsg
           ? getAssistantMessageText(assistantMsg)
           : null
-        // Guard isApiErrorMessage: query() catches API errors (including
-        // APIUserAbortError on ESC) and yields them as synthetic assistant
-        // messages. Without this check, an aborted compact "succeeds" with
-        // "Request was aborted." as the summary — the text doesn't start with
+        
+        
+        
+        
         
         if (assistantMsg && assistantText && !assistantMsg.isApiErrorMessage) {
-          // Skip success logging for PTL error text — it's returned so the
-          // caller's retry loop catches it, but it's not a successful summary.
+          
+          
           if (!assistantText.startsWith(PROMPT_TOO_LONG_ERROR_MESSAGE)) {
             logEvent('tengu_compact_cache_sharing_success', {
               preCompactTokenCount,
@@ -1218,7 +1174,7 @@ async function streamCompactSummary({
       }
     }
 
-    // Regular streaming path (fallback when cache sharing fails or is disabled)
+    
     const retryEnabled = getFeatureValue_CACHED_MAY_BE_STALE(
       'tengu_compact_streaming_retry',
       false,
@@ -1226,12 +1182,12 @@ async function streamCompactSummary({
     const maxAttempts = retryEnabled ? MAX_COMPACT_STREAMING_RETRIES : 1
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      // Reset state for retry
+      
       let hasStartedStreaming = false
       let response: AssistantMessage | undefined
       context.setResponseLength?.(() => 0)
 
-      // Check if tool search is enabled using the main loop's tools list.
+      
       
       const useToolSearch = await isToolSearchEnabled(
         context.options.mainLoopModel,
@@ -1359,30 +1315,13 @@ async function streamCompactSummary({
       throw new Error(ERROR_MESSAGE_INCOMPLETE_RESPONSE)
     }
 
-    // This should never be reached due to the throw above, but TypeScript needs it
+    
     throw new Error(ERROR_MESSAGE_INCOMPLETE_RESPONSE)
   } finally {
     clearInterval(activityInterval)
   }
 }
 
-/**
- * Creates attachment messages for recently accessed files to restore them after compaction.
- * This prevents the model from having to re-read files that were recently accessed.
- * Re-reads files using FileReadTool to get fresh content with proper validation.
- * Files are selected based on recency, but constrained by both file count and token budget limits.
- *
- * Files already present as Read tool results in preservedMessages are skipped —
- * re-injecting identical content the model can already see in the preserved tail
- * is pure waste (up to 25K tok/compact). Mirrors the diff-against-preserved
- * pattern that getDeferredToolsDeltaAttachment uses at the same call sites.
- *
- * @param readFileState The current file state tracking recently read files
- * @param toolUseContext The tool use context for calling FileReadTool
- * @param maxFiles Maximum number of files to restore (default: 5)
- * @param preservedMessages Messages kept post-compact; Read results here are skipped
- * @returns Array of attachment messages for the most recently accessed files that fit within token budget
- */
 export async function createPostCompactFileAttachments(
   readFileState: Record<string, { content: string; timestamp: number }>,
   toolUseContext: ToolUseContext,
@@ -1434,10 +1373,6 @@ export async function createPostCompactFileAttachments(
   })
 }
 
-/**
- * Creates a plan file attachment if a plan file exists for the current session.
- * This ensures the plan is preserved after compaction.
- */
 export function createPlanAttachmentIfNeeded(
   agentId?: AgentId,
 ): AttachmentMessage | null {
@@ -1456,12 +1391,6 @@ export function createPlanAttachmentIfNeeded(
   })
 }
 
-/**
- * Creates an attachment for invoked skills to preserve their content across compaction.
- * Only includes skills scoped to the given agent (or main session when agentId is null/undefined).
- * This ensures skill guidelines remain available after the conversation is summarized
- * without leaking skills from other agent contexts.
- */
 export function createSkillAttachmentIfNeeded(
   agentId?: string,
 ): AttachmentMessage | null {
@@ -1471,7 +1400,7 @@ export function createSkillAttachmentIfNeeded(
     return null
   }
 
-  // Sorted most-recent-first so budget pressure drops the least-relevant skills.
+  
   
   
   let usedTokens = 0
@@ -1504,12 +1433,6 @@ export function createSkillAttachmentIfNeeded(
   })
 }
 
-/**
- * Creates a plan_mode attachment if the user is currently in plan mode.
- * This ensures the model continues to operate in plan mode after compaction
- * (otherwise it would lose the plan mode instructions since those are
- * normally only injected on tool-use turns via getAttachmentMessages).
- */
 export async function createPlanModeAttachmentIfNeeded(
   context: ToolUseContext,
 ): Promise<AttachmentMessage | null> {
@@ -1530,12 +1453,6 @@ export async function createPlanModeAttachmentIfNeeded(
   })
 }
 
-/**
- * Creates attachments for async agents so the model knows about them after
- * compaction. Covers both agents still running in the background (so the model
- * doesn't spawn a duplicate) and agents that have finished but whose results
- * haven't been retrieved yet.
- */
 export async function createAsyncAgentAttachmentsIfNeeded(
   context: ToolUseContext,
 ): Promise<AttachmentMessage[]> {
@@ -1569,15 +1486,6 @@ export async function createAsyncAgentAttachmentsIfNeeded(
   })
 }
 
-/**
- * Scan messages for Read tool_use blocks and collect their file_path inputs
- * (normalized via expandPath). Used to dedup post-compact file restoration
- * against what's already visible in the preserved tail.
- *
- * Skips Reads whose tool_result is a dedup stub — the stub points at an
- * earlier full Read that may have been compacted away, so we want
- * createPostCompactFileAttachments to re-inject the real content.
- */
 function collectReadToolFilePaths(messages: Message[]): Set<string> {
   const stubIds = new Set<string>()
   for (const message of messages) {
@@ -1648,12 +1556,12 @@ function shouldExcludeFromPostCompactRestore(
       return true
     }
   } catch {
-    // If we can't get plan file path, continue with other checks
+    
   }
 
-  // Exclude all types of claude.md files
-  // TODO: Refactor to use isMemoryFilePath() from claudemd.ts for consistency
-  // and to also match child directory memory files (.claude/rules/*.md, etc.)
+  
+  
+  
   try {
     const normalizedMemoryPaths = new Set(
       MEMORY_TYPE_VALUES.map(type => expandPath(getMemoryPath(type))),
@@ -1663,7 +1571,7 @@ function shouldExcludeFromPostCompactRestore(
       return true
     }
   } catch {
-    // If we can't get memory paths, continue
+    
   }
 
   return false

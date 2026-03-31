@@ -18,15 +18,8 @@ export type ReplBridgeTransport = {
   setOnClose(callback: (closeCode?: number) => void): void
   setOnConnect(callback: () => void): void
   connect(): void
-  /**
-   * High-water mark of the underlying read stream's event sequence numbers.
-   * replBridge reads this before swapping transports so the new one can
-   * resume from where the old one left off (otherwise the server replays
-   * the entire session history from seq 0).
-   *
-   * v1 returns 0 — Session-Ingress WS doesn't use SSE sequence numbers;
-   * replay-on-reconnect is handled by the server-side message cursor.
-   */
+  
+
   getLastSequenceNum(): number
   
 
@@ -34,27 +27,16 @@ export type ReplBridgeTransport = {
   
 
   reportState(state: SessionState): void
-  /** PUT /worker external_metadata (v2 only; v1 is a no-op). */
+  
   reportMetadata(metadata: Record<string, unknown>): void
-  /**
-   * POST /worker/events/{id}/delivery (v2 only; v1 is a no-op). Populates
-   * CCR's processing_at/processed_at columns. `received` is auto-fired by
-   * CCRClient on every SSE frame and is not exposed here.
-   */
+  
+
   reportDelivery(eventId: string, status: 'processing' | 'processed'): void
-  /**
-   * Drain the write queue before close() (v2 only; v1 resolves
-   * immediately — HybridTransport POSTs are already awaited per-write).
-   */
+  
+
   flush(): Promise<void>
 }
 
-/**
- * v1 adapter: HybridTransport already has the full surface (it extends
- * WebSocketTransport which has setOnConnect + getStateLabel). This is a
- * no-op wrapper that exists only so replBridge's `transport` variable
- * has a single type.
- */
 export function createV1ReplTransport(
   hybrid: HybridTransport,
 ): ReplBridgeTransport {
@@ -68,9 +50,9 @@ export function createV1ReplTransport(
     setOnClose: cb => hybrid.setOnClose(cb),
     setOnConnect: cb => hybrid.setOnConnect(cb),
     connect: () => void hybrid.connect(),
-    // v1 Session-Ingress WS doesn't use SSE sequence numbers; replay
-    // semantics are different. Always return 0 so the seq-num carryover
-    // logic in replBridge is a no-op for v1.
+    
+    
+    
     getLastSequenceNum: () => 0,
     get droppedBatchCount() {
       return hybrid.droppedBatchCount
@@ -82,20 +64,6 @@ export function createV1ReplTransport(
   }
 }
 
-/**
- * v2 adapter: wrap SSETransport (reads) + CCRClient (writes, heartbeat,
- * state, delivery tracking).
- *
- * Auth: v2 endpoints validate the JWT's session_id claim (register_worker.go:32)
- * and worker role (environment_auth.py:856). OAuth tokens have neither.
- * This is the inverse of the v1 replBridge path, which deliberately uses OAuth.
- * The JWT is refreshed when the poll loop re-dispatches work — the caller
- * invokes createV2ReplTransport again with the fresh token.
- *
- * Registration happens here (not in the caller) so the entire v2 handshake
- * is one async step. registerWorker failure propagates — replBridge will
- * catch it and stay on the poll loop.
- */
 export async function createV2ReplTransport(opts: {
   sessionUrl: string
   ingressToken: string
@@ -137,7 +105,7 @@ export async function createV2ReplTransport(opts: {
       return { Authorization: `Bearer ${token}` }
     }
   } else {
-    // CCRClient.request() and SSETransport.connect() both read auth via
+    
     
     
     updateSessionIngressAuthToken(ingressToken)
@@ -166,9 +134,9 @@ export async function createV2ReplTransport(opts: {
     getAuthHeaders,
     heartbeatIntervalMs: opts.heartbeatIntervalMs,
     heartbeatJitterFraction: opts.heartbeatJitterFraction,
-    // Default is process.exit(1) — correct for spawn-mode children. In-process,
-    // that kills the REPL. Close instead: replBridge's onClose wakes the poll
-    // loop, which picks up the server's re-dispatch (with fresh epoch).
+    
+    
+    
     onEpochMismatch: () => {
       logForDebugging(
         '[bridge:repl] CCR v2: epoch superseded (409) — closing for poll-loop recovery',
@@ -187,14 +155,14 @@ export async function createV2ReplTransport(opts: {
           { level: 'error' },
         )
       }
-      // Don't return — the calling request() code continues after the 409
-      // branch, so callers see the logged warning and a false return. We
-      // throw to unwind; the uploaders catch it as a send failure.
+      
+      
+      
       throw new Error('epoch superseded')
     },
   })
 
-  // CCRClient's constructor wired sse.setOnEvent → reportDelivery('received').
+  
   
   
   
@@ -217,8 +185,8 @@ export async function createV2ReplTransport(opts: {
   
   
   
-  // sse.connect() opens the stream (events flow to onData/onClose immediately),
-  // and ccr.initialize().then() fires onConnectCb.
+  
+  
   
   
   
@@ -235,8 +203,8 @@ export async function createV2ReplTransport(opts: {
       return ccr.writeEvent(msg)
     },
     async writeBatch(msgs) {
-      // SerialBatchEventUploader already batches internally (maxBatchSize=100);
-      // sequential enqueue preserves order and the uploader coalesces.
+      
+      
       
       
       for (const m of msgs) {
@@ -250,13 +218,13 @@ export async function createV2ReplTransport(opts: {
       sse.close()
     },
     isConnectedStatus() {
-      // Write-readiness, not read-readiness — replBridge checks this
+      
       
       return ccrInitialized
     },
     getStateLabel() {
-      // SSETransport doesn't expose its state string; synthesize from
-      // what we can observe. replBridge only uses this for debug logging.
+      
+      
       if (sse.isClosedStatus()) return 'closed'
       if (sse.isConnectedStatus()) return ccrInitialized ? 'connected' : 'init'
       return 'connecting'
@@ -266,9 +234,9 @@ export async function createV2ReplTransport(opts: {
     },
     setOnClose(cb) {
       onCloseCb = cb
-      // SSE reconnect-budget exhaustion fires onClose(undefined) — map to
-      // 4092 so ws_closed telemetry can distinguish it from HTTP-status
-      // closes (SSETransport:280 passes response.status). Stop CCRClient's
+      
+      
+      
       
       
       sse.setOnClose(code => {
@@ -282,7 +250,7 @@ export async function createV2ReplTransport(opts: {
     getLastSequenceNum() {
       return sse.getLastSequenceNum()
     },
-    // v2 write path (CCRClient) doesn't set maxConsecutiveFailures — no drops.
+    
     droppedBatchCount: 0,
     reportState(state) {
       ccr.reportState(state)
@@ -297,13 +265,13 @@ export async function createV2ReplTransport(opts: {
       return ccr.flush()
     },
     connect() {
-      // Outbound-only: skip the SSE read stream entirely — no inbound
-      // events to receive, no delivery ACKs to send. Only the CCRClient
-      // write path (POST /worker/events) and heartbeat are needed.
+      
+      
+      
       if (!opts.outboundOnly) {
-        // Fire-and-forget — SSETransport.connect() awaits readStream()
-        // (the read loop) and only resolves on stream close/error. The
-        // spawn-mode path in remoteIO.ts does the same void discard.
+        
+        
+        
         void sse.connect()
       }
       void ccr.initialize(epoch).then(
@@ -319,13 +287,13 @@ export async function createV2ReplTransport(opts: {
             `[bridge:repl] CCR v2 initialize failed: ${errorMessage(err)}`,
             { level: 'error' },
           )
-          // Close transport resources and notify replBridge via onClose
-          // so the poll loop can retry on the next work dispatch.
-          // Without this callback, replBridge never learns the transport
-          // failed to initialize and sits with transport === null forever.
+          
+          
+          
+          
           ccr.close()
           sse.close()
-          onCloseCb?.(4091) // 4091 = init failure, distinguishable from 4090 epoch mismatch
+          onCloseCb?.(4091) 
         },
       )
     },

@@ -28,16 +28,6 @@ type StoredPastedContent = {
   filename?: string
 }
 
-/**
- * Claude Code parses history for pasted content references to match back to
- * pasted content. The references look like:
- *   Text: [Pasted text #1 +10 lines]
- *   Image: [Image #2]
- * The numbers are expected to be unique within a single prompt but not across
- * prompts. We choose numeric, auto-incrementing IDs as they are more
- * user-friendly than other ID options.
- */
-
 export function getPastedTextRefNumLines(text: string): number {
   return (text.match(/\r\n|\r|\n/g) || []).length
 }
@@ -68,10 +58,6 @@ export function parseReferences(
     .filter(match => match.id > 0)
 }
 
-/**
- * Replace [Pasted text #N] placeholders in input with their actual content.
- * Image refs are left alone — they become content blocks, not inlined text.
- */
 export function expandPastedTextRefs(
   input: string,
   pastedContents: Record<number, PastedContent>,
@@ -105,7 +91,7 @@ async function* makeLogEntryReader(): AsyncGenerator<LogEntry> {
     yield pendingEntries[i]!
   }
 
-  // Read from global history file (shared across all projects)
+  
   const historyPath = join(getClaudeConfigHomeDir(), 'history.jsonl')
 
   try {
@@ -113,7 +99,7 @@ async function* makeLogEntryReader(): AsyncGenerator<LogEntry> {
       try {
         const entry = deserializeLogEntry(line)
         
-        // so filter here so both getHistory (Up-arrow) and makeHistoryReader
+        
         
         if (
           entry.sessionId === currentSession &&
@@ -123,7 +109,7 @@ async function* makeLogEntryReader(): AsyncGenerator<LogEntry> {
         }
         yield entry
       } catch (error) {
-        // Not a critical error - just skip malformed lines
+        
         logForDebugging(`Failed to parse history line: ${error}`)
       }
     }
@@ -148,11 +134,6 @@ export type TimestampedHistoryEntry = {
   resolve: () => Promise<HistoryEntry>
 }
 
-/**
- * Current-project history for the ctrl+r picker: deduped by display text,
- * newest first, with timestamps. Paste contents are resolved lazily via
- * `resolve()` — the picker only reads display+timestamp for the list.
- */
 export async function* getTimestampedHistory(): AsyncGenerator<TimestampedHistoryEntry> {
   const currentProject = getProjectRoot()
   const seen = new Set<string>()
@@ -173,14 +154,6 @@ export async function* getTimestampedHistory(): AsyncGenerator<TimestampedHistor
   }
 }
 
-/**
- * Get history entries for the current project, with current session's entries first.
- *
- * Entries from the current session are yielded before entries from other sessions,
- * so concurrent sessions don't interleave their up-arrow history. Within each group,
- * order is newest-first. Scans the same MAX_HISTORY_ITEMS window as before —
- * entries are reordered within that window, not beyond it.
- */
 export async function* getHistory(): AsyncGenerator<HistoryEntry> {
   const currentProject = getProjectRoot()
   const currentSession = getSessionId()
@@ -188,7 +161,7 @@ export async function* getHistory(): AsyncGenerator<HistoryEntry> {
   let yielded = 0
 
   for await (const entry of makeLogEntryReader()) {
-    // Skip malformed entries (corrupted file, old format, or invalid JSON structure)
+    
     if (!entry || typeof entry.project !== 'string') continue
     if (entry.project !== currentProject) continue
 
@@ -199,7 +172,7 @@ export async function* getHistory(): AsyncGenerator<HistoryEntry> {
       otherSessionEntries.push(entry)
     }
 
-    // Same MAX_HISTORY_ITEMS window as before — just reordered within it.
+    
     if (yielded + otherSessionEntries.length >= MAX_HISTORY_ITEMS) break
   }
 
@@ -218,13 +191,10 @@ type LogEntry = {
   sessionId?: string
 }
 
-/**
- * Resolve stored paste content to full PastedContent by fetching from paste store if needed.
- */
 async function resolveStoredPastedContent(
   stored: StoredPastedContent,
 ): Promise<PastedContent | null> {
-  // If we have inline content, use it directly
+  
   if (stored.content) {
     return {
       id: stored.id,
@@ -235,7 +205,7 @@ async function resolveStoredPastedContent(
     }
   }
 
-  // If we have a hash reference, fetch from paste store
+  
   if (stored.contentHash) {
     const content = await retrievePastedText(stored.contentHash)
     if (content) {
@@ -249,13 +219,10 @@ async function resolveStoredPastedContent(
     }
   }
 
-  // Content not available
+  
   return null
 }
 
-/**
- * Convert LogEntry to HistoryEntry by resolving paste store references.
- */
 async function logEntryToHistoryEntry(entry: LogEntry): Promise<HistoryEntry> {
   const pastedContents: Record<number, PastedContent> = {}
 
@@ -322,7 +289,7 @@ async function flushPromptHistory(retries: number): Promise<void> {
     return
   }
 
-  // Stop trying to flush history until the next user prompt
+  
   if (retries > 5) {
     return
   }
@@ -335,7 +302,7 @@ async function flushPromptHistory(retries: number): Promise<void> {
     isWriting = false
 
     if (pendingEntries.length > 0) {
-      // Avoid trying again in a hot loop
+      
       await sleep(500)
 
       void flushPromptHistory(retries + 1)
@@ -354,12 +321,12 @@ async function addToPromptHistory(
   const storedPastedContents: Record<number, StoredPastedContent> = {}
   if (entry.pastedContents) {
     for (const [id, content] of Object.entries(entry.pastedContents)) {
-      // Filter out images (they're stored separately in image-cache)
+      
       if (content.type === 'image') {
         continue
       }
 
-      // For small text content, store inline
+      
       if (content.content.length <= MAX_PASTED_CONTENT_LENGTH) {
         storedPastedContents[Number(id)] = {
           id: content.id,
@@ -369,8 +336,8 @@ async function addToPromptHistory(
           filename: content.filename,
         }
       } else {
-        // For large text content, compute hash synchronously and store reference
-        // The actual disk write happens async (fire-and-forget)
+        
+        
         const hash = hashPastedText(content.content)
         storedPastedContents[Number(id)] = {
           id: content.id,
@@ -379,7 +346,7 @@ async function addToPromptHistory(
           mediaType: content.mediaType,
           filename: content.filename,
         }
-        // Fire-and-forget disk write - don't block history entry creation
+        
         void storePastedText(hash, content.content)
       }
     }
@@ -400,21 +367,21 @@ async function addToPromptHistory(
 }
 
 export function addToHistory(command: HistoryEntry | string): void {
-  // Skip history when running in a tmux session spawned by Claude Code's Tungsten tool.
-  // This prevents verification/test sessions from polluting the user's real command history.
-  if (isEnvTruthy(process.env.CLAUDE_CODE_SKIP_PROMPT_HISTORY)) {
+  
+  
+  if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_SKIP_PROMPT_HISTORY)) {
     return
   }
 
-  // Register cleanup on first use
+  
   if (!cleanupRegistered) {
     cleanupRegistered = true
     registerCleanup(async () => {
-      // If there's an in-progress flush, wait for it
+      
       if (currentFlushPromise) {
         await currentFlushPromise
       }
-      // If there are still pending entries after the flush completed, do one final flush
+      
       if (pendingEntries.length > 0) {
         await immediateFlushHistory()
       }
@@ -430,17 +397,6 @@ export function clearPendingHistoryEntries(): void {
   skippedTimestamps.clear()
 }
 
-/**
- * Undo the most recent addToHistory call. Used by auto-restore-on-interrupt:
- * when Esc rewinds the conversation before any response arrives, the submit is
- * semantically undone — the history entry should be too, otherwise Up-arrow
- * shows the restored text twice (once from the input box, once from disk).
- *
- * Fast path pops from the pending buffer. If the async flush already won the
- * race (TTFT is typically >> disk write latency), the entry's timestamp is
- * added to a skip-set consulted by getHistory. One-shot: clears the tracked
- * entry so a second call is a no-op.
- */
 export function removeLastFromHistory(): void {
   if (!lastAddedEntry) return
   const entry = lastAddedEntry

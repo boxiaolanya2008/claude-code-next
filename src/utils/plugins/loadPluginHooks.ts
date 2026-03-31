@@ -57,7 +57,7 @@ function convertPluginHooksToMatchers(
     return pluginMatchers
   }
 
-  // Process each hook event - pass through all hook types with plugin context
+  
   for (const [event, matchers] of Object.entries(plugin.hooksConfig)) {
     const hookEvent = event as HookEvent
     if (!pluginMatchers[hookEvent]) {
@@ -80,9 +80,6 @@ function convertPluginHooksToMatchers(
   return pluginMatchers
 }
 
-/**
- * Load and register hooks from all enabled plugins
- */
 export const loadPluginHooks = memoize(async (): Promise<void> => {
   const { enabled } = await loadAllPluginsCacheOnly()
   const allPluginHooks: Record<HookEvent, PluginHookMatcher[]> = {
@@ -115,7 +112,7 @@ export const loadPluginHooks = memoize(async (): Promise<void> => {
     FileChanged: [],
   }
 
-  // Process each enabled plugin
+  
   for (const plugin of enabled) {
     if (!plugin.hooksConfig) {
       continue
@@ -130,8 +127,8 @@ export const loadPluginHooks = memoize(async (): Promise<void> => {
     }
   }
 
-  // Clear-then-register as an atomic pair. Previously the clear lived in
-  // clearPluginHookCache(), which meant any clearAllCaches() call (from
+  
+  
   
   
   
@@ -152,7 +149,7 @@ export const loadPluginHooks = memoize(async (): Promise<void> => {
 })
 
 export function clearPluginHookCache(): void {
-  // Only invalidate the memoize — do NOT wipe STATE.registeredHooks here.
+  
   
   
   
@@ -161,18 +158,8 @@ export function clearPluginHookCache(): void {
   loadPluginHooks.cache?.clear?.()
 }
 
-/**
- * Remove hooks from plugins no longer in the enabled set, without adding
- * hooks from newly-enabled plugins. Called from clearAllCaches() so
- * uninstalled/disabled plugins stop firing hooks immediately (gh-36995),
- * while newly-enabled plugins wait for /reload-plugins — consistent with
- * how commands/agents/MCP behave.
- *
- * The full swap (clear + register all) still happens via loadPluginHooks(),
- * which /reload-plugins awaits.
- */
 export async function pruneRemovedPluginHooks(): Promise<void> {
-  // Early return when nothing to prune — avoids seeding the loadAllPluginsCacheOnly
+  
   
   if (!getRegisteredHooks()) return
   const { enabled } = await loadAllPluginsCacheOnly()
@@ -184,7 +171,7 @@ export async function pruneRemovedPluginHooks(): Promise<void> {
   const current = getRegisteredHooks()
   if (!current) return
 
-  // Collect plugin hooks whose pluginRoot is still enabled, then swap via
+  
   
   
   
@@ -201,28 +188,10 @@ export async function pruneRemovedPluginHooks(): Promise<void> {
   registerHookCallbacks(survivors)
 }
 
-/**
- * Reset hot reload subscription state. Only for testing.
- */
 export function resetHotReloadState(): void {
   hotReloadSubscribed = false
   lastPluginSettingsSnapshot = undefined
 }
-
-/**
- * Build a stable string snapshot of the settings that feed into
- * `loadAllPluginsCacheOnly()` for change detection. Sorts keys so comparison is
- * deterministic regardless of insertion order.
- *
- * Hashes FOUR fields — not just enabledPlugins — because the memoized
- * loadAllPluginsCacheOnly() also reads strictKnownMarketplaces, blockedMarketplaces
- * (pluginLoader.ts:1933 via getBlockedMarketplaces), and
- * extraKnownMarketplaces. If remote managed settings set only one of
- * these (no enabledPlugins), a snapshot keyed only on enabledPlugins
- * would never diff, the listener would skip, and the memoized result
- * would retain the pre-remote marketplace allow/blocklist.
- * See #23085 / #23152 poisoned-cache discussion (Slack C09N89L3VNJ).
- */
 
 export function getPluginAffectingSettingsSnapshot(): string {
   const merged = getSettings_DEPRECATED()
@@ -240,12 +209,6 @@ export function getPluginAffectingSettingsSnapshot(): string {
   })
 }
 
-/**
- * Set up hot reload for plugin hooks when remote settings change.
- * When policySettings changes (e.g., from remote managed settings),
- * compares the plugin-affecting settings snapshot and only reloads if it
- * actually changed.
- */
 export function setupPluginHookHotReload(): void {
   if (hotReloadSubscribed) {
     return

@@ -39,12 +39,8 @@ export type SessionInfo = {
   sessionKey?: string
 }
 
-/**
- * Stable session key → session metadata. Persisted to ~/.claude/server-sessions.json
- * so sessions can be resumed across server restarts.
- */
 export type SessionIndexEntry = {
-  /** Server-assigned session ID (matches the subprocess's claude session). */
+  
   sessionId: string
   
   transcriptSessionId: string

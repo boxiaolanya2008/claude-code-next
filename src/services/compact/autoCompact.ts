@@ -34,7 +34,7 @@ export function getEffectiveContextWindowSize(model: string): number {
   )
   let contextWindow = getContextWindowForModel(model, getSdkBetas())
 
-  const autoCompactWindow = process.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW
+  const autoCompactWindow = process.env.CLAUDE_CODE_NEXT_AUTO_COMPACT_WINDOW
   if (autoCompactWindow) {
     const parsed = parseInt(autoCompactWindow, 10)
     if (!isNaN(parsed) && parsed > 0) {
@@ -118,7 +118,7 @@ export function calculateTokenWarningState(
     actualContextWindow - MANUAL_COMPACT_BUFFER_TOKENS
 
   
-  const blockingLimitOverride = process.env.CLAUDE_CODE_BLOCKING_LIMIT_OVERRIDE
+  const blockingLimitOverride = process.env.CLAUDE_CODE_NEXT_BLOCKING_LIMIT_OVERRIDE
   const parsedOverride = blockingLimitOverride
     ? parseInt(blockingLimitOverride, 10)
     : NaN
@@ -142,11 +142,11 @@ export function isAutoCompactEnabled(): boolean {
   if (isEnvTruthy(process.env.DISABLE_COMPACT)) {
     return false
   }
-  // Allow disabling just auto-compact (keeps manual /compact working)
+  
   if (isEnvTruthy(process.env.DISABLE_AUTO_COMPACT)) {
     return false
   }
-  // Check if user has disabled auto-compact in their settings
+  
   const userConfig = getGlobalConfig()
   return userConfig.autoCompactEnabled
 }
@@ -155,17 +155,17 @@ export async function shouldAutoCompact(
   messages: Message[],
   model: string,
   querySource?: QuerySource,
-  // Snip removes messages but the surviving assistant's usage still reflects
-  // pre-snip context, so tokenCountWithEstimation can't see the savings.
+  
+  
   
   snipTokensFreed = 0,
 ): Promise<boolean> {
-  // Recursion guards. session_memory and compact are forked agents that
+  
   
   if (querySource === 'session_memory' || querySource === 'compact') {
     return false
   }
-  // marble_origami is the ctx-agent — if ITS context blows up and
+  
   
   
   
@@ -180,7 +180,7 @@ export async function shouldAutoCompact(
     return false
   }
 
-  // Reactive-only mode: suppress proactive autocompact, let reactive compact
+  
   
   
   
@@ -192,7 +192,7 @@ export async function shouldAutoCompact(
     }
   }
 
-  // Context-collapse mode: same suppression. Collapse IS the context
+  
   
   
   
@@ -207,7 +207,7 @@ export async function shouldAutoCompact(
   
   
   if (feature('CONTEXT_COLLAPSE')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
+    
     const { isContextCollapseEnabled } =
       require('../contextCollapse/index.js') as typeof import('../contextCollapse/index.js')
     
@@ -248,7 +248,7 @@ export async function autoCompactIfNeeded(
     return { wasCompacted: false }
   }
 
-  // Circuit breaker: stop retrying after N consecutive failures.
+  
   
   
   if (
@@ -278,14 +278,14 @@ export async function autoCompactIfNeeded(
     querySource,
   }
 
-  // EXPERIMENT: Try session memory compaction first
+  
   const sessionMemoryResult = await trySessionMemoryCompaction(
     messages,
     toolUseContext.agentId,
     recompactionInfo.autoCompactThreshold,
   )
   if (sessionMemoryResult) {
-    // Reset lastSummarizedMessageId since session memory compaction prunes messages
+    
     
     setLastSummarizedMessageId(undefined)
     runPostCompactCleanup(querySource)
@@ -308,9 +308,9 @@ export async function autoCompactIfNeeded(
       messages,
       toolUseContext,
       cacheSafeParams,
-      true, // Suppress user questions for autocompact
-      undefined, // No custom instructions for autocompact
-      true, // isAutoCompact
+      true, 
+      undefined, 
+      true, 
       recompactionInfo,
     )
 
@@ -322,14 +322,14 @@ export async function autoCompactIfNeeded(
     return {
       wasCompacted: true,
       compactionResult,
-      // Reset failure count on success
+      
       consecutiveFailures: 0,
     }
   } catch (error) {
     if (!hasExactErrorMessage(error, ERROR_MESSAGE_USER_ABORT)) {
       logError(error)
     }
-    // Increment consecutive failure count for circuit breaker.
+    
     
     
     const prevFailures = tracking?.consecutiveFailures ?? 0

@@ -33,14 +33,12 @@ function log(message: string, ...args: unknown[]): void {
     
     
     void appendFile(LOG_FILE, logLine).catch(() => {
-      // Ignore file write errors
+      
     })
   }
   console.error(`[Claude Chrome Native Host] ${message}`, ...args)
 }
-/**
- * Send a message to stdout (Chrome native messaging protocol)
- */
+
 export function sendChromeMessage(message: string): void {
   const jsonBytes = Buffer.from(message, 'utf-8')
   const lengthBuffer = Buffer.alloc(4)
@@ -64,14 +62,14 @@ export async function runChromeNativeHost(): Promise<void> {
   while (true) {
     const message = await messageReader.read()
     if (message === null) {
-      // stdin closed, Chrome disconnected
+      
       break
     }
 
     await host.handleMessage(message)
   }
 
-  // Stop the server
+  
   await host.stop()
 }
 
@@ -118,15 +116,15 @@ class ChromeNativeHost {
           await unlink(socketDir)
         }
       } catch {
-        // Doesn't exist, that's fine
+        
       }
 
-      // Create socket directory with secure permissions
+      
       await mkdir(socketDir, { recursive: true, mode: 0o700 })
 
       
       await chmod(socketDir, 0o700).catch(() => {
-        // Ignore
+        
       })
 
       
@@ -144,15 +142,15 @@ class ChromeNativeHost {
             process.kill(pid, 0)
             
           } catch {
-            // Process is dead, remove stale socket
+            
             await unlink(join(socketDir, file)).catch(() => {
-              // Ignore
+              
             })
             log(`Removed stale socket for PID ${pid}`)
           }
         }
       } catch {
-        // Ignore errors scanning directory
+        
       }
     }
 
@@ -189,7 +187,7 @@ class ChromeNativeHost {
       return
     }
 
-    // Close all MCP clients
+    
     for (const [, client] of this.mcpClients) {
       client.socket.destroy()
     }
@@ -203,16 +201,16 @@ class ChromeNativeHost {
       this.server = null
     }
 
-    // Cleanup socket file
+    
     if (platform() !== 'win32' && this.socketPath) {
       try {
         await unlink(this.socketPath)
         log('Cleaned up socket file')
       } catch {
-        // ENOENT is fine, ignore
+        
       }
 
-      // Remove directory if empty
+      
       try {
         const socketDir = getSocketDir()
         const remaining = await readdir(socketDir)
@@ -221,7 +219,7 @@ class ChromeNativeHost {
           log('Removed empty socket directory')
         }
       } catch {
-        // Ignore
+        
       }
     }
 
@@ -427,10 +425,6 @@ class ChromeNativeHost {
   }
 }
 
-/**
- * Chrome message reader using async stdin. Synchronous reads can crash Bun, so we use
- * async reads with a buffer.
- */
 class ChromeMessageReader {
   private buffer = Buffer.alloc(0)
   private pendingResolve: ((value: string | null) => void) | null = null
@@ -464,7 +458,7 @@ class ChromeMessageReader {
       return
     }
 
-    // Need at least 4 bytes for length prefix
+    
     if (this.buffer.length < 4) {
       return
     }
@@ -478,12 +472,12 @@ class ChromeMessageReader {
       return
     }
 
-    // Check if we have the full message
+    
     if (this.buffer.length < 4 + length) {
-      return // Wait for more data
+      return 
     }
 
-    // Extract the message
+    
     const messageBytes = this.buffer.subarray(4, 4 + length)
     this.buffer = this.buffer.subarray(4 + length)
 
@@ -497,7 +491,7 @@ class ChromeMessageReader {
       return null
     }
 
-    // Check if we already have a complete message buffered
+    
     if (this.buffer.length >= 4) {
       const length = this.buffer.readUInt32LE(0)
       if (
@@ -511,7 +505,7 @@ class ChromeMessageReader {
       }
     }
 
-    // Wait for more data
+    
     return new Promise(resolve => {
       this.pendingResolve = resolve
       

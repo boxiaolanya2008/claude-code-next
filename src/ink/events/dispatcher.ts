@@ -31,16 +31,6 @@ function getHandler(
   return handlers[propName] as ((event: TerminalEvent) => void) | undefined
 }
 
-/**
- * Collect all listeners for an event in dispatch order.
- *
- * Uses react-dom's two-phase accumulation pattern:
- * - Walk from target to root
- * - Capture handlers are prepended (unshift) → root-first
- * - Bubble handlers are appended (push) → target-first
- *
- * Result: [root-cap, ..., parent-cap, target-cap, target-bub, parent-bub, ..., root-bub]
- */
 function collectListeners(
   target: EventTarget,
   event: TerminalEvent,
@@ -76,12 +66,6 @@ function collectListeners(
   return listeners
 }
 
-/**
- * Execute collected listeners with propagation control.
- *
- * Before each handler, calls event._prepareForTarget(node) so event
- * subclasses can do per-node setup.
- */
 function processDispatchQueue(
   listeners: DispatchListener[],
   event: TerminalEvent,
@@ -111,8 +95,6 @@ function processDispatchQueue(
   }
 }
 
-// --
-
 function getEventPriority(eventType: string): number {
   switch (eventType) {
     case 'keydown':
@@ -130,8 +112,6 @@ function getEventPriority(eventType: string): number {
       return DefaultEventPriority as number
   }
 }
-
-// --
 
 type DiscreteUpdates = <A, B>(
   fn: (a: A, b: B) => boolean,
@@ -158,10 +138,8 @@ export class Dispatcher {
     return DefaultEventPriority as number
   }
 
-  /**
-   * Dispatch an event through capture and bubble phases.
-   * Returns true if preventDefault() was NOT called.
-   */
+  
+
   dispatch(target: EventTarget, event: TerminalEvent): boolean {
     const previousEvent = this.currentEvent
     this.currentEvent = event
@@ -180,10 +158,8 @@ export class Dispatcher {
     }
   }
 
-  /**
-   * Dispatch with discrete (sync) priority.
-   * For user-initiated events: keyboard, click, focus, paste.
-   */
+  
+
   dispatchDiscrete(target: EventTarget, event: TerminalEvent): boolean {
     if (!this.discreteUpdates) {
       return this.dispatch(target, event)
@@ -197,10 +173,8 @@ export class Dispatcher {
     )
   }
 
-  /**
-   * Dispatch with continuous priority.
-   * For high-frequency events: resize, scroll, mouse move.
-   */
+  
+
   dispatchContinuous(target: EventTarget, event: TerminalEvent): boolean {
     const previousPriority = this.currentUpdatePriority
     try {

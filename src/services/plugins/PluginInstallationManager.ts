@@ -19,9 +19,6 @@ import { logEvent } from '../analytics/index.js'
 
 type SetAppState = (f: (prevState: AppState) => AppState) => void
 
-/**
- * Update marketplace installation status in app state
- */
 function updateMarketplaceStatus(
   setAppState: SetAppState,
   name: string,
@@ -42,23 +39,13 @@ function updateMarketplaceStatus(
   }))
 }
 
-/**
- * Perform background plugin startup checks and installations.
- *
- * This is a thin wrapper around reconcileMarketplaces() that maps onProgress
- * events to AppState updates for the REPL UI. After marketplaces are
- * reconciled:
- * - New installs → auto-refresh plugins (fixes "plugin-not-found" errors
- *   from the initial cache-only load on fresh homespace/cleared cache)
- * - Updates only → set needsRefresh, show notification for /reload-plugins
- */
 export async function performBackgroundPluginInstallations(
   setAppState: SetAppState,
 ): Promise<void> {
   logForDebugging('performBackgroundPluginInstallations called')
 
   try {
-    // Compute diff upfront for initial UI status (pending spinners)
+    
     const declared = getDeclaredMarketplaces()
     const materialized = await loadKnownMarketplacesConfig().catch(() => ({}))
     const diff = diffMarketplaces(declared, materialized)
@@ -128,7 +115,7 @@ export async function performBackgroundPluginInstallations(
     )
 
     if (result.installed.length > 0) {
-      // New marketplaces were installed — auto-refresh plugins. This fixes
+      
       
       
       
@@ -140,7 +127,7 @@ export async function performBackgroundPluginInstallations(
       try {
         await refreshActivePlugins(setAppState)
       } catch (refreshError) {
-        // If auto-refresh fails, fall back to needsRefresh notification so
+        
         
         logError(refreshError)
         logForDebugging(
@@ -159,7 +146,7 @@ export async function performBackgroundPluginInstallations(
         })
       }
     } else if (result.updated.length > 0) {
-      // Existing marketplaces updated — notify user to run /reload-plugins.
+      
       
       clearMarketplacesCache()
       clearPluginCache(

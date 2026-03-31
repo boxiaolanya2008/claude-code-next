@@ -20,8 +20,6 @@ const MAX_UPLOAD_BYTES = 30 * 1024 * 1024
 
 const UPLOAD_TIMEOUT_MS = 30_000
 
-// so images go image
-
 function getBridgeBaseUrl(): string {
   return (
     getBridgeBaseUrlOverride() ??
@@ -29,8 +27,6 @@ function getBridgeBaseUrl(): string {
     getOauthConfig().BASE_API_URL
   )
 }
-
-// /api/oauth/file_upload returns one of ChatMessage{Image,Blob,Document}FileSchema.
 
 const uploadResponseSchema = lazySchema(() =>
   z.object({ file_uuid: z.string() }),
@@ -41,16 +37,12 @@ export type BriefUploadContext = {
   signal?: AbortSignal
 }
 
-/**
- * Upload a single attachment. Returns file_uuid on success, undefined otherwise.
- * Every early-return is intentional graceful degradation.
- */
 export async function uploadBriefAttachment(
   fullPath: string,
   size: number,
   ctx: BriefUploadContext,
 ): Promise<string | undefined> {
-  // Positive pattern so bun:bundle eliminates the entire body from
+  
   
   if (feature('BRIDGE_MODE')) {
     if (!ctx.replBridgeEnabled) return undefined

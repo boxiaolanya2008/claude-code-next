@@ -112,7 +112,7 @@ export const TaskCreateTool = buildTool({
       throw new Error(blockingErrors.join('\n'))
     }
 
-    // Auto-expand task list when creating tasks
+    
     context.setAppState(prev => {
       if (prev.expandedView === 'tasks') return prev
       return { ...prev, expandedView: 'tasks' as const }

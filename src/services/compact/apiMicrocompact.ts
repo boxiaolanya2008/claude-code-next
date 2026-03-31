@@ -50,12 +50,10 @@ export type ContextEditStrategy =
       keep: { type: 'thinking_turns'; value: number } | 'all'
     }
 
-// Context management configuration wrapper
 export type ContextManagementConfig = {
   edits: ContextEditStrategy[]
 }
 
-// API-based microcompact implementation that uses native context management
 export function getAPIContextManagement(options?: {
   hasThinking?: boolean
   isRedactThinkingActive?: boolean
@@ -81,7 +79,7 @@ export function getAPIContextManagement(options?: {
     })
   }
 
-  // Tool clearing strategies are ant-only
+  
   if (process.env.USER_TYPE !== 'ant') {
     return strategies.length > 0 ? { edits: strategies } : undefined
   }

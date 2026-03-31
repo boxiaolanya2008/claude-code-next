@@ -33,7 +33,7 @@ const DOTNET_READ_ONLY_FLAGS = new Set([
 ])
 
 type CommandConfig = {
-  /** Safe subcommands or flags for this command */
+  
   safeFlags?: string[]
   
 
@@ -47,24 +47,6 @@ type CommandConfig = {
   ) => boolean
 }
 
-/**
- * Shared callback for cmdlets that print or coerce their args to stdout/
- * stderr. `Write-Output $env:SECRET` prints it directly; `Start-Sleep
- * $env:SECRET` leaks via type-coerce error ("Cannot convert value 'sk-...'
- * to System.Double"). Bash's echo regex WHITELISTS safe chars per token.
- *
- * Two checks:
- * 1. elementTypes whitelist — StringConstant (literals) + Parameter (flag
- *    names). Rejects Variable, Other (HashtableAst/ConvertExpressionAst/
- *    BinaryExpressionAst all map to Other), ScriptBlock, SubExpression,
- *    ExpandableString. Same pattern as SAFE_PATH_ELEMENT_TYPES.
- * 2. Colon-bound parameter value — `-InputObject:$env:SECRET` creates a
- *    SINGLE CommandParameterAst; the VariableExpressionAst is its .Argument
- *    child, not a separate CommandElement. elementTypes = [..., 'Parameter'],
- *    whitelist passes. Query children[] for the .Argument's mapped type;
- *    anything other than StringConstant (Variable, ParenExpression wrapping
- *    arbitrary pipelines, Hashtable, etc.) is a leak vector.
- */
 export function argLeaksValue(
   _cmd: string,
   element?: ParsedCommandElement,
@@ -74,12 +56,12 @@ export function argLeaksValue(
   const children = element?.children
   for (let i = 0; i < argTypes.length; i++) {
     if (argTypes[i] !== 'StringConstant' && argTypes[i] !== 'Parameter') {
-      // ArrayLiteralAst (`Select-Object Name, Id`) maps to 'Other' — the
       
-      // so we can't inspect elements. Fall back to string-archaeology on the
-      // extent text: Hashtable has `@{`, ParenExpr has `(`, variables have
-      // `$`, type literals have `[`, scriptblocks have `{`. A comma-list of
-      // bare identifiers has none. `Name, $x` still rejects on `$`.
+      
+      
+      
+      
+      
       if (!/[$(@{[]/.test(args[i] ?? '')) {
         continue
       }
@@ -92,9 +74,9 @@ export function argLeaksValue(
           return true
         }
       } else {
-        // Fallback: string-archaeology on arg text (pre-children parsers).
-        // Reject `$` (variable), `(` (ParenExpressionAst), `@` (hash/array
-        // sub), `{` (scriptblock), `[` (type literal/static method).
+        
+        
+        
         const arg = args[i] ?? ''
         const colonIdx = arg.indexOf(':')
         if (colonIdx > 0 && /[$(@{[]/.test(arg.slice(colonIdx + 1))) {
@@ -106,24 +88,12 @@ export function argLeaksValue(
   return false
 }
 
-/**
- * Allowlist of PowerShell cmdlets that are considered read-only.
- * Each cmdlet maps to its configuration including safe flags.
- *
- * Note: PowerShell cmdlets are case-insensitive, so we store keys in lowercase
- * and normalize input for matching.
- *
- * Uses Object.create(null) to prevent prototype-chain pollution — attacker-
- * controlled command names like 'constructor' or '__proto__' must return
- * undefined, not inherited Object.prototype properties. Same defense as
- * COMMON_ALIASES in parser.ts.
- */
 export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
   Object.create(null) as Record<string, CommandConfig>,
   {
-    // =========================================================================
-    // PowerShell Cmdlets - Filesystem (read-only)
-    // =========================================================================
+    
+    
+    
     'get-childitem': {
       safeFlags: [
         '-Path',
@@ -192,9 +162,9 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       ],
     },
 
-    // =========================================================================
-    // PowerShell Cmdlets - Navigation (read-only, just changes working directory)
-    // =========================================================================
+    
+    
+    
     'set-location': {
       safeFlags: ['-Path', '-LiteralPath', '-PassThru', '-StackName'],
     },
@@ -205,9 +175,9 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       safeFlags: ['-PassThru', '-StackName'],
     },
 
-    // =========================================================================
-    // PowerShell Cmdlets - Text searching/filtering (read-only)
-    // =========================================================================
+    
+    
+    
     'select-string': {
       safeFlags: [
         '-Path',
@@ -227,9 +197,9 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       ],
     },
 
-    // =========================================================================
-    // PowerShell Cmdlets - Data conversion (pure transforms, no side effects)
-    // =========================================================================
+    
+    
+    
     'convertto-json': {
       safeFlags: [
         '-InputObject',
@@ -281,9 +251,9 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       ],
     },
 
-    // =========================================================================
-    // PowerShell Cmdlets - Object inspection and manipulation (read-only)
-    // =========================================================================
+    
+    
+    
     'get-member': {
       safeFlags: [
         '-InputObject',
@@ -310,9 +280,9 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
         '-PassThru',
       ],
     },
-    // SECURITY: select-xml REMOVED. XML external entity (XXE) resolution can
-    // trigger network requests via DOCTYPE SYSTEM/PUBLIC references in -Content
-    // or -Xml. `Select-Xml -Content '<!DOCTYPE x [<!ENTITY e SYSTEM
+    
+    
+    
     
     
     
@@ -328,10 +298,10 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
         '-FormatString',
       ],
     },
-    // SECURITY: Test-Json REMOVED. -Schema (positional 1) accepts JSON Schema
     
     
-    // `Test-Json '{}' '{"$ref":"http://evil.com"}'` → position 1 binds to
+    
+    
     
     'get-random': {
       safeFlags: [
@@ -344,24 +314,24 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       ],
     },
 
-    // =========================================================================
-    // PowerShell Cmdlets - Path utilities (read-only)
     
-    // convert-path's entire purpose is to resolve filesystem paths. It is now
-    // in CMDLET_PATH_CONFIG for proper path validation, so safeFlags here only
-    // list the path parameters (which CMDLET_PATH_CONFIG will validate).
+    
+    
+    
+    
+    
     'convert-path': {
       safeFlags: ['-Path', '-LiteralPath'],
     },
     'join-path': {
-      // -Resolve removed: it touches the filesystem to verify the joined path
-      // exists, but the path was not validated against allowed directories.
-      // Without -Resolve, Join-Path is pure string manipulation.
+      
+      
+      
       safeFlags: ['-Path', '-ChildPath', '-AdditionalChildPath'],
     },
     'split-path': {
-      // -Resolve removed: same rationale as join-path. Without -Resolve,
-      // Split-Path is pure string manipulation.
+      
+      
       safeFlags: [
         '-Path',
         '-LiteralPath',
@@ -375,12 +345,12 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       ],
     },
 
-    // =========================================================================
-    // PowerShell Cmdlets - Additional system info (read-only)
-    // =========================================================================
-    // NOTE: Get-Clipboard is intentionally NOT included - it can expose sensitive
-    // data like passwords or API keys that the user may have copied. Bash also
-    // does not auto-allow clipboard commands (pbpaste, xclip, etc.).
+    
+    
+    
+    
+    
+    
     'get-hotfix': {
       safeFlags: ['-Id', '-Description'],
     },
@@ -391,9 +361,9 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       safeFlags: ['-PSProvider'],
     },
 
-    // =========================================================================
-    // PowerShell Cmdlets - Process/System info
-    // =========================================================================
+    
+    
+    
     'get-process': {
       safeFlags: [
         '-Name',
@@ -428,13 +398,13 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
     'get-psdrive': {
       safeFlags: ['-Name', '-PSProvider', '-Scope'],
     },
-    // SECURITY: Get-Command REMOVED from allowlist. -Name (positional 0,
-    // ValueFromPipeline=true) triggers module autoload which runs .psm1 init
-    // code. Chain attack: pre-plant module in PSModulePath, trigger autoload.
-    // Previously tried removing -Name/-Module from safeFlags + rejecting
-    // positional StringConstant, but pipeline input (`'EvilCmdlet' | Get-Command`)
-    // bypasses the callback entirely since args are empty. Removal forces
-    // prompt. Users who need it can add explicit allow rule.
+    
+    
+    
+    
+    
+    
+    
     'get-module': {
       safeFlags: [
         '-Name',
@@ -444,9 +414,9 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
         '-PSEdition',
       ],
     },
-    // SECURITY: Get-Help REMOVED from allowlist. Same module autoload hazard
-    // as Get-Command (-Name has ValueFromPipeline=true, pipeline input bypasses
-    // arg-level callback). Removal forces prompt.
+    
+    
+    
     'get-alias': {
       safeFlags: ['-Name', '-Definition', '-Scope', '-Exclude'],
     },
@@ -466,17 +436,17 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       allowAllFlags: true,
     },
 
-    // =========================================================================
-    // PowerShell Cmdlets - Output & misc (no side effects)
-    // =========================================================================
-    // Bash parity: `echo` is auto-allowed via custom regex (BashTool
-    // readOnlyValidation.ts:~1517). That regex WHITELISTS safe chars per arg.
-    // See argLeaksValue above for the three attack shapes it blocks.
+    
+    
+    
+    
+    
+    
     'write-output': {
       safeFlags: ['-InputObject', '-NoEnumerate'],
       additionalCommandIsDangerousCallback: argLeaksValue,
     },
-    // Write-Host bypasses the pipeline (Information stream, PS5+), so it's
+    
     
     
     'write-host': {
@@ -489,26 +459,26 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       ],
       additionalCommandIsDangerousCallback: argLeaksValue,
     },
-    // Bash parity: `sleep` is in READONLY_COMMANDS (BashTool
+    
     
     
     'start-sleep': {
       safeFlags: ['-Seconds', '-Milliseconds', '-Duration'],
       additionalCommandIsDangerousCallback: argLeaksValue,
     },
-    // Format-* and Measure-Object moved here from SAFE_OUTPUT_CMDLETS after
-    
-    
-    
-    
-    //   | Format-Table               → no args → safe → allow
     
     
     
     
     
     
-    // -Wrap, etc.) are display-only. Without allowAllFlags, the empty-safeFlags
+    
+    
+    
+    
+    
+    
+    
     
     'format-table': {
       allowAllFlags: true,
@@ -530,15 +500,15 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       allowAllFlags: true,
       additionalCommandIsDangerousCallback: argLeaksValue,
     },
-    // Select-Object/Sort-Object/Group-Object/Where-Object: same calculated-
     
     
     
     
-    // HashtableAst/ScriptBlock/Variable args block (`Select-Object @{N='x';E={...}}`,
-    // `Where-Object { ... }`). allowAllFlags: -First/-Last/-Skip/-Descending/
     
-    // argLeaksValue catches the dangerous arg *values*.
+    
+    
+    
+    
     'select-object': {
       allowAllFlags: true,
       additionalCommandIsDangerousCallback: argLeaksValue,
@@ -555,11 +525,11 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       allowAllFlags: true,
       additionalCommandIsDangerousCallback: argLeaksValue,
     },
-    // Out-String/Out-Host moved here from SAFE_OUTPUT_CMDLETS — both accept
     
     
     
-    // argLeaksValue catches the dangerous -InputObject *value*.
+    
+    
     'out-string': {
       allowAllFlags: true,
       additionalCommandIsDangerousCallback: argLeaksValue,
@@ -569,8 +539,8 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       additionalCommandIsDangerousCallback: argLeaksValue,
     },
 
-    // =========================================================================
-    // PowerShell Cmdlets - Network info (read-only)
+    
+    
     
     'get-netadapter': {
       safeFlags: [
@@ -600,7 +570,7 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       ],
     },
     'get-dnsclientcache': {
-      // SECURITY: -CimSession/-ThrottleLimit excluded. -CimSession connects to
+      
       
       safeFlags: ['-Entry', '-Name', '-Type', '-Status', '-Section', '-Data'],
     },
@@ -608,8 +578,8 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       safeFlags: ['-InterfaceIndex', '-InterfaceAlias'],
     },
 
-    // =========================================================================
-    // PowerShell Cmdlets - Event log (read-only)
+    
+    
     
     'get-eventlog': {
       safeFlags: [
@@ -628,7 +598,7 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       ],
     },
     'get-winevent': {
-      // SECURITY: -FilterXml/-FilterHashtable removed. -FilterXml accepts XML
+      
       
       
       
@@ -647,10 +617,10 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       ],
     },
 
-    // =========================================================================
-    // PowerShell Cmdlets - WMI/CIM
     
-    // SECURITY: Get-WmiObject and Get-CimInstance REMOVED. They actively
+    
+    
+    
     
     
     
@@ -669,26 +639,26 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       ],
     },
 
-    // =========================================================================
-    // Git - uses shared external command validation with per-flag checking
+    
+    
     
     git: {},
 
-    // =========================================================================
-    // GitHub CLI (gh) - uses shared external command validation
+    
+    
     
     gh: {},
 
-    // =========================================================================
-    // Docker - uses shared external command validation
+    
+    
     
     docker: {},
 
-    // =========================================================================
-    // Windows-specific system commands
+    
+    
     
     ipconfig: {
-      // SECURITY: On macOS, `ipconfig set <iface> <mode>` configures network
+      
       
       
       
@@ -726,7 +696,7 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
     tasklist: {
       safeFlags: ['/M', '/SVC', '/V', '/FI', '/FO', '/NH'],
     },
-    // where.exe: Windows PATH locator, bash `which` equivalent. Reaches here via
+    
     
     
     
@@ -734,7 +704,7 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       allowAllFlags: true,
     },
     hostname: {
-      // SECURITY: `hostname NAME` on Linux/macOS SETS the hostname (writes to
+      
       
       
       safeFlags: ['-a', '-d', '-f', '-i', '-I', '-s', '-y', '-A'],
@@ -742,7 +712,7 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
         _cmd: string,
         element?: ParsedCommandElement,
       ) => {
-        // Reject any positional (non-flag) argument — sets hostname.
+        
         return (element?.args ?? []).some(a => !a.startsWith('-'))
       },
     },
@@ -770,7 +740,7 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
         _cmd: string,
         element?: ParsedCommandElement,
       ) => {
-        // SECURITY: route.exe syntax is `route [-f] [-p] [-4|-6] VERB [args...]`.
+        
         
         
         
@@ -782,22 +752,22 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
         return verb?.toLowerCase() !== 'print'
       },
     },
-    // netsh: intentionally NOT allowlisted. Three rounds of denylist gaps in PR
     
     
     
-    // script execution via -f and `exec`, remote RPC via -r, offline-mode
     
     
-    // simple single-verb-position grammar.
+    
+    
+    
     getmac: {
       safeFlags: ['/FO', '/NH', '/V'],
     },
 
-    // =========================================================================
-    // Cross-platform CLI tools
     
-    // File inspection
+    
+    
+    
     
     
     file: {
@@ -852,8 +822,8 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
         '/M',
         '/O',
         '/P',
-        // Flag matching strips ':' before comparison (e.g., /C:pattern → /C),
-        // so these entries must NOT include the trailing colon.
+        
+        
         '/C',
         '/G',
         '/D',
@@ -861,12 +831,12 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
       ],
     },
 
-    // =========================================================================
-    // Package managers - uses shared external command validation
+    
+    
     
     dotnet: {},
 
-    // SECURITY: man and help direct entries REMOVED. They aliased Get-Help
+    
     
     
     
@@ -875,17 +845,6 @@ export const CMDLET_ALLOWLIST: Record<string, CommandConfig> = Object.assign(
 
 const SAFE_OUTPUT_CMDLETS = new Set([
   'out-null',
-  // NOT out-string/out-host — both accept -InputObject which leaks args the
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  //   Where-Object @{k=$env:SECRET}       — HashtableAst arg, 'Other' elementType
   
   
   
@@ -898,7 +857,18 @@ const SAFE_OUTPUT_CMDLETS = new Set([
   
   
   
-  // skipped by getSubCommandsForPermissionCheck (non-CommandAst). With
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   
   
   
@@ -936,60 +906,29 @@ export function resolveToCanonical(name: string): string {
   return lower
 }
 
-/**
- * Checks if a command name (after alias resolution) alters the path-resolution
- * namespace for subsequent statements in the same compound command.
- *
- * Covers TWO classes:
- * 1. Cwd-changing cmdlets: Set-Location, Push-Location, Pop-Location (and
- *    aliases cd, sl, chdir, pushd, popd). Subsequent relative paths resolve
- *    from the new cwd.
- * 2. PSDrive-creating cmdlets: New-PSDrive (and aliases ndr, mount on Windows).
- *    Subsequent drive-prefixed paths (p:/foo) resolve via the new drive root,
- *    not via the filesystem. Finding #21: `New-PSDrive -Name p -Root /etc;
- *    Remove-Item p:/passwd` — the validator cannot know p: maps to /etc.
- *
- * Any compound containing one of these cannot have its later statements'
- * relative/drive-prefixed paths validated against the stale validator cwd.
- *
- * Name kept for BashTool parity (isCwdChangingCmdlet ↔ compoundCommandHasCd);
- * semantically this is "alters path-resolution namespace".
- */
 export function isCwdChangingCmdlet(name: string): boolean {
   const canonical = resolveToCanonical(name)
   return (
     canonical === 'set-location' ||
     canonical === 'push-location' ||
     canonical === 'pop-location' ||
-    // New-PSDrive creates a drive mapping that redirects <name>:/... paths
-    // to an arbitrary filesystem root. Aliases ndr/mount are not in
-    // COMMON_ALIASES — check them explicitly (finding #21).
+    
+    
+    
     canonical === 'new-psdrive' ||
-    // ndr/mount are PS aliases for New-PSDrive on Windows only. On POSIX,
-    // 'mount' is the native mount(8) command; treating it as PSDrive-creating
-    // would false-positive. (bug #15 / review nit)
+    
+    
+    
     (getPlatform() === 'windows' &&
       (canonical === 'ndr' || canonical === 'mount'))
   )
 }
 
-/**
- * Checks if a command name (after alias resolution) is a safe output cmdlet.
- */
 export function isSafeOutputCommand(name: string): boolean {
   const canonical = resolveToCanonical(name)
   return SAFE_OUTPUT_CMDLETS.has(canonical)
 }
 
-/**
- * Checks if a command element is a pipeline-tail transformer that was moved
- * from SAFE_OUTPUT_CMDLETS to CMDLET_ALLOWLIST (PIPELINE_TAIL_CMDLETS set)
- * AND passes its argLeaksValue guard via isAllowlistedCommand.
- *
- * Narrow fallback for isSafeOutputCommand call sites that need to keep the
- * "skip harmless pipeline tail" behavior for Format-Table / Select-Object / etc.
- * Does NOT match the full CMDLET_ALLOWLIST — only the migrated transformers.
- */
 export function isAllowlistedPipelineTail(
   cmd: ParsedCommandElement,
   originalCommand: string,
@@ -1001,20 +940,11 @@ export function isAllowlistedPipelineTail(
   return isAllowlistedCommand(cmd, originalCommand)
 }
 
-/**
- * Fail-closed gate for read-only auto-allow. Returns true ONLY for a
- * PipelineAst where every element is a CommandAst — the one statement
- * shape we can fully validate. Everything else (assignments, control
- * flow, expression sources, chain operators) defaults to false.
- *
- * Single code path to true. New AST types added to PowerShell fall
- * through to false by construction.
- */
 export function isProvablySafeStatement(stmt: ParsedStatement): boolean {
   if (stmt.statementType !== 'PipelineAst') return false
-  // Empty commands → vacuously passes the loop below. PowerShell's
   
-  // but this gate is the linchpin — defend against parser/JSON edge cases.
+  
+  
   if (stmt.commands.length === 0) return false
   for (const cmd of stmt.commands) {
     if (cmd.elementType !== 'CommandAst') return false
@@ -1022,10 +952,6 @@ export function isProvablySafeStatement(stmt: ParsedStatement): boolean {
   return true
 }
 
-/**
- * Looks up a command in the allowlist, resolving aliases first.
- * Returns the config if found, or undefined.
- */
 function lookupAllowlist(name: string): CommandConfig | undefined {
   const lower = name.toLowerCase()
   
@@ -1033,7 +959,7 @@ function lookupAllowlist(name: string): CommandConfig | undefined {
   if (direct) {
     return direct
   }
-  // Resolve alias to canonical and look up
+  
   const canonical = resolveToCanonical(lower)
   if (canonical !== lower) {
     return CMDLET_ALLOWLIST[canonical]
@@ -1041,27 +967,18 @@ function lookupAllowlist(name: string): CommandConfig | undefined {
   return undefined
 }
 
-/**
- * Sync regex-based check for security-concerning patterns in a PowerShell command.
- * Used by isReadOnly (which must be sync) as a fast pre-filter before the
- * cmdlet allowlist check. This mirrors BashTool's checkReadOnlyConstraints
- * which checks bashCommandIsSafe_DEPRECATED before evaluating read-only status.
- *
- * Returns true if the command contains patterns that indicate it should NOT
- * be considered read-only, even if the cmdlet is in the allowlist.
- */
 export function hasSyncSecurityConcerns(command: string): boolean {
   const trimmed = command.trim()
   if (!trimmed) {
     return false
   }
 
-  // Subexpressions: $(...) can execute arbitrary code
+  
   if (/\$\(/.test(trimmed)) {
     return true
   }
 
-  // Splatting: @variable passes arbitrary parameters. Real splatting is
+  
   
   
   
@@ -1069,29 +986,29 @@ export function hasSyncSecurityConcerns(command: string): boolean {
     return true
   }
 
-  // Member invocations: .Method() can call arbitrary .NET methods
+  
   if (/\.\w+\s*\(/.test(trimmed)) {
     return true
   }
 
-  // Assignments: $var = ... can modify state
+  
   if (/\$\w+\s*[+\-*/]?=/.test(trimmed)) {
     return true
   }
 
-  // Stop-parsing symbol: --% passes everything raw to native commands
+  
   if (/--%/.test(trimmed)) {
     return true
   }
 
-  // UNC paths: \\server\share or 
   
   
-  if (/\\\\/.test(trimmed) || /(?<!:)\/\//.test(trimmed)) {
+  
+  if (/\\\\/.test(trimmed) || /(?<!:)\/\
     return true
   }
 
-  // Static method calls: [Type]::Method() can invoke arbitrary .NET methods
+  
   if (/::/.test(trimmed)) {
     return true
   }
@@ -1099,13 +1016,6 @@ export function hasSyncSecurityConcerns(command: string): boolean {
   return false
 }
 
-/**
- * Checks if a PowerShell command is read-only based on the cmdlet allowlist.
- *
- * @param command - The original PowerShell command string
- * @param parsed - The AST-parsed representation of the command
- * @returns true if the command is read-only, false otherwise
- */
 export function isReadOnlyCommand(
   command: string,
   parsed?: ParsedPowerShellCommand,
@@ -1115,12 +1025,12 @@ export function isReadOnlyCommand(
     return false
   }
 
-  // If no parsed AST available, conservatively return false
+  
   if (!parsed) {
     return false
   }
 
-  // If parsing failed, reject
+  
   if (!parsed.valid) {
     return false
   }
@@ -1147,11 +1057,11 @@ export function isReadOnlyCommand(
     return false
   }
 
-  // SECURITY: Block compound commands that contain a cwd-changing cmdlet
   
   
   
-  //   Set-Location ~; Get-Content ./.ssh/id_rsa
+  
+  
   
   
   
@@ -1174,13 +1084,13 @@ export function isReadOnlyCommand(
     }
   }
 
-  // Check each statement individually - all must be read-only
+  
   for (const pipeline of segments) {
     if (!pipeline || pipeline.commands.length === 0) {
       return false
     }
 
-    // Reject file redirections (writing to files). `> $null` discards output
+    
     
     if (pipeline.redirections.length > 0) {
       const hasFileRedirection = pipeline.redirections.some(
@@ -1191,7 +1101,7 @@ export function isReadOnlyCommand(
       }
     }
 
-    // First command must be in the allowlist
+    
     const firstCmd = pipeline.commands[0]
     if (!firstCmd) {
       return false
@@ -1201,7 +1111,7 @@ export function isReadOnlyCommand(
       return false
     }
 
-    // Remaining pipeline commands must be safe output cmdlets OR allowlisted
+    
     
     
     
@@ -1215,12 +1125,12 @@ export function isReadOnlyCommand(
       if (!cmd || cmd.nameType === 'application') {
         return false
       }
-      // SECURITY: isSafeOutputCommand is name-only; only short-circuit for
       
       
       
       
-      // CMDLET_ALLOWLIST so any args will reject.
+      
+      
       
       
       if (isSafeOutputCommand(cmd.name) && cmd.args.length === 0) {
@@ -1231,7 +1141,7 @@ export function isReadOnlyCommand(
       }
     }
 
-    // SECURITY: Reject statements with nested commands. nestedCommands are
+    
     
     
     
@@ -1245,14 +1155,11 @@ export function isReadOnlyCommand(
   return true
 }
 
-/**
- * Checks if a single command element is in the allowlist and passes flag validation.
- */
 export function isAllowlistedCommand(
   cmd: ParsedCommandElement,
   originalCommand: string,
 ): boolean {
-  // SECURITY: nameType is computed from the raw (pre-stripModulePrefix) name.
+  
   
   
   
@@ -1261,15 +1168,15 @@ export function isAllowlistedCommand(
   
   
   if (cmd.nameType === 'application') {
-    // Bypass for explicit safe .exe names (bash `which` parity — see
     
-    // not cmd.name. stripModulePrefix collapses scripts\where.exe →
+    
+    
     
     const rawFirstToken = cmd.text.split(/\s/, 1)[0]?.toLowerCase() ?? ''
     if (!SAFE_EXTERNAL_EXES.has(rawFirstToken)) {
       return false
     }
-    // Fall through to lookupAllowlist — CMDLET_ALLOWLIST['where.exe'] handles
+    
     
   }
 
@@ -1278,20 +1185,16 @@ export function isAllowlistedCommand(
     return false
   }
 
-  // If there's a regex constraint, check it against the original command
+  
   if (config.regex && !config.regex.test(originalCommand)) {
     return false
   }
 
-  // If there's an additional callback, check it
+  
   if (config.additionalCommandIsDangerousCallback?.(originalCommand, cmd)) {
     return false
   }
 
-  // SECURITY: whitelist arg elementTypes — only StringConstant and Parameter
-  
-  //   'Variable'          → `Get-Process $env:AWS_SECRET_ACCESS_KEY` expands,
-  //                         errors "Cannot find process 'sk-ant-...'", model
   
   
   
@@ -1303,21 +1206,25 @@ export function isAllowlistedCommand(
   
   
   
-  // pathValidation.ts — this closes the gap for non-file cmdlets (Get-Process,
-  // Get-Service, Get-Command, ~15 others). PS equivalent of Bash's blanket `$`
-  // token check at BashTool/readOnlyValidation.ts:~1356.
-  //
-  // Placement: BEFORE external-command dispatch so git/gh/docker/dotnet get
-  // this too (defense-in-depth with their string-based `$` checks; catches
-  // @{...}/[cast]/($a+$b) that `$` substring misses). In PS argument mode,
-  // bare `5` tokenizes as StringConstant (BareWord), not a numeric literal,
-  // so `git log -n 5` passes.
-  //
-  // SECURITY: elementTypes undefined → fail-closed. The real parser always
-  // sets it (parser.ts:769/781/812), so undefined means an untrusted or
-  // malformed element. Previously skipped (fail-open) for test-helper
-  // convenience; test helpers now set elementTypes explicitly.
-  // elementTypes[0] is the command name; args start at elementTypes[1].
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   if (!cmd.elementTypes) {
     return false
   }
@@ -1325,26 +1232,26 @@ export function isAllowlistedCommand(
     for (let i = 1; i < cmd.elementTypes.length; i++) {
       const t = cmd.elementTypes[i]
       if (t !== 'StringConstant' && t !== 'Parameter') {
-        // ArrayLiteralAst (`Get-Process Name, Id`) maps to 'Other'. The
-        // leak vectors enumerated above all have a metachar in their extent
-        // text: Hashtable `@{`, Convert `[`, BinaryExpr-with-var `$`,
-        // ParenExpr `(`. A bare comma-list of identifiers has none.
+        
+        
+        
+        
         if (!/[$(@{[]/.test(cmd.args[i - 1] ?? '')) {
           continue
         }
         return false
       }
-      // Colon-bound parameter (`-Flag:$env:SECRET`) is a SINGLE
-      // CommandParameterAst — the VariableExpressionAst is its .Argument
-      // child, not a separate CommandElement, so elementTypes says 'Parameter'
-      // and the whitelist above passes.
-      //
-      // Query the parser's children[] tree instead of doing
       
       
       
       
-      // `-Name:('payload' > file)` (ParenExpressionAst with redirection).
+      
+      
+      
+      
+      
+      
+      
       
       
       if (t === 'Parameter') {
@@ -1354,7 +1261,7 @@ export function isAllowlistedCommand(
             return false
           }
         } else {
-          // Fallback: string-archaeology on arg text (pre-children parsers).
+          
           
           
           const arg = cmd.args[i - 1] ?? ''
@@ -1379,9 +1286,9 @@ export function isAllowlistedCommand(
     return isExternalCommandSafe(canonical, cmd.args)
   }
 
-  // On Windows, / is a valid flag prefix for native commands (e.g., findstr /S).
   
-  // not a flag. We detect cmdlets by checking if the command resolves to a
+  
+  
   
   const isCmdlet = canonical.includes('-')
 
@@ -1392,7 +1299,7 @@ export function isAllowlistedCommand(
     return true
   }
   if (!config.safeFlags || config.safeFlags.length === 0) {
-    // No safeFlags defined and allowAllFlags not set: reject any flags.
+    
     
     
     const hasFlags = cmd.args.some((arg, i) => {
@@ -1407,7 +1314,7 @@ export function isAllowlistedCommand(
     return !hasFlags
   }
 
-  // Validate that all flags used are in the allowlist.
+  
   
   
   
@@ -1416,7 +1323,7 @@ export function isAllowlistedCommand(
   
   for (let i = 0; i < cmd.args.length; i++) {
     const arg = cmd.args[i]!
-    // For cmdlets: trust elementTypes (AST ground truth, catches Unicode dashes).
+    
     
     
     const isFlag = isCmdlet
@@ -1424,7 +1331,7 @@ export function isAllowlistedCommand(
       : arg.startsWith('-') ||
         (process.platform === 'win32' && arg.startsWith('/'))
     if (isFlag) {
-      // For cmdlets, normalize Unicode dash to ASCII hyphen for safeFlags
+      
       
       
       let paramName = isCmdlet ? '-' + arg.slice(1) : arg
@@ -1433,7 +1340,7 @@ export function isAllowlistedCommand(
         paramName = paramName.substring(0, colonIndex)
       }
 
-      // -ErrorAction/-Verbose/-Debug etc. are accepted by every cmdlet via
+      
       
       
       
@@ -1455,8 +1362,6 @@ export function isAllowlistedCommand(
 
   return true
 }
-
-// ---------------------------------------------------------------------------
 
 function isExternalCommandSafe(command: string, args: string[]): boolean {
   switch (command) {
@@ -1480,10 +1385,10 @@ const DANGEROUS_GIT_GLOBAL_FLAGS = new Set([
   '--config-env',
   '--git-dir',
   '--work-tree',
-  // SECURITY: --attr-source creates a parser differential. Git treats the
   
   
-  //   git --attr-source HEAD~10 log status
+  
+  
   
   
   
@@ -1491,7 +1396,6 @@ const DANGEROUS_GIT_GLOBAL_FLAGS = new Set([
   '--attr-source',
 ])
 
-// creating a second differential — moved to DANGEROUS_GIT_GLOBAL_FLAGS above.
 const GIT_GLOBAL_FLAGS_WITH_VALUES = new Set([
   '-c',
   '-C',
@@ -1504,8 +1408,6 @@ const GIT_GLOBAL_FLAGS_WITH_VALUES = new Set([
   '--shallow-file',
 ])
 
-// so the split-on-`=` check handles them. But `-ccore.pager=sh` and `-C/path`
-
 const DANGEROUS_GIT_SHORT_FLAGS_ATTACHED = ['-c', '-C']
 
 function isGitSafe(args: string[]): boolean {
@@ -1513,23 +1415,23 @@ function isGitSafe(args: string[]): boolean {
     return true
   }
 
-  // SECURITY: Reject any arg containing `$` (variable reference). Bare
   
-  // $VAR). deriveSecurityFlags does not gate bare Variable args. The validator
   
-  //   git diff $VAR   where $VAR = '--output=/tmp/evil'
+  
+  
+  
   
   
   
   
   
   for (const arg of args) {
-    if (arg.includes('$')) {
+    if (arg.includes(')) {
       return false
     }
   }
 
-  // Skip over global flags before the subcommand, rejecting dangerous ones.
+  
   
   
   let idx = 0
@@ -1538,7 +1440,7 @@ function isGitSafe(args: string[]): boolean {
     if (!arg || !arg.startsWith('-')) {
       break
     }
-    // SECURITY: Attached-form short flags. `-ccore.pager=sh` splits on `=` to
+    
     
     
     
@@ -1560,7 +1462,7 @@ function isGitSafe(args: string[]): boolean {
     if (DANGEROUS_GIT_GLOBAL_FLAGS.has(flagName)) {
       return false
     }
-    // Consume the next token if the flag takes a separate value
+    
     if (!hasInlineValue && GIT_GLOBAL_FLAGS_WITH_VALUES.has(flagName)) {
       idx += 2
     } else {
@@ -1572,7 +1474,7 @@ function isGitSafe(args: string[]): boolean {
     return true
   }
 
-  // Try multi-word subcommand first (e.g. 'stash list', 'config --get', 'remote show')
+  
   const first = args[idx]?.toLowerCase() || ''
   const second = idx + 1 < args.length ? args[idx + 1]?.toLowerCase() || '' : ''
 
@@ -1607,10 +1509,10 @@ function isGitSafe(args: string[]): boolean {
     for (const arg of flagArgs) {
       if (!arg.startsWith('-')) {
         if (
-          arg.includes('://') ||
+          arg.includes(':
           arg.includes('@') ||
           arg.includes(':') ||
-          arg.includes('$')
+          arg.includes(')
         ) {
           return false
         }
@@ -1628,7 +1530,7 @@ function isGitSafe(args: string[]): boolean {
 }
 
 function isGhSafe(args: string[]): boolean {
-  // gh commands are network-dependent; only allow for ant users
+  
   if (process.env.USER_TYPE !== 'ant') {
     return false
   }
@@ -1637,7 +1539,7 @@ function isGhSafe(args: string[]): boolean {
     return true
   }
 
-  // Try two-word subcommand first (e.g. 'pr view')
+  
   let config: ExternalCommandConfig | undefined
   let subcommandTokens = 0
 
@@ -1647,7 +1549,7 @@ function isGhSafe(args: string[]): boolean {
     subcommandTokens = 2
   }
 
-  // Try single-word subcommand (e.g. 'gh version')
+  
   if (!config && args.length >= 1) {
     const oneWordKey = `gh ${args[0]?.toLowerCase()}`
     config = GH_READ_ONLY_COMMANDS[oneWordKey]
@@ -1663,14 +1565,14 @@ function isGhSafe(args: string[]): boolean {
   
   
   
-  // splatting, expandable strings, etc. All gh subcommands are network-facing,
-  // so a variable arg is a data-exfiltration vector:
-  //   gh search repos $env:SECRET_API_KEY
+  
+  
+  
   
   
   
   for (const arg of flagArgs) {
-    if (arg.includes('$')) {
+    if (arg.includes(')) {
       return false
     }
   }
@@ -1688,20 +1590,20 @@ function isDockerSafe(args: string[]): boolean {
     return true
   }
 
-  // SECURITY: blanket PowerShell `$` variable rejection. Same guard as
   
   
   
   
   
   
-  // its output, model read it. Check ALL args, not flagArgs — args[0]
+  
+  
   
   
   
   
   for (const arg of args) {
-    if (arg.includes('$')) {
+    if (arg.includes(')) {
       return false
     }
   }
@@ -1714,7 +1616,7 @@ function isDockerSafe(args: string[]): boolean {
     return true
   }
 
-  // DOCKER_READ_ONLY_COMMANDS entries ('docker logs', 'docker inspect') have
+  
   
   const config: ExternalCommandConfig | undefined =
     DOCKER_READ_ONLY_COMMANDS[oneWordKey]
@@ -1738,7 +1640,2554 @@ function isDotnetSafe(args: string[]): boolean {
     return false
   }
 
-  // dotnet uses top-level flags like --version, --info, --list-runtimes
+  
+  
+  for (const arg of args) {
+    if (!DOTNET_READ_ONLY_FLAGS.has(arg.toLowerCase())) {
+      return false
+    }
+  }
+
+  return true
+}
+)) {
+      return false
+    }
+  }
+
+  
+  
+  
+  let idx = 0
+  while (idx < args.length) {
+    const arg = args[idx]
+    if (!arg || !arg.startsWith( STR55542 )) {
+      break
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    for (const shortFlag of DANGEROUS_GIT_SHORT_FLAGS_ATTACHED) {
+      if (
+        arg.length > shortFlag.length &&
+        arg.startsWith(shortFlag) &&
+        (shortFlag ===  STR55543  || arg[shortFlag.length] !==  STR55544 )
+      ) {
+        return false
+      }
+    }
+    const hasInlineValue = arg.includes( STR55545 )
+    const flagName = hasInlineValue ? arg.split( STR55546 )[0] ||  STR55547  : arg
+    if (DANGEROUS_GIT_GLOBAL_FLAGS.has(flagName)) {
+      return false
+    }
+    
+    if (!hasInlineValue && GIT_GLOBAL_FLAGS_WITH_VALUES.has(flagName)) {
+      idx += 2
+    } else {
+      idx++
+    }
+  }
+
+  if (idx >= args.length) {
+    return true
+  }
+
+  
+  const first = args[idx]?.toLowerCase() ||  STR55548 
+  const second = idx + 1 < args.length ? args[idx + 1]?.toLowerCase() ||  STR55549  :  STR55550 
+
+  
+  const twoWordKey =  STR55551 
+  const oneWordKey =  STR55552 
+
+  let config: ExternalCommandConfig | undefined =
+    GIT_READ_ONLY_COMMANDS[twoWordKey]
+  let subcommandTokens = 2
+
+  if (!config) {
+    config = GIT_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(idx + subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  if (first ===  STR55553 ) {
+    for (const arg of flagArgs) {
+      if (!arg.startsWith( STR55554 )) {
+        if (
+          arg.includes( STR55555 ) ||
+          arg.includes( STR55556 ) ||
+          arg.includes( STR55557 ) ||
+          arg.includes( STR55558 )
+        ) {
+          return false
+        }
+      }
+    }
+  }
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55559 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config, { commandName:  STR55560  })
+}
+
+function isGhSafe(args: string[]): boolean {
+  
+  if (process.env.USER_TYPE !==  STR55561 ) {
+    return false
+  }
+
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  let config: ExternalCommandConfig | undefined
+  let subcommandTokens = 0
+
+  if (args.length >= 2) {
+    const twoWordKey =  STR55562 
+    config = GH_READ_ONLY_COMMANDS[twoWordKey]
+    subcommandTokens = 2
+  }
+
+  
+  if (!config && args.length >= 1) {
+    const oneWordKey =  STR55563 
+    config = GH_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of flagArgs) {
+    if (arg.includes( STR55564 )) {
+      return false
+    }
+  }
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55565 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDockerSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of args) {
+    if (arg.includes( STR55566 )) {
+      return false
+    }
+  }
+
+  const oneWordKey =  STR55567 
+
+  
+  
+  if (EXTERNAL_READONLY_COMMANDS.includes(oneWordKey)) {
+    return true
+  }
+
+  
+  
+  const config: ExternalCommandConfig | undefined =
+    DOCKER_READ_ONLY_COMMANDS[oneWordKey]
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(1)
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55568 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDotnetSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return false
+  }
+
+  
+  
+  for (const arg of args) {
+    if (!DOTNET_READ_ONLY_FLAGS.has(arg.toLowerCase())) {
+      return false
+    }
+  }
+
+  return true
+}
+)
+        ) {
+          return false
+        }
+      }
+    }
+  }
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55559 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config, { commandName:  STR55560  })
+}
+
+function isGhSafe(args: string[]): boolean {
+  
+  if (process.env.USER_TYPE !==  STR55561 ) {
+    return false
+  }
+
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  let config: ExternalCommandConfig | undefined
+  let subcommandTokens = 0
+
+  if (args.length >= 2) {
+    const twoWordKey =  STR55562 
+    config = GH_READ_ONLY_COMMANDS[twoWordKey]
+    subcommandTokens = 2
+  }
+
+  
+  if (!config && args.length >= 1) {
+    const oneWordKey =  STR55563 
+    config = GH_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of flagArgs) {
+    if (arg.includes( STR55564 )) {
+      return false
+    }
+  }
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55565 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDockerSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of args) {
+    if (arg.includes( STR55566 )) {
+      return false
+    }
+  }
+
+  const oneWordKey =  STR55567 
+
+  
+  
+  if (EXTERNAL_READONLY_COMMANDS.includes(oneWordKey)) {
+    return true
+  }
+
+  
+  
+  const config: ExternalCommandConfig | undefined =
+    DOCKER_READ_ONLY_COMMANDS[oneWordKey]
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(1)
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55568 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDotnetSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return false
+  }
+
+  
+  
+  for (const arg of args) {
+    if (!DOTNET_READ_ONLY_FLAGS.has(arg.toLowerCase())) {
+      return false
+    }
+  }
+
+  return true
+}
+)) {
+      return false
+    }
+  }
+
+  
+  
+  
+  let idx = 0
+  while (idx < args.length) {
+    const arg = args[idx]
+    if (!arg || !arg.startsWith( STR55542 )) {
+      break
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    for (const shortFlag of DANGEROUS_GIT_SHORT_FLAGS_ATTACHED) {
+      if (
+        arg.length > shortFlag.length &&
+        arg.startsWith(shortFlag) &&
+        (shortFlag ===  STR55543  || arg[shortFlag.length] !==  STR55544 )
+      ) {
+        return false
+      }
+    }
+    const hasInlineValue = arg.includes( STR55545 )
+    const flagName = hasInlineValue ? arg.split( STR55546 )[0] ||  STR55547  : arg
+    if (DANGEROUS_GIT_GLOBAL_FLAGS.has(flagName)) {
+      return false
+    }
+    
+    if (!hasInlineValue && GIT_GLOBAL_FLAGS_WITH_VALUES.has(flagName)) {
+      idx += 2
+    } else {
+      idx++
+    }
+  }
+
+  if (idx >= args.length) {
+    return true
+  }
+
+  
+  const first = args[idx]?.toLowerCase() ||  STR55548 
+  const second = idx + 1 < args.length ? args[idx + 1]?.toLowerCase() ||  STR55549  :  STR55550 
+
+  
+  const twoWordKey =  STR55551 
+  const oneWordKey =  STR55552 
+
+  let config: ExternalCommandConfig | undefined =
+    GIT_READ_ONLY_COMMANDS[twoWordKey]
+  let subcommandTokens = 2
+
+  if (!config) {
+    config = GIT_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(idx + subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  if (first ===  STR55553 ) {
+    for (const arg of flagArgs) {
+      if (!arg.startsWith( STR55554 )) {
+        if (
+          arg.includes( STR55555 ) ||
+          arg.includes( STR55556 ) ||
+          arg.includes( STR55557 ) ||
+          arg.includes( STR55558 )
+        ) {
+          return false
+        }
+      }
+    }
+  }
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55559 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config, { commandName:  STR55560  })
+}
+
+function isGhSafe(args: string[]): boolean {
+  
+  if (process.env.USER_TYPE !==  STR55561 ) {
+    return false
+  }
+
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  let config: ExternalCommandConfig | undefined
+  let subcommandTokens = 0
+
+  if (args.length >= 2) {
+    const twoWordKey =  STR55562 
+    config = GH_READ_ONLY_COMMANDS[twoWordKey]
+    subcommandTokens = 2
+  }
+
+  
+  if (!config && args.length >= 1) {
+    const oneWordKey =  STR55563 
+    config = GH_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of flagArgs) {
+    if (arg.includes( STR55564 )) {
+      return false
+    }
+  }
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55565 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDockerSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of args) {
+    if (arg.includes( STR55566 )) {
+      return false
+    }
+  }
+
+  const oneWordKey =  STR55567 
+
+  
+  
+  if (EXTERNAL_READONLY_COMMANDS.includes(oneWordKey)) {
+    return true
+  }
+
+  
+  
+  const config: ExternalCommandConfig | undefined =
+    DOCKER_READ_ONLY_COMMANDS[oneWordKey]
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(1)
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55568 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDotnetSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return false
+  }
+
+  
+  
+  for (const arg of args) {
+    if (!DOTNET_READ_ONLY_FLAGS.has(arg.toLowerCase())) {
+      return false
+    }
+  }
+
+  return true
+}
+)) {
+      return false
+    }
+  }
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55565 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDockerSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of args) {
+    if (arg.includes( STR55566 )) {
+      return false
+    }
+  }
+
+  const oneWordKey =  STR55567 
+
+  
+  
+  if (EXTERNAL_READONLY_COMMANDS.includes(oneWordKey)) {
+    return true
+  }
+
+  
+  
+  const config: ExternalCommandConfig | undefined =
+    DOCKER_READ_ONLY_COMMANDS[oneWordKey]
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(1)
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55568 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDotnetSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return false
+  }
+
+  
+  
+  for (const arg of args) {
+    if (!DOTNET_READ_ONLY_FLAGS.has(arg.toLowerCase())) {
+      return false
+    }
+  }
+
+  return true
+}
+)) {
+      return false
+    }
+  }
+
+  
+  
+  
+  let idx = 0
+  while (idx < args.length) {
+    const arg = args[idx]
+    if (!arg || !arg.startsWith( STR55542 )) {
+      break
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    for (const shortFlag of DANGEROUS_GIT_SHORT_FLAGS_ATTACHED) {
+      if (
+        arg.length > shortFlag.length &&
+        arg.startsWith(shortFlag) &&
+        (shortFlag ===  STR55543  || arg[shortFlag.length] !==  STR55544 )
+      ) {
+        return false
+      }
+    }
+    const hasInlineValue = arg.includes( STR55545 )
+    const flagName = hasInlineValue ? arg.split( STR55546 )[0] ||  STR55547  : arg
+    if (DANGEROUS_GIT_GLOBAL_FLAGS.has(flagName)) {
+      return false
+    }
+    
+    if (!hasInlineValue && GIT_GLOBAL_FLAGS_WITH_VALUES.has(flagName)) {
+      idx += 2
+    } else {
+      idx++
+    }
+  }
+
+  if (idx >= args.length) {
+    return true
+  }
+
+  
+  const first = args[idx]?.toLowerCase() ||  STR55548 
+  const second = idx + 1 < args.length ? args[idx + 1]?.toLowerCase() ||  STR55549  :  STR55550 
+
+  
+  const twoWordKey =  STR55551 
+  const oneWordKey =  STR55552 
+
+  let config: ExternalCommandConfig | undefined =
+    GIT_READ_ONLY_COMMANDS[twoWordKey]
+  let subcommandTokens = 2
+
+  if (!config) {
+    config = GIT_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(idx + subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  if (first ===  STR55553 ) {
+    for (const arg of flagArgs) {
+      if (!arg.startsWith( STR55554 )) {
+        if (
+          arg.includes( STR55555 ) ||
+          arg.includes( STR55556 ) ||
+          arg.includes( STR55557 ) ||
+          arg.includes( STR55558 )
+        ) {
+          return false
+        }
+      }
+    }
+  }
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55559 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config, { commandName:  STR55560  })
+}
+
+function isGhSafe(args: string[]): boolean {
+  
+  if (process.env.USER_TYPE !==  STR55561 ) {
+    return false
+  }
+
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  let config: ExternalCommandConfig | undefined
+  let subcommandTokens = 0
+
+  if (args.length >= 2) {
+    const twoWordKey =  STR55562 
+    config = GH_READ_ONLY_COMMANDS[twoWordKey]
+    subcommandTokens = 2
+  }
+
+  
+  if (!config && args.length >= 1) {
+    const oneWordKey =  STR55563 
+    config = GH_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of flagArgs) {
+    if (arg.includes( STR55564 )) {
+      return false
+    }
+  }
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55565 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDockerSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of args) {
+    if (arg.includes( STR55566 )) {
+      return false
+    }
+  }
+
+  const oneWordKey =  STR55567 
+
+  
+  
+  if (EXTERNAL_READONLY_COMMANDS.includes(oneWordKey)) {
+    return true
+  }
+
+  
+  
+  const config: ExternalCommandConfig | undefined =
+    DOCKER_READ_ONLY_COMMANDS[oneWordKey]
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(1)
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55568 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDotnetSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return false
+  }
+
+  
+  
+  for (const arg of args) {
+    if (!DOTNET_READ_ONLY_FLAGS.has(arg.toLowerCase())) {
+      return false
+    }
+  }
+
+  return true
+}
+)
+        ) {
+          return false
+        }
+      }
+    }
+  }
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55559 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config, { commandName:  STR55560  })
+}
+
+function isGhSafe(args: string[]): boolean {
+  
+  if (process.env.USER_TYPE !==  STR55561 ) {
+    return false
+  }
+
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  let config: ExternalCommandConfig | undefined
+  let subcommandTokens = 0
+
+  if (args.length >= 2) {
+    const twoWordKey =  STR55562 
+    config = GH_READ_ONLY_COMMANDS[twoWordKey]
+    subcommandTokens = 2
+  }
+
+  
+  if (!config && args.length >= 1) {
+    const oneWordKey =  STR55563 
+    config = GH_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of flagArgs) {
+    if (arg.includes( STR55564 )) {
+      return false
+    }
+  }
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55565 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDockerSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of args) {
+    if (arg.includes( STR55566 )) {
+      return false
+    }
+  }
+
+  const oneWordKey =  STR55567 
+
+  
+  
+  if (EXTERNAL_READONLY_COMMANDS.includes(oneWordKey)) {
+    return true
+  }
+
+  
+  
+  const config: ExternalCommandConfig | undefined =
+    DOCKER_READ_ONLY_COMMANDS[oneWordKey]
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(1)
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55568 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDotnetSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return false
+  }
+
+  
+  
+  for (const arg of args) {
+    if (!DOTNET_READ_ONLY_FLAGS.has(arg.toLowerCase())) {
+      return false
+    }
+  }
+
+  return true
+}
+)) {
+      return false
+    }
+  }
+
+  
+  
+  
+  let idx = 0
+  while (idx < args.length) {
+    const arg = args[idx]
+    if (!arg || !arg.startsWith( STR55542 )) {
+      break
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    for (const shortFlag of DANGEROUS_GIT_SHORT_FLAGS_ATTACHED) {
+      if (
+        arg.length > shortFlag.length &&
+        arg.startsWith(shortFlag) &&
+        (shortFlag ===  STR55543  || arg[shortFlag.length] !==  STR55544 )
+      ) {
+        return false
+      }
+    }
+    const hasInlineValue = arg.includes( STR55545 )
+    const flagName = hasInlineValue ? arg.split( STR55546 )[0] ||  STR55547  : arg
+    if (DANGEROUS_GIT_GLOBAL_FLAGS.has(flagName)) {
+      return false
+    }
+    
+    if (!hasInlineValue && GIT_GLOBAL_FLAGS_WITH_VALUES.has(flagName)) {
+      idx += 2
+    } else {
+      idx++
+    }
+  }
+
+  if (idx >= args.length) {
+    return true
+  }
+
+  
+  const first = args[idx]?.toLowerCase() ||  STR55548 
+  const second = idx + 1 < args.length ? args[idx + 1]?.toLowerCase() ||  STR55549  :  STR55550 
+
+  
+  const twoWordKey =  STR55551 
+  const oneWordKey =  STR55552 
+
+  let config: ExternalCommandConfig | undefined =
+    GIT_READ_ONLY_COMMANDS[twoWordKey]
+  let subcommandTokens = 2
+
+  if (!config) {
+    config = GIT_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(idx + subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  if (first ===  STR55553 ) {
+    for (const arg of flagArgs) {
+      if (!arg.startsWith( STR55554 )) {
+        if (
+          arg.includes( STR55555 ) ||
+          arg.includes( STR55556 ) ||
+          arg.includes( STR55557 ) ||
+          arg.includes( STR55558 )
+        ) {
+          return false
+        }
+      }
+    }
+  }
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55559 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config, { commandName:  STR55560  })
+}
+
+function isGhSafe(args: string[]): boolean {
+  
+  if (process.env.USER_TYPE !==  STR55561 ) {
+    return false
+  }
+
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  let config: ExternalCommandConfig | undefined
+  let subcommandTokens = 0
+
+  if (args.length >= 2) {
+    const twoWordKey =  STR55562 
+    config = GH_READ_ONLY_COMMANDS[twoWordKey]
+    subcommandTokens = 2
+  }
+
+  
+  if (!config && args.length >= 1) {
+    const oneWordKey =  STR55563 
+    config = GH_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of flagArgs) {
+    if (arg.includes( STR55564 )) {
+      return false
+    }
+  }
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55565 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDockerSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of args) {
+    if (arg.includes( STR55566 )) {
+      return false
+    }
+  }
+
+  const oneWordKey =  STR55567 
+
+  
+  
+  if (EXTERNAL_READONLY_COMMANDS.includes(oneWordKey)) {
+    return true
+  }
+
+  
+  
+  const config: ExternalCommandConfig | undefined =
+    DOCKER_READ_ONLY_COMMANDS[oneWordKey]
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(1)
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55568 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDotnetSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return false
+  }
+
+  
+  
+  for (const arg of args) {
+    if (!DOTNET_READ_ONLY_FLAGS.has(arg.toLowerCase())) {
+      return false
+    }
+  }
+
+  return true
+}
+)) {
+      return false
+    }
+  }
+
+  const oneWordKey =  STR55567 
+
+  
+  
+  if (EXTERNAL_READONLY_COMMANDS.includes(oneWordKey)) {
+    return true
+  }
+
+  
+  
+  const config: ExternalCommandConfig | undefined =
+    DOCKER_READ_ONLY_COMMANDS[oneWordKey]
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(1)
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55568 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDotnetSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return false
+  }
+
+  
+  
+  for (const arg of args) {
+    if (!DOTNET_READ_ONLY_FLAGS.has(arg.toLowerCase())) {
+      return false
+    }
+  }
+
+  return true
+}
+)) {
+      return false
+    }
+  }
+
+  
+  
+  
+  let idx = 0
+  while (idx < args.length) {
+    const arg = args[idx]
+    if (!arg || !arg.startsWith( STR55542 )) {
+      break
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    for (const shortFlag of DANGEROUS_GIT_SHORT_FLAGS_ATTACHED) {
+      if (
+        arg.length > shortFlag.length &&
+        arg.startsWith(shortFlag) &&
+        (shortFlag ===  STR55543  || arg[shortFlag.length] !==  STR55544 )
+      ) {
+        return false
+      }
+    }
+    const hasInlineValue = arg.includes( STR55545 )
+    const flagName = hasInlineValue ? arg.split( STR55546 )[0] ||  STR55547  : arg
+    if (DANGEROUS_GIT_GLOBAL_FLAGS.has(flagName)) {
+      return false
+    }
+    
+    if (!hasInlineValue && GIT_GLOBAL_FLAGS_WITH_VALUES.has(flagName)) {
+      idx += 2
+    } else {
+      idx++
+    }
+  }
+
+  if (idx >= args.length) {
+    return true
+  }
+
+  
+  const first = args[idx]?.toLowerCase() ||  STR55548 
+  const second = idx + 1 < args.length ? args[idx + 1]?.toLowerCase() ||  STR55549  :  STR55550 
+
+  
+  const twoWordKey =  STR55551 
+  const oneWordKey =  STR55552 
+
+  let config: ExternalCommandConfig | undefined =
+    GIT_READ_ONLY_COMMANDS[twoWordKey]
+  let subcommandTokens = 2
+
+  if (!config) {
+    config = GIT_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(idx + subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  if (first ===  STR55553 ) {
+    for (const arg of flagArgs) {
+      if (!arg.startsWith( STR55554 )) {
+        if (
+          arg.includes( STR55555 ) ||
+          arg.includes( STR55556 ) ||
+          arg.includes( STR55557 ) ||
+          arg.includes( STR55558 )
+        ) {
+          return false
+        }
+      }
+    }
+  }
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55559 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config, { commandName:  STR55560  })
+}
+
+function isGhSafe(args: string[]): boolean {
+  
+  if (process.env.USER_TYPE !==  STR55561 ) {
+    return false
+  }
+
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  let config: ExternalCommandConfig | undefined
+  let subcommandTokens = 0
+
+  if (args.length >= 2) {
+    const twoWordKey =  STR55562 
+    config = GH_READ_ONLY_COMMANDS[twoWordKey]
+    subcommandTokens = 2
+  }
+
+  
+  if (!config && args.length >= 1) {
+    const oneWordKey =  STR55563 
+    config = GH_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of flagArgs) {
+    if (arg.includes( STR55564 )) {
+      return false
+    }
+  }
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55565 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDockerSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of args) {
+    if (arg.includes( STR55566 )) {
+      return false
+    }
+  }
+
+  const oneWordKey =  STR55567 
+
+  
+  
+  if (EXTERNAL_READONLY_COMMANDS.includes(oneWordKey)) {
+    return true
+  }
+
+  
+  
+  const config: ExternalCommandConfig | undefined =
+    DOCKER_READ_ONLY_COMMANDS[oneWordKey]
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(1)
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55568 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDotnetSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return false
+  }
+
+  
+  
+  for (const arg of args) {
+    if (!DOTNET_READ_ONLY_FLAGS.has(arg.toLowerCase())) {
+      return false
+    }
+  }
+
+  return true
+}
+)
+        ) {
+          return false
+        }
+      }
+    }
+  }
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55559 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config, { commandName:  STR55560  })
+}
+
+function isGhSafe(args: string[]): boolean {
+  
+  if (process.env.USER_TYPE !==  STR55561 ) {
+    return false
+  }
+
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  let config: ExternalCommandConfig | undefined
+  let subcommandTokens = 0
+
+  if (args.length >= 2) {
+    const twoWordKey =  STR55562 
+    config = GH_READ_ONLY_COMMANDS[twoWordKey]
+    subcommandTokens = 2
+  }
+
+  
+  if (!config && args.length >= 1) {
+    const oneWordKey =  STR55563 
+    config = GH_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of flagArgs) {
+    if (arg.includes( STR55564 )) {
+      return false
+    }
+  }
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55565 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDockerSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of args) {
+    if (arg.includes( STR55566 )) {
+      return false
+    }
+  }
+
+  const oneWordKey =  STR55567 
+
+  
+  
+  if (EXTERNAL_READONLY_COMMANDS.includes(oneWordKey)) {
+    return true
+  }
+
+  
+  
+  const config: ExternalCommandConfig | undefined =
+    DOCKER_READ_ONLY_COMMANDS[oneWordKey]
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(1)
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55568 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDotnetSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return false
+  }
+
+  
+  
+  for (const arg of args) {
+    if (!DOTNET_READ_ONLY_FLAGS.has(arg.toLowerCase())) {
+      return false
+    }
+  }
+
+  return true
+}
+)) {
+      return false
+    }
+  }
+
+  
+  
+  
+  let idx = 0
+  while (idx < args.length) {
+    const arg = args[idx]
+    if (!arg || !arg.startsWith( STR55542 )) {
+      break
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    for (const shortFlag of DANGEROUS_GIT_SHORT_FLAGS_ATTACHED) {
+      if (
+        arg.length > shortFlag.length &&
+        arg.startsWith(shortFlag) &&
+        (shortFlag ===  STR55543  || arg[shortFlag.length] !==  STR55544 )
+      ) {
+        return false
+      }
+    }
+    const hasInlineValue = arg.includes( STR55545 )
+    const flagName = hasInlineValue ? arg.split( STR55546 )[0] ||  STR55547  : arg
+    if (DANGEROUS_GIT_GLOBAL_FLAGS.has(flagName)) {
+      return false
+    }
+    
+    if (!hasInlineValue && GIT_GLOBAL_FLAGS_WITH_VALUES.has(flagName)) {
+      idx += 2
+    } else {
+      idx++
+    }
+  }
+
+  if (idx >= args.length) {
+    return true
+  }
+
+  
+  const first = args[idx]?.toLowerCase() ||  STR55548 
+  const second = idx + 1 < args.length ? args[idx + 1]?.toLowerCase() ||  STR55549  :  STR55550 
+
+  
+  const twoWordKey =  STR55551 
+  const oneWordKey =  STR55552 
+
+  let config: ExternalCommandConfig | undefined =
+    GIT_READ_ONLY_COMMANDS[twoWordKey]
+  let subcommandTokens = 2
+
+  if (!config) {
+    config = GIT_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(idx + subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  if (first ===  STR55553 ) {
+    for (const arg of flagArgs) {
+      if (!arg.startsWith( STR55554 )) {
+        if (
+          arg.includes( STR55555 ) ||
+          arg.includes( STR55556 ) ||
+          arg.includes( STR55557 ) ||
+          arg.includes( STR55558 )
+        ) {
+          return false
+        }
+      }
+    }
+  }
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55559 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config, { commandName:  STR55560  })
+}
+
+function isGhSafe(args: string[]): boolean {
+  
+  if (process.env.USER_TYPE !==  STR55561 ) {
+    return false
+  }
+
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  let config: ExternalCommandConfig | undefined
+  let subcommandTokens = 0
+
+  if (args.length >= 2) {
+    const twoWordKey =  STR55562 
+    config = GH_READ_ONLY_COMMANDS[twoWordKey]
+    subcommandTokens = 2
+  }
+
+  
+  if (!config && args.length >= 1) {
+    const oneWordKey =  STR55563 
+    config = GH_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of flagArgs) {
+    if (arg.includes( STR55564 )) {
+      return false
+    }
+  }
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55565 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDockerSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of args) {
+    if (arg.includes( STR55566 )) {
+      return false
+    }
+  }
+
+  const oneWordKey =  STR55567 
+
+  
+  
+  if (EXTERNAL_READONLY_COMMANDS.includes(oneWordKey)) {
+    return true
+  }
+
+  
+  
+  const config: ExternalCommandConfig | undefined =
+    DOCKER_READ_ONLY_COMMANDS[oneWordKey]
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(1)
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55568 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDotnetSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return false
+  }
+
+  
+  
+  for (const arg of args) {
+    if (!DOTNET_READ_ONLY_FLAGS.has(arg.toLowerCase())) {
+      return false
+    }
+  }
+
+  return true
+}
+)) {
+      return false
+    }
+  }
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55565 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDockerSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of args) {
+    if (arg.includes( STR55566 )) {
+      return false
+    }
+  }
+
+  const oneWordKey =  STR55567 
+
+  
+  
+  if (EXTERNAL_READONLY_COMMANDS.includes(oneWordKey)) {
+    return true
+  }
+
+  
+  
+  const config: ExternalCommandConfig | undefined =
+    DOCKER_READ_ONLY_COMMANDS[oneWordKey]
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(1)
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55568 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDotnetSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return false
+  }
+
+  
+  
+  for (const arg of args) {
+    if (!DOTNET_READ_ONLY_FLAGS.has(arg.toLowerCase())) {
+      return false
+    }
+  }
+
+  return true
+}
+)) {
+      return false
+    }
+  }
+
+  
+  
+  
+  let idx = 0
+  while (idx < args.length) {
+    const arg = args[idx]
+    if (!arg || !arg.startsWith( STR55542 )) {
+      break
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    for (const shortFlag of DANGEROUS_GIT_SHORT_FLAGS_ATTACHED) {
+      if (
+        arg.length > shortFlag.length &&
+        arg.startsWith(shortFlag) &&
+        (shortFlag ===  STR55543  || arg[shortFlag.length] !==  STR55544 )
+      ) {
+        return false
+      }
+    }
+    const hasInlineValue = arg.includes( STR55545 )
+    const flagName = hasInlineValue ? arg.split( STR55546 )[0] ||  STR55547  : arg
+    if (DANGEROUS_GIT_GLOBAL_FLAGS.has(flagName)) {
+      return false
+    }
+    
+    if (!hasInlineValue && GIT_GLOBAL_FLAGS_WITH_VALUES.has(flagName)) {
+      idx += 2
+    } else {
+      idx++
+    }
+  }
+
+  if (idx >= args.length) {
+    return true
+  }
+
+  
+  const first = args[idx]?.toLowerCase() ||  STR55548 
+  const second = idx + 1 < args.length ? args[idx + 1]?.toLowerCase() ||  STR55549  :  STR55550 
+
+  
+  const twoWordKey =  STR55551 
+  const oneWordKey =  STR55552 
+
+  let config: ExternalCommandConfig | undefined =
+    GIT_READ_ONLY_COMMANDS[twoWordKey]
+  let subcommandTokens = 2
+
+  if (!config) {
+    config = GIT_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(idx + subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  if (first ===  STR55553 ) {
+    for (const arg of flagArgs) {
+      if (!arg.startsWith( STR55554 )) {
+        if (
+          arg.includes( STR55555 ) ||
+          arg.includes( STR55556 ) ||
+          arg.includes( STR55557 ) ||
+          arg.includes( STR55558 )
+        ) {
+          return false
+        }
+      }
+    }
+  }
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55559 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config, { commandName:  STR55560  })
+}
+
+function isGhSafe(args: string[]): boolean {
+  
+  if (process.env.USER_TYPE !==  STR55561 ) {
+    return false
+  }
+
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  let config: ExternalCommandConfig | undefined
+  let subcommandTokens = 0
+
+  if (args.length >= 2) {
+    const twoWordKey =  STR55562 
+    config = GH_READ_ONLY_COMMANDS[twoWordKey]
+    subcommandTokens = 2
+  }
+
+  
+  if (!config && args.length >= 1) {
+    const oneWordKey =  STR55563 
+    config = GH_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of flagArgs) {
+    if (arg.includes( STR55564 )) {
+      return false
+    }
+  }
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55565 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDockerSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of args) {
+    if (arg.includes( STR55566 )) {
+      return false
+    }
+  }
+
+  const oneWordKey =  STR55567 
+
+  
+  
+  if (EXTERNAL_READONLY_COMMANDS.includes(oneWordKey)) {
+    return true
+  }
+
+  
+  
+  const config: ExternalCommandConfig | undefined =
+    DOCKER_READ_ONLY_COMMANDS[oneWordKey]
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(1)
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55568 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDotnetSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return false
+  }
+
+  
+  
+  for (const arg of args) {
+    if (!DOTNET_READ_ONLY_FLAGS.has(arg.toLowerCase())) {
+      return false
+    }
+  }
+
+  return true
+}
+)
+        ) {
+          return false
+        }
+      }
+    }
+  }
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55559 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config, { commandName:  STR55560  })
+}
+
+function isGhSafe(args: string[]): boolean {
+  
+  if (process.env.USER_TYPE !==  STR55561 ) {
+    return false
+  }
+
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  let config: ExternalCommandConfig | undefined
+  let subcommandTokens = 0
+
+  if (args.length >= 2) {
+    const twoWordKey =  STR55562 
+    config = GH_READ_ONLY_COMMANDS[twoWordKey]
+    subcommandTokens = 2
+  }
+
+  
+  if (!config && args.length >= 1) {
+    const oneWordKey =  STR55563 
+    config = GH_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of flagArgs) {
+    if (arg.includes( STR55564 )) {
+      return false
+    }
+  }
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55565 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDockerSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of args) {
+    if (arg.includes( STR55566 )) {
+      return false
+    }
+  }
+
+  const oneWordKey =  STR55567 
+
+  
+  
+  if (EXTERNAL_READONLY_COMMANDS.includes(oneWordKey)) {
+    return true
+  }
+
+  
+  
+  const config: ExternalCommandConfig | undefined =
+    DOCKER_READ_ONLY_COMMANDS[oneWordKey]
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(1)
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55568 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDotnetSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return false
+  }
+
+  
+  
+  for (const arg of args) {
+    if (!DOTNET_READ_ONLY_FLAGS.has(arg.toLowerCase())) {
+      return false
+    }
+  }
+
+  return true
+}
+)) {
+      return false
+    }
+  }
+
+  
+  
+  
+  let idx = 0
+  while (idx < args.length) {
+    const arg = args[idx]
+    if (!arg || !arg.startsWith( STR55542 )) {
+      break
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    for (const shortFlag of DANGEROUS_GIT_SHORT_FLAGS_ATTACHED) {
+      if (
+        arg.length > shortFlag.length &&
+        arg.startsWith(shortFlag) &&
+        (shortFlag ===  STR55543  || arg[shortFlag.length] !==  STR55544 )
+      ) {
+        return false
+      }
+    }
+    const hasInlineValue = arg.includes( STR55545 )
+    const flagName = hasInlineValue ? arg.split( STR55546 )[0] ||  STR55547  : arg
+    if (DANGEROUS_GIT_GLOBAL_FLAGS.has(flagName)) {
+      return false
+    }
+    
+    if (!hasInlineValue && GIT_GLOBAL_FLAGS_WITH_VALUES.has(flagName)) {
+      idx += 2
+    } else {
+      idx++
+    }
+  }
+
+  if (idx >= args.length) {
+    return true
+  }
+
+  
+  const first = args[idx]?.toLowerCase() ||  STR55548 
+  const second = idx + 1 < args.length ? args[idx + 1]?.toLowerCase() ||  STR55549  :  STR55550 
+
+  
+  const twoWordKey =  STR55551 
+  const oneWordKey =  STR55552 
+
+  let config: ExternalCommandConfig | undefined =
+    GIT_READ_ONLY_COMMANDS[twoWordKey]
+  let subcommandTokens = 2
+
+  if (!config) {
+    config = GIT_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(idx + subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  if (first ===  STR55553 ) {
+    for (const arg of flagArgs) {
+      if (!arg.startsWith( STR55554 )) {
+        if (
+          arg.includes( STR55555 ) ||
+          arg.includes( STR55556 ) ||
+          arg.includes( STR55557 ) ||
+          arg.includes( STR55558 )
+        ) {
+          return false
+        }
+      }
+    }
+  }
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55559 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config, { commandName:  STR55560  })
+}
+
+function isGhSafe(args: string[]): boolean {
+  
+  if (process.env.USER_TYPE !==  STR55561 ) {
+    return false
+  }
+
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  let config: ExternalCommandConfig | undefined
+  let subcommandTokens = 0
+
+  if (args.length >= 2) {
+    const twoWordKey =  STR55562 
+    config = GH_READ_ONLY_COMMANDS[twoWordKey]
+    subcommandTokens = 2
+  }
+
+  
+  if (!config && args.length >= 1) {
+    const oneWordKey =  STR55563 
+    config = GH_READ_ONLY_COMMANDS[oneWordKey]
+    subcommandTokens = 1
+  }
+
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(subcommandTokens)
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of flagArgs) {
+    if (arg.includes( STR55564 )) {
+      return false
+    }
+  }
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55565 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDockerSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return true
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  for (const arg of args) {
+    if (arg.includes( STR55566 )) {
+      return false
+    }
+  }
+
+  const oneWordKey =  STR55567 
+
+  
+  
+  if (EXTERNAL_READONLY_COMMANDS.includes(oneWordKey)) {
+    return true
+  }
+
+  
+  
+  const config: ExternalCommandConfig | undefined =
+    DOCKER_READ_ONLY_COMMANDS[oneWordKey]
+  if (!config) {
+    return false
+  }
+
+  const flagArgs = args.slice(1)
+
+  if (
+    config.additionalCommandIsDangerousCallback &&
+    config.additionalCommandIsDangerousCallback( STR55568 , flagArgs)
+  ) {
+    return false
+  }
+  return validateFlags(flagArgs, 0, config)
+}
+
+function isDotnetSafe(args: string[]): boolean {
+  if (args.length === 0) {
+    return false
+  }
+
+  
   
   for (const arg of args) {
     if (!DOTNET_READ_ONLY_FLAGS.has(arg.toLowerCase())) {

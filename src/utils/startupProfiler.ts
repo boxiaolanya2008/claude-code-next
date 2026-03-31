@@ -12,7 +12,7 @@ import { getFsImplementation } from './fsOperations.js'
 import { formatMs, formatTimelineLine, getPerformance } from './profilerBase.js'
 import { writeFileSync_DEPRECATED } from './slowOperations.js'
 
-const DETAILED_PROFILING = isEnvTruthy(process.env.CLAUDE_CODE_PROFILE_STARTUP)
+const DETAILED_PROFILING = isEnvTruthy(process.env.CLAUDE_CODE_NEXT_PROFILE_STARTUP)
 
 const STATSIG_SAMPLE_RATE = 0.005
 
@@ -31,13 +31,10 @@ const PHASE_DEFINITIONS = {
 } as const
 
 if (SHOULD_PROFILE) {
-  // eslint-disable-next-line custom-rules/no-top-level-side-effects
+  
   profileCheckpoint('profiler_initialized')
 }
 
-/**
- * Record a checkpoint with the given name
- */
 export function profileCheckpoint(name: string): void {
   if (!SHOULD_PROFILE) return
 
@@ -50,10 +47,6 @@ export function profileCheckpoint(name: string): void {
   }
 }
 
-/**
- * Get a formatted report of all checkpoints
- * Only available when DETAILED_PROFILING is enabled
- */
 function getReport(): string {
   if (!DETAILED_PROFILING) {
     return 'Startup profiling not enabled'
@@ -105,7 +98,7 @@ export function profileReport(): void {
 
   
   if (DETAILED_PROFILING) {
-    // Write to file
+    
     const path = getStartupPerfLogPath()
     const dir = dirname(path)
     const fs = getFsImplementation()
@@ -128,25 +121,21 @@ export function getStartupPerfLogPath(): string {
   return join(getClaudeConfigHomeDir(), 'startup-perf', `${getSessionId()}.txt`)
 }
 
-/**
- * Log startup performance phases to Statsig.
- * Only logs if this session was sampled at startup.
- */
 export function logStartupPerf(): void {
-  // Only log if we were sampled (decision made at module load)
+  
   if (!STATSIG_LOGGING_SAMPLED) return
 
   const perf = getPerformance()
   const marks = perf.getEntriesByType('mark')
   if (marks.length === 0) return
 
-  // Build checkpoint lookup
+  
   const checkpointTimes = new Map<string, number>()
   for (const mark of marks) {
     checkpointTimes.set(mark.name, mark.startTime)
   }
 
-  // Compute phase durations
+  
   const metadata: Record<string, number | undefined> = {}
 
   for (const [phaseName, [startCheckpoint, endCheckpoint]] of Object.entries(
@@ -160,7 +149,7 @@ export function logStartupPerf(): void {
     }
   }
 
-  // Add checkpoint count for debugging
+  
   metadata.checkpoint_count = marks.length
 
   logEvent(

@@ -8,7 +8,7 @@ export function registerEscHotkey(onEscape: () => void): boolean {
   if (registered) return true
   const cu = requireComputerUseSwift()
   if (!cu.hotkey.registerEscape(onEscape)) {
-    // CGEvent.tapCreate failed — typically missing Accessibility permission.
+    
     
     logForDebugging('[cu-esc] registerEscape returned false', { level: 'warn' })
     return false

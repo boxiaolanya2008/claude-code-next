@@ -6,14 +6,14 @@ import {
   SUPPORTED_SETTINGS,
 } from './supportedSettings.js'
 
-export const DESCRIPTION = 'Get or set Claude Code configuration settings.'
+export const DESCRIPTION = 'Get or set Claude Code Next configuration settings.'
 
 export function generatePrompt(): string {
   const globalSettings: string[] = []
   const projectSettings: string[] = []
 
   for (const [key, config] of Object.entries(SUPPORTED_SETTINGS)) {
-    // Skip model - it gets its own section with dynamic options
+    
     if (key === 'model') continue
     
     
@@ -44,9 +44,9 @@ export function generatePrompt(): string {
 
   const modelSection = generateModelSection()
 
-  return `Get or set Claude Code configuration settings.
+  return `Get or set Claude Code Next configuration settings.
 
-  View or change Claude Code settings. Use when the user requests configuration changes, asks about current settings, or when adjusting a setting would benefit them.
+  View or change Claude Code Next settings. Use when the user requests configuration changes, asks about current settings, or when adjusting a setting would benefit them.
 
 ## Usage
 - **Get current value:** Omit the "value" parameter

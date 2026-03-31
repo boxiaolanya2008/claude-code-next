@@ -1,11 +1,11 @@
 
 
 export type Signal<Args extends unknown[] = []> = {
-  /** Subscribe a listener. Returns an unsubscribe function. */
+  
   subscribe: (listener: (...args: Args) => void) => () => void
-  /** Call all subscribed listeners with the given arguments. */
+  
   emit: (...args: Args) => void
-  /** Remove all listeners. Useful in dispose/reset paths. */
+  
   clear: () => void
 }
 

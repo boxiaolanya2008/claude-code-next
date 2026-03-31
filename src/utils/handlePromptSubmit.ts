@@ -71,9 +71,6 @@ type BaseExecutionParams = {
   canUseTool?: CanUseToolFn
 }
 
-/**
- * Parameters for core execution logic (no UI concerns).
- */
 type ExecuteUserInputParams = BaseExecutionParams & {
   resetHistory: () => void
   onInputChange: (value: string) => void
@@ -86,7 +83,7 @@ export type PromptInputHelpers = {
 }
 
 export type HandlePromptSubmitParams = BaseExecutionParams & {
-  // Direct user input path (set when called from onSubmit, absent for queue processor)
+  
   input?: string
   mode?: PromptInputMode
   pastedContents?: Record<number, PastedContent>
@@ -168,7 +165,7 @@ export async function handlePromptSubmit(
   const mode = params.mode ?? 'prompt'
   const rawPastedContents = params.pastedContents ?? {}
 
-  // Images are only sent if their [Image #N] placeholder is still in the text.
+  
   
   const referencedIds = new Set(parseReferences(input).map(r => r.id))
   const pastedContents = Object.fromEntries(
@@ -182,28 +179,28 @@ export async function handlePromptSubmit(
     return
   }
 
-  // Handle exit commands by triggering the exit command instead of direct process.exit
+  
   
   if (
     !skipSlashCommands &&
     ['exit', 'quit', ':q', ':q!', ':wq', ':wq!'].includes(input.trim())
   ) {
-    // Trigger the exit command which will show the feedback dialog
+    
     const exitCommand = commands.find(cmd => cmd.name === 'exit')
     if (exitCommand) {
-      // Submit the /exit command instead - recursive call needs to be handled
+      
       void handlePromptSubmit({
         ...params,
         input: '/exit',
       })
     } else {
-      // Fallback to direct exit if exit command not found
+      
       exit()
     }
     return
   }
 
-  // Parse references and replace with actual content early, before queueing
+  
   
   
   const finalInput = expandPastedTextRefs(input, pastedContents)
@@ -304,12 +301,12 @@ export async function handlePromptSubmit(
   }
 
   if (queryGuard.isActive || isExternalLoading) {
-    // Only allow prompt and bash mode commands to be queued
+    
     if (mode !== 'prompt' && mode !== 'bash') {
       return
     }
 
-    // Interrupt the current turn when all executing tools have
+    
     
     if (params.hasInterruptibleToolInProgress) {
       logForDebugging(
@@ -324,7 +321,7 @@ export async function handlePromptSubmit(
       params.abortController?.abort('interrupt')
     }
 
-    // Enqueue with string value + raw pastedContents. Images will be resized
+    
     
     enqueue({
       value: finalInput.trim(),
@@ -343,7 +340,7 @@ export async function handlePromptSubmit(
     return
   }
 
-  // Start query profiling for this query
+  
   startQueryProfile()
 
   
@@ -379,13 +376,6 @@ export async function handlePromptSubmit(
   })
 }
 
-/**
- * Core logic for executing user input without UI side effects.
- *
- * All commands arrive as `queuedCommands`. First command gets full treatment
- * (attachments, ideSelection, pastedContents with image resizing). Commands 2-N
- * get `skipAttachments` to avoid duplicating turn-level context.
- */
 async function executeUserInput(params: ExecuteUserInputParams): Promise<void> {
   const {
     messages,
@@ -416,14 +406,14 @@ async function executeUserInput(params: ExecuteUserInputParams): Promise<void> {
     return getToolUseContext(messages, [], abortController, mainLoopModel)
   }
 
-  // Wrap in try-finally so the guard is released even if processUserInput
   
-  // which transitions running→idle; cancelReservation() below is a no-op in
-  // that case (only acts on dispatching state).
+  
+  
+  
   try {
-    // Reserve the guard BEFORE processUserInput — processBashCommand awaits
     
-    // so the guard must be active during those awaits to ensure concurrent
+    
+    
     
     
     
@@ -532,7 +522,7 @@ async function executeUserInput(params: ExecuteUserInputParams): Promise<void> {
       }
 
       if (newMessages.length) {
-        // History is now added in the caller (onSubmit) for direct user submissions.
+        
         
         
         
@@ -563,7 +553,7 @@ async function executeUserInput(params: ExecuteUserInputParams): Promise<void> {
           effort,
         )
       } else {
-        // Local slash commands that skip messages (e.g., /model, /theme).
+        
         
         
         
@@ -578,7 +568,7 @@ async function executeUserInput(params: ExecuteUserInputParams): Promise<void> {
         setAbortController(null)
       }
 
-      // Handle nextInput from commands that want to chain (e.g., /discover activation)
+      
       if (nextInput) {
         if (submitNextInput) {
           enqueue({ value: nextInput, mode: 'prompt' })
@@ -586,13 +576,13 @@ async function executeUserInput(params: ExecuteUserInputParams): Promise<void> {
           params.onInputChange(nextInput)
         }
       }
-    }) // end runWithWorkload — ALS context naturally scoped, no finally needed
+    }) 
   } finally {
-    // Safety net: release the guard reservation if processUserInput threw
     
     
     
-    // useQueueProcessor no longer needs its own .finally().
+    
+    
     queryGuard.cancelReservation()
     
     

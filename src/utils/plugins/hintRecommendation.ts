@@ -31,22 +31,6 @@ export type PluginHintRecommendation = {
   sourceCommand: string
 }
 
-/**
- * Pre-store gate called by shell tools when a `type="plugin"` hint is detected.
- * Drops the hint if:
- *
- *  - a dialog has already been shown this session
- *  - user has disabled hints
- *  - the shown-plugins list has hit the config-growth cap
- *  - plugin slug doesn't parse as `name@marketplace`
- *  - marketplace isn't official (hardcoded for v1)
- *  - plugin is already installed
- *  - plugin was already shown in a prior session
- *
- * Synchronous on purpose — shell tools shouldn't await a marketplace lookup
- * just to strip a stderr line. The async marketplace-cache check happens
- * later in resolvePluginHint (hook side).
- */
 export function maybeRecordPluginHint(hint: ClaudeCodeHint): void {
   if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_lapis_finch', false)) return
   if (hasShownHintThisSession()) return
@@ -65,7 +49,7 @@ export function maybeRecordPluginHint(hint: ClaudeCodeHint): void {
   if (isPluginInstalled(pluginId)) return
   if (isPluginBlockedByPolicy(pluginId)) return
 
-  // Bound repeat lookups on the same slug — a CLI that emits on every
+  
   
   if (triedThisSession.has(pluginId)) return
   triedThisSession.add(pluginId)
@@ -79,11 +63,6 @@ export function _resetHintRecommendationForTesting(): void {
   triedThisSession.clear()
 }
 
-/**
- * Resolve the pending hint to a renderable recommendation. Runs the async
- * marketplace lookup that the sync pre-store gate skipped. Returns null if
- * the plugin isn't in the marketplace cache — the hint is discarded.
- */
 export async function resolvePluginHint(
   hint: ClaudeCodeHint,
 ): Promise<PluginHintRecommendation | null> {
@@ -118,10 +97,6 @@ export async function resolvePluginHint(
   }
 }
 
-/**
- * Record that a prompt for this plugin was surfaced. Called regardless of
- * the user's yes/no response — show-once semantics.
- */
 export function markHintPluginShown(pluginId: string): void {
   saveGlobalConfig(current => {
     const existing = current.claudeCodeHints?.plugin ?? []
@@ -136,7 +111,6 @@ export function markHintPluginShown(pluginId: string): void {
   })
 }
 
-/** Called when the user picks "don't show plugin installation hints again". */
 export function disableHintRecommendations(): void {
   saveGlobalConfig(current => {
     if (current.claudeCodeHints?.disabled) return current

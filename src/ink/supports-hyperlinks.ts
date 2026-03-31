@@ -16,11 +16,6 @@ type SupportsHyperlinksOptions = {
   stdoutSupported?: boolean
 }
 
-/**
- * Returns whether stdout supports OSC 8 hyperlinks.
- * Extends the supports-hyperlinks library with additional terminal detection.
- * @param options Optional overrides for testing (env, stdoutSupported)
- */
 export function supportsHyperlinks(
   options?: SupportsHyperlinksOptions,
 ): boolean {
@@ -38,14 +33,14 @@ export function supportsHyperlinks(
     return true
   }
 
-  // LC_TERMINAL is set by some terminals (e.g. iTerm2) and preserved inside tmux,
-  // where TERM_PROGRAM is overwritten to 'tmux'.
+  
+  
   const lcTerminal = env['LC_TERMINAL']
   if (lcTerminal && ADDITIONAL_HYPERLINK_TERMINALS.includes(lcTerminal)) {
     return true
   }
 
-  // Kitty sets TERM=xterm-kitty
+  
   const term = env['TERM']
   if (term?.includes('kitty')) {
     return true

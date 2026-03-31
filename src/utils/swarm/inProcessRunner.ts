@@ -132,7 +132,7 @@ function createInProcessCanUseTool(
       return result
     }
 
-    // For bash commands, try classifier auto-approval before showing leader dialog.
+    
     
     
     if (
@@ -154,7 +154,7 @@ function createInProcessCanUseTool(
       }
     }
 
-    // Check if aborted before showing UI
+    
     if (abortController.signal.aborted) {
       return { behavior: 'ask', message: SUBAGENT_REJECT_MESSAGE }
     }
@@ -214,7 +214,7 @@ function createInProcessCanUseTool(
               ? { name: identity.agentName, color: identity.color }
               : undefined,
             onUserInteraction() {
-              // No-op for teammates (no classifier auto-approval)
+              
             },
             onAbort() {
               if (decisionMade) return
@@ -312,7 +312,7 @@ function createInProcessCanUseTool(
       })
     }
 
-    // Fallback: use mailbox system when leader UI queue is unavailable
+    
     return new Promise<PermissionDecision>(resolve => {
       const request = createPermissionRequest({
         toolName: (tool as Tool).name,
@@ -398,7 +398,7 @@ function createInProcessCanUseTool(
                     feedback: parsed.error,
                   })
                 }
-                return // Callback already resolves the promise
+                return 
               }
             }
           }
@@ -429,10 +429,6 @@ function createInProcessCanUseTool(
   }
 }
 
-/**
- * Formats a message as <teammate-message> XML for injection into the conversation.
- * This ensures the model sees messages in the same format as tmux teammates.
- */
 function formatAsTeammateMessage(
   from: string,
   content: string,
@@ -444,11 +440,8 @@ function formatAsTeammateMessage(
   return `<${TEAMMATE_MESSAGE_TAG} teammate_id="${from}"${colorAttr}${summaryAttr}>\n${content}\n</${TEAMMATE_MESSAGE_TAG}>`
 }
 
-/**
- * Configuration for running an in-process teammate.
- */
 export type InProcessRunnerConfig = {
-  /** Teammate identity for context */
+  
   identity: TeammateIdentity
   
   taskId: string
@@ -480,11 +473,8 @@ export type InProcessRunnerConfig = {
   invokingRequestId?: string
 }
 
-/**
- * Result from running an in-process teammate.
- */
 export type InProcessRunnerResult = {
-  /** Whether the run completed successfully */
+  
   success: boolean
   
   error?: string
@@ -492,9 +482,6 @@ export type InProcessRunnerResult = {
   messages: Message[]
 }
 
-/**
- * Updates task state in AppState.
- */
 function updateTaskState(
   taskId: string,
   updater: (task: InProcessTeammateTaskState) => InProcessTeammateTaskState,
@@ -519,10 +506,6 @@ function updateTaskState(
   })
 }
 
-/**
- * Sends a message to the leader's file-based mailbox.
- * Uses the same mailbox system as tmux teammates for consistency.
- */
 async function sendMessageToLeader(
   from: string,
   text: string,
@@ -541,10 +524,6 @@ async function sendMessageToLeader(
   )
 }
 
-/**
- * Sends idle notification to the leader via file-based mailbox.
- * Uses agentName (not agentId) for consistency with process-based teammates.
- */
 async function sendIdleNotification(
   agentName: string,
   agentColor: string | undefined,
@@ -567,10 +546,6 @@ async function sendIdleNotification(
   )
 }
 
-/**
- * Find an available task from the team's task list.
- * A task is available if it's pending, has no owner, and is not blocked.
- */
 function findAvailableTask(tasks: Task[]): Task | undefined {
   const unresolvedTaskIds = new Set(
     tasks.filter(t => t.status !== 'completed').map(t => t.id),
@@ -583,9 +558,6 @@ function findAvailableTask(tasks: Task[]): Task | undefined {
   })
 }
 
-/**
- * Format a task as a prompt for the teammate to work on.
- */
 function formatTaskAsPrompt(task: Task): string {
   let prompt = `Complete all open tasks. Start with task #${task.id}: \n\n ${task.subject}`
 
@@ -596,10 +568,6 @@ function formatTaskAsPrompt(task: Task): string {
   return prompt
 }
 
-/**
- * Try to claim an available task from the team's task list.
- * Returns the formatted prompt if a task was claimed, or undefined if none available.
- */
 async function tryClaimNextTask(
   taskListId: string,
   agentName: string,
@@ -621,7 +589,7 @@ async function tryClaimNextTask(
       return undefined
     }
 
-    // Also set status to in_progress so the UI reflects it immediately
+    
     await updateTask(taskListId, availableTask.id, { status: 'in_progress' })
 
     logForDebugging(
@@ -635,9 +603,6 @@ async function tryClaimNextTask(
   }
 }
 
-/**
- * Result of waiting for messages.
- */
 type WaitResult =
   | {
       type: 'shutdown_request'
@@ -655,16 +620,6 @@ type WaitResult =
       type: 'aborted'
     }
 
-/**
- * Waits for new prompts or shutdown request.
- * Polls the teammate's mailbox every 500ms, checking for:
- * - Shutdown request from leader (returned to caller for model decision)
- * - New messages/prompts from leader
- * - Abort signal
- *
- * This keeps the teammate alive in 'idle' state instead of terminating.
- * Does NOT auto-approve shutdown - the model should make that decision.
- */
 async function waitForNextPromptOrShutdown(
   identity: TeammateIdentity,
   abortController: AbortController,
@@ -681,7 +636,7 @@ async function waitForNextPromptOrShutdown(
 
   let pollCount = 0
   while (!abortController.signal.aborted) {
-    // Check for in-memory pending messages on every iteration (from transcript viewing)
+    
     const appState = getAppState()
     const task = appState.tasks[taskId]
     if (
@@ -689,7 +644,7 @@ async function waitForNextPromptOrShutdown(
       task.type === 'in_process_teammate' &&
       task.pendingUserMessages.length > 0
     ) {
-      const message = task.pendingUserMessages[0]! // Safe: checked length > 0
+      const message = task.pendingUserMessages[0]! 
       
       setAppState(prev => {
         const prevTask = prev.tasks[taskId]
@@ -717,7 +672,7 @@ async function waitForNextPromptOrShutdown(
       }
     }
 
-    // Wait before next poll (skip on first iteration to check immediately)
+    
     if (pollCount > 0) {
       await sleep(POLL_INTERVAL_MS)
     }
@@ -731,12 +686,12 @@ async function waitForNextPromptOrShutdown(
       return { type: 'aborted' }
     }
 
-    // Check for messages in mailbox
+    
     logForDebugging(
       `[inProcessRunner] ${identity.agentName} poll #${pollCount}: checking mailbox`,
     )
     try {
-      // Read all messages and scan unread for shutdown requests first.
+      
       
       
       const allMessages = await readMailbox(
@@ -782,7 +737,7 @@ async function waitForNextPromptOrShutdown(
         }
       }
 
-      // No shutdown request found. Prioritize team-lead messages over peer
+      
       
       
       
@@ -797,7 +752,7 @@ async function waitForNextPromptOrShutdown(
         }
       }
 
-      // Fall back to first unread message (any sender)
+      
       if (selectedIndex === -1) {
         selectedIndex = allMessages.findIndex(m => !m.read)
       }
@@ -829,7 +784,7 @@ async function waitForNextPromptOrShutdown(
       
     }
 
-    // Check the team's task list for unclaimed tasks
+    
     const taskPrompt = await tryClaimNextTask(taskListId, identity.agentName)
     if (taskPrompt) {
       return {
@@ -846,19 +801,6 @@ async function waitForNextPromptOrShutdown(
   return { type: 'aborted' }
 }
 
-/**
- * Runs an in-process teammate with a continuous prompt loop.
- *
- * Executes runAgent() within the teammate's AsyncLocalStorage context,
- * tracks progress, updates task state, sends idle notification on completion,
- * then waits for new prompts or shutdown requests.
- *
- * Unlike background tasks, teammates stay alive and can receive multiple prompts.
- * The loop only exits on abort or after shutdown is approved by the model.
- *
- * @param config - Runner configuration
- * @returns Result with messages and success status
- */
 export async function runInProcessTeammate(
   config: InProcessRunnerConfig,
 ): Promise<InProcessRunnerResult> {
@@ -899,7 +841,7 @@ export async function runInProcessTeammate(
     invocationEmitted: false,
   }
 
-  // Build system prompt based on systemPromptMode
+  
   let teammateSystemPrompt: string
   if (systemPromptMode === 'replace' && systemPrompt) {
     teammateSystemPrompt = systemPrompt
@@ -923,7 +865,7 @@ export async function runInProcessTeammate(
         systemPromptParts.push(`\n# Custom Agent Instructions\n${customPrompt}`)
       }
 
-      // Log agent memory loaded event for in-process teammates
+      
       if (agentDefinition.memory) {
         logEvent('tengu_agent_memory_loaded', {
           ...(process.env.USER_TYPE === 'ant'
@@ -940,7 +882,7 @@ export async function runInProcessTeammate(
       }
     }
 
-    // Append mode: add provided system prompt after default
+    
     if (systemPromptMode === 'append' && systemPrompt) {
       systemPromptParts.push(systemPrompt)
     }
@@ -948,16 +890,16 @@ export async function runInProcessTeammate(
     teammateSystemPrompt = systemPromptParts.join('\n')
   }
 
-  // Resolve agent definition - use full system prompt with teammate addendum
+  
   
   
   const resolvedAgentDefinition: CustomAgentDefinition = {
     agentType: identity.agentName,
     whenToUse: `In-process teammate: ${identity.agentName}`,
     getSystemPrompt: () => teammateSystemPrompt,
-    // Inject team-essential tools so teammates can always respond to
     
-    // even with explicit tool lists
+    
+    
     tools: agentDefinition?.tools
       ? [
           ...new Set([
@@ -974,12 +916,12 @@ export async function runInProcessTeammate(
       : ['*'],
     source: 'projectSettings',
     permissionMode: 'default',
-    // Propagate model from custom agent definition so getAgentModel()
+    
     
     ...(agentDefinition?.model ? { model: agentDefinition.model } : {}),
   }
 
-  // All messages across all prompts
+  
   const allMessages: Message[] = []
   
   const wrappedInitialPrompt = formatAsTeammateMessage(
@@ -998,7 +940,7 @@ export async function runInProcessTeammate(
   await tryClaimNextTask(identity.parentSessionId, identity.agentName)
 
   try {
-    // Add initial prompt to task.messages for display (wrapped with XML)
+    
     updateTaskState(
       taskId,
       task => ({
@@ -1076,9 +1018,9 @@ export async function runInProcessTeammate(
             toolUseContext: isolatedContext,
             forkContextMessages: [],
           },
-          true, // suppressFollowUpQuestions
-          undefined, // customInstructions
-          true, // isAutoCompact
+          true, 
+          undefined, 
+          true, 
         )
         contextMessages = buildPostCompactMessages(compactedSummary)
         
@@ -1090,7 +1032,7 @@ export async function runInProcessTeammate(
         if (teammateReplacementState) {
           teammateReplacementState = createContentReplacementState()
         }
-        // Update allMessages in place with compacted version
+        
         allMessages.length = 0
         allMessages.push(...contextMessages)
 
@@ -1104,7 +1046,7 @@ export async function runInProcessTeammate(
         )
       }
 
-      // Pass previous messages as context to preserve conversation history
+      
       
       const forkContextMessages =
         contextMessages.length > 0 ? [...contextMessages] : undefined
@@ -1132,13 +1074,13 @@ export async function runInProcessTeammate(
         permissionMode: currentPermissionMode,
       }
 
-      // Track if this iteration was interrupted by work abort (not lifecycle abort)
+      
       let workWasAborted = false
 
       
       await runWithTeammateContext(teammateContext, async () => {
         return runWithAgentContext(agentContext, async () => {
-          // Mark task as running (not idle)
+          
           updateTaskState(
             taskId,
             task => ({ ...task, status: 'running', isIdle: false }),
@@ -1149,7 +1091,7 @@ export async function runInProcessTeammate(
           
           
           
-          // so they CAN show permission prompts (unlike true background agents).
+          
           
           for await (const message of runAgent({
             agentDefinition: iterationAgentDefinition,
@@ -1180,7 +1122,7 @@ export async function runInProcessTeammate(
             allowedTools,
             contentReplacementState: teammateReplacementState,
           })) {
-            // Check lifecycle abort first (kills whole teammate)
+            
             if (abortController.signal.aborted) {
               logForDebugging(
                 `[inProcessRunner] ${identity.agentId} lifecycle aborted`,
@@ -1188,7 +1130,7 @@ export async function runInProcessTeammate(
               break
             }
 
-            // Check work abort (stops current turn only)
+            
             if (currentWorkAbortController.signal.aborted) {
               logForDebugging(
                 `[inProcessRunner] ${identity.agentId} current work aborted (Escape pressed)`,
@@ -1211,7 +1153,7 @@ export async function runInProcessTeammate(
             updateTaskState(
               taskId,
               task => {
-                // Track in-progress tool use IDs for animation in transcript view
+                
                 let inProgressToolUseIDs = task.inProgressToolUseIDs
                 if (message.type === 'assistant') {
                   for (const block of message.message.content) {
@@ -1267,7 +1209,7 @@ export async function runInProcessTeammate(
         break
       }
 
-      // If work was aborted (Escape), log it and add interrupt message, then continue to idle state
+      
       if (workWasAborted) {
         logForDebugging(
           `[inProcessRunner] ${identity.agentId} work interrupted, returning to idle`,
@@ -1287,7 +1229,7 @@ export async function runInProcessTeammate(
         )
       }
 
-      // Check if already idle before updating (to skip duplicate notification)
+      
       const prevAppState = toolUseContext.getAppState()
       const prevTask = prevAppState.tasks[taskId]
       const wasAlreadyIdle =
@@ -1297,7 +1239,7 @@ export async function runInProcessTeammate(
       updateTaskState(
         taskId,
         task => {
-          // Call any registered idle callbacks
+          
           task.onIdleCallbacks?.forEach(cb => cb())
           return { ...task, isIdle: true, onIdleCallbacks: [] }
         },
@@ -1341,7 +1283,7 @@ export async function runInProcessTeammate(
 
       switch (waitResult.type) {
         case 'shutdown_request':
-          // Pass shutdown request to model for decision
+          
           
           
           logForDebugging(
@@ -1360,7 +1302,7 @@ export async function runInProcessTeammate(
           break
 
         case 'new_message':
-          // New prompt from leader or teammate
+          
           logForDebugging(
             `[inProcessRunner] ${identity.agentId} received new message from ${waitResult.from}`,
           )
@@ -1395,13 +1337,13 @@ export async function runInProcessTeammate(
       }
     }
 
-    // Mark as completed when exiting the loop
+    
     let alreadyTerminal = false
     let toolUseId: string | undefined
     updateTaskState(
       taskId,
       task => {
-        // killInProcessTeammate may have already set status:killed +
+        
         
         
         if (task.status !== 'running') {
@@ -1491,7 +1433,7 @@ export async function runInProcessTeammate(
       })
     }
 
-    // Send idle notification with failure via file-based mailbox
+    
     await sendIdleNotification(
       identity.agentName,
       identity.color,
@@ -1512,18 +1454,10 @@ export async function runInProcessTeammate(
   }
 }
 
-/**
- * Starts an in-process teammate in the background.
- *
- * This is the main entry point called after spawn. It starts the agent
- * execution loop in a fire-and-forget manner.
- *
- * @param config - Runner configuration
- */
 export function startInProcessTeammate(config: InProcessRunnerConfig): void {
-  // Extract agentId before the closure so the catch handler doesn't retain
-  // the full config object (including toolUseContext) while the promise is
-  // pending - which can be hours for a long-running teammate.
+  
+  
+  
   const agentId = config.identity.agentId
   void runInProcessTeammate(config).catch(error => {
     logForDebugging(`[inProcessRunner] Unhandled error in ${agentId}: ${error}`)

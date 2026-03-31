@@ -16,7 +16,7 @@ function needsBidi(): boolean {
   if (needsSoftwareBidi === undefined) {
     needsSoftwareBidi =
       process.platform === 'win32' ||
-      typeof process.env['WT_SESSION'] === 'string' || // WSL in Windows Terminal
+      typeof process.env['WT_SESSION'] === 'string' || 
       process.env['TERM_PROGRAM'] === 'vscode' 
   }
   return needsSoftwareBidi
@@ -29,19 +29,12 @@ function getBidi() {
   return bidiInstance
 }
 
-/**
- * Reorder an array of ClusteredChars from logical order to visual order
- * using the Unicode Bidi Algorithm. Active on terminals that lack native
- * bidi support (Windows Terminal, conhost, WSL).
- *
- * Returns the same array on bidi-capable terminals (no-op).
- */
 export function reorderBidi(characters: ClusteredChar[]): ClusteredChar[] {
   if (!needsBidi() || characters.length === 0) {
     return characters
   }
 
-  // Build a plain string from the clustered chars to run through bidi
+  
   const plainText = characters.map(c => c.value).join('')
 
   
@@ -61,7 +54,7 @@ export function reorderBidi(characters: ClusteredChar[]): ClusteredChar[] {
     offset += characters[i]!.value.length
   }
 
-  // Get reorder segments from bidi-js, but we need to work at the
+  
   
   
   
@@ -72,12 +65,12 @@ export function reorderBidi(characters: ClusteredChar[]): ClusteredChar[] {
     let i = 0
     while (i < reordered.length) {
       if (charLevels[i]! >= level) {
-        // Find the end of this run
+        
         let j = i + 1
         while (j < reordered.length && charLevels[j]! >= level) {
           j++
         }
-        // Reverse the run in both arrays
+        
         reverseRange(reordered, i, j - 1)
         reverseRangeNumbers(charLevels, i, j - 1)
         i = j
@@ -110,12 +103,8 @@ function reverseRangeNumbers(arr: number[], start: number, end: number): void {
   }
 }
 
-/**
- * Quick check for RTL characters (Hebrew, Arabic, and related scripts).
- * Avoids running the full bidi algorithm on pure-LTR text.
- */
 function hasRTLCharacters(text: string): boolean {
-  // Hebrew: U+0590-U+05FF, U+FB1D-U+FB4F
+  
   
   
   

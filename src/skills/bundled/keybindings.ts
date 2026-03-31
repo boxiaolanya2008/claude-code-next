@@ -24,11 +24,8 @@ function generateContextsTable(): string {
   )
 }
 
-/**
- * Build a markdown table of all actions with their default bindings and context.
- */
 function generateActionsTable(): string {
-  // Build a lookup: action -> { keys, context }
+  
   const actionInfo: Record<string, { keys: string[]; context: string }> = {}
   for (const block of DEFAULT_BINDINGS) {
     for (const [key, action] of Object.entries(block.bindings)) {
@@ -52,9 +49,6 @@ function generateActionsTable(): string {
   )
 }
 
-/**
- * Infer context from action prefix when not in DEFAULT_BINDINGS.
- */
 function inferContextFromAction(action: string): string {
   const prefix = action.split(':')[0]
   const prefixToContext: Record<string, string> = {
@@ -80,9 +74,6 @@ function inferContextFromAction(action: string): string {
   return prefixToContext[prefix ?? ''] ?? 'Unknown'
 }
 
-/**
- * Build a list of reserved shortcuts.
- */
 function generateReservedShortcuts(): string {
   const lines: string[] = []
 
@@ -109,7 +100,7 @@ function generateReservedShortcuts(): string {
 }
 
 const FILE_FORMAT_EXAMPLE: KeybindingsSchemaType = {
-  $schema: 'https://www.schemastore.org/claude-code-keybindings.json',
+  $schema: 'https://www.schemastore.org/claude-code-next-keybindings.json',
   $docs: 'https://code.claude.com/docs/en/keybindings',
   bindings: [
     {
@@ -295,7 +286,7 @@ export function registerKeybindingsSkill(): void {
     userInvocable: false,
     isEnabled: isKeybindingCustomizationEnabled,
     async getPromptForCommand(args) {
-      // Generate reference tables dynamically from source-of-truth arrays
+      
       const contextsTable = generateContextsTable()
       const actionsTable = generateActionsTable()
       const reservedShortcuts = generateReservedShortcuts()
@@ -323,9 +314,6 @@ export function registerKeybindingsSkill(): void {
   })
 }
 
-/**
- * Build a markdown table from headers and rows.
- */
 function markdownTable(headers: string[], rows: string[][]): string {
   const separator = headers.map(() => '---')
   return [

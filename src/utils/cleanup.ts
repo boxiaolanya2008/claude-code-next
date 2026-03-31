@@ -64,7 +64,7 @@ async function cleanupOldFilesInDirectory(
 
     for (const file of files) {
       try {
-        // Convert filename format where all ':.' were replaced with '-'
+        
         const timestamp = convertFileNameToDate(file.name)
         if (timestamp < cutoffDate) {
           await getFsImplementation().unlink(join(dirPath, file.name))
@@ -76,12 +76,12 @@ async function cleanupOldFilesInDirectory(
           }
         }
       } catch (error) {
-        // Log but continue processing other files
+        
         logError(error as Error)
       }
     }
   } catch (error: unknown) {
-    // Ignore if directory doesn't exist
+    
     if (error instanceof Error && 'code' in error && error.code !== 'ENOENT') {
       logError(error)
     }
@@ -96,10 +96,10 @@ export async function cleanupOldMessageFiles(): Promise<CleanupResult> {
   const errorPath = CACHE_PATHS.errors()
   const baseCachePath = CACHE_PATHS.baseLogs()
 
-  // Clean up message and error logs
+  
   let result = await cleanupOldFilesInDirectory(errorPath, cutoffDate, false)
 
-  // Clean up MCP logs
+  
   try {
     let dirents
     try {
@@ -115,7 +115,7 @@ export async function cleanupOldMessageFiles(): Promise<CleanupResult> {
       .map(dirent => join(baseCachePath, dirent.name))
 
     for (const mcpLogDir of mcpLogDirs) {
-      // Clean up files in MCP log directory
+      
       result = addCleanupResults(
         result,
         await cleanupOldFilesInDirectory(mcpLogDir, cutoffDate, true),
@@ -148,7 +148,7 @@ async function tryRmdir(dirPath: string, fsImpl: FsOperations): Promise<void> {
   try {
     await fsImpl.rmdir(dirPath)
   } catch {
-    // not empty / doesn't exist
+    
   }
 }
 
@@ -193,7 +193,7 @@ export async function cleanupOldSessionFiles(): Promise<CleanupResult> {
           result.errors++
         }
       } else if (entry.isDirectory()) {
-        // Session directory — clean up tool-results/<toolDir>
+        
 
 async function cleanupSingleDirectory(
   dirPath: string,
@@ -319,12 +319,6 @@ export async function cleanupOldSessionEnvDirs(): Promise<CleanupResult> {
   return result
 }
 
-/**
- * Cleans up old debug log files from ~/.claude/debug/
- * Preserves the 'latest' symlink which points to the current session's log.
- * Debug logs can grow very large (especially with the infinite logging loop bug)
- * and accumulate indefinitely without this cleanup.
- */
 export async function cleanupOldDebugLogs(): Promise<CleanupResult> {
   const cutoffDate = getCutoffDate()
   const result: CleanupResult = { messages: 0, errors: 0 }
@@ -339,7 +333,7 @@ export async function cleanupOldDebugLogs(): Promise<CleanupResult> {
   }
 
   for (const dirent of dirents) {
-    // Preserve the 'latest' symlink
+    
     if (
       !dirent.isFile() ||
       !dirent.name.endsWith('.txt') ||
@@ -356,17 +350,12 @@ export async function cleanupOldDebugLogs(): Promise<CleanupResult> {
     }
   }
 
-  // Intentionally do NOT remove debugDir even if empty — needed for future logs
+  
   return result
 }
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
 
-/**
- * Clean up old npm cache entries for Anthropic packages.
- * This helps reduce disk usage since we publish many dev versions per day.
- * Only runs once per day for Ant users.
- */
 export async function cleanupNpmCacheForAnthropicPackages(): Promise<void> {
   const markerPath = join(getClaudeConfigHomeDir(), '.npm-cache-cleanup')
 
@@ -377,7 +366,7 @@ export async function cleanupNpmCacheForAnthropicPackages(): Promise<void> {
       return
     }
   } catch {
-    // File doesn't exist, proceed with cleanup
+    
   }
 
   try {
@@ -413,7 +402,7 @@ export async function cleanupNpmCacheForAnthropicPackages(): Promise<void> {
       }
     }
 
-    // Group by package name (everything before the last @version separator)
+    
     const byPackage = new Map<string, { key: string; time: number }[]>()
     for (const entry of anthropicEntries) {
       const atVersionIdx = entry.key.lastIndexOf('@')
@@ -424,7 +413,7 @@ export async function cleanupNpmCacheForAnthropicPackages(): Promise<void> {
       byPackage.set(pkgName, existing)
     }
 
-    // Remove entries older than 1 day OR beyond the top N most recent per package
+    
     const keysToRemove: string[] = []
     for (const [, entries] of byPackage) {
       entries.sort((a, b) => b.time - a.time) 
@@ -466,12 +455,6 @@ export async function cleanupNpmCacheForAnthropicPackages(): Promise<void> {
   }
 }
 
-/**
- * Throttled wrapper around cleanupOldVersions for recurring cleanup in long-running sessions.
- * Uses a marker file and lock to ensure it runs at most once per 24 hours,
- * and does not block if another process is already running cleanup.
- * The regular cleanupOldVersions() should still be used for installer flows.
- */
 export async function cleanupOldVersionsThrottled(): Promise<void> {
   const markerPath = join(getClaudeConfigHomeDir(), '.version-cleanup')
 
@@ -482,7 +465,7 @@ export async function cleanupOldVersionsThrottled(): Promise<void> {
       return
     }
   } catch {
-    // File doesn't exist, proceed with cleanup
+    
   }
 
   try {
@@ -505,9 +488,9 @@ export async function cleanupOldVersionsThrottled(): Promise<void> {
 }
 
 export async function cleanupOldMessageFilesInBackground(): Promise<void> {
-  // If settings have validation errors but the user explicitly set cleanupPeriodDays,
-  // skip cleanup entirely rather than falling back to the default (30 days).
-  // This prevents accidentally deleting files when the user intended a different retention period.
+  
+  
+  
   const { errors } = getSettingsWithAllErrors()
   if (errors.length > 0 && rawSettingsContainsKey('cleanupPeriodDays')) {
     logForDebugging(

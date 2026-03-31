@@ -16,7 +16,7 @@ const MAX_RETRIES_FOR_TRANSIENT_ERRORS = 3
 const RETRY_BASE_DELAY_MS = 500
 
 export type LSPServerInstance = {
-  /** Unique server identifier */
+  
   readonly name: string
   
   readonly config: ScopedLspServerConfig
@@ -42,41 +42,18 @@ export type LSPServerInstance = {
   sendNotification(method: string, params: unknown): Promise<void>
   
   onNotification(method: string, handler: (params: unknown) => void): void
-  /** Register a handler for LSP requests from the server */
+  
   onRequest<TParams, TResult>(
     method: string,
     handler: (params: TParams) => TResult | Promise<TResult>,
   ): void
 }
 
-/**
- * Creates and manages a single LSP server instance.
- *
- * Uses factory function pattern with closures for state encapsulation (avoiding classes).
- * Provides state tracking, health monitoring, and request forwarding for an LSP server.
- * Supports manual restart with configurable retry limits.
- *
- * State machine transitions:
- * - stopped → starting → running
- * - running → stopping → stopped
- * - any → error (on failure)
- * - error → starting (on retry)
- *
- * @param name - Unique identifier for this server instance
- * @param config - Server configuration including command, args, and limits
- * @returns LSP server instance with lifecycle management methods
- *
- * @example
- * const instance = createLSPServerInstance('my-server', config)
- * await instance.start()
- * const result = await instance.sendRequest('textDocument/definition', params)
- * await instance.stop()
- */
 export function createLSPServerInstance(
   name: string,
   config: ScopedLspServerConfig,
 ): LSPServerInstance {
-  // Validate that unimplemented fields are not set
+  
   if (config.restartOnCrash !== undefined) {
     throw new Error(
       `LSP server '${name}': restartOnCrash is not yet implemented. Remove this field from the configuration.`,
@@ -88,10 +65,10 @@ export function createLSPServerInstance(
     )
   }
 
-  // Private state encapsulated via closures. Lazy-require LSPClient so
-  // vscode-jsonrpc (~129KB) only loads when an LSP server is actually
-  // instantiated, not when the static import chain reaches this module.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  
+  
+  
+  
   const { createLSPClient } = require('./LSPClient.js') as {
     createLSPClient: typeof createLSPClientType
   }
@@ -100,29 +77,23 @@ export function createLSPServerInstance(
   let lastError: Error | undefined
   let restartCount = 0
   let crashRecoveryCount = 0
-  // Propagate crash state so ensureServerStarted can restart on next use.
-  // Without this, state stays 'running' after crash and the server is never
-  // restarted (zombie state).
+  
+  
+  
   const client = createLSPClient(name, error => {
     state = 'error'
     lastError = error
     crashRecoveryCount++
   })
 
-  /**
-   * Starts the LSP server and initializes it with workspace information.
-   *
-   * If the server is already running or starting, this method returns immediately.
-   * On failure, sets state to 'error', logs for monitoring, and throws.
-   *
-   * @throws {Error} If server fails to start or initialize
-   */
+  
+
   async function start(): Promise<void> {
     if (state === 'running' || state === 'starting') {
       return
     }
 
-    // Cap crash-recovery attempts so a persistently crashing server doesn't
+    
     
     const maxRestarts = config.maxRestarts ?? 3
     if (state === 'error' && crashRecoveryCount > maxRestarts) {
@@ -152,13 +123,13 @@ export function createLSPServerInstance(
       const initParams: InitializeParams = {
         processId: process.pid,
 
-        // Pass server-specific initialization options from plugin config
+        
         
         
         
         initializationOptions: config.initializationOptions ?? {},
 
-        // Modern approach (LSP 3.16+) - required for Pyright, gopls
+        
         workspaceFolders: [
           {
             uri: workspaceUri,
@@ -166,17 +137,17 @@ export function createLSPServerInstance(
           },
         ],
 
-        // Deprecated fields - some servers still need these for proper URI resolution
-        rootPath: workspaceFolder, // Deprecated in LSP 3.8 but needed by some servers
-        rootUri: workspaceUri, // Deprecated in LSP 3.16 but needed by typescript-language-server for goToDefinition
+        
+        rootPath: workspaceFolder, 
+        rootUri: workspaceUri, 
 
         
         capabilities: {
           workspace: {
-            // Don't claim to support workspace/configuration since we don't implement it
+            
             
             configuration: false,
-            // Don't claim to support workspace folders changes since we don't handle
+            
             
             workspaceFolders: false,
           },
@@ -190,7 +161,7 @@ export function createLSPServerInstance(
             publishDiagnostics: {
               relatedInformation: true,
               tagSupport: {
-                valueSet: [1, 2], // Unnecessary (1), Deprecated (2)
+                valueSet: [1, 2], 
               },
               versionSupport: false,
               codeDescriptionSupport: true,
@@ -237,7 +208,7 @@ export function createLSPServerInstance(
       crashRecoveryCount = 0
       logForDebugging(`LSP server instance started: ${name}`)
     } catch (error) {
-      // Clean up the spawned child process on timeout/error
+      
       client.stop().catch(() => {})
       
       initPromise?.catch(() => {})
@@ -248,14 +219,8 @@ export function createLSPServerInstance(
     }
   }
 
-  /**
-   * Stops the LSP server gracefully.
-   *
-   * If already stopped or stopping, returns immediately.
-   * On failure, sets state to 'error', logs for monitoring, and throws.
-   *
-   * @throws {Error} If server fails to stop
-   */
+  
+
   async function stop(): Promise<void> {
     if (state === 'stopped' || state === 'stopping') {
       return
@@ -274,14 +239,8 @@ export function createLSPServerInstance(
     }
   }
 
-  /**
-   * Manually restarts the server by stopping and starting it.
-   *
-   * Increments restartCount and enforces maxRestarts limit.
-   * Note: This is NOT automatic - must be called explicitly.
-   *
-   * @throws {Error} If stop or start fails, or if restartCount exceeds config.maxRestarts (default: 3)
-   */
+  
+
   async function restart(): Promise<void> {
     try {
       await stop()
@@ -315,28 +274,14 @@ export function createLSPServerInstance(
     }
   }
 
-  /**
-   * Checks if the server is healthy and ready to handle requests.
-   *
-   * @returns true if state is 'running' AND the client has completed initialization
-   */
+  
+
   function isHealthy(): boolean {
     return state === 'running' && client.isInitialized
   }
 
-  /**
-   * Sends an LSP request to the server with retry logic for transient errors.
-   *
-   * Checks server health before sending and wraps errors with context.
-   * Automatically retries on "content modified" errors (code -32801) which occur
-   * when servers like rust-analyzer are still indexing. This is expected LSP behavior
-   * and clients should retry silently per the LSP specification.
-   *
-   * @param method - LSP method name (e.g., 'textDocument/definition')
-   * @param params - Method-specific parameters
-   * @returns The server's response
-   * @throws {Error} If server is not healthy or request fails after all retries
-   */
+  
+
   async function sendRequest<T>(method: string, params: unknown): Promise<T> {
     if (!isHealthy()) {
       const error = new Error(
@@ -381,12 +326,12 @@ export function createLSPServerInstance(
           continue
         }
 
-        // Non-retryable error or max retries exceeded
+        
         break
       }
     }
 
-    // All retries failed or non-retryable error
+    
     const requestError = new Error(
       `LSP request '${method}' failed for server '${name}': ${lastAttemptError?.message ?? 'unknown error'}`,
     )
@@ -394,10 +339,8 @@ export function createLSPServerInstance(
     throw requestError
   }
 
-  /**
-   * Send a notification to the LSP server (fire-and-forget).
-   * Used for file synchronization (didOpen, didChange, didClose).
-   */
+  
+
   async function sendNotification(
     method: string,
     params: unknown,
@@ -421,12 +364,8 @@ export function createLSPServerInstance(
     }
   }
 
-  /**
-   * Registers a handler for LSP notifications from the server.
-   *
-   * @param method - LSP notification method (e.g., 'window/logMessage')
-   * @param handler - Callback function to handle the notification
-   */
+  
+
   function onNotification(
     method: string,
     handler: (params: unknown) => void,
@@ -434,15 +373,8 @@ export function createLSPServerInstance(
     client.onNotification(method, handler)
   }
 
-  /**
-   * Registers a handler for LSP requests from the server.
-   *
-   * Some LSP servers send requests TO the client (reverse direction).
-   * This allows registering handlers for such requests.
-   *
-   * @param method - LSP request method (e.g., 'workspace/configuration')
-   * @param handler - Callback function to handle the request and return a response
-   */
+  
+
   function onRequest<TParams, TResult>(
     method: string,
     handler: (params: TParams) => TResult | Promise<TResult>,
@@ -450,7 +382,7 @@ export function createLSPServerInstance(
     client.onRequest(method, handler)
   }
 
-  // Return public API
+  
   return {
     name,
     config,
@@ -477,10 +409,6 @@ export function createLSPServerInstance(
   }
 }
 
-/**
- * Race a promise against a timeout. Cleans up the timer regardless of outcome
- * to avoid unhandled rejections from orphaned setTimeout callbacks.
- */
 function withTimeout<T>(
   promise: Promise<T>,
   ms: number,

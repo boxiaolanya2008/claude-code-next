@@ -60,14 +60,14 @@ export function useDiffInIDE({
 
   const sha = useMemo(() => randomUUID().slice(0, 6), [])
   const tabName = useMemo(
-    () => `✻ [Claude Code] ${basename(filePath)} (${sha}) ⧉`,
+    () => `✻ [Claude Code Next] ${basename(filePath)} (${sha}) ⧉`,
     [filePath, sha],
   )
 
   const shouldShowDiffInIDE =
     hasAccessToIDEExtensionDiffFeature(toolUseContext.options.mcpClients) &&
     getGlobalConfig().diffTool === 'auto' &&
-    // Diffs should only be for file edits.
+    
     
     !filePath.endsWith('.ipynb')
 
@@ -103,14 +103,14 @@ export function useDiffInIDE({
       )
 
       if (newEdits.length === 0) {
-        // No changes -- edit was rejected (eg. reverted)
+        
         logEvent('tengu_ext_diff_rejected', {})
         
         const ideClient = getConnectedIdeClient(
           toolUseContext.options.mcpClients,
         )
         if (ideClient) {
-          // Close the tab in the IDE
+          
           await closeTabInIDE(tabName, ideClient)
         }
         onChange(
@@ -123,7 +123,7 @@ export function useDiffInIDE({
         return
       }
 
-      // File was modified - edit was accepted
+      
       onChange(
         { type: 'accept-once' },
         {
@@ -144,7 +144,7 @@ export function useDiffInIDE({
     return () => {
       isUnmounted.current = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [])
 
   return {
@@ -163,17 +163,13 @@ export function useDiffInIDE({
   }
 }
 
-/**
- * Re-computes the edits from the old and new contents. This is necessary
- * to apply any edits the user may have made to the new contents.
- */
 export function computeEditsFromContents(
   filePath: string,
   oldContent: string,
   newContent: string,
   editMode: 'single' | 'multiple',
 ): FileEdit[] {
-  // Use unformatted patches, otherwise the edits will be formatted.
+  
   const singleHunk = editMode === 'single'
   const patch = getPatchFromContents({
     filePath,
@@ -186,7 +182,7 @@ export function computeEditsFromContents(
     return []
   }
 
-  // For single edit mode, verify we only got one hunk
+  
   if (singleHunk && patch.length > 1) {
     logError(
       new Error(
@@ -195,24 +191,10 @@ export function computeEditsFromContents(
     )
   }
 
-  // Re-compute the edits to match the patch
+  
   return getEditsForPatch(patch)
 }
 
-/**
- * Done if:
- *
- * 1. Tab is closed in IDE
- * 2. Tab is saved in IDE (we then close the tab)
- * 3. User selected an option in IDE
- * 4. User selected an option in terminal (or hit esc)
- *
- * Resolves with the new file content.
- *
- * TODO: Time out after 5 mins of inactivity?
- * TODO: Update auto-approval UI when IDE exits
- * TODO: Close the IDE tab when the approval prompt is unmounted
- */
 async function showDiffInIDE(
   file_path: string,
   edits: FileEdit[],
@@ -232,7 +214,7 @@ async function showDiffInIDE(
   }
 
   async function cleanup() {
-    // Careful to avoid race conditions, since this
+    
     
     if (isCleanedUp) {
       return
@@ -250,7 +232,7 @@ async function showDiffInIDE(
     toolUseContext.abortController.signal.removeEventListener('abort', cleanup)
   }
 
-  // Cleanup if the user hits esc to cancel the tool call - or on exit
+  
   toolUseContext.abortController.signal.addEventListener('abort', cleanup)
   process.on('beforeExit', cleanup)
 
@@ -316,7 +298,7 @@ async function showDiffInIDE(
       }
     }
 
-    // Indicates that the tool call completed with none of the expected
+    
     
     throw new Error('Not accepted')
   } catch (error) {
@@ -335,7 +317,7 @@ async function closeTabInIDE(
       throw new Error('IDE client not available')
     }
 
-    // Use direct RPC to close the tab
+    
     await callIdeRpc('close_tab', { tab_name: tabName }, ideClient)
   } catch (error) {
     logError(error as Error)

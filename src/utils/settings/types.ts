@@ -8,7 +8,7 @@ import {
   PERMISSION_MODES,
 } from '../permissions/PermissionMode.js'
 import { MarketplaceSourceSchema } from '../plugins/schemas.js'
-import { CLAUDE_CODE_SETTINGS_SCHEMA_URL } from './constants.js'
+import { CLAUDE_CODE_NEXT_SETTINGS_SCHEMA_URL } from './constants.js'
 import { PermissionRuleSchema } from './permissionValidation.js'
 
 export {
@@ -55,7 +55,7 @@ export const PermissionsSchema = lazySchema(() =>
             : EXTERNAL_PERMISSION_MODES,
         )
         .optional()
-        .describe('Default permission mode when Claude Code needs access'),
+        .describe('Default permission mode when Claude Code Next needs access'),
       disableBypassPermissionsMode: z
         .enum(['disable'])
         .optional()
@@ -120,7 +120,7 @@ export const AllowedMcpServerEntrySchema = lazySchema(() =>
         .describe(
           'URL pattern with wildcard support (e.g., "https://*.example.com/*") for allowed remote MCP servers',
         ),
-      // Future extensibility: allowedTransports, requiredArgs, maxInstances, etc.
+      
     })
     .refine(
       data => {
@@ -165,7 +165,7 @@ export const DeniedMcpServerEntrySchema = lazySchema(() =>
         .describe(
           'URL pattern with wildcard support (e.g., "https://*.example.com/*") for blocked remote MCP servers',
         ),
-      // Future extensibility: reason, blockedSince, etc.
+      
     })
     .refine(
       data => {
@@ -197,9 +197,9 @@ export const SettingsSchema = lazySchema(() =>
   z
     .object({
       $schema: z
-        .literal(CLAUDE_CODE_SETTINGS_SCHEMA_URL)
+        .literal(CLAUDE_CODE_NEXT_SETTINGS_SCHEMA_URL)
         .optional()
-        .describe('JSON Schema reference for Claude Code settings'),
+        .describe('JSON Schema reference for Claude Code Next settings'),
       apiKeyHelper: z
         .string()
         .optional()
@@ -218,11 +218,11 @@ export const SettingsSchema = lazySchema(() =>
         .describe(
           'Command to refresh GCP authentication (e.g., gcloud auth application-default login)',
         ),
-      // Gated so the SDK generator (which runs without CLAUDE_CODE_ENABLE_XAA)
       
       
       
-      ...(isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_XAA)
+      
+      ...(isEnvTruthy(process.env.CLAUDE_CODE_NEXT_ENABLE_XAA)
         ? {
             xaaIdp: z
               .object({
@@ -232,7 +232,7 @@ export const SettingsSchema = lazySchema(() =>
                   .describe('IdP issuer URL for OIDC discovery'),
                 clientId: z
                   .string()
-                  .describe("Claude Code's client_id registered at the IdP"),
+                  .describe("Claude Code Next's client_id registered at the IdP"),
                 callbackPort: z
                   .number()
                   .int()
@@ -273,8 +273,8 @@ export const SettingsSchema = lazySchema(() =>
         ),
       env: EnvironmentVariablesSchema()
         .optional()
-        .describe('Environment variables to set for Claude Code sessions'),
-      // Attribution for commits and PRs
+        .describe('Environment variables to set for Claude Code Next sessions'),
+      
       attribution: z
         .object({
           commit: z
@@ -295,7 +295,7 @@ export const SettingsSchema = lazySchema(() =>
         .optional()
         .describe(
           'Customize attribution text for commits and PRs. ' +
-            'Each field defaults to the standard Claude Code attribution if not set.',
+            'Each field defaults to the standard Claude Code Next attribution if not set.',
         ),
       includeCoAuthoredBy: z
         .boolean()
@@ -316,8 +316,8 @@ export const SettingsSchema = lazySchema(() =>
       model: z
         .string()
         .optional()
-        .describe('Override the default model used by Claude Code'),
-      // Enterprise allowlist of models
+        .describe('Override the default model used by Claude Code Next'),
+      
       availableModels: z
         .array(z.string())
         .optional()
@@ -337,24 +337,24 @@ export const SettingsSchema = lazySchema(() =>
             'model ID (e.g. a Bedrock inference profile ARN). Typically set in managed settings by ' +
             'enterprise administrators.',
         ),
-      // Whether to automatically approve all MCP servers in the project
+      
       enableAllProjectMcpServers: z
         .boolean()
         .optional()
         .describe(
           'Whether to automatically approve all MCP servers in the project',
         ),
-      // List of approved MCP servers from .mcp.json
+      
       enabledMcpjsonServers: z
         .array(z.string())
         .optional()
         .describe('List of approved MCP servers from .mcp.json'),
-      // List of rejected MCP servers from .mcp.json
+      
       disabledMcpjsonServers: z
         .array(z.string())
         .optional()
         .describe('List of rejected MCP servers from .mcp.json'),
-      // Enterprise allowlist of MCP servers
+      
       allowedMcpServers: z
         .array(AllowedMcpServerEntrySchema())
         .optional()
@@ -364,7 +364,7 @@ export const SettingsSchema = lazySchema(() =>
             'If undefined, all servers are allowed. If empty array, no servers are allowed. ' +
             'Denylist takes precedence - if a server is on both lists, it is denied.',
         ),
-      // Enterprise denylist of MCP servers
+      
       deniedMcpServers: z
         .array(DeniedMcpServerEntrySchema())
         .optional()
@@ -396,12 +396,12 @@ export const SettingsSchema = lazySchema(() =>
         })
         .optional()
         .describe('Git worktree configuration for --worktree flag.'),
-      // Whether to disable all hooks and statusLine
+      
       disableAllHooks: z
         .boolean()
         .optional()
         .describe('Disable all hooks and statusLine execution'),
-      // Which shell backs input-box `!` (see docs/design/ps-shell-selection.md §4.2)
+      
       defaultShell: z
         .enum(['bash', 'powershell'])
         .optional()
@@ -409,7 +409,7 @@ export const SettingsSchema = lazySchema(() =>
           'Default shell for input-box ! commands. ' +
             "Defaults to 'bash' on all platforms (no Windows auto-flip).",
         ),
-      // Only run hooks defined in managed settings (managed-settings.json)
+      
       allowManagedHooksOnly: z
         .boolean()
         .optional()
@@ -417,7 +417,7 @@ export const SettingsSchema = lazySchema(() =>
           'When true (and set in managed settings), only hooks from managed settings run. ' +
             'User, project, and local hooks are ignored.',
         ),
-      // Allowlist of URL patterns HTTP hooks may target (follows allowedMcpServers precedent)
+      
       allowedHttpHookUrls: z
         .array(z.string())
         .optional()
@@ -428,7 +428,7 @@ export const SettingsSchema = lazySchema(() =>
             'If undefined, all URLs are allowed. If empty array, no HTTP hooks are allowed. ' +
             'Arrays merge across settings sources (same semantics as allowedMcpServers).',
         ),
-      // Allowlist of env var names HTTP hooks may interpolate into headers
+      
       httpHookAllowedEnvVars: z
         .array(z.string())
         .optional()
@@ -438,7 +438,7 @@ export const SettingsSchema = lazySchema(() =>
             'If undefined, no restriction is applied. ' +
             'Arrays merge across settings sources (same semantics as allowedMcpServers).',
         ),
-      // Only use permission rules defined in managed settings (managed-settings.json)
+      
       allowManagedPermissionRulesOnly: z
         .boolean()
         .optional()
@@ -446,7 +446,7 @@ export const SettingsSchema = lazySchema(() =>
           'When true (and set in managed settings), only permission rules (allow/deny/ask) from managed settings are respected. ' +
             'User, project, local, and CLI argument permission rules are ignored.',
         ),
-      // Only read MCP allowlist policy from managed settings
+      
       allowManagedMcpServersOnly: z
         .boolean()
         .optional()
@@ -455,15 +455,15 @@ export const SettingsSchema = lazySchema(() =>
             'deniedMcpServers still merges from all sources, so users can deny servers for themselves. ' +
             'Users can still add their own MCP servers, but only the admin-defined allowlist applies.',
         ),
-      // Force customizations through plugins only (LinkedIn ask via GTM)
+      
       strictPluginOnlyCustomization: z
         .preprocess(
-          // Forwards-compat: drop unknown surface names so a future enum
           
           
-          // "commands"] on an old client → ["skills"] → locks what it knows,
-          // ignores what it doesn't. Degrades to less-locked, never to
-          // everything-unlocked.
+          
+          
+          
+          
           v =>
             Array.isArray(v)
               ? v.filter(x =>
@@ -473,11 +473,11 @@ export const SettingsSchema = lazySchema(() =>
           z.union([z.boolean(), z.array(z.enum(CUSTOMIZATION_SURFACES))]),
         )
         .optional()
-        // Non-array invalid values ("skills" string, {object}) pass through
-        // the preprocess unchanged and would fail the union → null the whole
-        // managed-settings file. .catch drops the field to undefined instead.
-        // Degrades to unlocked-for-this-field, never to everything-broken.
-        // Doctor flags the raw value.
+        
+        
+        
+        
+        
         .catch(undefined)
         .describe(
           'When set in managed settings, blocks non-plugin customization sources for the listed surfaces. ' +
@@ -487,7 +487,7 @@ export const SettingsSchema = lazySchema(() =>
             'Composes with strictKnownMarketplaces for end-to-end admin control — plugins gated by ' +
             'marketplace allowlist, everything else blocked here.',
         ),
-      // Status line for custom status line display
+      
       statusLine: z
         .object({
           type: z.literal('command'),
@@ -496,7 +496,7 @@ export const SettingsSchema = lazySchema(() =>
         })
         .optional()
         .describe('Custom status line display configuration'),
-      // Enabled plugins using marketplace-first format
+      
       enabledPlugins: z
         .record(
           z.string(),
@@ -506,11 +506,11 @@ export const SettingsSchema = lazySchema(() =>
         .describe(
           'Enabled plugins using plugin-id@marketplace-id format. Example: { "formatter@anthropic-tools": true }. Also supports extended format with version constraints.',
         ),
-      // Extra marketplaces for this repository (usually for project settings)
+      
       extraKnownMarketplaces: z
         .record(z.string(), ExtraKnownMarketplaceSchema())
         .check(ctx => {
-          // For settings sources, key must equal source.name. diffMarketplaces
+          
           
           
           
@@ -539,7 +539,7 @@ export const SettingsSchema = lazySchema(() =>
         .describe(
           'Additional marketplaces to make available for this repository. Typically used in repository .claude/settings.json to ensure team members have required plugin sources.',
         ),
-      // Enterprise strict list of allowed marketplace sources (policy settings only)
+      
       
       strictKnownMarketplaces: z
         .array(MarketplaceSourceSchema())
@@ -551,7 +551,7 @@ export const SettingsSchema = lazySchema(() =>
             'Note: this is a policy gate only — it does NOT register marketplaces. ' +
             'To pre-register allowed marketplaces for users, also set extraKnownMarketplaces.',
         ),
-      // Enterprise blocklist of marketplace sources (policy settings only)
+      
       
       blockedMarketplaces: z
         .array(MarketplaceSourceSchema())
@@ -561,14 +561,14 @@ export const SettingsSchema = lazySchema(() =>
             'these exact sources are blocked from being added as marketplaces. The check happens BEFORE ' +
             'downloading, so blocked sources never touch the filesystem.',
         ),
-      // Force a specific login method: 'claudeai' for Claude Pro/Max, 'console' for Console billing
+      
       forceLoginMethod: z
         .enum(['claudeai', 'console'])
         .optional()
         .describe(
           'Force a specific login method: "claudeai" for Claude Pro/Max, "console" for Console billing',
         ),
-      // Organization UUID to use for OAuth login (will be added as URL param to authorization URL)
+      
       forceLoginOrgUUID: z
         .string()
         .optional()
@@ -826,7 +826,7 @@ export const SettingsSchema = lazySchema(() =>
               ),
           }
         : {}),
-      // Teams/Enterprise opt-IN for channel notifications. Default OFF.
+      
       
       
       
@@ -842,7 +842,7 @@ export const SettingsSchema = lazySchema(() =>
             'claude/channel capability pushing inbound messages). Default off. ' +
             'Set true to allow; users then select servers via --channels.',
         ),
-      // Org-level channel plugin allowlist. When set, REPLACES the
+      
       
       
       
@@ -932,7 +932,7 @@ export const SettingsSchema = lazySchema(() =>
                   .describe('Rules for the auto mode classifier deny section'),
                 ...(process.env.USER_TYPE === 'ant'
                   ? {
-                      // Back-compat alias for ant users; external users use soft_deny
+                      
                       deny: z.array(z.string()).optional(),
                     }
                   : {}),
@@ -1021,10 +1021,6 @@ export type PluginHookMatcher = {
   pluginId: string 
 }
 
-/**
- * Internal type for skill hooks - includes skill context for execution.
- * Not a Zod schema since it's not user-facing (skills provide native hooks).
- */
 export type SkillHookMatcher = {
   matcher?: string
   hooks: HookCommand[]
@@ -1046,27 +1042,18 @@ export function isMcpServerNameEntry(
   return 'serverName' in entry && entry.serverName !== undefined
 }
 
-/**
- * Type guard for MCP server entry with serverCommand
- */
 export function isMcpServerCommandEntry(
   entry: AllowedMcpServerEntry | DeniedMcpServerEntry,
 ): entry is { serverCommand: string[] } {
   return 'serverCommand' in entry && entry.serverCommand !== undefined
 }
 
-/**
- * Type guard for MCP server entry with serverUrl
- */
 export function isMcpServerUrlEntry(
   entry: AllowedMcpServerEntry | DeniedMcpServerEntry,
 ): entry is { serverUrl: string } {
   return 'serverUrl' in entry && entry.serverUrl !== undefined
 }
 
-/**
- * User configuration values for MCPB MCP servers
- */
 export type UserConfigValues = Record<
   string,
   string | number | boolean | string[]

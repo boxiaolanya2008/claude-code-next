@@ -56,10 +56,10 @@ export async function agentsHandler(): Promise<void> {
   }
 
   if (lines.length === 0) {
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
+    
     console.log('No agents found.')
   } else {
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
+    
     console.log(`${totalActive} active agents\n`)
     
     console.log(lines.join('\n').trimEnd())

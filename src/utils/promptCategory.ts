@@ -10,7 +10,7 @@ export function getQuerySourceForAgent(
   isBuiltInAgent: boolean,
 ): QuerySource {
   if (isBuiltInAgent) {
-    // TODO: avoid this cast
+    
     return agentType
       ? (`agent:builtin:${agentType}` as QuerySource)
       : 'agent:default'
@@ -19,12 +19,6 @@ export function getQuerySourceForAgent(
   }
 }
 
-/**
- * Determines the prompt category based on output style settings.
- * Used for analytics to track different output style usage.
- *
- * @returns The prompt category string or undefined for default
- */
 export function getQuerySourceForREPL(): QuerySource {
   const settings = getSettings_DEPRECATED()
   const style = settings?.outputStyle ?? DEFAULT_OUTPUT_STYLE_NAME
@@ -33,7 +27,7 @@ export function getQuerySourceForREPL(): QuerySource {
     return 'repl_main_thread'
   }
 
-  // All styles in OUTPUT_STYLE_CONFIG are built-in
+  
   const isBuiltIn = style in OUTPUT_STYLE_CONFIG
   return isBuiltIn
     ? (`repl_main_thread:outputStyle:${style}` as QuerySource)

@@ -38,7 +38,7 @@ export async function validateDirectoryForWorkspace(
     }
   }
 
-  // resolve() strips the trailing slash expandPath can leave on absolute
+  
   
   const absolutePath = resolve(expandPath(directoryPath))
 
@@ -72,7 +72,7 @@ export async function validateDirectoryForWorkspace(
     throw e
   }
 
-  // Get current permission context
+  
   const currentWorkingDirs = allWorkingDirectories(permissionContext)
 
   

@@ -28,18 +28,14 @@ export type RateLimitMessage = {
   severity: 'error' | 'warning'
 }
 
-/**
- * Get the appropriate rate limit message based on limit state
- * Returns null if no message should be shown
- */
 export function getRateLimitMessage(
   limits: ClaudeAILimits,
   model: string,
 ): RateLimitMessage | null {
-  // Check overage scenarios first (when subscription is rejected but overage is available)
+  
   
   if (limits.isUsingOverage) {
-    // Show warning if approaching overage spending limit
+    
     if (limits.overageStatus === 'allowed_warning') {
       return {
         message: "You're close to your extra usage spending limit",
@@ -49,14 +45,14 @@ export function getRateLimitMessage(
     return null
   }
 
-  // ERROR STATES - when limits are rejected
+  
   if (limits.status === 'rejected') {
     return { message: getLimitReachedText(limits, model), severity: 'error' }
   }
 
-  // WARNING STATES - when approaching limits with early warning
+  
   if (limits.status === 'allowed_warning') {
-    // Only show warnings when utilization is above threshold (70%)
+    
     
     
     const WARNING_THRESHOLD = 0.7
@@ -67,8 +63,8 @@ export function getRateLimitMessage(
       return null
     }
 
-    // Don't warn non-billing Team/Enterprise users about approaching plan limits
-    // if overages are enabled - they'll seamlessly roll into overage
+    
+    
     const subscriptionType = getSubscriptionType()
     const isTeamOrEnterprise =
       subscriptionType === 'team' || subscriptionType === 'enterprise'
@@ -89,14 +85,10 @@ export function getRateLimitMessage(
     }
   }
 
-  // No message needed
+  
   return null
 }
 
-/**
- * Get error message for API errors (used in errors.ts)
- * Returns the message string or null if no error message should be shown
- */
 export function getRateLimitErrorMessage(
   limits: ClaudeAILimits,
   model: string,
@@ -111,10 +103,6 @@ export function getRateLimitErrorMessage(
   return null
 }
 
-/**
- * Get warning message for UI footer
- * Returns the warning message string or null if no warning should be shown
- */
 export function getRateLimitWarning(
   limits: ClaudeAILimits,
   model: string,
@@ -126,7 +114,7 @@ export function getRateLimitWarning(
     return message.message
   }
 
-  // Don't show errors in the footer
+  
   return null
 }
 
@@ -138,12 +126,12 @@ function getLimitReachedText(limits: ClaudeAILimits, model: string): string {
     : undefined
   const resetMessage = resetTime ? ` · resets ${resetTime}` : ''
 
-  // if BOTH subscription (checked before this method) and overage are exhausted
+  
   if (limits.overageStatus === 'rejected') {
-    // Show the earliest reset time to indicate when user can resume
+    
     let overageResetMessage = ''
     if (resetsAt && limits.overageResetsAt) {
-      // Both timestamps present - use the earlier one
+      
       if (resetsAt < limits.overageResetsAt) {
         overageResetMessage = ` · resets ${resetTime}`
       } else {
@@ -166,7 +154,7 @@ function getLimitReachedText(limits: ClaudeAILimits, model: string): string {
     const subscriptionType = getSubscriptionType()
     const isProOrEnterprise =
       subscriptionType === 'pro' || subscriptionType === 'enterprise'
-    // For pro and enterprise, Sonnet limit is the same as weekly
+    
     const limit = isProOrEnterprise ? 'weekly limit' : 'Sonnet limit'
     return formatLimitReachedText(limit, resetMessage, model)
   }
@@ -208,7 +196,7 @@ function getEarlyWarningText(limits: ClaudeAILimits): string | null {
       return null
   }
 
-  // utilization and resetsAt should be defined since early warning is calculated with them
+  
   const used = limits.utilization
     ? Math.floor(limits.utilization * 100)
     : undefined
@@ -216,7 +204,7 @@ function getEarlyWarningText(limits: ClaudeAILimits): string | null {
     ? formatResetTime(limits.resetsAt, true)
     : undefined
 
-  // Get upsell command based on subscription type and limit type
+  
   const upsell = getWarningUpsellText(limits.rateLimitType)
 
   if (used && resetTime) {
@@ -230,7 +218,7 @@ function getEarlyWarningText(limits: ClaudeAILimits): string | null {
   }
 
   if (limits.rateLimitType === 'overage') {
-    // For the "Approaching <x>" verbiage, "extra usage limit" makes more sense than "extra usage"
+    
     limitName += ' limit'
   }
 
@@ -243,11 +231,6 @@ function getEarlyWarningText(limits: ClaudeAILimits): string | null {
   return upsell ? `${base} · ${upsell}` : base
 }
 
-/**
- * Get the upsell command text for warning messages based on subscription and limit type.
- * Returns null if no upsell should be shown.
- * Only used for warnings because actual rate limit hits will see an interactive menu of options.
- */
 function getWarningUpsellText(
   rateLimitType: ClaudeAILimits['rateLimitType'],
 ): string | null {
@@ -255,25 +238,25 @@ function getWarningUpsellText(
   const hasExtraUsageEnabled =
     getOauthAccountInfo()?.hasExtraUsageEnabled === true
 
-  // 5-hour session limit warning
+  
   if (rateLimitType === 'five_hour') {
-    // Teams/Enterprise with overages disabled: prompt to request extra usage
-    // Only show if overage provisioning is allowed for this org type (e.g., not AWS marketplace)
+    
+    
     if (subscriptionType === 'team' || subscriptionType === 'enterprise') {
       if (!hasExtraUsageEnabled && isOverageProvisioningAllowed()) {
         return '/extra-usage to request more'
       }
-      // Teams/Enterprise with overages enabled or unsupported billing type don't need upsell
+      
       return null
     }
 
-    // Pro/Max users: prompt to upgrade
+    
     if (subscriptionType === 'pro' || subscriptionType === 'max') {
-      return '/upgrade to keep using Claude Code'
+      return '/upgrade to keep using Claude Code Next'
     }
   }
 
-  // Overage warning (approaching spending limit)
+  
   if (rateLimitType === 'overage') {
     if (subscriptionType === 'team' || subscriptionType === 'enterprise') {
       if (!hasExtraUsageEnabled && isOverageProvisioningAllowed()) {
@@ -282,14 +265,10 @@ function getWarningUpsellText(
     }
   }
 
-  // Weekly limit warnings don't show upsell per spec
+  
   return null
 }
 
-/**
- * Get notification text for overage mode transitions
- * Used for transient notifications when entering overage mode
- */
 export function getUsingOverageText(limits: ClaudeAILimits): string {
   const resetTime = limits.resetsAt
     ? formatResetTime(limits.resetsAt, true)
@@ -306,7 +285,7 @@ export function getUsingOverageText(limits: ClaudeAILimits): string {
     const subscriptionType = getSubscriptionType()
     const isProOrEnterprise =
       subscriptionType === 'pro' || subscriptionType === 'enterprise'
-    // For pro and enterprise, Sonnet limit is the same as weekly
+    
     limitName = isProOrEnterprise ? 'weekly limit' : 'Sonnet limit'
   }
 
@@ -325,7 +304,7 @@ function formatLimitReachedText(
   resetMessage: string,
   _model: string,
 ): string {
-  // Enhanced messaging for Ant users
+  
   if (process.env.USER_TYPE === 'ant') {
     return `You've hit your ${limit}${resetMessage}. If you have feedback about this limit, post in ${FEEDBACK_CHANNEL_ANT}. You can reset your limits with /reset-limits`
   }

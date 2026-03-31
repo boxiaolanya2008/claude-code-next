@@ -43,10 +43,6 @@ function logLoadOnce(success: boolean): void {
   logEvent('tengu_tree_sitter_load', { success })
 }
 
-/**
- * Awaits WASM init (Parser.init + Language.load). Must be called before
- * parseCommand/parseCommandRaw for the parser to be available. Idempotent.
- */
 export async function ensureInitialized(): Promise<void> {
   if (feature('TREE_SITTER_BASH') || feature('TREE_SITTER_BASH_SHADOW')) {
     await ensureParserInitialized()
@@ -83,13 +79,6 @@ export async function parseCommand(
   return null
 }
 
-/**
- * SECURITY: Sentinel for "parser was loaded and attempted, but aborted"
- * (timeout / node budget / Rust panic). Distinct from `null` (module not
- * loaded). Adversarial input can trigger abort under MAX_COMMAND_LENGTH:
- * `(( a[0][0]... ))` with ~2800 subscripts hits PARSE_TIMEOUT_MICROS.
- * Callers MUST treat this as fail-closed (too-complex), NOT route to legacy.
- */
 export const PARSE_ABORTED = Symbol('parse-aborted')
 
 export async function parseCommandRaw(
@@ -104,7 +93,7 @@ export async function parseCommandRaw(
     try {
       const result = mod.parse(command)
       
-      // bashParser.ts (PARSE_TIMEOUT_MS=50, MAX_NODES=50_000).
+      
       
       
       if (result === null) {
@@ -140,7 +129,7 @@ function findCommandNode(node: Node, parent: Node | null): Node | null {
     )
   }
 
-  // Pipeline: recurse into first child (which may be a redirected_statement)
+  
   if (type === 'pipeline') {
     for (const child of children) {
       const result = findCommandNode(child, node)
@@ -149,12 +138,12 @@ function findCommandNode(node: Node, parent: Node | null): Node | null {
     return null
   }
 
-  // Redirected statement: find the command inside
+  
   if (type === 'redirected_statement') {
     return children.find(c => COMMAND_TYPES.has(c.type)) ?? null
   }
 
-  // Recursive search
+  
   for (const child of children) {
     const result = findCommandNode(child, node)
     if (result) return result
@@ -178,7 +167,7 @@ function extractEnvVars(commandNode: Node | null): string[] {
 }
 
 export function extractCommandArguments(commandNode: Node): string[] {
-  // Declaration commands
+  
   if (commandNode.type === 'declaration_command') {
     const firstChild = commandNode.children[0]
     return firstChild && DECLARATION_COMMANDS.has(firstChild.text)
@@ -202,7 +191,7 @@ export function extractCommandArguments(commandNode: Node): string[] {
       continue
     }
 
-    // Arguments
+    
     if (ARGUMENT_TYPES.has(child.type)) {
       args.push(stripQuotes(child.text))
     } else if (SUBSTITUTION_TYPES.has(child.type)) {

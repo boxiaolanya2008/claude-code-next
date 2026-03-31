@@ -4,13 +4,13 @@ import { which } from './which.js'
 const binaryCache = new Map<string, boolean>()
 
 export async function isBinaryInstalled(command: string): Promise<boolean> {
-  // Edge case: empty or whitespace-only command
+  
   if (!command || !command.trim()) {
     logForDebugging('[binaryCheck] Empty command provided, returning false')
     return false
   }
 
-  // Trim the command to handle whitespace
+  
   const trimmedCommand = command.trim()
 
   
@@ -27,7 +27,7 @@ export async function isBinaryInstalled(command: string): Promise<boolean> {
     exists = true
   }
 
-  // Cache the result
+  
   binaryCache.set(trimmedCommand, exists)
 
   logForDebugging(
@@ -37,9 +37,6 @@ export async function isBinaryInstalled(command: string): Promise<boolean> {
   return exists
 }
 
-/**
- * Clear the binary check cache (useful for testing)
- */
 export function clearBinaryCache(): void {
   binaryCache.clear()
 }

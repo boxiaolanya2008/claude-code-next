@@ -4,7 +4,7 @@ import { logForDebugging } from './debug.js'
 import { isEnvTruthy } from './envUtils.js'
 import { formatMs, formatTimelineLine, getPerformance } from './profilerBase.js'
 
-const ENABLED = isEnvTruthy(process.env.CLAUDE_CODE_PROFILE_QUERY)
+const ENABLED = isEnvTruthy(process.env.CLAUDE_CODE_NEXT_PROFILE_QUERY)
 
 const memorySnapshots = new Map<string, NodeJS.MemoryUsage>()
 
@@ -28,9 +28,6 @@ export function startQueryProfile(): void {
   queryCheckpoint('query_user_input_received')
 }
 
-/**
- * Record a checkpoint with the given name
- */
 export function queryCheckpoint(name: string): void {
   if (!ENABLED) return
 
@@ -48,21 +45,15 @@ export function queryCheckpoint(name: string): void {
   }
 }
 
-/**
- * End the current query profiling session
- */
 export function endQueryProfile(): void {
   if (!ENABLED) return
 
   queryCheckpoint('query_profile_end')
 }
 
-/**
- * Identify slow operations (> 100ms delta)
- */
 function getSlowWarning(deltaMs: number, name: string): string {
-  // Don't flag the first checkpoint as slow - it measures time from process start,
-  // not actual processing overhead
+  
+  
   if (name === 'query_user_input_received') {
     return ''
   }
@@ -74,7 +65,7 @@ function getSlowWarning(deltaMs: number, name: string): string {
     return ` ⚠️  SLOW`
   }
 
-  // Specific warnings for known bottlenecks
+  
   if (name.includes('git_status') && deltaMs > 50) {
     return ' ⚠️  git status'
   }
@@ -88,12 +79,9 @@ function getSlowWarning(deltaMs: number, name: string): string {
   return ''
 }
 
-/**
- * Get a formatted report of all checkpoints for the current/last query
- */
 function getQueryProfileReport(): string {
   if (!ENABLED) {
-    return 'Query profiling not enabled (set CLAUDE_CODE_PROFILE_QUERY=1)'
+    return 'Query profiling not enabled (set CLAUDE_CODE_NEXT_PROFILE_QUERY=1)'
   }
 
   const perf = getPerformance()
@@ -108,7 +96,7 @@ function getQueryProfileReport(): string {
   lines.push('='.repeat(80))
   lines.push('')
 
-  // Use first mark as baseline (query start time) to show relative times
+  
   const baselineTime = marks[0]?.startTime ?? 0
   let prevTime = baselineTime
   let apiRequestSentTime = 0
@@ -129,7 +117,7 @@ function getQueryProfileReport(): string {
       ),
     )
 
-    // Track key milestones for summary (use relative times)
+    
     if (mark.name === 'query_api_request_sent') {
       apiRequestSentTime = relativeTime
     }
@@ -140,7 +128,7 @@ function getQueryProfileReport(): string {
     prevTime = mark.startTime
   }
 
-  // Calculate summary statistics (relative to baseline)
+  
   const lastMark = marks[marks.length - 1]
   const totalTime = lastMark ? lastMark.startTime - baselineTime : 0
 
@@ -167,7 +155,7 @@ function getQueryProfileReport(): string {
     lines.push(`Total time: ${formatMs(totalTime)}ms`)
   }
 
-  // Add phase summary
+  
   lines.push(getPhaseSummary(marks, baselineTime))
 
   lines.push('='.repeat(80))
@@ -175,9 +163,6 @@ function getQueryProfileReport(): string {
   return lines.join('\n')
 }
 
-/**
- * Get phase-based summary showing time spent in each major phase
- */
 function getPhaseSummary(
   marks: Array<{ name: string; startTime: number }>,
   baselineTime: number,
@@ -238,14 +223,14 @@ function getPhaseSummary(
 
     if (startTime !== undefined && endTime !== undefined) {
       const duration = endTime - startTime
-      const bar = '█'.repeat(Math.min(Math.ceil(duration / 10), 50)) // 1 block per 10ms, max 50
+      const bar = '█'.repeat(Math.min(Math.ceil(duration / 10), 50)) 
       lines.push(
         `  ${phase.name.padEnd(22)} ${formatMs(duration).padStart(10)}ms ${bar}`,
       )
     }
   }
 
-  // Calculate pre-API overhead (everything before api_request_sent)
+  
   const apiRequestSent = markMap.get('query_api_request_sent')
   if (apiRequestSent !== undefined) {
     lines.push('')
@@ -257,9 +242,6 @@ function getPhaseSummary(
   return lines.join('\n')
 }
 
-/**
- * Log the query profile report to debug output
- */
 export function logQueryProfileReport(): void {
   if (!ENABLED) return
   logForDebugging(getQueryProfileReport())

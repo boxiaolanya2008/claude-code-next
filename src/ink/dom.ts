@@ -37,12 +37,12 @@ export type DOMElement = {
   onComputeLayout?: () => void
   onRender?: () => void
   onImmediateRender?: () => void
-  // Used to skip empty renders during React 19's effect double-invoke in test mode
+  
   hasRenderedContent?: boolean
 
-  // When true, this node needs re-rendering
+  
   dirty: boolean
-  // Set by the reconciler's hideInstance/unhideInstance; survives style updates.
+  
   isHidden?: boolean
   
   
@@ -79,11 +79,11 @@ export type DOMElement = {
   
   
   scrollAnchor?: { el: DOMElement; offset: number }
-  // Only set on ink-root. The document owns focus — any node can
+  
   
   focusManager?: FocusManager
   
-  // e.g. ['ToolUseLoader', 'Messages', 'REPL']. Only populated when
+  
   
   
   debugOwnerChain?: string[]
@@ -163,9 +163,9 @@ export const insertBeforeNode = (
   const index = node.childNodes.indexOf(beforeChildNode)
 
   if (index >= 0) {
-    // Calculate yoga index BEFORE modifying childNodes.
     
-    // ink-link, ink-virtual-text) don't have yogaNodes, so DOM indices don't
+    
+    
     
     let yogaIndex = 0
     if (newChildNode.yogaNode && node.yogaNode) {
@@ -206,7 +206,7 @@ export const removeChildNode = (
     removeNode.parentNode?.yogaNode?.removeChild(removeNode.yogaNode)
   }
 
-  // Collect cached rects from the removed subtree so they can be cleared
+  
   collectRemovedRects(node, removeNode)
 
   removeNode.parentNode = undefined
@@ -227,7 +227,7 @@ function collectRemovedRects(
   if (removed.nodeName === '#text') return
   const elem = removed as DOMElement
   
-  // its painted pixels may overlap non-siblings — flag for global blit
+  
   
   
   const isAbsolute = underAbsolute || elem.style.position === 'absolute'
@@ -246,13 +246,13 @@ export const setAttribute = (
   key: string,
   value: DOMNodeAttribute,
 ): void => {
-  // Skip 'children' - React handles children via appendChild/removeChild,
-  // not attributes. React always passes a new children reference, so
+  
+  
   
   if (key === 'children') {
     return
   }
-  // Skip if unchanged
+  
   if (node.attributes[key] === value) {
     return
   }
@@ -261,7 +261,7 @@ export const setAttribute = (
 }
 
 export const setStyle = (node: DOMNode, style: Styles): void => {
-  // Compare style properties to avoid marking dirty unnecessarily.
+  
   
   if (stylesEqual(node.style, style)) {
     return
@@ -274,7 +274,7 @@ export const setTextStyles = (
   node: DOMElement,
   textStyles: TextStyles,
 ): void => {
-  // Same dirty-check guard as setStyle: React (and buildTextStyles in Text.tsx)
+  
   
   
   
@@ -293,7 +293,7 @@ function shallowEqual<T extends object>(
   a: T | undefined,
   b: T | undefined,
 ): boolean {
-  // Fast path: same object reference (or both undefined)
+  
   if (a === b) return true
   if (a === undefined || b === undefined) return false
 
@@ -345,18 +345,18 @@ const measureTextNode = function (
     return dimensions
   }
 
-  // This is happening when <Box> is shrinking child nodes and layout asks
+  
   
   if (dimensions.width >= 1 && width > 0 && width < 1) {
     return dimensions
   }
 
-  // For text with embedded newlines (pre-wrapped content), avoid re-wrapping
   
   
   
   
-  // we must respect it and measure at that width. Otherwise, if the actual
+  
+  
   
   
   if (text.includes('\n') && widthMode === LayoutMeasureMode.Undefined) {
@@ -370,8 +370,6 @@ const measureTextNode = function (
   return measureText(wrappedText, width)
 }
 
-// ink-raw-ansi nodes hold pre-rendered ANSI strings with known dimensions.
-
 const measureRawAnsiNode = function (node: DOMElement): {
   width: number
   height: number
@@ -382,10 +380,6 @@ const measureRawAnsiNode = function (node: DOMElement): {
   }
 }
 
-/**
- * Mark a node and all its ancestors as dirty for re-rendering.
- * Also marks yoga dirty for text remeasurement if this is a text node.
- */
 export const markDirty = (node?: DOMNode): void => {
   let current: DOMNode | undefined = node
   let markedYoga = false
@@ -408,8 +402,6 @@ export const markDirty = (node?: DOMNode): void => {
   }
 }
 
-// Walk to root and call its onRender (the throttled scheduleRender). Use for
-
 export const scheduleRenderFrom = (node?: DOMNode): void => {
   let cur: DOMNode | undefined = node
   while (cur?.parentNode) cur = cur.parentNode
@@ -421,7 +413,7 @@ export const setTextNodeValue = (node: TextNode, text: string): void => {
     text = String(text)
   }
 
-  // Skip if unchanged
+  
   if (node.nodeValue === text) {
     return
   }
@@ -434,8 +426,6 @@ function isDOMElement(node: DOMElement | TextNode): node is DOMElement {
   return node.nodeName !== '#text'
 }
 
-// Clear yogaNode references recursively before freeing.
-
 export const clearYogaNodeReferences = (node: DOMElement | TextNode): void => {
   if ('childNodes' in node) {
     for (const child of node.childNodes) {
@@ -445,16 +435,6 @@ export const clearYogaNodeReferences = (node: DOMElement | TextNode): void => {
   node.yogaNode = undefined
 }
 
-/**
- * Find the React component stack responsible for content at screen row `y`.
- *
- * DFS the DOM tree accumulating yoga offsets. Returns the debugOwnerChain of
- * the deepest node whose bounding box contains `y`. Called from ink.tsx when
- * log-update triggers a full reset, to attribute the flicker to its source.
- *
- * Only useful when CLAUDE_CODE_DEBUG_REPAINTS is set (otherwise chains are
- * undefined and this returns []).
- */
 export function findOwnerChainAtRow(root: DOMElement, y: number): string[] {
   let best: string[] = []
   walk(root, 0)

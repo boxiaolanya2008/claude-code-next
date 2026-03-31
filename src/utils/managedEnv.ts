@@ -23,24 +23,17 @@ function withoutSSHTunnelVars(
     ANTHROPIC_BASE_URL: _2,
     ANTHROPIC_API_KEY: _3,
     ANTHROPIC_AUTH_TOKEN: _4,
-    CLAUDE_CODE_OAUTH_TOKEN: _5,
+    CLAUDE_CODE_NEXT_OAUTH_TOKEN: _5,
     ...rest
   } = env
   return rest
 }
 
-/**
- * When the host owns inference routing (sets
- * CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST in spawn env), strip
- * provider-selection / model-default vars from settings-sourced env so a
- * user's ~/.claude/settings.json can't redirect requests away from the
- * host-configured provider.
- */
 function withoutHostManagedProviderVars(
   env: Record<string, string> | undefined,
 ): Record<string, string> {
   if (!env) return {}
-  if (!isEnvTruthy(process.env.CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST)) {
+  if (!isEnvTruthy(process.env.CLAUDE_CODE_NEXT_PROVIDER_MANAGED_BY_HOST)) {
     return env
   }
   const out: Record<string, string> = {}
@@ -52,14 +45,6 @@ function withoutHostManagedProviderVars(
   return out
 }
 
-/**
- * Snapshot of env keys present before any settings.env is applied — for CCD,
- * these are the keys the desktop host set to orchestrate the subprocess.
- * Settings must not override them (OTEL_LOGS_EXPORTER=console would corrupt
- * the stdio JSON-RPC transport). Keys added LATER by user/project settings
- * are not in this set, so mid-session settings.json changes still apply.
- * Lazy-captured on first applySafeConfigEnvironmentVariables() call.
- */
 let ccdSpawnEnvKeys: Set<string> | null | undefined
 
 function withoutCcdSpawnEnvKeys(
@@ -73,9 +58,6 @@ function withoutCcdSpawnEnvKeys(
   return out
 }
 
-/**
- * Compose the strip filters applied to every settings-sourced env object.
- */
 function filterSettingsEnv(
   env: Record<string, string> | undefined,
 ): Record<string, string> {
@@ -84,18 +66,6 @@ function filterSettingsEnv(
   )
 }
 
-/**
- * Trusted setting sources whose env vars can be applied before the trust dialog.
- *
- * - userSettings (~/.claude/settings.json): controlled by the user, not project-specific
- * - flagSettings (--settings CLI flag or SDK inline settings): explicitly passed by the user
- * - policySettings (managed settings from enterprise API or local managed-settings.json):
- *   controlled by IT/admin (highest priority, cannot be overridden)
- *
- * Project-scoped sources (projectSettings, localSettings) are excluded because they live
- * inside the project directory and could be committed by a malicious actor to redirect
- * traffic (e.g., ANTHROPIC_BASE_URL) to an attacker-controlled server.
- */
 const TRUSTED_SETTING_SOURCES = [
   'userSettings',
   'flagSettings',
@@ -103,16 +73,16 @@ const TRUSTED_SETTING_SOURCES = [
 ] as const
 
 export function applySafeConfigEnvironmentVariables(): void {
-  // Capture CCD spawn-env keys before any settings.env is applied (once).
+  
   if (ccdSpawnEnvKeys === undefined) {
     ccdSpawnEnvKeys =
-      process.env.CLAUDE_CODE_ENTRYPOINT === 'claude-desktop'
+      process.env.CLAUDE_CODE_NEXT_ENTRYPOINT === 'claude-desktop'
         ? new Set(Object.keys(process.env))
         : null
   }
 
-  // Global config (~/.claude.json) is user-controlled. In CCD mode,
-  // filterSettingsEnv strips keys that were in the spawn env snapshot so
+  
+  
   
   Object.assign(process.env, filterSettingsEnv(getGlobalConfig().env))
 
@@ -129,11 +99,11 @@ export function applySafeConfigEnvironmentVariables(): void {
     )
   }
 
-  // Compute remote-managed-settings eligibility now, with userSettings and
   
-  // ANTHROPIC_BASE_URL — both settable via settings.env.
   
-  // which guards on this. The two-phase structure makes the ordering
+  
+  
+  
   
   isRemoteManagedSettingsEligible()
 
@@ -144,7 +114,7 @@ export function applySafeConfigEnvironmentVariables(): void {
 
   
   
-  // the merged value (which may come from a higher-priority project source)
+  
   
   
   
@@ -158,13 +128,6 @@ export function applySafeConfigEnvironmentVariables(): void {
   }
 }
 
-/**
- * Apply environment variables from settings to process.env.
- * This applies ALL environment variables (except provider-routing vars when
- * CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST is set — see filterSettingsEnv) and
- * should only be called after trust is established. This applies potentially
- * dangerous environment variables such as LD_PRELOAD, PATH, etc.
- */
 export function applyConfigEnvironmentVariables(): void {
   Object.assign(process.env, filterSettingsEnv(getGlobalConfig().env))
 

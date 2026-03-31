@@ -19,7 +19,6 @@ export type {
   PermissionResult,
 }
 
-// Helper function to get the appropriate prose description for rule behavior
 export function getRuleBehaviorDescription(
   permissionResult: PermissionResult['behavior'],
 ): string {

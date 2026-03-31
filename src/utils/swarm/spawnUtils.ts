@@ -20,14 +20,6 @@ export function getTeammateCommand(): string {
   return isInBundledMode() ? process.execPath : process.argv[1]!
 }
 
-/**
- * Builds CLI flags to propagate from the current session to spawned teammates.
- * This ensures teammates inherit important settings like permission mode,
- * model selection, and plugin configuration from their parent.
- *
- * @param options.planModeRequired - If true, don't inherit bypass permissions (plan mode takes precedence)
- * @param options.permissionMode - Permission mode to propagate
- */
 export function buildInheritedCliFlags(options?: {
   planModeRequired?: boolean
   permissionMode?: PermissionMode
@@ -35,10 +27,10 @@ export function buildInheritedCliFlags(options?: {
   const flags: string[] = []
   const { planModeRequired, permissionMode } = options || {}
 
-  // Propagate permission mode to teammates, but NOT if plan mode is required
+  
   
   if (planModeRequired) {
-    // Don't inherit bypass permissions when plan mode is required
+    
   } else if (
     permissionMode === 'bypassPermissions' ||
     getSessionBypassPermissionsMode()
@@ -48,29 +40,29 @@ export function buildInheritedCliFlags(options?: {
     flags.push('--permission-mode acceptEdits')
   }
 
-  // Propagate --model if explicitly set via CLI
+  
   const modelOverride = getMainLoopModelOverride()
   if (modelOverride) {
     flags.push(`--model ${quote([modelOverride])}`)
   }
 
-  // Propagate --settings if set via CLI
+  
   const settingsPath = getFlagSettingsPath()
   if (settingsPath) {
     flags.push(`--settings ${quote([settingsPath])}`)
   }
 
-  // Propagate --plugin-dir for each inline plugin
+  
   const inlinePlugins = getInlinePlugins()
   for (const pluginDir of inlinePlugins) {
     flags.push(`--plugin-dir ${quote([pluginDir])}`)
   }
 
-  // Propagate --teammate-mode so tmux teammates use the same mode as leader
+  
   const sessionMode = getTeammateModeFromSnapshot()
   flags.push(`--teammate-mode ${sessionMode}`)
 
-  // Propagate --chrome / --no-chrome if explicitly set on the CLI
+  
   const chromeFlagOverride = getChromeFlagOverride()
   if (chromeFlagOverride === true) {
     flags.push('--chrome')
@@ -81,30 +73,25 @@ export function buildInheritedCliFlags(options?: {
   return flags.join(' ')
 }
 
-/**
- * Environment variables that must be explicitly forwarded to tmux-spawned
- * teammates. Tmux may start a new login shell that doesn't inherit the
- * parent's env, so we forward any that are set in the current process.
- */
 const TEAMMATE_ENV_VARS = [
-  // API provider selection — without these, teammates default to firstParty
-  // and send requests to the wrong endpoint (GitHub issue #23561)
-  'CLAUDE_CODE_USE_BEDROCK',
-  'CLAUDE_CODE_USE_VERTEX',
-  'CLAUDE_CODE_USE_FOUNDRY',
-  // Custom API endpoint
+  
+  
+  'CLAUDE_CODE_NEXT_USE_BEDROCK',
+  'CLAUDE_CODE_NEXT_USE_VERTEX',
+  'CLAUDE_CODE_NEXT_USE_FOUNDRY',
+  
   'ANTHROPIC_BASE_URL',
-  // Config directory override
+  
   'CLAUDE_CONFIG_DIR',
-  // CCR marker — teammates need this for CCR-aware code paths. Auth finds
-  // its own way via /home/claude/.claude/remote/.oauth_token regardless;
-  // the FD env var wouldn't help (pipe FDs don't cross tmux).
-  'CLAUDE_CODE_REMOTE',
-  // Auto-memory gate (memdir/paths.ts) checks REMOTE && !MEMORY_DIR to
-  // disable memory on ephemeral CCR filesystems. Forwarding REMOTE alone
-  // would flip teammates to memory-off when the parent has it on.
-  'CLAUDE_CODE_REMOTE_MEMORY_DIR',
-  // Upstream proxy — the parent's MITM relay is reachable from teammates
+  
+  
+  
+  'CLAUDE_CODE_NEXT_REMOTE',
+  
+  
+  
+  'CLAUDE_CODE_NEXT_REMOTE_MEMORY_DIR',
+  
   
   
   
@@ -121,7 +108,7 @@ const TEAMMATE_ENV_VARS = [
 ] as const
 
 export function buildInheritedEnvVars(): string {
-  const envVars = ['CLAUDECODE=1', 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1']
+  const envVars = ['CLAUDECODE=1', 'CLAUDE_CODE_NEXT_EXPERIMENTAL_AGENT_TEAMS=1']
 
   for (const key of TEAMMATE_ENV_VARS) {
     const value = process.env[key]

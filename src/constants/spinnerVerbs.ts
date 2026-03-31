@@ -12,7 +12,6 @@ export function getSpinnerVerbs(): string[] {
   return [...SPINNER_VERBS, ...config.verbs]
 }
 
-// Spinner verbs for loading messages
 export const SPINNER_VERBS = [
   'Accomplishing',
   'Actioning',

@@ -26,7 +26,7 @@ export function useApiKeyVerification(): ApiKeyVerificationResult {
     if (!isAnthropicAuthEnabled() || isClaudeAISubscriber()) {
       return 'valid'
     }
-    // Use skipRetrievingKeyFromApiKeyHelper to avoid executing apiKeyHelper
+    
     
     const { key, source } = getAnthropicApiKeyWithSource({
       skipRetrievingKeyFromApiKeyHelper: true,
@@ -45,7 +45,7 @@ export function useApiKeyVerification(): ApiKeyVerificationResult {
       setStatus('valid')
       return
     }
-    // Warm the apiKeyHelper cache (no-op if not configured), then read from
+    
     
     await getApiKeyFromApiKeyHelper(getIsNonInteractiveSession())
     const { key: apiKey, source } = getAnthropicApiKeyWithSource()
@@ -66,9 +66,9 @@ export function useApiKeyVerification(): ApiKeyVerificationResult {
       setStatus(newStatus)
       return
     } catch (error) {
-      // This happens when there an error response from the API but it's not an invalid API key error
-      // In this case, we still mark the API key as invalid - but we also log the error so we can
-      // display it to the user to be more helpful
+      
+      
+      
       setError(error as Error)
       const newStatus = 'error'
       setStatus(newStatus)

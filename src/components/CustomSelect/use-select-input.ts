@@ -11,11 +11,8 @@ import type { OptionWithDescription } from './select.js'
 import type { SelectState } from './use-select-state.js'
 
 export type UseSelectProps<T> = {
-  /**
-   * When disabled, user input is ignored.
-   *
-   * @default false
-   */
+  
+
   isDisabled?: boolean
 
   
@@ -38,22 +35,16 @@ export type UseSelectProps<T> = {
 
   onUpFromFirstItem?: () => void
 
-  /**
-   * Callback when user presses down from the last item.
-   * If provided, navigation will not wrap to the first item.
-   */
+  
+
   onDownFromLastItem?: () => void
 
-  /**
-   * Callback when input mode should be toggled for an option.
-   * Called when Tab is pressed (to enter or exit input mode).
-   */
+  
+
   onInputModeToggle?: (value: T) => void
 
-  /**
-   * Current input values for input-type options.
-   * Used to determine if number key should submit an empty input option.
-   */
+  
+
   inputValues?: Map<T, string>
 
   
@@ -78,7 +69,7 @@ export const useSelectInput = <T>({
   imagesSelected = false,
   onEnterImageSelection,
 }: UseSelectProps<T>) => {
-  // Automatically register as an overlay when onCancel is provided.
+  
   
   useRegisterOverlay('select', !!state.onCancel)
 
@@ -151,7 +142,7 @@ export const useSelectInput = <T>({
   })
 
   
-  // and arrow key navigation when in input mode
+  
   useInput(
     (input, key, event: InputEvent) => {
       const normalizedInput = normalizeFullWidthDigits(input)
@@ -167,17 +158,17 @@ export const useSelectInput = <T>({
       }
 
       if (currentIsInInput) {
-        // When in image selection mode, suppress all input handling so
+        
         
         if (imagesSelected) return
 
-        // DOWN arrow enters image selection mode if images exist
+        
         if (key.downArrow && onEnterImageSelection?.()) {
           event.stopImmediatePropagation()
           return
         }
 
-        // Arrow keys still navigate the select even while in input mode
+        
         if (key.downArrow || (key.ctrl && input === 'n')) {
           if (onDownFromLastItem) {
             const lastOption = options[options.length - 1]
@@ -205,7 +196,7 @@ export const useSelectInput = <T>({
           return
         }
 
-        // All other keys (including digits) pass through to TextInput.
+        
         
         
         
@@ -221,7 +212,7 @@ export const useSelectInput = <T>({
       }
 
       if (disableSelection !== true) {
-        // Space for multi-select toggle
+        
         if (
           isMultiSelect &&
           normalizeFullWidthSpace(input) === ' ' &&
@@ -247,7 +238,7 @@ export const useSelectInput = <T>({
             if (selectedOption.type === 'input') {
               const currentValue = inputValues?.get(selectedOption.value) ?? ''
               if (currentValue.trim()) {
-                // Pre-filled input: auto-submit (user can Tab to edit instead)
+                
                 state.onChange?.(selectedOption.value)
                 return
               }

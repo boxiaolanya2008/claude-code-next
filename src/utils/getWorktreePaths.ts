@@ -26,9 +26,9 @@ export async function getWorktreePaths(cwd: string): Promise<string[]> {
     return []
   }
 
-  // Parse porcelain output - lines starting with "worktree " contain paths
   
-  // worktree /Users/foo/repo
+  
+  
   
   
   

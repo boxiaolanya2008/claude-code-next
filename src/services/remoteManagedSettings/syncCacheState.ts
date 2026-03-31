@@ -31,8 +31,6 @@ export function getSettingsPath(): string {
   return join(getClaudeConfigHomeDir(), SETTINGS_FILENAME)
 }
 
-// sync IO — settings pipeline is sync. fileRead and jsonRead are leaves;
-// file.ts and json.ts both sit in the settings SCC.
 function loadSettings(): SettingsJson | null {
   try {
     const content = readFileSync(getSettingsPath())

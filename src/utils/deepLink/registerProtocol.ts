@@ -17,10 +17,10 @@ import { which } from '../which.js'
 import { getUserBinDir, getXDGDataHome } from '../xdg.js'
 import { DEEP_LINK_PROTOCOL } from './parseDeepLink.js'
 
-export const MACOS_BUNDLE_ID = 'com.anthropic.claude-code-url-handler'
-const APP_NAME = 'Claude Code URL Handler'
-const DESKTOP_FILE_NAME = 'claude-code-url-handler.desktop'
-const MACOS_APP_NAME = 'Claude Code URL Handler.app'
+export const MACOS_BUNDLE_ID = 'com.anthropic.claude-code-next-url-handler'
+const APP_NAME = 'Claude Code Next URL Handler'
+const DESKTOP_FILE_NAME = 'claude-code-next-url-handler.desktop'
+const MACOS_APP_NAME = 'Claude Code Next URL Handler.app'
 
 const MACOS_APP_DIR = path.join(os.homedir(), 'Applications', MACOS_APP_NAME)
 const MACOS_SYMLINK_PATH = path.join(
@@ -44,22 +44,10 @@ function windowsCommandValue(claudePath: string): string {
   return `"${claudePath}" --handle-uri "%1"`
 }
 
-/**
- * Register the protocol handler on macOS.
- *
- * Creates a .app bundle where the CFBundleExecutable is a symlink to the
- * already-installed (and signed) `claude` binary. When macOS opens a
- * `claude-cli://` URL, it launches `claude` through this app bundle.
- * Claude then uses the url-handler NAPI module to read the URL from the
- * Apple Event and handles it normally.
- *
- * This approach avoids shipping a separate executable (which would need
- * to be signed and allowlisted by endpoint security tools like Santa).
- */
 async function registerMacos(claudePath: string): Promise<void> {
   const contentsDir = path.join(MACOS_APP_DIR, 'Contents')
 
-  // Remove any existing app bundle to start clean
+  
   try {
     await fs.rm(MACOS_APP_DIR, { recursive: true })
   } catch (e: unknown) {
@@ -71,7 +59,7 @@ async function registerMacos(claudePath: string): Promise<void> {
 
   await fs.mkdir(path.dirname(MACOS_SYMLINK_PATH), { recursive: true })
 
-  // Info.plist — registers the URL scheme with claude as the executable
+  
   const infoPlist = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -92,7 +80,7 @@ async function registerMacos(claudePath: string): Promise<void> {
   <array>
     <dict>
       <key>CFBundleURLName</key>
-      <string>Claude Code Deep Link</string>
+      <string>Claude Code Next Deep Link</string>
       <key>CFBundleURLSchemes</key>
       <array>
         <string>${DEEP_LINK_PROTOCOL}</string>
@@ -104,14 +92,14 @@ async function registerMacos(claudePath: string): Promise<void> {
 
   await fs.writeFile(path.join(contentsDir, 'Info.plist'), infoPlist)
 
-  // Symlink to the already-signed claude binary — avoids a new executable
-  // that would need signing and endpoint-security allowlisting.
-  // Written LAST among the throwing fs calls: isProtocolHandlerCurrent reads
-  // this symlink, so it acts as the commit marker. If Info.plist write
-  // failed above, no symlink → next session retries.
+  
+  
+  
+  
+  
   await fs.symlink(claudePath, MACOS_SYMLINK_PATH)
 
-  // Re-register the app with LaunchServices so macOS picks up the URL scheme.
+  
   const lsregister =
     '/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister'
   await execFileNoThrow(lsregister, ['-R', MACOS_APP_DIR], { useCwd: false })
@@ -121,16 +109,12 @@ async function registerMacos(claudePath: string): Promise<void> {
   )
 }
 
-/**
- * Register the protocol handler on Linux.
- * Creates a .desktop file and registers it with xdg-mime.
- */
 async function registerLinux(claudePath: string): Promise<void> {
   await fs.mkdir(path.dirname(linuxDesktopPath()), { recursive: true })
 
   const desktopEntry = `[Desktop Entry]
 Name=${APP_NAME}
-Comment=Handle ${DEEP_LINK_PROTOCOL}:// deep links for Claude Code
+Comment=Handle ${DEEP_LINK_PROTOCOL}:// deep links for Claude Code Next
 ${linuxExecLine(claudePath)}
 Type=Application
 NoDisplay=true
@@ -139,11 +123,11 @@ MimeType=x-scheme-handler/${DEEP_LINK_PROTOCOL};
 
   await fs.writeFile(linuxDesktopPath(), desktopEntry)
 
-  // Register as the default handler for the scheme. On headless boxes
-  // (WSL, Docker, CI) xdg-utils isn't installed — not a failure: there's
-  // no desktop to click links from, and some apps read the .desktop
-  // MimeType line directly. The artifact check still short-circuits
-  // next session since the .desktop file is present.
+  
+  
+  
+  
+  
   const xdgMime = await which('xdg-mime')
   if (xdgMime) {
     const { code } = await execFileNoThrow(
@@ -163,9 +147,6 @@ MimeType=x-scheme-handler/${DEEP_LINK_PROTOCOL};
   )
 }
 
-/**
- * Register the protocol handler on Windows via the registry.
- */
 async function registerWindows(claudePath: string): Promise<void> {
   for (const args of [
     ['add', WINDOWS_REG_KEY, '/ve', '/d', `URL:${APP_NAME}`, '/f'],
@@ -192,10 +173,6 @@ async function registerWindows(claudePath: string): Promise<void> {
   )
 }
 
-/**
- * Register the `claude-cli://` protocol handler with the operating system.
- * After registration, clicking a `claude-cli://` link will invoke claude.
- */
 export async function registerProtocolHandler(
   claudePath?: string,
 ): Promise<void> {
@@ -216,12 +193,6 @@ export async function registerProtocolHandler(
   }
 }
 
-/**
- * Resolve the claude binary path for protocol registration. Prefers the
- * native installer's stable symlink (~/.local/bin/claude) which survives
- * auto-updates; falls back to process.execPath when the symlink is absent
- * (dev builds, non-native installs).
- */
 async function resolveClaudePath(): Promise<string> {
   const binaryName = process.platform === 'win32' ? 'claude.exe' : 'claude'
   const stablePath = path.join(getUserBinDir(), binaryName)
@@ -233,17 +204,6 @@ async function resolveClaudePath(): Promise<string> {
   }
 }
 
-/**
- * Check whether the OS-level protocol handler is already registered AND
- * points at the expected `claude` binary. Reads the registration artifact
- * directly (symlink target, .desktop Exec line, registry value) rather than
- * a cached flag in ~/.claude.json, so:
- *   - the check is per-machine (config can sync across machines; OS state can't)
- *   - stale paths self-heal (install-method change → re-register next session)
- *   - deleted artifacts self-heal
- *
- * Any read error (ENOENT, EACCES, reg nonzero) → false → re-register.
- */
 export async function isProtocolHandlerCurrent(
   claudePath: string,
 ): Promise<boolean> {
@@ -273,12 +233,6 @@ export async function isProtocolHandlerCurrent(
   }
 }
 
-/**
- * Auto-register the claude-cli:// deep link protocol handler when missing
- * or stale. Runs every session from backgroundHousekeeping (fire-and-forget),
- * but the artifact check makes it a no-op after the first successful run
- * unless the install path moves or the OS artifact is deleted.
- */
 export async function ensureDeepLinkProtocolRegistered(): Promise<void> {
   if (getInitialSettings().disableDeepLinkRegistration === 'disable') {
     return
@@ -292,10 +246,10 @@ export async function ensureDeepLinkProtocolRegistered(): Promise<void> {
     return
   }
 
-  // EACCES/ENOSPC are deterministic — retrying next session won't help.
-  // Throttle to once per 24h so a read-only ~/.local/share/applications
-  // doesn't generate a failure event on every startup. Marker lives in
-  // ~/.claude (per-machine, not synced) rather than ~/.claude.json (can sync).
+  
+  
+  
+  
   const failureMarkerPath = path.join(
     getClaudeConfigHomeDir(),
     '.deep-link-register-failed',
@@ -306,7 +260,7 @@ export async function ensureDeepLinkProtocolRegistered(): Promise<void> {
       return
     }
   } catch {
-    // Marker absent — proceed.
+    
   }
 
   try {

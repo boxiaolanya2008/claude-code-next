@@ -266,7 +266,7 @@ const MAX_MEMORY_LINES = 200
 const MAX_MEMORY_BYTES = 4096
 
 export const RELEVANT_MEMORIES_CONFIG = {
-  // Per-turn cap (5 × 4KB = 20KB) bounds a single injection, but over a
+  
   
   
   
@@ -425,9 +425,8 @@ export type HookNonBlockingErrorAttachment = {
 }
 
 export type Attachment =
-  /**
-   * User at-mentioned the file
-   */
+  
+
   | FileAttachment
   | CompactFileReferenceAttachment
   | PDFReferenceAttachment
@@ -711,10 +710,6 @@ export type TeamContextAttachment = {
   taskListPath: string
 }
 
-/**
- * This is janky
- * TODO: Generate attachments when we create messages
- */
 export async function getAttachments(
   input: string | null,
   toolUseContext: ToolUseContext,
@@ -725,17 +720,17 @@ export async function getAttachments(
   options?: { skipSkillDiscovery?: boolean },
 ): Promise<Attachment[]> {
   if (
-    isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_ATTACHMENTS) ||
-    isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)
+    isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_ATTACHMENTS) ||
+    isEnvTruthy(process.env.CLAUDE_CODE_NEXT_SIMPLE)
   ) {
-    // query.ts:removeFromQueue dequeues these unconditionally after
+    
     
     
     
     return getQueuedCommandAttachments(queuedCommands)
   }
 
-  // This will slow down submissions
+  
   
   
   const abortController = createAbortController()
@@ -761,9 +756,9 @@ export async function getAttachments(
             ),
           ),
         ),
-        // Skill discovery on turn 0 (user input as signal). Inter-turn
         
-        // gated on write-pivot detection — see skillSearch/prefetch.ts.
+        
+        
         
         
         
@@ -800,7 +795,7 @@ export async function getAttachments(
     
     
     
-    // (removed from queue by removeFromQueue but never attached).
+    
     maybe('queued_commands', () => getQueuedCommandAttachments(queuedCommands)),
     maybe('date_change', () =>
       Promise.resolve(getDateChangeAttachments(messages)),
@@ -845,10 +840,10 @@ export async function getAttachments(
       : []),
     maybe('changed_files', () => getChangedFiles(context)),
     maybe('nested_memory', () => getNestedMemoryAttachments(context)),
-    // relevant_memories moved to async prefetch (startRelevantMemoryPrefetch)
+    
     maybe('dynamic_skill', () => getDynamicSkillAttachments(context)),
     maybe('skill_listing', () => getSkillListingAttachments(context)),
-    // Inter-turn skill discovery now runs via startSkillDiscoveryPrefetch
+    
     
     
     
@@ -875,7 +870,7 @@ export async function getAttachments(
           
           
           
-          // silently stealing messages that should be delivered as permanent turns.
+          
           ...(querySource === 'session_memory'
             ? []
             : [
@@ -984,7 +979,7 @@ async function maybe<A>(label: string, f: () => Promise<A[]>): Promise<A[]> {
     const duration = Date.now() - startTime
     
     if (Math.random() < 0.05) {
-      // jsonStringify(undefined) returns undefined, so .length would throw
+      
       const attachmentSizeBytes = result
         .filter(a => a !== undefined && a !== null)
         .reduce((total, attachment) => {
@@ -1024,7 +1019,7 @@ export async function getQueuedCommandAttachments(
   if (!queuedCommands) {
     return []
   }
-  // Include both 'prompt' and 'task-notification' commands as attachments.
+  
   
   
   
@@ -1037,7 +1032,7 @@ export async function getQueuedCommandAttachments(
       const imageBlocks = await buildImageContentBlocks(_.pastedContents)
       let prompt: string | Array<ContentBlockParam> = _.value
       if (imageBlocks.length > 0) {
-        // Build content block array with text + images so the model sees them
+        
         const textValue =
           typeof _.value === 'string'
             ? _.value
@@ -1137,10 +1132,6 @@ function getPlanModeAttachmentTurnCount(messages: Message[]): {
   return { turnCount: turnsSinceLastAttachment, foundPlanModeAttachment }
 }
 
-/**
- * Count plan_mode attachments since the last plan_mode_exit (or from start if no exit).
- * This ensures the full/sparse cycle resets when re-entering plan mode.
- */
 function countPlanModeAttachmentsSinceLastExit(messages: Message[]): number {
   let count = 0
   
@@ -1168,7 +1159,7 @@ async function getPlanModeAttachments(
     return []
   }
 
-  // Check if we should attach based on turn count (except for first turn)
+  
   if (messages && messages.length > 0) {
     const { turnCount, foundPlanModeAttachment } =
       getPlanModeAttachmentTurnCount(messages)
@@ -1193,7 +1184,7 @@ async function getPlanModeAttachments(
     setHasExitedPlanMode(false) 
   }
 
-  // Determine if this should be a full or sparse reminder
+  
   
   const attachmentCount =
     countPlanModeAttachmentsSinceLastExit(messages ?? []) + 1
@@ -1216,14 +1207,10 @@ async function getPlanModeAttachments(
   return attachments
 }
 
-/**
- * Returns a plan_mode_exit attachment if we just exited plan mode.
- * This is a one-time notification to tell the model it's no longer in plan mode.
- */
 async function getPlanModeExitAttachment(
   toolUseContext: ToolUseContext,
 ): Promise<Attachment[]> {
-  // Only trigger if the flag is set (we just exited plan mode)
+  
   if (!needsPlanModeExitAttachment()) {
     return []
   }
@@ -1234,7 +1221,7 @@ async function getPlanModeExitAttachment(
     return []
   }
 
-  // Clear the flag - this is a one-time notification
+  
   setNeedsPlanModeExitAttachment(false)
 
   const planFilePath = getPlanFilePath(toolUseContext.agentId)
@@ -1279,7 +1266,7 @@ function getAutoModeAttachmentTurnCount(messages: Message[]): {
       message?.type === 'attachment' &&
       message.attachment.type === 'auto_mode_exit'
     ) {
-      // Exit resets the throttle — treat as if no prior attachment exists
+      
       break
     }
   }
@@ -1287,10 +1274,6 @@ function getAutoModeAttachmentTurnCount(messages: Message[]): {
   return { turnCount: turnsSinceLastAttachment, foundAutoModeAttachment }
 }
 
-/**
- * Count auto_mode attachments since the last auto_mode_exit (or from start if no exit).
- * This ensures the full/sparse cycle resets when re-entering auto mode.
- */
 function countAutoModeAttachmentsSinceLastExit(messages: Message[]): number {
   let count = 0
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -1321,7 +1304,7 @@ async function getAutoModeAttachments(
     return []
   }
 
-  // Check if we should attach based on turn count (except for first turn)
+  
   if (messages && messages.length > 0) {
     const { turnCount, foundAutoModeAttachment } =
       getAutoModeAttachmentTurnCount(messages)
@@ -1335,7 +1318,7 @@ async function getAutoModeAttachments(
     }
   }
 
-  // Determine if this should be a full or sparse reminder
+  
   const attachmentCount =
     countAutoModeAttachmentsSinceLastExit(messages ?? []) + 1
   const reminderType: 'full' | 'sparse' =
@@ -1348,10 +1331,6 @@ async function getAutoModeAttachments(
   return [{ type: 'auto_mode', reminderType }]
 }
 
-/**
- * Returns an auto_mode_exit attachment if we just exited auto mode.
- * This is a one-time notification to tell the model it's no longer in auto mode.
- */
 async function getAutoModeExitAttachment(
   toolUseContext: ToolUseContext,
 ): Promise<Attachment[]> {
@@ -1374,19 +1353,6 @@ async function getAutoModeExitAttachment(
   return [{ type: 'auto_mode_exit' }]
 }
 
-/**
- * Detects when the local date has changed since the last turn (user coding
- * past midnight) and emits an attachment to notify the model.
- *
- * The date_change attachment is appended at the tail of the conversation,
- * so the model learns the new date without mutating the cached prefix.
- * messages[0] (from getUserContext → prependUserContext) intentionally
- * keeps the stale date — clearing that cache would regenerate the prefix
- * and turn the entire conversation into cache_creation on the next turn
- * (~920K effective tokens per midnight crossing per overnight session).
- *
- * Exported for testing — regression guard for the cache-clear removal.
- */
 export function getDateChangeAttachments(
   messages: Message[] | undefined,
 ): Attachment[] {
@@ -1394,7 +1360,7 @@ export function getDateChangeAttachments(
   const lastDate = getLastEmittedDate()
 
   if (lastDate === null) {
-    // First turn — just record, no attachment needed
+    
     setLastEmittedDate(currentDate)
     return []
   }
@@ -1426,7 +1392,6 @@ function getUltrathinkEffortAttachment(input: string | null): Attachment[] {
   return [{ type: 'ultrathink_effort', level: 'high' }]
 }
 
-// Exported for compact.ts — the gate must be identical at both call sites.
 export function getDeferredToolsDeltaAttachment(
   tools: Tools,
   model: string,
@@ -1438,7 +1403,7 @@ export function getDeferredToolsDeltaAttachment(
   
   
   
-  // in tst-auto below-threshold the attachment can fire while ToolSearch
+  
   
   
   if (!isToolSearchEnabledOptimistic()) return []
@@ -1449,19 +1414,6 @@ export function getDeferredToolsDeltaAttachment(
   return [{ type: 'deferred_tools_delta', ...delta }]
 }
 
-/**
- * Diff the current filtered agent pool against what's already been announced
- * in this conversation (reconstructed from prior agent_listing_delta
- * attachments). Returns [] if nothing changed or the gate is off.
- *
- * The agent list was embedded in AgentTool's description, causing ~10.2% of
- * fleet cache_creation: MCP async connect, /reload-plugins, or
- * permission-mode change → description changes → full tool-schema cache bust.
- * Moving the list here keeps the tool description static.
- *
- * Exported for compact.ts — re-announces the full set after compaction eats
- * prior deltas.
- */
 export function getAgentListingDeltaAttachment(
   toolUseContext: ToolUseContext,
   messages: Message[] | undefined,
@@ -1495,7 +1447,7 @@ export function getAgentListingDeltaAttachment(
     filtered = filtered.filter(a => allowedAgentTypes.includes(a.agentType))
   }
 
-  // Reconstruct announced set from prior deltas in the transcript.
+  
   const announced = new Set<string>()
   for (const msg of messages ?? []) {
     if (msg.type !== 'attachment') continue
@@ -1530,7 +1482,6 @@ export function getAgentListingDeltaAttachment(
   ]
 }
 
-// Exported for compact.ts / reactiveCompact.ts — single source of truth for the gate.
 export function getMcpInstructionsDeltaAttachment(
   mcpClients: MCPServerConnection[],
   tools: Tools,
@@ -1540,7 +1491,7 @@ export function getMcpInstructionsDeltaAttachment(
   if (!isMcpInstructionsDeltaEnabled()) return []
 
   
-  // actual server `instructions` are unconditional. Decide the chrome part
+  
   
   const clientSide: ClientSideInstruction[] = []
   if (
@@ -1618,26 +1569,16 @@ async function getSelectedLinesFromIDE(
   ]
 }
 
-/**
- * Computes the directories to process for nested memory file loading.
- * Returns two lists:
- * - nestedDirs: Directories between CWD and targetPath (processed for CLAUDE.md + all rules)
- * - cwdLevelDirs: Directories from root to CWD (processed for conditional rules only)
- *
- * @param targetPath The target file path
- * @param originalCwd The original current working directory
- * @returns Object with nestedDirs and cwdLevelDirs arrays, both ordered from parent to child
- */
 export function getDirectoriesToProcess(
   targetPath: string,
   originalCwd: string,
 ): { nestedDirs: string[]; cwdLevelDirs: string[] } {
-  // Build list of directories from original CWD to targetPath's directory
+  
   const targetDir = dirname(resolve(targetPath))
   const nestedDirs: string[] = []
   let currentDir = targetDir
 
-  // Walk up from target directory to original CWD
+  
   while (currentDir !== originalCwd && currentDir !== parse(currentDir).root) {
     if (currentDir.startsWith(originalCwd)) {
       nestedDirs.push(currentDir)
@@ -1645,10 +1586,10 @@ export function getDirectoriesToProcess(
     currentDir = dirname(currentDir)
   }
 
-  // Reverse to get order from CWD down to target
+  
   nestedDirs.reverse()
 
-  // Build list of directories from root to CWD (for conditional rules only)
+  
   const cwdLevelDirs: string[] = []
   currentDir = originalCwd
 
@@ -1657,19 +1598,12 @@ export function getDirectoriesToProcess(
     currentDir = dirname(currentDir)
   }
 
-  // Reverse to get order from root to CWD
+  
   cwdLevelDirs.reverse()
 
   return { nestedDirs, cwdLevelDirs }
 }
 
-/**
- * Converts memory files to attachments, filtering out already-loaded files.
- *
- * @param memoryFiles The memory files to convert
- * @param toolUseContext The tool use context (for tracking loaded files)
- * @returns Array of nested memory attachments
- */
 function isInstructionsMemoryType(
   type: MemoryFileInfo['type'],
 ): type is InstructionsMemoryType {
@@ -1681,7 +1615,6 @@ function isInstructionsMemoryType(
   )
 }
 
-/** Exported for testing — regression guard for LRU-eviction re-injection. */
 export function memoryFilesToAttachments(
   memoryFiles: MemoryFileInfo[],
   toolUseContext: ToolUseContext,
@@ -1691,9 +1624,9 @@ export function memoryFilesToAttachments(
   const shouldFireHook = hasInstructionsLoadedHook()
 
   for (const memoryFile of memoryFiles) {
-    // Dedup: loadedNestedMemoryPaths is a non-evicting Set; readFileState
-    // is a 100-entry LRU that drops entries in busy sessions, so relying
-    // on it alone re-injects the same CLAUDE.md on every eviction cycle.
+    
+    
+    
     if (toolUseContext.loadedNestedMemoryPaths?.has(memoryFile.path)) {
       continue
     }
@@ -1706,11 +1639,11 @@ export function memoryFilesToAttachments(
       })
       toolUseContext.loadedNestedMemoryPaths?.add(memoryFile.path)
 
-      // Mark as loaded in readFileState — this provides cross-function and
-      // cross-turn dedup via the .has() check above.
-      //
-      // When the injected content doesn't match disk (stripped HTML comments,
-      // stripped frontmatter, truncated MEMORY.md), cache the RAW disk bytes
+      
+      
+      
+      
+      
       
       
       
@@ -1748,21 +1681,6 @@ export function memoryFilesToAttachments(
   return attachments
 }
 
-/**
- * Loads nested memory files for a given file path and returns them as attachments.
- * This function performs directory traversal to find CLAUDE.md files and conditional rules
- * that apply to the target file path.
- *
- * Processing order (must be preserved):
- * 1. Managed/User conditional rules matching targetPath
- * 2. Nested directories (CWD → target): CLAUDE.md + unconditional + conditional rules
- * 3. CWD-level directories (root → CWD): conditional rules only
- *
- * @param filePath The file path to get nested memory files for
- * @param toolUseContext The tool use context
- * @param appState The app state containing tool permission context
- * @returns Array of nested memory attachments
- */
 async function getNestedMemoryAttachmentsForFile(
   filePath: string,
   toolUseContext: ToolUseContext,
@@ -1771,7 +1689,7 @@ async function getNestedMemoryAttachmentsForFile(
   const attachments: Attachment[] = []
 
   try {
-    // Early return if path is not in allowed working path
+    
     if (!pathInAllowedWorkingPath(filePath, appState.toolPermissionContext)) {
       return attachments
     }
@@ -1812,7 +1730,7 @@ async function getNestedMemoryAttachmentsForFile(
       )
     }
 
-    // Phase 4: Process CWD-level directories (root → CWD)
+    
     
     for (const dir of cwdLevelDirs) {
       const conditionalRules = (
@@ -1848,7 +1766,7 @@ async function getOpenedFileFromIDE(
     return []
   }
 
-  // Get nested memory files
+  
   const nestedMemoryAttachments = await getNestedMemoryAttachmentsForFile(
     ideSelection.filePath,
     toolUseContext,
@@ -1885,7 +1803,7 @@ async function processAtMentionedFiles(
           return null
         }
 
-        // Check if it's a directory
+        
         try {
           const stats = await stat(absoluteFilename)
           if (stats.isDirectory()) {
@@ -1915,7 +1833,7 @@ async function processAtMentionedFiles(
             }
           }
         } catch {
-          // If stat fails, continue with file logic
+          
         }
 
         return await generateFileAttachment(
@@ -1979,21 +1897,21 @@ async function processMcpResourceAttachments(
     resourceMentions.map(async mention => {
       try {
         const [serverName, ...uriParts] = mention.split(':')
-        const uri = uriParts.join(':') // Rejoin in case URI contains colons
+        const uri = uriParts.join(':') 
 
         if (!serverName || !uri) {
           logEvent('tengu_at_mention_mcp_resource_error', {})
           return null
         }
 
-        // Find the MCP client
+        
         const client = mcpClients.find(c => c.name === serverName)
         if (!client || client.type !== 'connected') {
           logEvent('tengu_at_mention_mcp_resource_error', {})
           return null
         }
 
-        // Find the resource in available resources to get its metadata
+        
         const serverResources =
           toolUseContext.options.mcpResources?.[serverName] || []
         const resourceInfo = serverResources.find(r => r.uri === uri)
@@ -2046,14 +1964,14 @@ export async function getChangedFiles(
       const fileState = toolUseContext.readFileState.get(filePath)
       if (!fileState) return null
 
-      // TODO: Implement offset/limit support for changed files
+      
       if (fileState.offset !== undefined || fileState.limit !== undefined) {
         return null
       }
 
       const normalizedPath = expandPath(filePath)
 
-      // Check if file has a deny rule configured
+      
       if (isFileReadDenied(normalizedPath, appState.toolPermissionContext)) {
         return null
       }
@@ -2066,7 +1984,7 @@ export async function getChangedFiles(
 
         const fileInput = { file_path: normalizedPath }
 
-        // Validate file path is valid
+        
         const isValid = await FileReadTool.validateInput(
           fileInput,
           toolUseContext,
@@ -2076,14 +1994,14 @@ export async function getChangedFiles(
         }
 
         const result = await FileReadTool.call(fileInput, toolUseContext)
-        // Extract only the changed section
+        
         if (result.data.type === 'text') {
           const snippet = getSnippetForTwoFileDiff(
             fileState.content,
             result.data.file.content,
           )
 
-          // File was touched but not modified
+          
           if (snippet === '') {
             return null
           }
@@ -2095,7 +2013,7 @@ export async function getChangedFiles(
           }
         }
 
-        // For non-text files (images), apply the same token limit logic as FileReadTool
+        
         if (result.data.type === 'image') {
           try {
             const data = await readImageWithTokenBudget(normalizedPath)
@@ -2113,17 +2031,17 @@ export async function getChangedFiles(
           }
         }
 
-        // notebook / pdf / parts — no diff representation; explicitly
-        // null so the map callback has no implicit-undefined path.
+        
+        
         return null
       } catch (err) {
-        // Evict ONLY on ENOENT (file truly deleted). Transient stat
-        // failures — atomic-save races (editor writes tmp→rename and
-        // stat hits the gap), EACCES churn, network-FS hiccups — must
-        // NOT evict, or the next Edit fails code-6 even though the
-        // file still exists and the model just read it. VS Code
-        // auto-save/format-on-save hits this race especially often.
-        // See regression analysis on PR #18525.
+        
+        
+        
+        
+        
+        
+        
         if (isENOENT(err)) {
           toolUseContext.readFileState.delete(filePath)
         }
@@ -2134,15 +2052,11 @@ export async function getChangedFiles(
   return results.filter(result => result != null) as Attachment[]
 }
 
-/**
- * Processes paths that need nested memory attachments and checks for nested CLAUDE.md files
- * Uses nestedMemoryAttachmentTriggers field from ToolUseContext
- */
 async function getNestedMemoryAttachments(
   toolUseContext: ToolUseContext,
 ): Promise<Attachment[]> {
-  // Check triggers first — getAppState() waits for a React render cycle,
-  // and the common case is an empty trigger set.
+  
+  
   if (
     !toolUseContext.nestedMemoryAttachmentTriggers ||
     toolUseContext.nestedMemoryAttachmentTriggers.size === 0
@@ -2175,8 +2089,8 @@ async function getRelevantMemoryAttachments(
   signal: AbortSignal,
   alreadySurfaced: ReadonlySet<string>,
 ): Promise<Attachment[]> {
-  // If an agent is @-mentioned, search only its memory dir (isolation).
-  // Otherwise search the auto-memory dir.
+  
+  
   const memoryDirs = extractAgentMentions(input).flatMap(mention => {
     const agentType = mention.replace('agent-', '')
     const agentDef = agents.find(def => def.agentType === agentType)
@@ -2197,11 +2111,11 @@ async function getRelevantMemoryAttachments(
       ).catch(() => []),
     ),
   )
-  // alreadySurfaced is filtered inside the selector so Sonnet spends its
-  // 5-slot budget on fresh candidates; readFileState catches files the
-  // model read via FileReadTool. The redundant alreadySurfaced check here
-  // is a belt-and-suspenders guard (multi-dir results may re-introduce a
-  // path the selector filtered in a different dir).
+  
+  
+  
+  
+  
   const selected = allResults
     .flat()
     .filter(m => !readFileState.has(m.path) && !alreadySurfaced.has(m.path))
@@ -2215,13 +2129,6 @@ async function getRelevantMemoryAttachments(
   return [{ type: 'relevant_memories' as const, memories }]
 }
 
-/**
- * Scan messages for past relevant_memories attachments.  Returns both the
- * set of surfaced paths (for selector de-dup) and cumulative byte count
- * (for session-total throttle).  Scanning messages rather than tracking
- * in toolUseContext means compact naturally resets both — old attachments
- * are gone from the compacted transcript, so re-surfacing is valid again.
- */
 export function collectSurfacedMemories(messages: ReadonlyArray<Message>): {
   paths: Set<string>
   totalBytes: number
@@ -2239,17 +2146,6 @@ export function collectSurfacedMemories(messages: ReadonlyArray<Message>): {
   return { paths, totalBytes }
 }
 
-/**
- * Reads a set of relevance-ranked memory files for injection as
- * <system-reminder> attachments. Enforces both MAX_MEMORY_LINES and
- * MAX_MEMORY_BYTES via readFileInRange's truncateOnByteLimit option.
- * Truncation surfaces partial
- * content with a note rather than dropping the file — findRelevantMemories
- * already picked this as most-relevant, so the frontmatter + opening context
- * is worth surfacing even if later lines are cut.
- *
- * Exported for direct testing without mocking the ranker + GB gates.
- */
 export async function readMemoriesForSurfacing(
   selected: ReadonlyArray<{ path: string; mtimeMs: number }>,
   signal?: AbortSignal,
@@ -2294,10 +2190,6 @@ export async function readMemoriesForSurfacing(
   return results.filter(r => r !== null)
 }
 
-/**
- * Header string for a relevant-memory block.  Exported so messages.ts
- * can fall back for resumed sessions where the stored header is missing.
- */
 export function memoryHeader(path: string, mtimeMs: number): string {
   const staleness = memoryFreshnessText(mtimeMs)
   return staleness
@@ -2305,18 +2197,6 @@ export function memoryHeader(path: string, mtimeMs: number): string {
     : `Memory (saved ${memoryAge(mtimeMs)}): ${path}:`
 }
 
-/**
- * A memory relevance-selector prefetch handle. The promise is started once
- * per user turn and runs while the main model streams and tools execute.
- * At the collect point (post-tools), the caller reads settledAt to
- * consume-if-ready or skip-and-retry-next-iteration — the prefetch never
- * blocks the turn.
- *
- * Disposable: query.ts binds with `using`, so [Symbol.dispose] fires on all
- * generator exit paths (return, throw, .return() closure) — aborting the
- * in-flight request and emitting terminal telemetry without instrumenting
- * each of the ~13 return sites inside the while loop.
- */
 export type MemoryPrefetch = {
   promise: Promise<Attachment[]>
   
@@ -2326,12 +2206,6 @@ export type MemoryPrefetch = {
   [Symbol.dispose](): void
 }
 
-/**
- * Starts the relevant memory search as an async prefetch.
- * Extracts the last real user prompt from messages (skipping isMeta system
- * injections) and kicks off a non-blocking search. Returns a Disposable
- * handle with settlement tracking. Bound with `using` in query.ts.
- */
 export function startRelevantMemoryPrefetch(
   messages: ReadonlyArray<Message>,
   toolUseContext: ToolUseContext,
@@ -2359,7 +2233,7 @@ export function startRelevantMemoryPrefetch(
     return undefined
   }
 
-  // Chained to the turn-level abort so user Escape cancels the sideQuery
+  
   
   const controller = createChildAbortController(toolUseContext.abortController)
   const firedAt = Date.now()
@@ -2412,30 +2286,10 @@ function isToolResultBlock(b: unknown): b is ToolResultBlock {
   )
 }
 
-/**
- * Check whether a user message's content contains tool_result blocks.
- * This is more reliable than checking `toolUseResult === undefined` because
- * sub-agent tool result messages explicitly set `toolUseResult` to `undefined`
- * when `preserveToolUseResults` is false (the default for Explore agents).
- */
 function hasToolResultContent(content: unknown): boolean {
   return Array.isArray(content) && content.some(isToolResultBlock)
 }
 
-/**
- * Tools that succeeded (and never errored) since the previous real turn
- * boundary.  The memory selector uses this to suppress docs about tools
- * that are working — surfacing reference material for a tool the model
- * is already calling successfully is noise.
- *
- * Any error → tool excluded (model is struggling, docs stay available).
- * No result yet → also excluded (outcome unknown).
- *
- * tool_use lives in assistant content; tool_result in user content
- * (toolUseResult set, isMeta undefined).  Both are within the scan window.
- * Backward scan sees results before uses so we collect both by id and
- * resolve after.
- */
 export function collectRecentSuccessfulTools(
   messages: ReadonlyArray<Message>,
   lastUserMessage: Message,
@@ -2476,20 +2330,6 @@ export function collectRecentSuccessfulTools(
   return [...succeeded].filter(t => !failed.has(t))
 }
 
-/**
- * Filters prefetched memory attachments to exclude memories the model already
- * has in context via FileRead/Write/Edit tool calls (any iteration this turn)
- * or a previous turn's memory surfacing — both tracked in the cumulative
- * readFileState. Survivors are then marked in readFileState so subsequent
- * turns won't re-surface them.
- *
- * The mark-after-filter ordering is load-bearing: readMemoriesForSurfacing
- * used to write to readFileState during the prefetch, which meant the filter
- * saw every prefetch-selected path as "already in context" and dropped them
- * all (self-referential filter). Deferring the write to here, after the
- * filter runs, breaks that cycle while still deduping against tool calls
- * from any iteration.
- */
 export function filterDuplicateMemoryAttachments(
   attachments: Attachment[],
   readFileState: FileStateCache,
@@ -2513,10 +2353,6 @@ export function filterDuplicateMemoryAttachments(
     .filter((a): a is Attachment => a !== null)
 }
 
-/**
- * Processes skill directories that were discovered during file operations.
- * Uses dynamicSkillDirTriggers field from ToolUseContext
- */
 async function getDynamicSkillAttachments(
   toolUseContext: ToolUseContext,
 ): Promise<Attachment[]> {
@@ -2526,7 +2362,7 @@ async function getDynamicSkillAttachments(
     toolUseContext.dynamicSkillDirTriggers &&
     toolUseContext.dynamicSkillDirTriggers.size > 0
   ) {
-    // Parallelize: readdir all skill dirs concurrently
+    
     const perDirResults = await Promise.all(
       Array.from(toolUseContext.dynamicSkillDirTriggers).map(async skillDir => {
         try {
@@ -2550,7 +2386,7 @@ async function getDynamicSkillAttachments(
             skillNames: checked.filter((n): n is string => n !== null),
           }
         } catch {
-          // Ignore errors reading skill directories (e.g., directory doesn't exist)
+          
           return { skillDir, skillNames: [] }
         }
       }),
@@ -2573,10 +2409,6 @@ async function getDynamicSkillAttachments(
   return attachments
 }
 
-// Track which skills have been sent to avoid re-sending. Keyed by agentId
-// (empty string = main thread) so subagents get their own turn-0 listing —
-// without per-agent scoping, the main thread populating this Set would cause
-// every subagent's filterToBundledAndMcp result to dedup to empty.
 const sentSkillNames = new Map<string, Set<string>>()
 
 export function resetSentSkillNames(): void {
@@ -2584,22 +2416,6 @@ export function resetSentSkillNames(): void {
   suppressNext = false
 }
 
-/**
- * Suppress the next skill-listing injection. Called by conversationRecovery
- * on --resume when a skill_listing attachment already exists in the
- * transcript.
- *
- * `sentSkillNames` is module-scope — process-local. Each `claude -p` spawn
- * starts with an empty Map, so without this every resume re-injects the
- * full ~600-token listing even though it's already in the conversation from
- * the prior process. Shows up on every --resume; particularly loud for
- * daemons that respawn frequently.
- *
- * Trade-off: skills added between sessions won't be announced until the
- * next non-resume session. Acceptable — skill_listing was never meant to
- * cover cross-process deltas, and the agent can still call them (they're
- * in the Skill tool's runtime registry regardless).
- */
 export function suppressNextSkillListing(): void {
   suppressNext = true
 }
@@ -2624,7 +2440,7 @@ async function getSkillListingAttachments(
     return []
   }
 
-  // Skip skill listing for agents that don't have the Skill tool — they can't use skills directly.
+  
   if (
     !toolUseContext.options.tools.some(t => toolMatchesName(t, SKILL_TOOL_NAME))
   ) {
@@ -2662,9 +2478,9 @@ async function getSkillListingAttachments(
     sentSkillNames.set(agentKey, sent)
   }
 
-  // Resume path: prior process already injected a listing; it's in the
-  // transcript. Mark everything current as sent so only post-resume deltas
-  // (skills loaded later via /reload-plugins etc) get announced.
+  
+  
+  
   if (suppressNext) {
     suppressNext = false
     for (const cmd of allCommands) {
@@ -2673,14 +2489,14 @@ async function getSkillListingAttachments(
     return []
   }
 
-  // Find skills we haven't sent yet
+  
   const newSkills = allCommands.filter(cmd => !sent.has(cmd.name))
 
   if (newSkills.length === 0) {
     return []
   }
 
-  // If no skills have been sent yet, this is the initial batch
+  
   const isInitial = sent.size === 0
 
   
@@ -2709,10 +2525,8 @@ async function getSkillListingAttachments(
   ]
 }
 
-// getSkillDiscoveryAttachment moved to skillSearch/prefetch.ts as
-
 export function extractAtMentionedFiles(content: string): string[] {
-  // Extract filenames mentioned with @ symbol, including line range syntax: @file.txt#L10-20
+  
   
   
   
@@ -2732,7 +2546,6 @@ export function extractAtMentionedFiles(content: string): string[] {
     }
   }
 
-  // Extract regular mentions
   const regularMatchArray = content.match(regularAtMentionRegex) || []
   regularMatchArray.forEach(match => {
     const filename = match.slice(match.indexOf('@') + 1)
@@ -2747,7 +2560,6 @@ export function extractAtMentionedFiles(content: string): string[] {
 }
 
 export function extractMcpResourceMentions(content: string): string[] {
-  // Extract MCP resources mentioned with @ symbol in format @server:uri
   
   const atMentionRegex = /(^|\s)@([^\s]+:[^\s]+)\b/g
   const matches = content.match(atMentionRegex) || []
@@ -2757,8 +2569,6 @@ export function extractMcpResourceMentions(content: string): string[] {
 }
 
 export function extractAgentMentions(content: string): string[] {
-  // Extract agent mentions in two formats:
-  // 1. @agent-<agent-type> (legacy/manual typing)
   
   
   
@@ -2774,7 +2584,6 @@ export function extractAgentMentions(content: string): string[] {
     }
   }
 
-  // Match unquoted format: @agent-<type>
   const unquotedAgentRegex = /(^|\s)@(agent-[\w:.@-]+)/g
   const unquotedMatches = content.match(unquotedAgentRegex) || []
   for (const m of unquotedMatches) {
@@ -2793,7 +2602,6 @@ interface AtMentionedFileLines {
 export function parseAtMentionedFileLines(
   mention: string,
 ): AtMentionedFileLines {
-  // Parse mentions like "file.txt#L10-20", "file.txt#heading", or just "file.txt"
   
   const match = mention.match(/^([^#]+)(?:#L(\d+)(?:-(\d+))?)?(?:#[^#]*)?$/)
 
@@ -2811,14 +2619,12 @@ export function parseAtMentionedFileLines(
 async function getDiagnosticAttachments(
   toolUseContext: ToolUseContext,
 ): Promise<Attachment[]> {
-  // Diagnostics are only useful if the agent has the Bash tool to act on them
   if (
     !toolUseContext.options.tools.some(t => toolMatchesName(t, BASH_TOOL_NAME))
   ) {
     return []
   }
 
-  // Get new diagnostics from the tracker (IDE diagnostics via MCP)
   const newDiagnostics = await diagnosticTracker.getNewDiagnostics()
   if (newDiagnostics.length === 0) {
     return []
@@ -2840,7 +2646,6 @@ async function getDiagnosticAttachments(
 async function getLSPDiagnosticAttachments(
   toolUseContext: ToolUseContext,
 ): Promise<Attachment[]> {
-  // LSP diagnostics are only useful if the agent has the Bash tool to act on them
   if (
     !toolUseContext.options.tools.some(t => toolMatchesName(t, BASH_TOOL_NAME))
   ) {
@@ -2900,7 +2705,6 @@ export async function* getAttachmentMessages(
   querySource?: QuerySource,
   options?: { skipSkillDiscovery?: boolean },
 ): AsyncGenerator<AttachmentMessage, void> {
-  // TODO: Compute this upstream
   const attachments = await getAttachments(
     input,
     toolUseContext,
@@ -2965,7 +2769,7 @@ export async function tryGetPDFReference(
       }
     }
   } catch {
-    // If we can't stat the file, return null to proceed with normal reading
+    
   }
   return null
 }
@@ -2989,13 +2793,13 @@ export async function generateFileAttachment(
 > {
   const { offset, limit } = options ?? {}
 
-  // Check if file has a deny rule configured
+  
   const appState = toolUseContext.getAppState()
   if (isFileReadDenied(filename, appState.toolPermissionContext)) {
     return null
   }
 
-  // Check file size before attempting to read (skip for PDFs — they have their own size/page handling below)
+  
   if (
     mode === 'at-mention' &&
     !isFileWithinReadSizeLimit(
@@ -3013,12 +2817,12 @@ export async function generateFileAttachment(
         } as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
         return null
       } catch {
-        // If we can't stat the file, proceed with normal reading (will fail later if file doesn't exist)
+        
       }
     }
   }
 
-  // For large PDFs on @ mention, return a lightweight reference instead of inlining
+  
   if (mode === 'at-mention') {
     const pdfRef = await tryGetPDFReference(filename)
     if (pdfRef) {
@@ -3026,28 +2830,28 @@ export async function generateFileAttachment(
     }
   }
 
-  // Check if file is already in context with latest version
+  
   const existingFileState = toolUseContext.readFileState.get(filename)
   if (existingFileState && mode === 'at-mention') {
     try {
-      // Check if the file has been modified since we last read it
+      
       const mtimeMs = await getFileModificationTimeAsync(filename)
 
-      // Handle timestamp format inconsistency:
-      // - FileReadTool stores Date.now() (current time when read)
-      // - FileEdit/WriteTools store mtimeMs (file modification time)
-      //
-      // If timestamp > mtimeMs, it was stored by FileReadTool using Date.now()
-      // In this case, we should not use the optimization since we can't reliably
       
-      // indicating it was stored by FileEdit/WriteTool with actual mtimeMs.
+      
+      
+      
+      
+      
+      
+      
 
       if (
         existingFileState.timestamp <= mtimeMs &&
         mtimeMs === existingFileState.timestamp
       ) {
-        // File hasn't been modified, return already_read_file attachment
-        // This tells the system the file is already in context and doesn't need to be sent to API
+        
+        
         logEvent(successEventName, {})
         return {
           type: 'already_read_file',
@@ -3067,7 +2871,7 @@ export async function generateFileAttachment(
         }
       }
     } catch {
-      // If we can't stat the file, proceed with normal reading
+      
     }
   }
 
@@ -3092,14 +2896,14 @@ export async function generateFileAttachment(
         }
       }
 
-      // Check deny rules before reading truncated file
+      
       const appState = toolUseContext.getAppState()
       if (isFileReadDenied(filename, appState.toolPermissionContext)) {
         return null
       }
 
       try {
-        // Read only the first MAX_LINES_TO_READ lines for files that are too large
+        
         const truncatedInput = {
           file_path: filename,
           offset: offset ?? 1,
@@ -3121,7 +2925,7 @@ export async function generateFileAttachment(
       }
     }
 
-    // Validate file path is valid
+    
     const isValid = await FileReadTool.validateInput(fileInput, toolUseContext)
     if (!isValid.result) {
       return null
@@ -3171,18 +2975,18 @@ function getTodoReminderTurnCounts(messages: Message[]): {
   let assistantTurnsSinceWrite = 0
   let assistantTurnsSinceReminder = 0
 
-  // Iterate backwards to find most recent events
+  
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i]
 
     if (message?.type === 'assistant') {
       if (isThinkingMessage(message)) {
-        // Skip thinking messages
+        
         continue
       }
 
-      // Check for TodoWrite usage BEFORE incrementing counter
-      // (we don't want to count the TodoWrite message itself as "1 turn since write")
+      
+      
       if (
         lastTodoWriteIndex === -1 &&
         'message' in message &&
@@ -3194,7 +2998,7 @@ function getTodoReminderTurnCounts(messages: Message[]): {
         lastTodoWriteIndex = i
       }
 
-      // Count assistant turns before finding events
+      
       if (lastTodoWriteIndex === -1) assistantTurnsSinceWrite++
       if (lastReminderIndex === -1) assistantTurnsSinceReminder++
     } else if (
@@ -3220,7 +3024,7 @@ async function getTodoReminderAttachments(
   messages: Message[] | undefined,
   toolUseContext: ToolUseContext,
 ): Promise<Attachment[]> {
-  // Skip if TodoWrite tool is not available
+  
   if (
     !toolUseContext.options.tools.some(t =>
       toolMatchesName(t, TODO_WRITE_TOOL_NAME),
@@ -3229,11 +3033,11 @@ async function getTodoReminderAttachments(
     return []
   }
 
-  // When SendUserMessage is in the toolkit, it's the primary communication
-  // channel and the model is always told to use it (#20467). TodoWrite
-  // becomes a side channel — nudging the model about it conflicts with the
-  // brief workflow. The tool itself stays available; this only gates the
-  // "you haven't used it in a while" nag.
+  
+  
+  
+  
+  
   if (
     BRIEF_TOOL_NAME &&
     toolUseContext.options.tools.some(t => toolMatchesName(t, BRIEF_TOOL_NAME))
@@ -3241,7 +3045,7 @@ async function getTodoReminderAttachments(
     return []
   }
 
-  // Skip if no messages provided
+  
   if (!messages || messages.length === 0) {
     return []
   }
@@ -3249,7 +3053,7 @@ async function getTodoReminderAttachments(
   const { turnsSinceLastTodoWrite, turnsSinceLastReminder } =
     getTodoReminderTurnCounts(messages)
 
-  // Check if we should show a reminder
+  
   if (
     turnsSinceLastTodoWrite >= TODO_REMINDER_CONFIG.TURNS_SINCE_WRITE &&
     turnsSinceLastReminder >= TODO_REMINDER_CONFIG.TURNS_BETWEEN_REMINDERS
@@ -3278,17 +3082,17 @@ function getTaskReminderTurnCounts(messages: Message[]): {
   let assistantTurnsSinceTaskManagement = 0
   let assistantTurnsSinceReminder = 0
 
-  // Iterate backwards to find most recent events
+  
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i]
 
     if (message?.type === 'assistant') {
       if (isThinkingMessage(message)) {
-        // Skip thinking messages
+        
         continue
       }
 
-      // Check for TaskCreate or TaskUpdate usage BEFORE incrementing counter
+      
       if (
         lastTaskManagementIndex === -1 &&
         'message' in message &&
@@ -3303,7 +3107,7 @@ function getTaskReminderTurnCounts(messages: Message[]): {
         lastTaskManagementIndex = i
       }
 
-      // Count assistant turns before finding events
+      
       if (lastTaskManagementIndex === -1) assistantTurnsSinceTaskManagement++
       if (lastReminderIndex === -1) assistantTurnsSinceReminder++
     } else if (
@@ -3333,15 +3137,15 @@ async function getTaskReminderAttachments(
     return []
   }
 
-  // Skip for ant users
+  
   if (process.env.USER_TYPE === 'ant') {
     return []
   }
 
-  // When SendUserMessage is in the toolkit, it's the primary communication
-  // channel and the model is always told to use it (#20467). TaskUpdate
-  // becomes a side channel — nudging the model about it conflicts with the
-  // brief workflow. The tool itself stays available; this only gates the nag.
+  
+  
+  
+  
   if (
     BRIEF_TOOL_NAME &&
     toolUseContext.options.tools.some(t => toolMatchesName(t, BRIEF_TOOL_NAME))
@@ -3349,7 +3153,7 @@ async function getTaskReminderAttachments(
     return []
   }
 
-  // Skip if TaskUpdate tool is not available
+  
   if (
     !toolUseContext.options.tools.some(t =>
       toolMatchesName(t, TASK_UPDATE_TOOL_NAME),
@@ -3358,7 +3162,7 @@ async function getTaskReminderAttachments(
     return []
   }
 
-  // Skip if no messages provided
+  
   if (!messages || messages.length === 0) {
     return []
   }
@@ -3366,7 +3170,7 @@ async function getTaskReminderAttachments(
   const { turnsSinceLastTaskManagement, turnsSinceLastReminder } =
     getTaskReminderTurnCounts(messages)
 
-  // Check if we should show a reminder
+  
   if (
     turnsSinceLastTaskManagement >= TODO_REMINDER_CONFIG.TURNS_SINCE_WRITE &&
     turnsSinceLastReminder >= TODO_REMINDER_CONFIG.TURNS_BETWEEN_REMINDERS
@@ -3384,11 +3188,6 @@ async function getTaskReminderAttachments(
   return []
 }
 
-/**
- * Get attachments for all unified tasks using the Task framework.
- * Replaces the old getBackgroundShellAttachments, getBackgroundRemoteSessionAttachments,
- * and getAsyncAgentAttachments functions.
- */
 async function getUnifiedTaskAttachments(
   toolUseContext: ToolUseContext,
 ): Promise<Attachment[]> {
@@ -3402,7 +3201,7 @@ async function getUnifiedTaskAttachments(
     evictedTaskIds,
   )
 
-  // Convert TaskAttachment to Attachment format
+  
   return attachments.map(taskAttachment => ({
     type: 'task_status' as const,
     taskId: taskAttachment.taskId,
@@ -3454,7 +3253,7 @@ async function getAsyncHookResponseAttachments(): Promise<Attachment[]> {
     },
   )
 
-  // Remove delivered hooks from registry to prevent re-processing
+  
   if (responses.length > 0) {
     const processIds = responses.map(r => r.processId)
     removeDeliveredAsyncHooks(processIds)
@@ -3470,18 +3269,6 @@ async function getAsyncHookResponseAttachments(): Promise<Attachment[]> {
   return attachments
 }
 
-/**
- * Get teammate mailbox attachments for agent swarm communication
- * Teammates are independent Claude Code sessions running in parallel (swarms),
- * not parent-child subagent relationships.
- *
- * This function checks two sources for messages:
- * 1. File-based mailbox (for messages that arrived between polls)
- * 2. AppState.inbox (for messages queued mid-turn by useInboxPoller)
- *
- * Messages from AppState.inbox are delivered mid-turn as attachments,
- * allowing teammates to receive messages without waiting for the turn to end.
- */
 async function getTeammateMailboxAttachments(
   toolUseContext: ToolUseContext,
 ): Promise<Attachment[]> {
@@ -3492,28 +3279,28 @@ async function getTeammateMailboxAttachments(
     return []
   }
 
-  // Get AppState early to check for team lead status
+  
   const appState = toolUseContext.getAppState()
 
-  // Use agent name from helper (checks AsyncLocalStorage, then dynamicTeamContext)
+  
   const envAgentName = getAgentName()
 
-  // Get team name (checks AsyncLocalStorage, dynamicTeamContext, then AppState)
+  
   const teamName = getTeamName(appState.teamContext)
 
-  // Check if we're the team lead (uses shared logic from swarm utils)
+  
   const teamLeadStatus = isTeamLead(appState.teamContext)
 
-  // Check if viewing a teammate's transcript (for in-process teammates)
+  
   const viewedTeammate = getViewedTeammateTask(appState)
 
-  // Resolve agent name based on who we're VIEWING:
-  // - If viewing a teammate, use THEIR name (to read from their mailbox)
-  // - Otherwise use env var if set, or leader's name if we're the team lead
+  
+  
+  
   let agentName = viewedTeammate?.identity.agentName ?? envAgentName
   if (!agentName && teamLeadStatus && appState.teamContext) {
     const leadAgentId = appState.teamContext.leadAgentId
-    // Look up the lead's name from agents map (not the UUID)
+    
     agentName = appState.teamContext.teammates[leadAgentId]?.name || 'team-lead'
   }
 
@@ -3521,7 +3308,7 @@ async function getTeammateMailboxAttachments(
     `[SwarmMailbox] getTeammateMailboxAttachments called: envAgentName=${envAgentName}, isTeamLead=${teamLeadStatus}, resolved agentName=${agentName}, teamName=${teamName}`,
   )
 
-  // Only check inbox if running as an agent in a swarm or team lead
+  
   if (!agentName) {
     logForDebugging(
       `[SwarmMailbox] Not checking inbox - not in a swarm or team lead`,
@@ -3533,13 +3320,13 @@ async function getTeammateMailboxAttachments(
     `[SwarmMailbox] Checking inbox for agent="${agentName}" team="${teamName || 'default'}"`,
   )
 
-  // Check mailbox for unread messages (routes to in-process or file-based)
-  // Filter out structured protocol messages (permission requests/responses, shutdown
-  // messages, etc.) — these must be left unread for useInboxPoller to route to their
-  // proper handlers (workerPermissions queue, sandbox queue, etc.). Without filtering,
-  // attachment generation races with InboxPoller: whichever reads first marks all
-  // messages as read, and if attachments wins, protocol messages get bundled as raw
-  // LLM context text instead of being routed to their UI handlers.
+  
+  
+  
+  
+  
+  
+  
   const allUnreadMessages = await readUnreadMessages(agentName, teamName)
   const unreadMessages = allUnreadMessages.filter(
     m => !isStructuredProtocolMessage(m.text),
@@ -3548,29 +3335,29 @@ async function getTeammateMailboxAttachments(
     `[MailboxBridge] Found ${allUnreadMessages.length} unread message(s) for "${agentName}" (${allUnreadMessages.length - unreadMessages.length} structured protocol messages filtered out)`,
   )
 
-  // Also check AppState.inbox for pending messages (queued mid-turn by useInboxPoller)
-  // IMPORTANT: appState.inbox contains messages FROM teammates TO the leader.
-  // Only show these when viewing the leader's transcript (not a teammate's).
-  // When viewing a teammate, their messages come from the file-based mailbox above.
-  // In-process teammates share AppState with the leader — appState.inbox contains
-  // the LEADER's queued messages, not the teammate's. Skip it to prevent leakage
-  // (including self-echo from broadcasts). Teammates receive messages exclusively
-  // through their file-based mailbox + waitForNextPromptOrShutdown.
-  // Note: viewedTeammate was already computed above for agentName resolution
+  
+  
+  
+  
+  
+  
+  
+  
+  
   const pendingInboxMessages =
     viewedTeammate || isInProcessTeammate()
-      ? [] // Viewing teammate or running as in-process teammate - don't show leader's inbox
+      ? [] 
       : appState.inbox.messages.filter(m => m.status === 'pending')
   logForDebugging(
     `[SwarmMailbox] Found ${pendingInboxMessages.length} pending message(s) in AppState.inbox`,
   )
 
-  // Combine both sources of messages WITH DEDUPLICATION
-  // The same message could exist in both file mailbox and AppState.inbox due to race conditions:
-  // 1. getTeammateMailboxAttachments reads file -> finds message M
-  // 2. InboxPoller reads same file -> queues M in AppState.inbox
-  // 3. getTeammateMailboxAttachments reads AppState -> finds M again
-  // We deduplicate using from+timestamp+text prefix as the key
+  
+  
+  
+  
+  
+  
   const seen = new Set<string>()
   let allMessages: Array<{
     from: string
@@ -3594,8 +3381,8 @@ async function getTeammateMailboxAttachments(
     }
   }
 
-  // Collapse multiple idle notifications per agent — keep only the latest.
-  // Single pass to parse, then filter without re-parsing.
+  
+  
   const idleAgentByIndex = new Map<number, string>()
   const latestIdleByAgent = new Map<string, number>()
   for (let i = 0; i < allMessages.length; i++) {
@@ -3626,8 +3413,8 @@ async function getTeammateMailboxAttachments(
     `[SwarmMailbox] Returning ${allMessages.length} message(s) as attachment for "${agentName}" (${unreadMessages.length} from file, ${pendingInboxMessages.length} from AppState, after dedup)`,
   )
 
-  // Build the attachment BEFORE marking messages as processed
-  // This prevents message loss if any operation below fails
+  
+  
   const attachment: Attachment[] = [
     {
       type: 'teammate_mailbox',
@@ -3635,8 +3422,8 @@ async function getTeammateMailboxAttachments(
     },
   ]
 
-  // Mark only non-structured mailbox messages as read after attachment is built.
-  // Structured protocol messages stay unread for useInboxPoller to handle.
+  
+  
   if (unreadMessages.length > 0) {
     await markMessagesAsReadByPredicate(
       agentName,
@@ -3648,9 +3435,9 @@ async function getTeammateMailboxAttachments(
     )
   }
 
-  // Process shutdown_approved messages - remove teammates from team file
-  // This mirrors what useInboxPoller does in interactive mode (lines 546-606)
-  // In -p mode, useInboxPoller doesn't run, so we must handle this here
+  
+  
+  
   if (teamLeadStatus && teamName) {
     for (const m of allMessages) {
       const shutdownApproval = isShutdownApproved(m.text)
@@ -3660,7 +3447,7 @@ async function getTeammateMailboxAttachments(
           `[SwarmMailbox] Processing shutdown_approved from ${teammateToRemove}`,
         )
 
-        // Find the teammate ID by name
+        
         const teammateId = appState.teamContext?.teammates
           ? Object.entries(appState.teamContext.teammates).find(
               ([, t]) => t.name === teammateToRemove,
@@ -3668,7 +3455,7 @@ async function getTeammateMailboxAttachments(
           : undefined
 
         if (teammateId) {
-          // Remove from team file
+          
           removeTeammateFromTeamFile(teamName, {
             agentId: teammateId,
             name: teammateToRemove,
@@ -3677,7 +3464,7 @@ async function getTeammateMailboxAttachments(
             `[SwarmMailbox] Removed ${teammateToRemove} from team file`,
           )
 
-          // Unassign tasks owned by this teammate
+          
           await unassignTeammateTasks(
             teamName,
             teammateId,
@@ -3685,7 +3472,7 @@ async function getTeammateMailboxAttachments(
             'shutdown',
           )
 
-          // Remove from teamContext in AppState
+          
           toolUseContext.setAppState(prev => {
             if (!prev.teamContext?.teammates) return prev
             if (!(teammateId in prev.teamContext.teammates)) return prev
@@ -3704,8 +3491,8 @@ async function getTeammateMailboxAttachments(
     }
   }
 
-  // Mark AppState inbox messages as processed LAST, after attachment is built
-  // This ensures messages aren't lost if earlier operations fail
+  
+  
   if (pendingInboxMessages.length > 0) {
     const pendingIds = new Set(pendingInboxMessages.map(m => m.id))
     toolUseContext.setAppState(prev => ({
@@ -3721,21 +3508,17 @@ async function getTeammateMailboxAttachments(
   return attachment
 }
 
-/**
- * Get team context attachment for teammates in a swarm.
- * Only injected on the first turn to provide team coordination instructions.
- */
 function getTeamContextAttachment(messages: Message[]): Attachment[] {
   const teamName = getTeamName()
   const agentId = getAgentId()
   const agentName = getAgentName()
 
-  // Only inject for teammates (not team lead or non-team sessions)
+  
   if (!teamName || !agentId) {
     return []
   }
 
-  // Only inject on first turn - check if there are no assistant messages yet
+  
   const hasAssistantMessage = messages.some(m => m.type === 'assistant')
   if (hasAssistantMessage) {
     return []
@@ -3761,7 +3544,7 @@ function getTokenUsageAttachment(
   messages: Message[],
   model: string,
 ): Attachment[] {
-  if (!isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_TOKEN_USAGE_ATTACHMENT)) {
+  if (!isEnvTruthy(process.env.CLAUDE_CODE_NEXT_ENABLE_TOKEN_USAGE_ATTACHMENT)) {
     return []
   }
 
@@ -3814,14 +3597,6 @@ function getMaxBudgetUsdAttachment(maxBudgetUsd?: number): Attachment[] {
   ]
 }
 
-/**
- * Count human turns since plan mode exit (plan_mode_exit attachment).
- * Returns 0 if no plan_mode_exit attachment found.
- *
- * tool_result messages are type:'user' without isMeta, so filter by
- * toolUseResult to avoid counting them — otherwise the 10-turn reminder
- * interval fires every ~10 tool calls instead of ~10 human turns.
- */
 export function getVerifyPlanReminderTurnCount(messages: Message[]): number {
   let turnCount = 0
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -3829,7 +3604,7 @@ export function getVerifyPlanReminderTurnCount(messages: Message[]): number {
     if (message && isHumanTurn(message)) {
       turnCount++
     }
-    // Stop counting at plan_mode_exit attachment (marks when implementation started)
+    
     if (
       message?.type === 'attachment' &&
       message.attachment.type === 'plan_mode_exit'
@@ -3837,20 +3612,17 @@ export function getVerifyPlanReminderTurnCount(messages: Message[]): number {
       return turnCount
     }
   }
-  // No plan_mode_exit found
+  
   return 0
 }
 
-/**
- * Get verify plan reminder attachment if the model hasn't called VerifyPlanExecution yet.
- */
 async function getVerifyPlanReminderAttachment(
   messages: Message[] | undefined,
   toolUseContext: ToolUseContext,
 ): Promise<Attachment[]> {
   if (
     process.env.USER_TYPE !== 'ant' ||
-    !isEnvTruthy(process.env.CLAUDE_CODE_VERIFY_PLAN)
+    !isEnvTruthy(process.env.CLAUDE_CODE_NEXT_VERIFY_PLAN)
   ) {
     return []
   }
@@ -3858,7 +3630,7 @@ async function getVerifyPlanReminderAttachment(
   const appState = toolUseContext.getAppState()
   const pending = appState.pendingPlanVerification
 
-  // Only remind if plan exists and verification not started or completed
+  
   if (
     !pending ||
     pending.verificationStarted ||
@@ -3867,7 +3639,7 @@ async function getVerifyPlanReminderAttachment(
     return []
   }
 
-  // Only remind every N turns
+  
   if (messages && messages.length > 0) {
     const turnCount = getVerifyPlanReminderTurnCount(messages)
     if (
@@ -3907,22 +3679,16 @@ export function getCompactionReminderAttachment(
   return [{ type: 'compaction_reminder' }]
 }
 
-/**
- * Context-efficiency nudge. Injected after every N tokens of growth without
- * a snip. Pacing is handled entirely by shouldNudgeForSnips — the 10k
- * interval resets on prior nudges, snip markers, snip boundaries, and
- * compact boundaries.
- */
 export function getContextEfficiencyAttachment(
   messages: Message[],
 ): Attachment[] {
   if (!feature('HISTORY_SNIP')) {
     return []
   }
-  // Gate must match SnipTool.isEnabled() — don't nudge toward a tool that
-  // isn't in the tool list. Lazy require keeps this file snip-string-free.
+  
+  
   const { isSnipRuntimeEnabled, shouldNudgeForSnips } =
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    
     require('../services/compact/snipCompact.js') as typeof import('../services/compact/snipCompact.js')
   if (!isSnipRuntimeEnabled()) {
     return []

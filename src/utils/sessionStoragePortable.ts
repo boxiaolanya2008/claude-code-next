@@ -17,8 +17,6 @@ export function validateUuid(maybeUuid: unknown): UUID | null {
   return uuidRegex.test(maybeUuid) ? (maybeUuid as UUID) : null
 }
 
-// ---------------------------------------------------------------------------
-
 export function unescapeJsonString(raw: string): string {
   if (!raw.includes('\\')) return raw
   try {
@@ -28,11 +26,6 @@ export function unescapeJsonString(raw: string): string {
   }
 }
 
-/**
- * Extracts a simple JSON string field value from raw text without full parsing.
- * Looks for `"key":"value"` or `"key": "value"` patterns.
- * Returns the first match, or undefined if not found.
- */
 export function extractJsonStringField(
   text: string,
   key: string,
@@ -58,10 +51,6 @@ export function extractJsonStringField(
   return undefined
 }
 
-/**
- * Like extractJsonStringField but finds the LAST occurrence.
- * Useful for fields that are appended (customTitle, tag, etc.).
- */
 export function extractLastJsonStringField(
   text: string,
   key: string,
@@ -92,8 +81,6 @@ export function extractLastJsonStringField(
   }
   return lastValue
 }
-
-// ---------------------------------------------------------------------------
 
 const SKIP_FIRST_PROMPT_PATTERN =
   /^(?:\s*<[a-z][\w-]*[\s>]|\[Request interrupted by user[^\]]*\])/
@@ -150,7 +137,7 @@ export function extractFirstPromptFromHead(head: string): string {
           continue
         }
 
-        // Format bash input with ! prefix before the generic XML skip
+        
         const bashMatch = /<bash-input>([\s\S]*?)<\/bash-input>/.exec(result)
         if (bashMatch) return `! ${bashMatch[1]!.trim()}`
 
@@ -168,8 +155,6 @@ export function extractFirstPromptFromHead(head: string): string {
   if (commandFallback) return commandFallback
   return ''
 }
-
-// ---------------------------------------------------------------------------
 
 export async function readHeadAndTail(
   filePath: string,
@@ -207,11 +192,6 @@ export type LiteSessionFile = {
   tail: string
 }
 
-/**
- * Opens a single session file, stats it, and reads head + tail in one fd.
- * Allocates its own buffer — safe for concurrent use with Promise.all.
- * Returns null on any error.
- */
 export async function readSessionLite(
   filePath: string,
 ): Promise<LiteSessionFile | null> {
@@ -240,26 +220,12 @@ export async function readSessionLite(
   }
 }
 
-// ---------------------------------------------------------------------------
-
 export const MAX_SANITIZED_LENGTH = 200
 
 function simpleHash(str: string): string {
   return Math.abs(djb2Hash(str)).toString(36)
 }
 
-/**
- * Makes a string safe for use as a directory or file name.
- * Replaces all non-alphanumeric characters with hyphens.
- * This ensures compatibility across all platforms, including Windows
- * where characters like colons are reserved.
- *
- * For deeply nested paths that would exceed filesystem limits (255 bytes),
- * truncates and appends a hash suffix for uniqueness.
- *
- * @param name - The string to make safe (e.g., '/Users/foo/my-project' or 'plugin:name:server')
- * @returns A safe name (e.g., '-Users-foo-my-project' or 'plugin-name-server')
- */
 export function sanitizePath(name: string): string {
   const sanitized = name.replace(/[^a-zA-Z0-9]/g, '-')
   if (sanitized.length <= MAX_SANITIZED_LENGTH) {
@@ -270,10 +236,6 @@ export function sanitizePath(name: string): string {
   return `${sanitized.slice(0, MAX_SANITIZED_LENGTH)}-${hash}`
 }
 
-// ---------------------------------------------------------------------------
-// Project directory discovery (shared by listSessions & getSessionMessages)
-// ---------------------------------------------------------------------------
-
 export function getProjectsDir(): string {
   return join(getClaudeConfigHomeDir(), 'projects')
 }
@@ -282,12 +244,6 @@ export function getProjectDir(projectDir: string): string {
   return join(getProjectsDir(), sanitizePath(projectDir))
 }
 
-/**
- * Resolves a directory path to its canonical form using realpath + NFC
- * normalization. Falls back to NFC-only if realpath fails (e.g., the
- * directory doesn't exist yet). Ensures symlinked paths (e.g.,
- * /tmp → /private/tmp on macOS) resolve to the same project directory.
- */
 export async function canonicalizePath(dir: string): Promise<string> {
   try {
     return (await realpath(dir)).normalize('NFC')
@@ -296,13 +252,6 @@ export async function canonicalizePath(dir: string): Promise<string> {
   }
 }
 
-/**
- * Finds the project directory for a given path, tolerating hash mismatches
- * for long paths (>200 chars). The CLI uses Bun.hash while the SDK under
- * Node.js uses simpleHash — for paths that exceed MAX_SANITIZED_LENGTH,
- * these produce different directory suffixes. This function falls back to
- * prefix-based scanning when the exact match doesn't exist.
- */
 export async function findProjectDir(
   projectPath: string,
 ): Promise<string | undefined> {
@@ -311,7 +260,7 @@ export async function findProjectDir(
     await readdir(exact)
     return exact
   } catch {
-    // Exact match failed — for short paths this means no sessions exist.
+    
     
     const sanitized = sanitizePath(projectPath)
     if (sanitized.length <= MAX_SANITIZED_LENGTH) {
@@ -331,27 +280,6 @@ export async function findProjectDir(
   }
 }
 
-/**
- * Resolve a sessionId to its on-disk JSONL file path.
- *
- * When `dir` is provided: canonicalize it, look in that project's directory
- * (with findProjectDir fallback for Bun/Node hash mismatches), then fall back
- * to sibling git worktrees. `projectPath` in the result is the canonical
- * user-facing directory the file was found under.
- *
- * When `dir` is omitted: scan all project directories under ~/.claude/projects/.
- * `projectPath` is undefined in this case (no meaningful project path to report).
- *
- * Existence is checked by stat (operate-then-catch-ENOENT, no existsSync).
- * Zero-byte files are treated as not-found so callers continue searching past
- * a truncated copy to find a valid one in a sibling directory.
- *
- * `fileSize` is returned so callers (loadSessionBuffer) don't need to re-stat.
- *
- * Shared by getSessionInfoImpl and getSessionMessagesImpl — the caller
- * invokes its own reader (readSessionLite / loadSessionBuffer) on the
- * resolved path.
- */
 export async function resolveSessionFilePath(
   sessionId: string,
   dir?: string,
@@ -371,10 +299,10 @@ export async function resolveSessionFilePath(
         if (s.size > 0)
           return { filePath, projectPath: canonical, fileSize: s.size }
       } catch {
-        // ENOENT/EACCES — keep searching
+        
       }
     }
-    // Worktree fallback — sessions may live under a different worktree root
+    
     let worktreePaths: string[]
     try {
       worktreePaths = await getWorktreePathsPortable(canonical)
@@ -390,13 +318,13 @@ export async function resolveSessionFilePath(
         const s = await stat(filePath)
         if (s.size > 0) return { filePath, projectPath: wt, fileSize: s.size }
       } catch {
-        // ENOENT/EACCES — keep searching
+        
       }
     }
     return undefined
   }
 
-  // No dir — scan all project directories
+  
   const projectsDir = getProjectsDir()
   let dirents: string[]
   try {
@@ -411,37 +339,21 @@ export async function resolveSessionFilePath(
       if (s.size > 0)
         return { filePath, projectPath: undefined, fileSize: s.size }
     } catch {
-      // ENOENT/ENOTDIR — not in this project, keep scanning
+      
     }
   }
   return undefined
 }
 
-// ---------------------------------------------------------------------------
-// Compact-boundary chunked read (shared by loadTranscriptFile & SDK getSessionMessages)
-// ---------------------------------------------------------------------------
-
-/** Chunk size for the forward transcript reader. 1 MB balances I/O calls vs buffer growth. */
 const TRANSCRIPT_READ_CHUNK_SIZE = 1024 * 1024
 
-/**
- * File size below which precompact filtering is skipped.
- * Large sessions (>5 MB) almost always have compact boundaries — they got big
- * because of many turns triggering auto-compact.
- */
 export const SKIP_PRECOMPACT_THRESHOLD = 5 * 1024 * 1024
 
-/** Marker bytes searched for when locating the boundary. Lazy: allocated on
- * first use, not at module load. Most sessions never resume. */
 let _compactBoundaryMarker: Buffer | undefined
 function compactBoundaryMarker(): Buffer {
   return (_compactBoundaryMarker ??= Buffer.from('"compact_boundary"'))
 }
 
-/**
- * Confirm a byte-matched line is a real compact_boundary (marker can appear
- * inside user content) and check for preservedSegment.
- */
 function parseBoundaryLine(
   line: string,
 ): { hasPreservedSegment: boolean } | null {
@@ -461,16 +373,6 @@ function parseBoundaryLine(
     return null
   }
 }
-
-/**
- * Single forward chunked read for the --resume load path. Attr-snap lines
- * are skipped at the fd level; compact boundaries truncate in-stream. Peak
- * is the output size, not the file size.
- *
- * The surviving (last) attr-snap is appended at EOF instead of in-place;
- * restoreAttributionStateFromSnapshots only reads [length-1] so position
- * doesn't matter.
- */
 
 type Sink = { buf: Buffer; len: number; cap: number }
 
@@ -520,7 +422,6 @@ type LoadState = {
   straddleSnapTailEnd: number
 }
 
-// Line spanning the chunk seam. 0 = fall through to concat.
 function processStraddle(
   s: LoadState,
   chunk: Buffer,
@@ -562,7 +463,6 @@ function processStraddle(
   return tailEnd
 }
 
-// Strip attr-snaps, truncate on boundaries. Kept lines write as runs.
 function scanChunkLines(
   s: LoadState,
   buf: Buffer,
@@ -612,7 +512,6 @@ function scanChunkLines(
   return { lastSnapStart, lastSnapEnd, trailStart: lineStart }
 }
 
-// In-buf snap wins over straddle (later in file). carryBuf still valid here.
 function captureSnap(
   s: LoadState,
   buf: Buffer,
@@ -679,13 +578,13 @@ export async function readTranscriptForLoad(
 
   const s: LoadState = {
     out: {
-      // Gated callers enter with fileSize > 5MB, so min(fileSize, 8MB) lands
+      
       
       
       
       buf: Buffer.allocUnsafe(Math.min(fileSize, 8 * 1024 * 1024)),
       len: 0,
-      // +1: finalizeOutput may insert one LF between a non-LF-terminated
+      
       
       cap: fileSize + 1,
     },

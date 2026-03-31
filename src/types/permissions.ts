@@ -3,8 +3,6 @@
 import { feature } from 'bun:bundle'
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 
-// Permission Modes
-
 export const EXTERNAL_PERMISSION_MODES = [
   'acceptEdits',
   'bypassPermissions',
@@ -25,16 +23,8 @@ export const INTERNAL_PERMISSION_MODES = [
 
 export const PERMISSION_MODES = INTERNAL_PERMISSION_MODES
 
-// Permission Behaviors
-
 export type PermissionBehavior = 'allow' | 'deny' | 'ask'
 
-// Permission Rules
-
-/**
- * Where a permission rule originated from.
- * Includes all SettingSource values plus additional rule-specific sources.
- */
 export type PermissionRuleSource =
   | 'userSettings'
   | 'projectSettings'
@@ -50,21 +40,12 @@ export type PermissionRuleValue = {
   ruleContent?: string
 }
 
-/**
- * A permission rule with its source and behavior
- */
 export type PermissionRule = {
   source: PermissionRuleSource
   ruleBehavior: PermissionBehavior
   ruleValue: PermissionRuleValue
 }
 
-// ============================================================================
-// Permission Updates
-
-/**
- * Where a permission update should be persisted
- */
 export type PermissionUpdateDestination =
   | 'userSettings'
   | 'projectSettings'
@@ -107,11 +88,6 @@ export type PermissionUpdate =
       directories: string[]
     }
 
-/**
- * Source of an additional working directory permission.
- * Note: This is currently the same as PermissionRuleSource but kept as a
- * separate type for semantic clarity and potential future divergence.
- */
 export type WorkingDirectorySource = PermissionRuleSource
 
 export type AdditionalWorkingDirectory = {
@@ -119,14 +95,6 @@ export type AdditionalWorkingDirectory = {
   source: WorkingDirectorySource
 }
 
-// ============================================================================
-// Permission Decisions & Results
-
-/**
- * Minimal command shape for permission metadata.
- * This is intentionally a subset of the full Command type to avoid import cycles.
- * Only includes properties needed by permission-related components.
- */
 export type PermissionCommandMetadata = {
   name: string
   description?: string
@@ -134,9 +102,6 @@ export type PermissionCommandMetadata = {
   [key: string]: unknown
 }
 
-/**
- * Metadata attached to permission decisions
- */
 export type PermissionMetadata =
   | { command: PermissionCommandMetadata }
   | undefined
@@ -153,19 +118,12 @@ export type PermissionAllowDecision<
   contentBlocks?: ContentBlockParam[]
 }
 
-/**
- * Metadata for a pending classifier check that will run asynchronously.
- * Used to enable non-blocking allow classifier evaluation.
- */
 export type PendingClassifierCheck = {
   command: string
   cwd: string
   descriptions: string[]
 }
 
-/**
- * Result when user should be prompted
- */
 export type PermissionAskDecision<
   Input extends { [key: string]: unknown } = { [key: string]: unknown },
 > = {
@@ -187,9 +145,6 @@ export type PermissionAskDecision<
   contentBlocks?: ContentBlockParam[]
 }
 
-/**
- * Result when permission is denied
- */
 export type PermissionDenyDecision = {
   behavior: 'deny'
   message: string
@@ -197,9 +152,6 @@ export type PermissionDenyDecision = {
   toolUseID?: string
 }
 
-/**
- * A permission decision - allow, ask, or deny
- */
 export type PermissionDecision<
   Input extends { [key: string]: unknown } = { [key: string]: unknown },
 > =
@@ -222,9 +174,6 @@ export type PermissionResult<
       pendingClassifierCheck?: PendingClassifierCheck
     }
 
-/**
- * Explanation of why a permission decision was made
- */
 export type PermissionDecisionReason =
   | {
       type: 'rule'
@@ -271,7 +220,7 @@ export type PermissionDecisionReason =
       reason: string
       
       
-      // shell configs) — the classifier can see context and decide. False
+      
       
       classifierApprovable: boolean
     }
@@ -279,9 +228,6 @@ export type PermissionDecisionReason =
       type: 'other'
       reason: string
     }
-
-// ============================================================================
-// Bash Classifier Types
 
 export type ClassifierResult = {
   matches: boolean
@@ -319,7 +265,7 @@ export type YoloClassifierResult = {
     toolCalls: number
     userPrompts: number
   }
-  /** Path where error prompts were dumped (only set when unavailable due to API error) */
+  
   errorDumpPath?: string
   
   stage?: 'fast' | 'thinking'
@@ -343,9 +289,6 @@ export type YoloClassifierResult = {
   stage2MsgId?: string
 }
 
-// ============================================================================
-// Permission Explainer Types
-
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH'
 
 export type PermissionExplanation = {
@@ -355,20 +298,10 @@ export type PermissionExplanation = {
   risk: string
 }
 
-// ============================================================================
-// Tool Permission Context
-
-/**
- * Mapping of permission rules by their source
- */
 export type ToolPermissionRulesBySource = {
   [T in PermissionRuleSource]?: string[]
 }
 
-/**
- * Context needed for permission checking in tools
- * Note: Uses a simplified DeepImmutable approximation for this types-only file
- */
 export type ToolPermissionContext = {
   readonly mode: PermissionMode
   readonly additionalWorkingDirectories: ReadonlyMap<

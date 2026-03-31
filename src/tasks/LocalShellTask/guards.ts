@@ -25,7 +25,7 @@ export type LocalShellTaskState = TaskStateBase & {
   
   agentId?: AgentId
   
-  // 'Monitor details' dialog title, distinct status bar pill.
+  
   kind?: BashTaskKind
 }
 

@@ -20,7 +20,7 @@ export function optimize(diff: Diff): Diff {
       if (patch.count === 0) continue
     }
 
-    // Try to merge with previous patch
+    
     if (len > 0) {
       const lastIdx = len - 1
       const last = result[lastIdx]!
@@ -36,13 +36,13 @@ export function optimize(diff: Diff): Diff {
         continue
       }
 
-      // Collapse consecutive cursorTo (only the last one matters)
+      
       if (type === 'cursorTo' && lastType === 'cursorTo') {
         result[lastIdx] = patch
         continue
       }
 
-      // Concat adjacent style patches. styleStr is a transition diff
+      
       
       
       
@@ -52,7 +52,7 @@ export function optimize(diff: Diff): Diff {
         continue
       }
 
-      // Dedupe hyperlinks
+      
       if (
         type === 'hyperlink' &&
         lastType === 'hyperlink' &&
@@ -61,7 +61,7 @@ export function optimize(diff: Diff): Diff {
         continue
       }
 
-      // Cancel cursor hide/show pairs
+      
       if (
         (type === 'cursorShow' && lastType === 'cursorHide') ||
         (type === 'cursorHide' && lastType === 'cursorShow')

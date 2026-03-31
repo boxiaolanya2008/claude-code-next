@@ -50,7 +50,7 @@ async function fetchBootstrapAPI(): Promise<BootstrapResponse | null> {
     return null
   }
 
-  // OAuth preferred (requires user:profile scope — service-key OAuth tokens
+  
   
   const apiKey = getAnthropicApiKey()
   const hasUsableOAuth =
@@ -66,7 +66,7 @@ async function fetchBootstrapAPI(): Promise<BootstrapResponse | null> {
   
   try {
     return await withOAuth401Retry(async () => {
-      // Re-read OAuth each call so the retry picks up the refreshed token.
+      
       const token = getClaudeAIOAuthTokens()?.accessToken
       let authHeaders: Record<string, string>
       if (token && hasProfileScope()) {
@@ -108,9 +108,6 @@ async function fetchBootstrapAPI(): Promise<BootstrapResponse | null> {
   }
 }
 
-/**
- * Fetch bootstrap data from the API and persist to disk cache.
- */
 export async function fetchBootstrapData(): Promise<void> {
   try {
     const response = await fetchBootstrapAPI()

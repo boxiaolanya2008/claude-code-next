@@ -108,7 +108,7 @@ async function loadAgentFromFile(
     const background =
       backgroundRaw === 'true' || backgroundRaw === true ? true : undefined
     
-    // and ${user_config.X} (non-sensitive only) so they can embed configured
+    
     
     let systemPrompt = substitutePluginVariables(markdownContent.trim(), {
       path: pluginPath,
@@ -122,7 +122,7 @@ async function loadAgentFromFile(
       )
     }
 
-    // Parse memory scope
+    
     const memoryRaw = frontmatter.memory as string | undefined
     let memory: AgentMemoryScope | undefined
     if (memoryRaw !== undefined) {
@@ -135,7 +135,7 @@ async function loadAgentFromFile(
       }
     }
 
-    // Parse isolation mode
+    
     const isolationRaw = frontmatter.isolation as string | undefined
     const isolation =
       isolationRaw === 'worktree' ? ('worktree' as const) : undefined
@@ -150,7 +150,7 @@ async function loadAgentFromFile(
       )
     }
 
-    // permissionMode, hooks, and mcpServers are intentionally NOT parsed for
+    
     
     
     
@@ -167,7 +167,7 @@ async function loadAgentFromFile(
       }
     }
 
-    // Parse maxTurns
+    
     const maxTurnsRaw = frontmatter.maxTurns
     const maxTurns = parsePositiveIntFromFrontmatter(maxTurnsRaw)
     if (maxTurnsRaw !== undefined && maxTurns === undefined) {
@@ -176,7 +176,7 @@ async function loadAgentFromFile(
       )
     }
 
-    // Parse disallowedTools
+    
     const disallowedTools =
       frontmatter.disallowedTools !== undefined
         ? parseAgentToolsFromFrontmatter(frontmatter.disallowedTools)
@@ -230,7 +230,7 @@ async function loadAgentFromFile(
 
 export const loadPluginAgents = memoize(
   async (): Promise<AgentDefinition[]> => {
-    // Only load agents from enabled plugins
+    
     const { enabled, errors } = await loadAllPluginsCacheOnly()
 
     if (errors.length > 0) {
@@ -239,10 +239,10 @@ export const loadPluginAgents = memoize(
       )
     }
 
-    // Process plugins in parallel; each plugin has its own loadedPaths scope
+    
     const perPluginAgents = await Promise.all(
       enabled.map(async (plugin): Promise<AgentDefinition[]> => {
-        // Track loaded file paths to prevent duplicates within this plugin
+        
         const loadedPaths = new Set<string>()
         const pluginAgents: AgentDefinition[] = []
 
@@ -272,9 +272,9 @@ export const loadPluginAgents = memoize(
           }
         }
 
-        // Load agents from additional paths specified in manifest
+        
         if (plugin.agentsPaths) {
-          // Process all agentsPaths in parallel. isDuplicatePath is synchronous
+          
           
           const pathResults = await Promise.all(
             plugin.agentsPaths.map(
@@ -284,7 +284,7 @@ export const loadPluginAgents = memoize(
                   const stats = await fs.stat(agentPath)
 
                   if (stats.isDirectory()) {
-                    // Load all .md files from directory
+                    
                     const agents = await loadAgentsFromDirectory(
                       agentPath,
                       plugin.name,
@@ -301,7 +301,7 @@ export const loadPluginAgents = memoize(
                     }
                     return agents
                   } else if (stats.isFile() && agentPath.endsWith('.md')) {
-                    // Load single agent file
+                    
                     const agent = await loadAgentFromFile(
                       agentPath,
                       plugin.name,

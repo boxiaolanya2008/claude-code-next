@@ -142,7 +142,7 @@ class HighlightSegmenter {
       }
     }
 
-    // Empty segment (can occur when only trailing ANSI codes remain)
+    
     if (this.stringPos === stringStart) {
       return null
     }

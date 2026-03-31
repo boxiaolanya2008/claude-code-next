@@ -25,7 +25,7 @@ export function useAnimationFrame(
       }
     }
 
-    // keepAlive: true — visible animations drive the clock
+    
     return clock.subscribe(onChange, true)
   }, [clock, intervalMs, active])
 

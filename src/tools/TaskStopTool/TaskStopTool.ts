@@ -13,7 +13,7 @@ const inputSchema = lazySchema(() =>
       .string()
       .optional()
       .describe('The ID of the background task to stop'),
-    // shell_id is accepted for backward compatibility with the deprecated KillShell tool
+    
     shell_id: z.string().optional().describe('Deprecated: use task_id instead'),
   }),
 )
@@ -24,7 +24,7 @@ const outputSchema = lazySchema(() =>
     message: z.string().describe('Status message about the operation'),
     task_id: z.string().describe('The ID of the task that was stopped'),
     task_type: z.string().describe('The type of the task that was stopped'),
-    // Optional: tool outputs are persisted to transcripts and replayed on --resume
+    
     
     command: z
       .string()
@@ -39,7 +39,7 @@ export type Output = z.infer<OutputSchema>
 export const TaskStopTool = buildTool({
   name: TASK_STOP_TOOL_NAME,
   searchHint: 'kill a running background task',
-  // KillShell is the deprecated name - kept as alias for backward compatibility
+  
   
   aliases: ['KillShell'],
   maxResultSizeChars: 100_000,
@@ -58,7 +58,7 @@ export const TaskStopTool = buildTool({
     return input.task_id ?? input.shell_id ?? ''
   },
   async validateInput({ task_id, shell_id }, { getAppState }) {
-    // Support both task_id and shell_id (deprecated KillShell compat)
+    
     const id = task_id ?? shell_id
     if (!id) {
       return {
@@ -108,7 +108,7 @@ export const TaskStopTool = buildTool({
     { task_id, shell_id },
     { getAppState, setAppState, abortController },
   ) {
-    // Support both task_id and shell_id (deprecated KillShell compat)
+    
     const id = task_id ?? shell_id
     if (!id) {
       throw new Error('Missing required parameter: task_id')

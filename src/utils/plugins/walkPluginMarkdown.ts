@@ -20,7 +20,7 @@ export async function walkPluginMarkdown(
         opts.stopAtSkillDir &&
         entries.some(e => e.isFile() && SKILL_MD_RE.test(e.name))
       ) {
-        // Skill directory: collect .md files here, don't recurse.
+        
         await Promise.all(
           entries.map(entry =>
             entry.isFile() && entry.name.toLowerCase().endsWith('.md')

@@ -84,17 +84,12 @@ function handlePluginCommandError(
   process.exit(1)
 }
 
-/**
- * CLI command: Install a plugin non-interactively
- * @param plugin Plugin identifier (name or plugin@marketplace)
- * @param scope Installation scope: user, project, or local (defaults to 'user')
- */
 export async function installPlugin(
   plugin: string,
   scope: InstallableScope = 'user',
 ): Promise<void> {
   try {
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
+    
     console.log(`Installing plugin "${plugin}"...`)
 
     const result = await installPluginOp(plugin, scope)
@@ -103,7 +98,7 @@ export async function installPlugin(
       throw new Error(result.message)
     }
 
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
+    
     console.log(`${figures.tick} ${result.message}`)
 
     
@@ -134,11 +129,6 @@ export async function installPlugin(
   }
 }
 
-/**
- * CLI command: Uninstall a plugin non-interactively
- * @param plugin Plugin name or plugin@marketplace identifier
- * @param scope Uninstall from scope: user, project, or local (defaults to 'user')
- */
 export async function uninstallPlugin(
   plugin: string,
   scope: InstallableScope = 'user',
@@ -151,7 +141,7 @@ export async function uninstallPlugin(
       throw new Error(result.message)
     }
 
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
+    
     console.log(`${figures.tick} ${result.message}`)
 
     const { name, marketplace } = parsePluginIdentifier(
@@ -176,11 +166,6 @@ export async function uninstallPlugin(
   }
 }
 
-/**
- * CLI command: Enable a plugin non-interactively
- * @param plugin Plugin name or plugin@marketplace identifier
- * @param scope Optional scope. If not provided, finds the most specific scope for the current project.
- */
 export async function enablePlugin(
   plugin: string,
   scope?: InstallableScope,
@@ -192,7 +177,7 @@ export async function enablePlugin(
       throw new Error(result.message)
     }
 
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
+    
     console.log(`${figures.tick} ${result.message}`)
 
     const { name, marketplace } = parsePluginIdentifier(
@@ -217,11 +202,6 @@ export async function enablePlugin(
   }
 }
 
-/**
- * CLI command: Disable a plugin non-interactively
- * @param plugin Plugin name or plugin@marketplace identifier
- * @param scope Optional scope. If not provided, finds the most specific scope for the current project.
- */
 export async function disablePlugin(
   plugin: string,
   scope?: InstallableScope,
@@ -233,7 +213,7 @@ export async function disablePlugin(
       throw new Error(result.message)
     }
 
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
+    
     console.log(`${figures.tick} ${result.message}`)
 
     const { name, marketplace } = parsePluginIdentifier(
@@ -258,9 +238,6 @@ export async function disablePlugin(
   }
 }
 
-/**
- * CLI command: Disable all enabled plugins non-interactively
- */
 export async function disableAllPlugins(): Promise<void> {
   try {
     const result = await disableAllPluginsOp()
@@ -269,7 +246,7 @@ export async function disableAllPlugins(): Promise<void> {
       throw new Error(result.message)
     }
 
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
+    
     console.log(`${figures.tick} ${result.message}`)
 
     logEvent('tengu_plugin_disabled_all_cli', {})
@@ -281,11 +258,6 @@ export async function disableAllPlugins(): Promise<void> {
   }
 }
 
-/**
- * CLI command: Update a plugin non-interactively
- * @param plugin Plugin name or plugin@marketplace identifier
- * @param scope Scope to update
- */
 export async function updatePluginCli(
   plugin: string,
   scope: PluginScope,

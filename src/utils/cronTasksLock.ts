@@ -60,9 +60,9 @@ async function tryCreateExclusive(
     const code = getErrnoCode(e)
     if (code === 'EEXIST') return false
     if (code === 'ENOENT') {
-      // .claude/ doesn't exist yet — create it and retry once. In steady
-      // state the dir already exists (scheduled_tasks.json lives there),
-      // so this path is hit at most once.
+      
+      
+      
       await mkdir(dirname(path), { recursive: true })
       try {
         await writeFile(path, body, { flag: 'wx' })
@@ -83,24 +83,13 @@ function registerLockCleanup(opts?: SchedulerLockOptions): void {
   })
 }
 
-/**
- * Try to acquire the scheduler lock for the current session.
- * Returns true on success, false if another live session holds it.
- *
- * Uses O_EXCL ('wx') for atomic test-and-set. If the file exists:
- *   - Already ours → true (idempotent re-acquire)
- *   - Another live PID → false
- *   - Stale (PID dead / corrupt) → unlink and retry exclusive create once
- *
- * If two sessions race to recover a stale lock, only one create succeeds.
- */
 export async function tryAcquireSchedulerLock(
   opts?: SchedulerLockOptions,
 ): Promise<boolean> {
   const dir = opts?.dir
-  // "sessionId" in the lock file is really just a stable owner key. REPL
-  // uses getSessionId(); daemon callers supply their own UUID. PID remains
-  // the liveness signal regardless.
+  
+  
+  
   const sessionId = opts?.lockIdentity ?? getSessionId()
   const lock: SchedulerLock = {
     sessionId,
@@ -119,9 +108,9 @@ export async function tryAcquireSchedulerLock(
 
   const existing = await readLock(dir)
 
-  // Already ours (idempotent). After --resume the session ID is restored
-  // but the process has a new PID — update the lock file so other sessions
-  // see a live PID and don't steal it.
+  
+  
+  
   if (existing?.sessionId === sessionId) {
     if (existing.pid !== process.pid) {
       await writeFile(getLockPath(dir), jsonStringify(lock))
@@ -130,7 +119,7 @@ export async function tryAcquireSchedulerLock(
     return true
   }
 
-  // Corrupt or unparseable — treat as stale.
+  
   
   if (existing && isProcessRunning(existing.pid)) {
     if (lastBlockedBy !== existing.sessionId) {
@@ -142,7 +131,7 @@ export async function tryAcquireSchedulerLock(
     return false
   }
 
-  // Stale — unlink and retry the exclusive create once.
+  
   if (existing) {
     logForDebugging(
       `[ScheduledTasks] recovering stale scheduler lock from PID ${existing.pid}`,
@@ -154,13 +143,10 @@ export async function tryAcquireSchedulerLock(
     registerLockCleanup(opts)
     return true
   }
-  // Another session won the recovery race.
+  
   return false
 }
 
-/**
- * Release the scheduler lock if the current session owns it.
- */
 export async function releaseSchedulerLock(
   opts?: SchedulerLockOptions,
 ): Promise<void> {
@@ -176,6 +162,6 @@ export async function releaseSchedulerLock(
     await unlink(getLockPath(dir))
     logForDebugging('[ScheduledTasks] released scheduler lock')
   } catch {
-    // Already gone.
+    
   }
 }

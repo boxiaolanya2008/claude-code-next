@@ -59,7 +59,7 @@ export async function resolveAttachments(
   rawPaths: string[],
   uploadCtx: { replBridgeEnabled: boolean; signal?: AbortSignal },
 ): Promise<ResolvedAttachment[]> {
-  // Stat serially (local, fast) to keep ordering deterministic, then upload
+  
   
   
   const stated: ResolvedAttachment[] = []
@@ -75,19 +75,19 @@ export async function resolveAttachments(
       isImage: IMAGE_EXTENSION_REGEX.test(fullPath),
     })
   }
-  // Dynamic import inside the feature() guard so upload.ts (axios, crypto,
-  // zod, auth utils, MIME map) is fully eliminated from non-BRIDGE_MODE
+  
+  
   
   
   
   if (feature('BRIDGE_MODE')) {
-    // Headless/SDK callers never set appState.replBridgeEnabled (only the TTY
     
     
-    // which already passes CLAUDE_CODE_OAUTH_TOKEN for auth.
+    
+    
     const shouldUpload =
       uploadCtx.replBridgeEnabled ||
-      isEnvTruthy(process.env.CLAUDE_CODE_BRIEF_UPLOAD)
+      isEnvTruthy(process.env.CLAUDE_CODE_NEXT_BRIEF_UPLOAD)
     const { uploadBriefAttachment } = await import('./upload.js')
     const uuids = await Promise.all(
       stated.map(a =>

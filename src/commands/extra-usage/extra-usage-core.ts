@@ -19,9 +19,9 @@ export async function runExtraUsage(): Promise<ExtraUsageResult> {
   if (!getGlobalConfig().hasVisitedExtraUsage) {
     saveGlobalConfig(prev => ({ ...prev, hasVisitedExtraUsage: true }))
   }
-  // Invalidate only the current org's entry so a follow-up read refetches
-  // the granted state. Separate from the visited flag since users may run
-  // /extra-usage more than once while iterating on the claim flow.
+  
+  
+  
   invalidateOverageCreditGrantCache()
 
   const subscriptionType = getSubscriptionType()
@@ -30,9 +30,9 @@ export async function runExtraUsage(): Promise<ExtraUsageResult> {
   const hasBillingAccess = hasClaudeAiBillingAccess()
 
   if (!hasBillingAccess && isTeamOrEnterprise) {
-    // Mirror apps/claude-ai useHasUnlimitedOverage(): if overage is enabled
-    // with no monthly cap, there is nothing to request. On fetch error, fall
-    // through and let the user ask (matching web's "err toward show" behavior).
+    
+    
+    
     let extraUsage: ExtraUsage | null | undefined
     try {
       const utilization = await fetchUtilization()

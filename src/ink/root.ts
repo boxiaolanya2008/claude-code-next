@@ -6,11 +6,8 @@ import Ink, { type Options as InkOptions } from './ink.js'
 import instances from './instances.js'
 
 export type RenderOptions = {
-  /**
-   * Output stream where app will be rendered.
-   *
-   * @default process.stdout
-   */
+  
+
   stdout?: NodeJS.WriteStream
   
 
@@ -32,9 +29,8 @@ export type RenderOptions = {
 }
 
 export type Instance = {
-  /**
-   * Replace previous root node with a new one or update props of the current root node.
-   */
+  
+
   rerender: Ink['render']
   
 
@@ -45,20 +41,12 @@ export type Instance = {
   cleanup: () => void
 }
 
-/**
- * A managed Ink root, similar to react-dom's createRoot API.
- * Separates instance creation from rendering so the same root
- * can be reused for multiple sequential screens.
- */
 export type Root = {
   render: (node: ReactNode) => void
   unmount: () => void
   waitUntilExit: () => Promise<void>
 }
 
-/**
- * Mount a component and render the output.
- */
 export const renderSync = (
   node: ReactNode,
   options?: NodeJS.WriteStream | RenderOptions,
@@ -94,7 +82,7 @@ const wrappedRender = async (
   node: ReactNode,
   options?: NodeJS.WriteStream | RenderOptions,
 ): Promise<Instance> => {
-  // Preserve the microtask boundary that `await loadYoga()` used to provide.
+  
   
   
   
@@ -116,7 +104,7 @@ export async function createRoot({
   patchConsole = true,
   onFrame,
 }: RenderOptions = {}): Promise<Root> {
-  // See wrappedRender — preserve microtask boundary from the old WASM await.
+  
   await Promise.resolve()
   const instance = new Ink({
     stdout,

@@ -21,7 +21,7 @@ export function migrateAutoUpdatesToSettings(): void {
   try {
     const userSettings = getSettingsForSource('userSettings') || {}
 
-    // Always set DISABLE_AUTOUPDATER to preserve user intent
+    
     
     updateSettingsForSource('userSettings', {
       ...userSettings,

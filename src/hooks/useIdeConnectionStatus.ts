@@ -16,7 +16,7 @@ export function useIdeConnectionStatus(
     if (!ideClient) {
       return { status: null, ideName: null }
     }
-    // Extract IDE name from config if available
+    
     const config = ideClient.config
     const ideName =
       config.type === 'sse-ide' || config.type === 'ws-ide'

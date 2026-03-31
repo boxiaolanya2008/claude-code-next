@@ -123,7 +123,7 @@ export const FileWriteTool = buildTool({
     return input.file_path
   },
   backfillObservableInput(input) {
-    // hooks.mdx documents file_path as absolute; expand so hook allowlists
+    
     
     if (typeof input.file_path === 'string') {
       input.file_path = expandPath(input.file_path)
@@ -144,7 +144,7 @@ export const FileWriteTool = buildTool({
   renderToolUseErrorMessage,
   renderToolResultMessage,
   extractSearchText() {
-    // Transcript render shows either content (create, via HighlightedCode)
+    
     
     
     
@@ -159,7 +159,7 @@ export const FileWriteTool = buildTool({
       return { result: false, message: secretError, errorCode: 0 }
     }
 
-    // Check if path should be ignored based on permission settings
+    
     const appState = toolUseContext.getAppState()
     const denyRule = matchingRuleForInput(
       fullFilePath,
@@ -176,7 +176,7 @@ export const FileWriteTool = buildTool({
       }
     }
 
-    // SECURITY: Skip filesystem operations for UNC paths to prevent NTLM credential leaks.
+    
     
     
     if (fullFilePath.startsWith('\\\\') || fullFilePath.startsWith('//')) {
@@ -205,7 +205,7 @@ export const FileWriteTool = buildTool({
       }
     }
 
-    // Reuse mtime from the stat above — avoids a redundant statSync via
+    
     
     
     const lastWriteTime = Math.floor(fileMtimeMs)
@@ -233,29 +233,29 @@ export const FileWriteTool = buildTool({
     const cwd = getCwd()
     const newSkillDirs = await discoverSkillDirsForPaths([fullFilePath], cwd)
     if (newSkillDirs.length > 0) {
-      // Store discovered dirs for attachment display
+      
       for (const dir of newSkillDirs) {
         dynamicSkillDirTriggers?.add(dir)
       }
-      // Don't await - let skill loading happen in the background
+      
       addSkillDirectories(newSkillDirs).catch(() => {})
     }
 
-    // Activate conditional skills whose path patterns match this file
+    
     activateConditionalSkillsForPaths([fullFilePath], cwd)
 
     await diagnosticTracker.beforeFileEdited(fullFilePath)
 
-    // Ensure parent directory exists before the atomic read-modify-write section.
-    // Must stay OUTSIDE the critical section below (a yield between the staleness
-    // check and writeTextContent lets concurrent edits interleave), and BEFORE the
-    // write (lazy-mkdir-on-ENOENT would fire a spurious tengu_atomic_write_error
-    // inside writeFileSyncAndFlush_DEPRECATED before ENOENT propagates back).
+    
+    
+    
+    
+    
     await getFsImplementation().mkdir(dir)
     if (fileHistoryEnabled()) {
-      // Backup captures pre-edit content — safe to call before the staleness
-      // check (idempotent v1 backup keyed on content hash; if staleness fails
-      // later we just have an unused backup, not corrupt state).
+      
+      
+      
       await fileHistoryTrackEdit(
         updateFileHistoryState,
         fullFilePath,
@@ -263,8 +263,8 @@ export const FileWriteTool = buildTool({
       )
     }
 
-    // Load current state and confirm no changes since last read.
-    // Please avoid async operations between here and writing to disk to preserve atomicity.
+    
+    
     let meta: ReturnType<typeof readFileSyncWithMetadata> | null
     try {
       meta = readFileSyncWithMetadata(fullFilePath)
@@ -280,14 +280,14 @@ export const FileWriteTool = buildTool({
       const lastWriteTime = getFileModificationTime(fullFilePath)
       const lastRead = readFileState.get(fullFilePath)
       if (!lastRead || lastWriteTime > lastRead.timestamp) {
-        // Timestamp indicates modification, but on Windows timestamps can change
-        // without content changes (cloud sync, antivirus, etc.). For full reads,
-        // compare content as a fallback to avoid false positives.
+        
+        
+        
         const isFullRead =
           lastRead &&
           lastRead.offset === undefined &&
           lastRead.limit === undefined
-        // meta.content is CRLF-normalized — matches readFileState's normalized form.
+        
         if (!isFullRead || meta.content !== lastRead.content) {
           throw new Error(FILE_UNEXPECTEDLY_MODIFIED_ERROR)
         }
@@ -300,14 +300,14 @@ export const FileWriteTool = buildTool({
     
     
     
-    // files), which silently corrupted e.g. bash scripts with \r on Linux when
+    
     
     writeTextContent(fullFilePath, content, enc, 'LF')
 
     
     const lspManager = getLspServerManager()
     if (lspManager) {
-      // Clear previously delivered diagnostics so new ones will be shown
+      
       clearDeliveredDiagnosticsForFile(`file://${fullFilePath}`)
       
       lspManager.changeFile(fullFilePath, content).catch((err: Error) => {
@@ -325,7 +325,7 @@ export const FileWriteTool = buildTool({
       })
     }
 
-    // Notify VSCode about the file change for diff view
+    
     notifyVscodeFileUpdated(fullFilePath, oldContent, content)
 
     
@@ -343,7 +343,7 @@ export const FileWriteTool = buildTool({
 
     let gitDiff: ToolUseDiff | undefined
     if (
-      isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) &&
+      isEnvTruthy(process.env.CLAUDE_CODE_NEXT_REMOTE) &&
       getFeatureValue_CACHED_MAY_BE_STALE('tengu_quartz_lantern', false)
     ) {
       const startTime = Date.now()
@@ -377,7 +377,7 @@ export const FileWriteTool = buildTool({
         originalFile: oldContent,
         ...(gitDiff && { gitDiff }),
       }
-      // Track lines added and removed for file updates, right before yielding result
+      
       countLinesChanged(patch)
 
       logFileOperation({
@@ -401,7 +401,7 @@ export const FileWriteTool = buildTool({
       ...(gitDiff && { gitDiff }),
     }
 
-    // For creation of new files, count all lines as additions, right before yielding the result
+    
     countLinesChanged([], content)
 
     logFileOperation({

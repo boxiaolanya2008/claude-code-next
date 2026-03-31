@@ -30,7 +30,7 @@ export type InProcessTeammateTaskState = TaskStateBase & {
   selectedAgent?: AgentDefinition
   abortController?: AbortController 
   currentWorkAbortController?: AbortController 
-  unregisterCleanup?: () => void // Runtime only
+  unregisterCleanup?: () => void 
 
   
   awaitingPlanApproval: boolean
@@ -81,18 +81,6 @@ export function isInProcessTeammateTask(
   )
 }
 
-/**
- * Cap on the number of messages kept in task.messages (the AppState UI mirror).
- *
- * task.messages exists purely for the zoomed transcript dialog, which only
- * needs recent context. The full conversation lives in the local allMessages
- * array (inProcessRunner) and on disk at the agent transcript path.
- *
- * BQ analysis (round 9, 2026-03-20) showed ~20MB RSS per agent at 500+ turn
- * sessions and ~125MB per concurrent agent in swarm bursts. Whale session
- * 9a990de8 launched 292 agents in 2 minutes and reached 36.8GB. The dominant
- * cost is this array holding a second full copy of every message.
- */
 export const TEAMMATE_MESSAGES_UI_CAP = 50
 
 export function appendCappedMessage<T>(

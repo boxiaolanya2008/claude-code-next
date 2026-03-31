@@ -20,7 +20,7 @@ import {
 
 const inputSchema = lazySchema(() =>
   z.strictObject({
-    // No parameters needed
+    
   }),
 )
 type InputSchema = ReturnType<typeof inputSchema>
@@ -54,7 +54,7 @@ export const EnterPlanModeTool: Tool<InputSchema, Output> = buildTool({
   },
   shouldDefer: true,
   isEnabled() {
-    // When --channels is active, ExitPlanMode is disabled (its approval
+    
     
     
     if (

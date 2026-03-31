@@ -9,7 +9,7 @@ import { isEnvDefinedFalsy } from '../../utils/envUtils.js'
 export type ColorModuleUnavailableReason = 'env'
 
 export function getColorModuleUnavailableReason(): ColorModuleUnavailableReason | null {
-  if (isEnvDefinedFalsy(process.env.CLAUDE_CODE_SYNTAX_HIGHLIGHT)) {
+  if (isEnvDefinedFalsy(process.env.CLAUDE_CODE_NEXT_SYNTAX_HIGHLIGHT)) {
     return 'env'
   }
   return null

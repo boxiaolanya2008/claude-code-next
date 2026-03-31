@@ -55,13 +55,12 @@ import { getBuiltInAgents } from './builtInAgents.js'
 
 export type AgentMcpServerSpec =
   | string 
-  | { [name: string]: McpServerConfig } // Inline definition as { name: config }
+  | { [name: string]: McpServerConfig } 
 
-// Zod schema for agent MCP server specs
 const AgentMcpServerSpecSchema = lazySchema(() =>
   z.union([
-    z.string(), // Reference by name
-    z.record(z.string(), McpServerConfigSchema()), // Inline as { name: config }
+    z.string(), 
+    z.record(z.string(), McpServerConfigSchema()), 
   ]),
 )
 
@@ -119,14 +118,11 @@ export type BaseAgentDefinition = {
   memory?: AgentMemoryScope 
   isolation?: 'worktree' | 'remote' 
   pendingSnapshotUpdate?: { snapshotTimestamp: string }
-  /** Omit CLAUDE.md hierarchy from the agent's userContext. Read-only agents
-   * (Explore, Plan) don't need commit/PR/lint guidelines — the main agent has
-   * full CLAUDE.md and interprets their output. Saves ~5-15 Gtok/week across
-   * 34M+ Explore spawns. Kill-switch: tengu_slim_subagent_claudemd. */
+  
+
   omitClaudeMd?: boolean
 }
 
-// Built-in agents - dynamic prompts only, no static systemPrompt field
 export type BuiltInAgentDefinition = BaseAgentDefinition & {
   source: 'built-in'
   baseDir: 'built-in'
@@ -136,7 +132,6 @@ export type BuiltInAgentDefinition = BaseAgentDefinition & {
   }) => string
 }
 
-// Custom agents from user/project/policy settings - prompt stored via closure
 export type CustomAgentDefinition = BaseAgentDefinition & {
   getSystemPrompt: () => string
   source: SettingSource
@@ -144,7 +139,6 @@ export type CustomAgentDefinition = BaseAgentDefinition & {
   baseDir?: string
 }
 
-// Plugin agents - similar to custom but with plugin metadata, prompt stored via closure
 export type PluginAgentDefinition = BaseAgentDefinition & {
   getSystemPrompt: () => string
   source: 'plugin'
@@ -152,7 +146,6 @@ export type PluginAgentDefinition = BaseAgentDefinition & {
   plugin: string
 }
 
-// Union type for all agent types
 export type AgentDefinition =
   | BuiltInAgentDefinition
   | CustomAgentDefinition
@@ -213,12 +206,6 @@ export function getActiveAgentsFromList(
   return Array.from(agentMap.values())
 }
 
-/**
- * Checks if an agent's required MCP servers are available.
- * Returns true if no requirements or all requirements are met.
- * @param agent The agent to check
- * @param availableServers List of available MCP server names (e.g., from mcp.clients)
- */
 export function hasRequiredMcpServers(
   agent: AgentDefinition,
   availableServers: string[],
@@ -226,7 +213,7 @@ export function hasRequiredMcpServers(
   if (!agent.requiredMcpServers || agent.requiredMcpServers.length === 0) {
     return true
   }
-  // Each required pattern must match at least one available server (case-insensitive)
+  
   return agent.requiredMcpServers.every(pattern =>
     availableServers.some(server =>
       server.toLowerCase().includes(pattern.toLowerCase()),
@@ -234,12 +221,6 @@ export function hasRequiredMcpServers(
   )
 }
 
-/**
- * Filters agents based on MCP server requirements.
- * Only returns agents whose required MCP servers are available.
- * @param agents List of agents to filter
- * @param availableServers List of available MCP server names
- */
 export function filterAgentsByMcpRequirements(
   agents: AgentDefinition[],
   availableServers: string[],
@@ -247,11 +228,6 @@ export function filterAgentsByMcpRequirements(
   return agents.filter(agent => hasRequiredMcpServers(agent, availableServers))
 }
 
-/**
- * Check for and initialize agent memory from project snapshots.
- * For agents with memory enabled, copies snapshot to local if no local memory exists.
- * For agents with newer snapshots, logs a debug message (user prompt TODO).
- */
 async function initializeAgentMemorySnapshots(
   agents: CustomAgentDefinition[],
 ): Promise<void> {
@@ -288,8 +264,8 @@ async function initializeAgentMemorySnapshots(
 
 export const getAgentDefinitionsWithOverrides = memoize(
   async (cwd: string): Promise<AgentDefinitionsResult> => {
-    // Simple mode: skip custom agents, only return built-ins
-    if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
+    
+    if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_SIMPLE)) {
       const builtInAgents = getBuiltInAgents()
       return {
         activeAgents: builtInAgents,
@@ -311,7 +287,7 @@ export const getAgentDefinitionsWithOverrides = memoize(
             source,
           )
           if (!agent) {
-            // Skip non-agent markdown files silently (e.g., reference docs
+            
             
             
             if (!frontmatter['name']) {
@@ -390,9 +366,6 @@ export function clearAgentDefinitionsCache(): void {
   clearPluginAgentCache()
 }
 
-/**
- * Helper to determine the specific parsing error for an agent file
- */
 function getParseError(frontmatter: Record<string, unknown>): string {
   const agentType = frontmatter['name']
   const description = frontmatter['description']
@@ -408,12 +381,6 @@ function getParseError(frontmatter: Record<string, unknown>): string {
   return 'Unknown parsing error'
 }
 
-/**
- * Parse hooks from frontmatter using the HooksSchema
- * @param frontmatter The frontmatter object containing potential hooks
- * @param agentType The agent type for logging purposes
- * @returns Parsed hooks settings or undefined if invalid/missing
- */
 function parseHooksFromFrontmatter(
   frontmatter: Record<string, unknown>,
   agentType: string,
@@ -432,9 +399,6 @@ function parseHooksFromFrontmatter(
   return result.data
 }
 
-/**
- * Parses agent definition from JSON data
- */
 export function parseAgentFromJson(
   name: string,
   definition: unknown,
@@ -508,9 +472,6 @@ export function parseAgentFromJson(
   }
 }
 
-/**
- * Parses multiple agents from a JSON object
- */
 export function parseAgentsFromJson(
   agentsJson: unknown,
   source: SettingSource = 'flagSettings',
@@ -528,9 +489,6 @@ export function parseAgentsFromJson(
   }
 }
 
-/**
- * Parses agent definition from markdown file data
- */
 export function parseAgentFromMarkdown(
   filePath: string,
   baseDir: string,
@@ -554,7 +512,7 @@ export function parseAgentFromMarkdown(
       return null
     }
 
-    // Unescape newlines in whenToUse that were escaped for YAML parsing
+    
     whenToUse = whenToUse.replace(/\\n/g, '\n')
 
     const color = frontmatter['color'] as AgentColorName | undefined
@@ -565,7 +523,7 @@ export function parseAgentFromMarkdown(
       model = trimmed.toLowerCase() === 'inherit' ? 'inherit' : trimmed
     }
 
-    // Parse background flag
+    
     const backgroundRaw = frontmatter['background']
 
     if (
@@ -597,7 +555,7 @@ export function parseAgentFromMarkdown(
       }
     }
 
-    // Parse isolation mode. 'remote' is ant-only; external builds reject it at parse time.
+    
     type IsolationMode = 'worktree' | 'remote'
     const VALID_ISOLATION_MODES: readonly IsolationMode[] =
       process.env.USER_TYPE === 'ant' ? ['worktree', 'remote'] : ['worktree']
@@ -613,7 +571,7 @@ export function parseAgentFromMarkdown(
       }
     }
 
-    // Parse effort from frontmatter (supports string levels and integers)
+    
     const effortRaw = frontmatter['effort']
     const parsedEffort =
       effortRaw !== undefined ? parseEffortValue(effortRaw) : undefined
@@ -624,7 +582,7 @@ export function parseAgentFromMarkdown(
       )
     }
 
-    // Parse permissionMode from frontmatter
+    
     const permissionModeRaw = frontmatter['permissionMode'] as
       | string
       | undefined
@@ -637,7 +595,7 @@ export function parseAgentFromMarkdown(
       logForDebugging(errorMsg)
     }
 
-    // Parse maxTurns from frontmatter
+    
     const maxTurnsRaw = frontmatter['maxTurns']
     const maxTurns = parsePositiveIntFromFrontmatter(maxTurnsRaw)
     if (maxTurnsRaw !== undefined && maxTurns === undefined) {
@@ -646,7 +604,7 @@ export function parseAgentFromMarkdown(
       )
     }
 
-    // Extract filename without extension
+    
     const filename = basename(filePath, '.md')
 
     
@@ -666,7 +624,7 @@ export function parseAgentFromMarkdown(
       }
     }
 
-    // Parse disallowedTools from frontmatter
+    
     const disallowedToolsRaw = frontmatter['disallowedTools']
     const disallowedTools =
       disallowedToolsRaw !== undefined
@@ -700,7 +658,7 @@ export function parseAgentFromMarkdown(
         .filter((item): item is AgentMcpServerSpec => item !== null)
     }
 
-    // Parse hooks from frontmatter
+    
     const hooks = parseHooksFromFrontmatter(frontmatter, agentType)
 
     const systemPrompt = content.trim()

@@ -52,7 +52,7 @@ export const fetchClaudeAIMcpConfigsIfEligible = memoize(
         return {}
       }
 
-      // Check for user:mcp_servers scope directly instead of isClaudeAISubscriber().
+      
       
       
       
@@ -84,7 +84,7 @@ export const fetchClaudeAIMcpConfigsIfEligible = memoize(
       })
 
       const configs: Record<string, ScopedMcpServerConfig> = {}
-      // Track used normalized names to detect collisions and assign (2), (3), etc. suffixes.
+      
       
       
       
@@ -133,14 +133,6 @@ export function clearClaudeAIMcpConfigsCache(): void {
   clearMcpAuthCache()
 }
 
-/**
- * Record that a claude.ai connector successfully connected. Idempotent.
- *
- * Gates the "N connectors unavailable/need auth" startup notifications: a
- * connector that was working yesterday and is now failed is a state change
- * worth surfacing; an org-configured connector that's been needs-auth since
- * it showed up is one the user has demonstrably ignored.
- */
 export function markClaudeAiMcpConnected(name: string): void {
   saveGlobalConfig(current => {
     const seen = current.claudeAiMcpEverConnected ?? []

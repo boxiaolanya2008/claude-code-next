@@ -11,7 +11,7 @@ import { which } from './which.js'
 type Platform = 'win32' | 'darwin' | 'linux'
 
 export const getGlobalClaudeFile = memoize((): string => {
-  // Legacy fallback for backwards compatibility
+  
   if (
     getFsImplementation().existsSync(
       join(getClaudeConfigHomeDir(), '.config.json'),
@@ -38,7 +38,7 @@ const hasInternetAccess = memoize(async (): Promise<boolean> => {
 
 async function isCommandAvailable(command: string): Promise<boolean> {
   try {
-    // which does not execute the file.
+    
     return !!(await which(command))
   } catch {
     return false
@@ -67,42 +67,34 @@ const detectRuntimes = memoize(async (): Promise<string[]> => {
 
 const isWslEnvironment = memoize((): boolean => {
   try {
-    // Check for WSLInterop file which is a reliable indicator of WSL
+    
     return getFsImplementation().existsSync(
       '/proc/sys/fs/binfmt_misc/WSLInterop',
     )
   } catch (_error) {
-    // If there's an error checking, assume not WSL
+    
     return false
   }
 })
 
-/**
- * Checks if the npm executable is located in the Windows filesystem within WSL
- * @returns true if npm is from Windows (starts with /mnt/c/), false otherwise
- */
 const isNpmFromWindowsPath = memoize((): boolean => {
   try {
-    // Only relevant in WSL environment
+    
     if (!isWslEnvironment()) {
       return false
     }
 
-    // Find the actual npm executable path
+    
     const { cmd } = findExecutable('npm', [])
 
-    // If npm is in Windows path, it will start with /mnt/c/
+    
     return cmd.startsWith('/mnt/c/')
   } catch (_error) {
-    // If there's an error, assume it's not from Windows
+    
     return false
   }
 })
 
-/**
- * Checks if we're running via Conductor
- * @returns true if running via Conductor, false otherwise
- */
 function isConductor(): boolean {
   return process.env.__CFBundleIdentifier === 'com.conductor.app'
 }
@@ -150,20 +142,20 @@ function detectTerminal(): string | null {
   }
 
   if (process.env.VisualStudioVersion) {
-    // This is desktop Visual Studio, not VS Code
+    
     return 'visualstudio'
   }
 
-  // Check for JetBrains terminal on Linux/Windows
+  
   if (process.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm') {
-    // For macOS, bundle ID detection above already handles JetBrains IDEs
+    
     if (process.platform === 'darwin') return 'pycharm'
 
     
     return 'pycharm'
   }
 
-  // Check for specific terminals by TERM before TERM_PROGRAM
+  
   
   if (process.env.TERM === 'xterm-ghostty') {
     return 'ghostty'
@@ -203,7 +195,7 @@ function detectTerminal(): string | null {
     return 'conemu'
   }
 
-  // WSL detection
+  
   if (process.env.WSL_DISTRO_NAME) return `wsl-${process.env.WSL_DISTRO_NAME}`
 
   
@@ -211,7 +203,7 @@ function detectTerminal(): string | null {
     return 'ssh-session'
   }
 
-  // Fall back to TERM which is more universally available
+  
   
   if (process.env.TERM) {
     const term = process.env.TERM
@@ -221,18 +213,14 @@ function detectTerminal(): string | null {
     return process.env.TERM
   }
 
-  // Detect non-interactive environment
+  
   if (!process.stdout.isTTY) return 'non-interactive'
 
   return null
 }
 
-/**
- * Detects the deployment environment/platform based on environment variables
- * @returns The deployment platform name, or 'unknown' if not detected
- */
 export const detectDeploymentEnvironment = memoize((): string => {
-  // Cloud development environments
+  
   if (isEnvTruthy(process.env.CODESPACES)) return 'codespaces'
   if (process.env.GITPOD_WORKSPACE_ID) return 'gitpod'
   if (process.env.REPL_ID || process.env.REPL_SLUG) return 'replit'
@@ -263,7 +251,7 @@ export const detectDeploymentEnvironment = memoize((): string => {
       .toLowerCase()
     if (uuid.startsWith('ec2')) return 'aws-ec2'
   } catch {
-    // Ignore errors reading hypervisor UUID (ENOENT on non-EC2, etc.)
+    
   }
   if (process.env.K_SERVICE) return 'gcp-cloud-run'
   if (process.env.GOOGLE_CLOUD_PROJECT) return 'gcp'
@@ -287,10 +275,10 @@ export const detectDeploymentEnvironment = memoize((): string => {
   try {
     if (getFsImplementation().existsSync('/.dockerenv')) return 'docker'
   } catch {
-    // Ignore errors checking for Docker
+    
   }
 
-  // Platform-specific fallback for undetected environments
+  
   if (env.platform === 'darwin') return 'unknown-darwin'
   if (env.platform === 'linux') return 'unknown-linux'
   if (env.platform === 'win32') return 'unknown-win32'
@@ -325,14 +313,8 @@ export const env = {
   detectDeploymentEnvironment,
 }
 
-/**
- * Returns the host platform for analytics reporting.
- * If CLAUDE_CODE_HOST_PLATFORM is set to a valid platform value, that overrides
- * the detected platform. This is useful for container/remote environments where
- * process.platform reports the container OS but the actual host platform differs.
- */
 export function getHostPlatformForAnalytics(): Platform {
-  const override = process.env.CLAUDE_CODE_HOST_PLATFORM
+  const override = process.env.CLAUDE_CODE_NEXT_HOST_PLATFORM
   if (override === 'win32' || override === 'darwin' || override === 'linux') {
     return override
   }

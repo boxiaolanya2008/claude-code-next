@@ -12,8 +12,6 @@ export type TerminalInfo = {
   command: string
 }
 
-// macOS terminals in preference order.
-
 const MACOS_TERMINALS: Array<{
   name: string
   bundleId: string
@@ -45,7 +43,7 @@ const LINUX_TERMINALS = [
 ]
 
 async function detectMacosTerminal(): Promise<TerminalInfo> {
-  // Stored preference from a previous interactive session. This is the only
+  
   
   
   const stored = getGlobalConfig().deepLinkTerminal
@@ -56,7 +54,7 @@ async function detectMacosTerminal(): Promise<TerminalInfo> {
     }
   }
 
-  // Check the TERM_PROGRAM env var — if set, the user has a clear preference.
+  
   
   const termProgram = process.env.TERM_PROGRAM
   if (termProgram) {
@@ -71,7 +69,7 @@ async function detectMacosTerminal(): Promise<TerminalInfo> {
     }
   }
 
-  // Check which terminals are installed by looking for .app bundles.
+  
   
   
   
@@ -86,7 +84,7 @@ async function detectMacosTerminal(): Promise<TerminalInfo> {
     }
   }
 
-  // Fallback: check /Applications directly (mdfind may not work if
+  
   
   for (const terminal of MACOS_TERMINALS) {
     const { code: lsCode } = await execFileNoThrow(
@@ -99,16 +97,12 @@ async function detectMacosTerminal(): Promise<TerminalInfo> {
     }
   }
 
-  // Terminal.app is always available on macOS
+  
   return { name: 'Terminal.app', command: 'Terminal' }
 }
 
-/**
- * Detect the user's preferred terminal on Linux.
- * Checks $TERMINAL, then x-terminal-emulator, then walks a priority list.
- */
 async function detectLinuxTerminal(): Promise<TerminalInfo | null> {
-  // Check $TERMINAL env var
+  
   const termEnv = process.env.TERMINAL
   if (termEnv) {
     const resolved = await which(termEnv)
@@ -117,13 +111,13 @@ async function detectLinuxTerminal(): Promise<TerminalInfo | null> {
     }
   }
 
-  // Check x-terminal-emulator (Debian/Ubuntu alternative)
+  
   const xte = await which('x-terminal-emulator')
   if (xte) {
     return { name: 'x-terminal-emulator', command: xte }
   }
 
-  // Walk the priority list
+  
   for (const terminal of LINUX_TERMINALS) {
     const resolved = await which(terminal)
     if (resolved) {
@@ -134,35 +128,29 @@ async function detectLinuxTerminal(): Promise<TerminalInfo | null> {
   return null
 }
 
-/**
- * Detect the user's preferred terminal on Windows.
- */
 async function detectWindowsTerminal(): Promise<TerminalInfo> {
-  // Check for Windows Terminal first
+  
   const wt = await which('wt.exe')
   if (wt) {
     return { name: 'Windows Terminal', command: wt }
   }
 
-  // PowerShell 7+ (separate install)
+  
   const pwsh = await which('pwsh.exe')
   if (pwsh) {
     return { name: 'PowerShell', command: pwsh }
   }
 
-  // Windows PowerShell 5.1 (built into Windows)
+  
   const powershell = await which('powershell.exe')
   if (powershell) {
     return { name: 'PowerShell', command: powershell }
   }
 
-  // cmd.exe is always available
+  
   return { name: 'Command Prompt', command: 'cmd.exe' }
 }
 
-/**
- * Detect the user's preferred terminal emulator.
- */
 export async function detectTerminal(): Promise<TerminalInfo | null> {
   switch (process.platform) {
     case 'darwin':
@@ -176,24 +164,6 @@ export async function detectTerminal(): Promise<TerminalInfo | null> {
   }
 }
 
-/**
- * Launch Claude Code in the detected terminal emulator.
- *
- * Pure argv paths (no shell, user input never touches an interpreter):
- *   macOS — Ghostty, Alacritty, Kitty, WezTerm (via open -na --args)
- *   Linux — all ten in LINUX_TERMINALS
- *   Windows — Windows Terminal
- *
- * Shell-string paths (user input is shell-quoted and relied upon):
- *   macOS — iTerm2, Terminal.app (AppleScript `write text` / `do script`
- *           are inherently shell-interpreted; no argv interface exists)
- *   Windows — PowerShell -Command, cmd.exe /k (no argv exec mode)
- *
- * For pure-argv paths: claudePath, --prefill, query, cwd travel as distinct
- * argv elements end-to-end. No sh -c. No shellQuote(). The terminal does
- * chdir(cwd) and execvp(claude, argv). Spaces/quotes/metacharacters in
- * query or cwd are preserved by argv boundaries with zero interpretation.
- */
 export async function launchInTerminal(
   claudePath: string,
   action: {
@@ -242,7 +212,7 @@ async function launchMacosTerminal(
   cwd?: string,
 ): Promise<boolean> {
   switch (terminal.command) {
-    // --- SHELL-STRING PATHS (AppleScript has no argv interface) ---
+    
     
     
 
@@ -282,7 +252,7 @@ end tell`
       return code === 0
     }
 
-    // --- PURE ARGV PATHS (no shell, no shellQuote) ---
+    
     
     
 
@@ -345,8 +315,8 @@ async function launchLinuxTerminal(
   claudeArgs: string[],
   cwd?: string,
 ): Promise<boolean> {
-  // All Linux paths are pure argv. Each terminal's --working-directory
-  // (or equivalent) sets cwd natively; the command is exec'd directly.
+  
+  
   
   
   
@@ -389,7 +359,7 @@ async function launchLinuxTerminal(
       args.push(claudePath, ...claudeArgs)
       break
     default:
-      // xterm, x-terminal-emulator, $TERMINAL — no reliable cwd flag.
+      
       
       args = ['-e', claudePath, ...claudeArgs]
       spawnCwd = cwd
@@ -408,7 +378,7 @@ async function launchWindowsTerminal(
   const args: string[] = []
 
   switch (terminal.name) {
-    // --- PURE ARGV PATH ---
+    
     case 'Windows Terminal':
       if (cwd) args.push('-d', cwd)
       args.push('--', claudePath, ...claudeArgs)
@@ -421,7 +391,7 @@ async function launchWindowsTerminal(
     
 
     case 'PowerShell': {
-      // Single-quoted PowerShell strings have NO escape sequences (only
+      
       
       
       const cdCmd = cwd ? `Set-Location ${psQuote(cwd)}; ` : ''
@@ -443,19 +413,14 @@ async function launchWindowsTerminal(
     }
   }
 
-  // cmd.exe does NOT use MSVCRT-style argument parsing. libuv's default
-  // quoting for spawn() on Windows assumes MSVCRT rules and would double-
-  // escape our already-cmdQuote'd string. Bypass it for cmd.exe only.
+  
+  
+  
   return spawnDetached(terminal.command, args, {
     windowsVerbatimArguments: terminal.name === 'Command Prompt',
   })
 }
 
-/**
- * Spawn a terminal detached so the handler process can exit without
- * waiting for the terminal to close. Resolves false on spawn failure
- * (ENOENT, EACCES) rather than crashing.
- */
 function spawnDetached(
   command: string,
   args: string[],
@@ -481,10 +446,6 @@ function spawnDetached(
   })
 }
 
-/**
- * Build a single-quoted POSIX shell command string. ONLY used by the
- * AppleScript paths (iTerm, Terminal.app) which have no argv interface.
- */
 function buildShellCommand(
   claudePath: string,
   claudeArgs: string[],
@@ -494,45 +455,18 @@ function buildShellCommand(
   return `${cdPrefix}${[claudePath, ...claudeArgs].map(shellQuote).join(' ')}`
 }
 
-/**
- * POSIX single-quote escaping. Single-quoted strings have zero
- * interpretation except for the closing single quote itself.
- * Only used by buildShellCommand() for the AppleScript paths.
- */
 function shellQuote(s: string): string {
   return `'${s.replace(/'/g, "'\\''")}'`
 }
 
-/**
- * AppleScript string literal escaping (backslash then double-quote).
- */
 function appleScriptQuote(s: string): string {
   return `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 }
 
-/**
- * PowerShell single-quoted string. The ONLY special sequence is '' for a
- * literal single quote — no backtick escapes, no variable expansion, no
- * subexpressions. This is the safe PowerShell quoting; double-quoted
- * strings interpret `n `t `" etc. and can be escaped out of.
- */
 function psQuote(s: string): string {
   return `'${s.replace(/'/g, "''")}'`
 }
 
-/**
- * cmd.exe argument quoting. cmd.exe does NOT use CommandLineToArgvW-style
- * backslash escaping — it toggles its quoting state on every raw "
- * character, so an embedded " breaks out of the quoted region and exposes
- * metacharacters (& | < > ^) to cmd.exe interpretation = command injection.
- *
- * Strategy: strip " from the input (it cannot be safely represented in a
- * cmd.exe double-quoted string). Escape % as %% to prevent environment
- * variable expansion (%PATH% etc.) which cmd.exe performs even inside
- * double quotes. Trailing backslashes are still doubled because the
- * *child process* (claude.exe) uses CommandLineToArgvW, where a trailing
- * \ before our closing " would eat the close-quote.
- */
 function cmdQuote(arg: string): string {
   const stripped = arg.replace(/"/g, '').replace(/%/g, '%%')
   const escaped = stripped.replace(/(\\+)$/, '$1$1')

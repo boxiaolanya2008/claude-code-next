@@ -32,9 +32,6 @@ const getPowerShellTool = (() => {
 
 const BLOCK_PATTERN = /```!\s*\n?([\s\S]*?)\n?```/g
 
-// This prevents false matches inside markdown inline code spans like `!!` or
-
-// eslint-disable-next-line custom-rules/no-lookbehind-regex -- gated by text.includes('!`') below (PR#22986)
 const INLINE_PATTERN = /(?<=^|\s)!`([^`]+)`/gm
 
 export async function executeShellCommandsInPrompt(
@@ -55,7 +52,7 @@ export async function executeShellCommandsInPrompt(
 
   
   
-  // so gate the expensive scan on a cheap substring check. BLOCK_PATTERN
+  
   
   const blockMatches = text.matchAll(BLOCK_PATTERN)
   const inlineMatches = text.includes('!`') ? text.matchAll(INLINE_PATTERN) : []
@@ -65,7 +62,7 @@ export async function executeShellCommandsInPrompt(
       const command = match[1]?.trim()
       if (command) {
         try {
-          // Check permissions before executing
+          
           const permissionResult = await hasPermissionsToUseTool(
             shellTool,
             { command },
@@ -96,7 +93,7 @@ export async function executeShellCommandsInPrompt(
               ? toolResultBlock.content
               : formatBashOutput(data.stdout, data.stderr)
           
-          // the replacement string even with a string search pattern. Shell
+          
           
           
           result = result.replace(match[0], () => output)

@@ -22,9 +22,6 @@ export type BackgroundRemoteSession = {
   log: SDKMessage[]
 }
 
-/**
- * Precondition failures for background remote sessions
- */
 export type BackgroundRemoteSessionPrecondition =
   | { type: 'not_logged_in' }
   | { type: 'no_remote_environment' }
@@ -33,12 +30,6 @@ export type BackgroundRemoteSessionPrecondition =
   | { type: 'github_app_not_installed' }
   | { type: 'policy_blocked' }
 
-/**
- * Checks eligibility for creating a background remote session
- * Returns an array of failed preconditions (empty array means all checks passed)
- *
- * @returns Array of failed preconditions
- */
 export async function checkBackgroundRemoteSessionEligibility({
   skipBundle = false,
 }: {
@@ -66,7 +57,7 @@ export async function checkBackgroundRemoteSessionEligibility({
     errors.push({ type: 'no_remote_environment' })
   }
 
-  // When bundle seeding is on, in-git-repo is enough — CCR can seed from
+  
   
   
   const bundleSeedGateOn =
@@ -78,7 +69,7 @@ export async function checkBackgroundRemoteSessionEligibility({
   if (!checkIsInGitRepo()) {
     errors.push({ type: 'not_in_git_repo' })
   } else if (bundleSeedGateOn) {
-    // has .git/, bundle will work — skip remote+app checks
+    
   } else if (repository === null) {
     errors.push({ type: 'no_git_remote' })
   } else if (repository.host === 'github.com') {

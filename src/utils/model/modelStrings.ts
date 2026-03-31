@@ -38,8 +38,8 @@ async function getBedrockModelStrings(): Promise<ModelStrings> {
   if (!profiles?.length) {
     return fallback
   }
-  // Each config's firstParty ID is the canonical substring we search for in the
-  // user's inference profile list (e.g. "claude-opus-4-6" matches
+  
+  
   
   
   const out = {} as ModelStrings
@@ -50,12 +50,6 @@ async function getBedrockModelStrings(): Promise<ModelStrings> {
   return out
 }
 
-/**
- * Layer user-configured modelOverrides (from settings.json) on top of the
- * provider-derived model strings. Overrides are keyed by canonical first-party
- * model ID (e.g. "claude-opus-4-6") and map to arbitrary provider-specific
- * strings — typically Bedrock inference profile ARNs.
- */
 function applyModelOverrides(ms: ModelStrings): ModelStrings {
   const overrides = getInitialSettings().modelOverrides
   if (!overrides) {
@@ -71,12 +65,6 @@ function applyModelOverrides(ms: ModelStrings): ModelStrings {
   return out
 }
 
-/**
- * Resolve an overridden model ID (e.g. a Bedrock ARN) back to its canonical
- * first-party model ID. If the input doesn't match any current override value,
- * it is returned unchanged. Safe to call during module init (no-ops if settings
- * aren't loaded yet).
- */
 export function resolveOverriddenModel(modelId: string): string {
   let overrides: Record<string, string> | undefined
   try {
@@ -97,7 +85,7 @@ export function resolveOverriddenModel(modelId: string): string {
 
 const updateBedrockModelStrings = sequential(async () => {
   if (getModelStringsState() !== null) {
-    // Already initialized. Doing the check here, combined with
+    
     
     
     
@@ -114,15 +102,15 @@ const updateBedrockModelStrings = sequential(async () => {
 function initModelStrings(): void {
   const ms = getModelStringsState()
   if (ms !== null) {
-    // Already initialized
+    
     return
   }
-  // Initial with default values for non-Bedrock providers
+  
   if (getAPIProvider() !== 'bedrock') {
     setModelStringsState(getBuiltinModelStrings(getAPIProvider()))
     return
   }
-  // On Bedrock, update model strings in the background without blocking.
+  
   
   
   
@@ -140,23 +128,18 @@ export function getModelStrings(): ModelStrings {
   return applyModelOverrides(ms)
 }
 
-/**
- * Ensure model strings are fully initialized.
- * For Bedrock users, this waits for the profile fetch to complete.
- * Call this before generating model options to ensure correct region strings.
- */
 export async function ensureModelStringsInitialized(): Promise<void> {
   const ms = getModelStringsState()
   if (ms !== null) {
     return
   }
 
-  // For non-Bedrock, initialize synchronously
+  
   if (getAPIProvider() !== 'bedrock') {
     setModelStringsState(getBuiltinModelStrings(getAPIProvider()))
     return
   }
 
-  // For Bedrock, wait for the profile fetch
+  
   await updateBedrockModelStrings()
 }

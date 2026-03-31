@@ -149,7 +149,7 @@ export function emitHookResponse(data: {
   exitCode?: number
   outcome: 'success' | 'error' | 'cancelled'
 }): void {
-  // Always log full hook output to debug log for verbose mode debugging
+  
   const outputToLog = data.stdout || data.stderr || data.output
   if (outputToLog) {
     logForDebugging(
@@ -165,11 +165,6 @@ export function emitHookResponse(data: {
   })
 }
 
-/**
- * Enable emission of all hook event types (beyond SessionStart and Setup).
- * Called when the SDK `includeHookEvents` option is set or when running
- * in CLAUDE_CODE_REMOTE mode.
- */
 export function setAllHookEventsEnabled(enabled: boolean): void {
   allHookEventsEnabled = enabled
 }

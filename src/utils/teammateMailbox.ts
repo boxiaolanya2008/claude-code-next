@@ -38,10 +38,6 @@ export type TeammateMessage = {
   summary?: string 
 }
 
-/**
- * Get the path to a teammate's inbox file
- * Structure: ~/.claude/teams/{team_name}/inboxes/{agent_name}.json
- */
 export function getInboxPath(agentName: string, teamName?: string): string {
   const team = teamName || getTeamName() || 'default'
   const safeTeam = sanitizePathComponent(team)
@@ -54,9 +50,6 @@ export function getInboxPath(agentName: string, teamName?: string): string {
   return fullPath
 }
 
-/**
- * Ensure the inbox directory exists for a team
- */
 async function ensureInboxDir(teamName?: string): Promise<void> {
   const team = teamName || getTeamName() || 'default'
   const safeTeam = sanitizePathComponent(team)
@@ -65,11 +58,6 @@ async function ensureInboxDir(teamName?: string): Promise<void> {
   logForDebugging(`[TeammateMailbox] Ensured inbox directory: ${inboxDir}`)
 }
 
-/**
- * Read all messages from a teammate's inbox
- * @param agentName - The agent name (not UUID) to read inbox for
- * @param teamName - Optional team name (defaults to CLAUDE_CODE_TEAM_NAME env var or 'default')
- */
 export async function readMailbox(
   agentName: string,
   teamName?: string,
@@ -96,11 +84,6 @@ export async function readMailbox(
   }
 }
 
-/**
- * Read only unread messages from a teammate's inbox
- * @param agentName - The agent name (not UUID) to read inbox for
- * @param teamName - Optional team name
- */
 export async function readUnreadMessages(
   agentName: string,
   teamName?: string,
@@ -113,13 +96,6 @@ export async function readUnreadMessages(
   return unread
 }
 
-/**
- * Write a message to a teammate's inbox
- * Uses file locking to prevent race conditions when multiple agents write concurrently
- * @param recipientName - The recipient's agent name (not UUID)
- * @param message - The message to write
- * @param teamName - Optional team name
- */
 export async function writeToMailbox(
   recipientName: string,
   message: Omit<TeammateMessage, 'read'>,
@@ -180,13 +156,6 @@ export async function writeToMailbox(
   }
 }
 
-/**
- * Mark a specific message in a teammate's inbox as read by index
- * Uses file locking to prevent race conditions
- * @param agentName - The agent name to mark message as read for
- * @param teamName - Optional team name
- * @param messageIndex - Index of the message to mark as read
- */
 export async function markMessageAsReadByIndex(
   agentName: string,
   teamName: string | undefined,
@@ -259,12 +228,6 @@ export async function markMessageAsReadByIndex(
   }
 }
 
-/**
- * Mark all messages in a teammate's inbox as read
- * Uses file locking to prevent race conditions
- * @param agentName - The agent name to mark messages as read for
- * @param teamName - Optional team name
- */
 export async function markMessagesAsRead(
   agentName: string,
   teamName?: string,
@@ -330,11 +293,6 @@ export async function markMessagesAsRead(
   }
 }
 
-/**
- * Clear a teammate's inbox (delete all messages)
- * @param agentName - The agent name to clear inbox for
- * @param teamName - Optional team name
- */
 export async function clearMailbox(
   agentName: string,
   teamName?: string,
@@ -342,7 +300,7 @@ export async function clearMailbox(
   const inboxPath = getInboxPath(agentName, teamName)
 
   try {
-    // flag 'r+' throws ENOENT if the file doesn't exist, so we don't
+    
     
     await writeFile(inboxPath, '[]', { encoding: 'utf-8', flag: 'r+' })
     logForDebugging(`[TeammateMailbox] Cleared inbox for ${agentName}`)
@@ -356,9 +314,6 @@ export async function clearMailbox(
   }
 }
 
-/**
- * Format teammate messages as XML for attachment display
- */
 export function formatTeammateMessages(
   messages: Array<{
     from: string
@@ -377,9 +332,6 @@ export function formatTeammateMessages(
     .join('\n\n')
 }
 
-/**
- * Structured message sent when a teammate becomes idle (via Stop hook)
- */
 export type IdleNotificationMessage = {
   type: 'idle_notification'
   from: string
@@ -393,9 +345,6 @@ export type IdleNotificationMessage = {
   failureReason?: string
 }
 
-/**
- * Creates an idle notification message to send to the team leader
- */
 export function createIdleNotification(
   agentId: string,
   options?: {
@@ -418,9 +367,6 @@ export function createIdleNotification(
   }
 }
 
-/**
- * Checks if a message text contains an idle notification
- */
 export function isIdleNotification(
   messageText: string,
 ): IdleNotificationMessage | null {
@@ -430,15 +376,11 @@ export function isIdleNotification(
       return parsed as IdleNotificationMessage
     }
   } catch {
-    // Not JSON or not a valid idle notification
+    
   }
   return null
 }
 
-/**
- * Permission request message sent from worker to leader via mailbox.
- * Field names align with SDK `can_use_tool` (snake_case).
- */
 export type PermissionRequestMessage = {
   type: 'permission_request'
   request_id: string
@@ -450,10 +392,6 @@ export type PermissionRequestMessage = {
   permission_suggestions: unknown[]
 }
 
-/**
- * Permission response message sent from leader to worker via mailbox.
- * Shape mirrors SDK ControlResponseSchema / ControlErrorResponseSchema.
- */
 export type PermissionResponseMessage =
   | {
       type: 'permission_response'
@@ -471,9 +409,6 @@ export type PermissionResponseMessage =
       error: string
     }
 
-/**
- * Creates a permission request message to send to the team leader
- */
 export function createPermissionRequestMessage(params: {
   request_id: string
   agent_id: string
@@ -495,9 +430,6 @@ export function createPermissionRequestMessage(params: {
   }
 }
 
-/**
- * Creates a permission response message to send back to a worker
- */
 export function createPermissionResponseMessage(params: {
   request_id: string
   subtype: 'success' | 'error'
@@ -524,9 +456,6 @@ export function createPermissionResponseMessage(params: {
   }
 }
 
-/**
- * Checks if a message text contains a permission request
- */
 export function isPermissionRequest(
   messageText: string,
 ): PermissionRequestMessage | null {
@@ -536,14 +465,11 @@ export function isPermissionRequest(
       return parsed as PermissionRequestMessage
     }
   } catch {
-    // Not JSON or not a valid permission request
+    
   }
   return null
 }
 
-/**
- * Checks if a message text contains a permission response
- */
 export function isPermissionResponse(
   messageText: string,
 ): PermissionResponseMessage | null {
@@ -553,15 +479,11 @@ export function isPermissionResponse(
       return parsed as PermissionResponseMessage
     }
   } catch {
-    // Not JSON or not a valid permission response
+    
   }
   return null
 }
 
-/**
- * Sandbox permission request message sent from worker to leader via mailbox
- * This is triggered when sandbox runtime detects a network access to a non-allowed host
- */
 export type SandboxPermissionRequestMessage = {
   type: 'sandbox_permission_request'
   
@@ -576,13 +498,10 @@ export type SandboxPermissionRequestMessage = {
   hostPattern: {
     host: string
   }
-  /** Timestamp when request was created */
+  
   createdAt: number
 }
 
-/**
- * Sandbox permission response message sent from leader to worker via mailbox
- */
 export type SandboxPermissionResponseMessage = {
   type: 'sandbox_permission_response'
   
@@ -595,9 +514,6 @@ export type SandboxPermissionResponseMessage = {
   timestamp: string
 }
 
-/**
- * Creates a sandbox permission request message to send to the team leader
- */
 export function createSandboxPermissionRequestMessage(params: {
   requestId: string
   workerId: string
@@ -616,9 +532,6 @@ export function createSandboxPermissionRequestMessage(params: {
   }
 }
 
-/**
- * Creates a sandbox permission response message to send back to a worker
- */
 export function createSandboxPermissionResponseMessage(params: {
   requestId: string
   host: string
@@ -633,9 +546,6 @@ export function createSandboxPermissionResponseMessage(params: {
   }
 }
 
-/**
- * Checks if a message text contains a sandbox permission request
- */
 export function isSandboxPermissionRequest(
   messageText: string,
 ): SandboxPermissionRequestMessage | null {
@@ -645,14 +555,11 @@ export function isSandboxPermissionRequest(
       return parsed as SandboxPermissionRequestMessage
     }
   } catch {
-    // Not JSON or not a valid sandbox permission request
+    
   }
   return null
 }
 
-/**
- * Checks if a message text contains a sandbox permission response
- */
 export function isSandboxPermissionResponse(
   messageText: string,
 ): SandboxPermissionResponseMessage | null {
@@ -662,14 +569,11 @@ export function isSandboxPermissionResponse(
       return parsed as SandboxPermissionResponseMessage
     }
   } catch {
-    // Not JSON or not a valid sandbox permission response
+    
   }
   return null
 }
 
-/**
- * Message sent when a teammate requests plan approval from the team leader
- */
 export const PlanApprovalRequestMessageSchema = lazySchema(() =>
   z.object({
     type: z.literal('plan_approval_request'),
@@ -757,9 +661,6 @@ export function createShutdownRequestMessage(params: {
   }
 }
 
-/**
- * Creates a shutdown approved message to send to the team leader
- */
 export function createShutdownApprovedMessage(params: {
   requestId: string
   from: string
@@ -776,9 +677,6 @@ export function createShutdownApprovedMessage(params: {
   }
 }
 
-/**
- * Creates a shutdown rejected message to send to the team leader
- */
 export function createShutdownRejectedMessage(params: {
   requestId: string
   from: string
@@ -793,15 +691,6 @@ export function createShutdownRejectedMessage(params: {
   }
 }
 
-/**
- * Sends a shutdown request to a teammate's mailbox.
- * This is the core logic extracted for reuse by both the tool and UI components.
- *
- * @param targetName - Name of the teammate to send shutdown request to
- * @param teamName - Optional team name (defaults to CLAUDE_CODE_TEAM_NAME env var)
- * @param reason - Optional reason for the shutdown request
- * @returns The request ID and target name
- */
 export async function sendShutdownRequestToMailbox(
   targetName: string,
   teamName?: string,
@@ -836,9 +725,6 @@ export async function sendShutdownRequestToMailbox(
   return { requestId, target: targetName }
 }
 
-/**
- * Checks if a message text contains a shutdown request
- */
 export function isShutdownRequest(
   messageText: string,
 ): ShutdownRequestMessage | null {
@@ -848,14 +734,11 @@ export function isShutdownRequest(
     )
     if (result.success) return result.data
   } catch {
-    // Not JSON
+    
   }
   return null
 }
 
-/**
- * Checks if a message text contains a plan approval request
- */
 export function isPlanApprovalRequest(
   messageText: string,
 ): PlanApprovalRequestMessage | null {
@@ -865,14 +748,11 @@ export function isPlanApprovalRequest(
     )
     if (result.success) return result.data
   } catch {
-    // Not JSON
+    
   }
   return null
 }
 
-/**
- * Checks if a message text contains a shutdown approved message
- */
 export function isShutdownApproved(
   messageText: string,
 ): ShutdownApprovedMessage | null {
@@ -882,14 +762,11 @@ export function isShutdownApproved(
     )
     if (result.success) return result.data
   } catch {
-    // Not JSON
+    
   }
   return null
 }
 
-/**
- * Checks if a message text contains a shutdown rejected message
- */
 export function isShutdownRejected(
   messageText: string,
 ): ShutdownRejectedMessage | null {
@@ -899,14 +776,11 @@ export function isShutdownRejected(
     )
     if (result.success) return result.data
   } catch {
-    // Not JSON
+    
   }
   return null
 }
 
-/**
- * Checks if a message text contains a plan approval response
- */
 export function isPlanApprovalResponse(
   messageText: string,
 ): PlanApprovalResponseMessage | null {
@@ -916,14 +790,11 @@ export function isPlanApprovalResponse(
     )
     if (result.success) return result.data
   } catch {
-    // Not JSON
+    
   }
   return null
 }
 
-/**
- * Task assignment message sent when a task is assigned to a teammate
- */
 export type TaskAssignmentMessage = {
   type: 'task_assignment'
   taskId: string
@@ -933,9 +804,6 @@ export type TaskAssignmentMessage = {
   timestamp: string
 }
 
-/**
- * Checks if a message text contains a task assignment
- */
 export function isTaskAssignment(
   messageText: string,
 ): TaskAssignmentMessage | null {
@@ -945,15 +813,11 @@ export function isTaskAssignment(
       return parsed as TaskAssignmentMessage
     }
   } catch {
-    // Not JSON or not a valid task assignment
+    
   }
   return null
 }
 
-/**
- * Team permission update message sent from leader to teammates via mailbox
- * Broadcasts a permission update that applies to all teammates
- */
 export type TeamPermissionUpdateMessage = {
   type: 'team_permission_update'
   
@@ -963,15 +827,12 @@ export type TeamPermissionUpdateMessage = {
     behavior: 'allow' | 'deny' | 'ask'
     destination: 'session'
   }
-  /** The directory path that was allowed */
+  
   directoryPath: string
   
   toolName: string
 }
 
-/**
- * Checks if a message text contains a team permission update
- */
 export function isTeamPermissionUpdate(
   messageText: string,
 ): TeamPermissionUpdateMessage | null {
@@ -981,15 +842,11 @@ export function isTeamPermissionUpdate(
       return parsed as TeamPermissionUpdateMessage
     }
   } catch {
-    // Not JSON or not a valid team permission update
+    
   }
   return null
 }
 
-/**
- * Mode set request message sent from leader to teammate via mailbox
- * Uses SDK PermissionModeSchema for validated mode values
- */
 export const ModeSetRequestMessageSchema = lazySchema(() =>
   z.object({
     type: z.literal('mode_set_request'),
@@ -1013,9 +870,6 @@ export function createModeSetRequestMessage(params: {
   }
 }
 
-/**
- * Checks if a message text contains a mode set request
- */
 export function isModeSetRequest(
   messageText: string,
 ): ModeSetRequestMessage | null {
@@ -1027,20 +881,11 @@ export function isModeSetRequest(
       return parsed.data
     }
   } catch {
-    // Not JSON or not a valid mode set request
+    
   }
   return null
 }
 
-/**
- * Checks if a message text is a structured protocol message that should be
- * routed by useInboxPoller rather than consumed as raw LLM context.
- *
- * These message types have specific handlers in useInboxPoller that route them
- * to the correct queues (workerPermissions, workerSandboxPermissions, etc.).
- * If getTeammateMailboxAttachments consumes them first, they get bundled as
- * raw text in attachments and never reach their intended handlers.
- */
 export function isStructuredProtocolMessage(messageText: string): boolean {
   try {
     const parsed = jsonParse(messageText)
@@ -1065,10 +910,6 @@ export function isStructuredProtocolMessage(messageText: string): boolean {
   }
 }
 
-/**
- * Marks only messages matching a predicate as read, leaving others unread.
- * Uses the same file-locking mechanism as markMessagesAsRead.
- */
 export async function markMessagesAsReadByPredicate(
   agentName: string,
   predicate: (msg: TeammateMessage) => boolean,
@@ -1106,17 +947,12 @@ export async function markMessagesAsReadByPredicate(
       try {
         await release()
       } catch {
-        // Lock may have already been released
+        
       }
     }
   }
 }
 
-/**
- * Extracts a "[to {name}] {summary}" string from the last assistant message
- * if it ended with a SendMessage tool_use targeting a peer (not the team lead).
- * Returns undefined when the turn didn't end with a peer DM.
- */
 export function getLastPeerDmSummary(messages: Message[]): string | undefined {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i]

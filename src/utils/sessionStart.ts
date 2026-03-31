@@ -17,9 +17,6 @@ type SessionStartHooksOptions = {
   forceSyncExecution?: boolean
 }
 
-// Set by processSessionStartHooks when a hook emits initialUserMessage;
-// consumed once by takeInitialUserMessage. This side channel avoids changing
-
 let pendingInitialUserMessage: string | undefined
 
 export function takeInitialUserMessage(): string | undefined {
@@ -28,7 +25,6 @@ export function takeInitialUserMessage(): string | undefined {
   return v
 }
 
-// Note to CLAUDE: do not add ANY "warmup" logic. It is **CRITICAL** that you do not add extra work on startup.
 export async function processSessionStartHooks(
   source: 'startup' | 'resume' | 'clear' | 'compact',
   {
@@ -38,7 +34,7 @@ export async function processSessionStartHooks(
     forceSyncExecution,
   }: SessionStartHooksOptions = {},
 ): Promise<HookResultMessage[]> {
-  // --bare skips all hooks. executeHooks already early-returns under --bare
+  
   
   
   if (isBareMode()) {
@@ -53,7 +49,7 @@ export async function processSessionStartHooks(
   if (shouldAllowManagedHooksOnly()) {
     logForDebugging('Skipping plugin hooks - allowManagedHooksOnly is enabled')
   } else {
-    // Ensure plugin hooks are loaded before executing SessionStart hooks.
+    
     
     
     
@@ -61,8 +57,8 @@ export async function processSessionStartHooks(
     try {
       await withDiagnosticsTiming('load_plugin_hooks', () => loadPluginHooks())
     } catch (error) {
-      // Log error but don't crash - continue with session start without plugin hooks
-      /* eslint-disable no-restricted-syntax -- both branches wrap with context, not a toError case */
+      
+      
       const enhancedError =
         error instanceof Error
           ? new Error(
@@ -71,7 +67,7 @@ export async function processSessionStartHooks(
           : new Error(
               `Failed to load plugin hooks during ${source}: ${String(error)}`,
             )
-      /* eslint-enable no-restricted-syntax */
+      
 
       if (error instanceof Error && error.stack) {
         enhancedError.stack = error.stack
@@ -79,7 +75,7 @@ export async function processSessionStartHooks(
 
       logError(enhancedError)
 
-      // Provide specific guidance based on error type
+      
       const errorMessage =
         error instanceof Error ? error.message : String(error)
       let userGuidance = ''
@@ -118,12 +114,12 @@ export async function processSessionStartHooks(
         { level: 'warn' },
       )
 
-      // Continue execution - plugin hooks won't be available, but project-level hooks
+      
       
     }
   }
 
-  // Execute SessionStart hooks, ignoring blocking errors
+  
   
   const resolvedAgentType = agentType ?? getMainThreadAgentType()
   for await (const hookResult of executeSessionStartHooks(
@@ -156,7 +152,7 @@ export async function processSessionStartHooks(
     updateWatchPaths(allWatchPaths)
   }
 
-  // If hooks provided additional context, add it as a message
+  
   if (additionalContexts.length > 0) {
     const contextMessage = createAttachmentMessage({
       type: 'hook_additional_context',
@@ -175,7 +171,7 @@ export async function processSetupHooks(
   trigger: 'init' | 'maintenance',
   { forceSyncExecution }: { forceSyncExecution?: boolean } = {},
 ): Promise<HookResultMessage[]> {
-  // Same rationale as processSessionStartHooks above.
+  
   if (isBareMode()) {
     return []
   }

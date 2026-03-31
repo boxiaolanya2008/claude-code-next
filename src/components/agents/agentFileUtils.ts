@@ -24,8 +24,8 @@ export function formatAgentAsMarkdown(
   memory?: AgentMemoryScope,
   effort?: EffortValue,
 ): string {
-  // For YAML double-quoted strings, we need to escape:
-  // - Backslashes: \ -> \\
+  
+  
   
   
   const escapedWhenToUse = whenToUse
@@ -51,9 +51,6 @@ ${systemPrompt}
 `
 }
 
-/**
- * Gets the directory path for an agent location
- */
 function getAgentDirectoryPath(location: SettingSource): string {
   switch (location) {
     case 'flagSettings':
@@ -82,10 +79,6 @@ function getRelativeAgentDirectoryPath(location: SettingSource): string {
   }
 }
 
-/**
- * Gets the file path for a new agent based on its name
- * Used when creating new agent files
- */
 export function getNewAgentFilePath(agent: {
   source: SettingSource
   agentType: string
@@ -94,10 +87,6 @@ export function getNewAgentFilePath(agent: {
   return join(dirPath, `${agent.agentType}.md`)
 }
 
-/**
- * Gets the actual file path for an agent (handles filename vs agentType mismatch)
- * Always use this for existing agents to get their real file location
- */
 export function getActualAgentFilePath(agent: AgentDefinition): string {
   if (agent.source === 'built-in') {
     return 'Built-in'
@@ -111,10 +100,6 @@ export function getActualAgentFilePath(agent: AgentDefinition): string {
   return join(dirPath, `${filename}.md`)
 }
 
-/**
- * Gets the relative file path for a new agent based on its name
- * Used for displaying where new agent files will be created
- */
 export function getNewRelativeAgentFilePath(agent: {
   source: SettingSource | 'built-in'
   agentType: string
@@ -126,9 +111,6 @@ export function getNewRelativeAgentFilePath(agent: {
   return join(dirPath, `${agent.agentType}.md`)
 }
 
-/**
- * Gets the actual relative file path for an agent (handles filename vs agentType mismatch)
- */
 export function getActualRelativeAgentFilePath(agent: AgentDefinition): string {
   if (isBuiltInAgent(agent)) {
     return 'Built-in'
@@ -145,9 +127,6 @@ export function getActualRelativeAgentFilePath(agent: AgentDefinition): string {
   return join(dirPath, `${filename}.md`)
 }
 
-/**
- * Ensures the directory for an agent location exists
- */
 async function ensureAgentDirectoryExists(
   source: SettingSource,
 ): Promise<string> {
@@ -156,10 +135,6 @@ async function ensureAgentDirectoryExists(
   return dirPath
 }
 
-/**
- * Saves an agent to the filesystem
- * @param checkExists - If true, throws error if file already exists
- */
 export async function saveAgentToFile(
   source: SettingSource | 'built-in',
   agentType: string,
@@ -199,9 +174,6 @@ export async function saveAgentToFile(
   }
 }
 
-/**
- * Updates an existing agent file
- */
 export async function updateAgentFile(
   agent: AgentDefinition,
   newWhenToUse: string,
@@ -232,9 +204,6 @@ export async function updateAgentFile(
   await writeFileAndFlush(filePath, content)
 }
 
-/**
- * Deletes an agent file
- */
 export async function deleteAgentFromFile(
   agent: AgentDefinition,
 ): Promise<void> {

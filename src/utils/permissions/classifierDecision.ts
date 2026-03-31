@@ -46,13 +46,13 @@ const WORKFLOW_TOOL_NAME = feature('WORKFLOW_SCRIPTS')
 const SAFE_YOLO_ALLOWLISTED_TOOLS = new Set([
   
   FILE_READ_TOOL_NAME,
-  // Search / read-only
+  
   GREP_TOOL_NAME,
   GLOB_TOOL_NAME,
   LSP_TOOL_NAME,
   TOOL_SEARCH_TOOL_NAME,
   LIST_MCP_RESOURCES_TOOL_NAME,
-  'ReadMcpResourceTool', // no exported constant
+  'ReadMcpResourceTool', 
   
   TODO_WRITE_TOOL_NAME,
   TASK_CREATE_TOOL_NAME,
@@ -61,25 +61,25 @@ const SAFE_YOLO_ALLOWLISTED_TOOLS = new Set([
   TASK_LIST_TOOL_NAME,
   TASK_STOP_TOOL_NAME,
   TASK_OUTPUT_TOOL_NAME,
-  // Plan mode / UI
+  
   ASK_USER_QUESTION_TOOL_NAME,
   ENTER_PLAN_MODE_TOOL_NAME,
   EXIT_PLAN_MODE_TOOL_NAME,
-  // Swarm coordination (internal mailbox/team state only — teammates have
+  
   
   TEAM_CREATE_TOOL_NAME,
-  // Agent cleanup
+  
   TEAM_DELETE_TOOL_NAME,
   SEND_MESSAGE_TOOL_NAME,
-  // Workflow orchestration — subagents go through canUseTool individually
+  
   ...(WORKFLOW_TOOL_NAME ? [WORKFLOW_TOOL_NAME] : []),
-  // Misc safe
+  
   SLEEP_TOOL_NAME,
-  // Ant-only safe tools (gates mirror tools.ts)
+  
   ...(TERMINAL_CAPTURE_TOOL_NAME ? [TERMINAL_CAPTURE_TOOL_NAME] : []),
   ...(OVERFLOW_TEST_TOOL_NAME ? [OVERFLOW_TEST_TOOL_NAME] : []),
   ...(VERIFY_PLAN_EXECUTION_TOOL_NAME ? [VERIFY_PLAN_EXECUTION_TOOL_NAME] : []),
-  // Internal classifier tool
+  
   YOLO_CLASSIFIER_TOOL_NAME,
 ])
 

@@ -15,7 +15,6 @@ import { isEnvTruthy } from './envUtils.js'
 import type { PermissionMode } from './permissions/PermissionMode.js'
 import { enqueueSdkEvent } from './sdkEventQueue.js'
 
-// externalMetadataToAppState.
 export type SessionExternalMetadata = {
   permission_mode?: string | null
   is_ultraplan_mode?: boolean | null
@@ -56,13 +55,6 @@ export function setSessionMetadataChangedListener(
   metadataListener = cb
 }
 
-/**
- * Register a listener for permission-mode changes from onChangeAppState.
- * Wired by print.ts to emit an SDK system:status message so CCR/IDE clients
- * see mode transitions in real time — regardless of which code path mutated
- * toolPermissionContext.mode (Shift+Tab, ExitPlanMode dialog, slash command,
- * bridge set_permission_mode, etc.).
- */
 export function setPermissionModeChangedListener(
   cb: PermissionModeChangedListener | null,
 ): void {
@@ -96,22 +88,22 @@ export function notifySessionStateChanged(
     metadataListener?.({ pending_action: null })
   }
 
-  // task_summary is written mid-turn by the forked summarizer; clear it at
+  
   
   if (state === 'idle') {
     metadataListener?.({ task_summary: null })
   }
 
-  // Mirror to the SDK event stream so non-CCR consumers (scmuxd, VS Code)
   
   
   
   
   
-  // their isWorking() last-message heuristics — the trailing idle event
   
   
-  if (isEnvTruthy(process.env.CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS)) {
+  
+  
+  if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_EMIT_SESSION_STATE_EVENTS)) {
     enqueueSdkEvent({
       type: 'system',
       subtype: 'session_state_changed',
@@ -126,12 +118,6 @@ export function notifySessionMetadataChanged(
   metadataListener?.(metadata)
 }
 
-/**
- * Fired by onChangeAppState when toolPermissionContext.mode changes.
- * Downstream listeners (CCR external_metadata PUT, SDK status stream) are
- * both wired through this single choke point so no mode-mutation path can
- * silently bypass them.
- */
 export function notifyPermissionModeChanged(mode: PermissionMode): void {
   permissionModeListener?.(mode)
 }

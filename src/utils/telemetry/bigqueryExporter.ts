@@ -44,15 +44,15 @@ export class BigQueryMetricsExporter implements PushMetricExporter {
   private isShutdown = false
 
   constructor(options: { timeout?: number } = {}) {
-    const defaultEndpoint = 'https://api.anthropic.com/api/claude_code/metrics'
+    const defaultEndpoint = 'https://api.anthropic.com/api/claude_code_next/metrics'
 
     if (
       process.env.USER_TYPE === 'ant' &&
-      process.env.ANT_CLAUDE_CODE_METRICS_ENDPOINT
+      process.env.ANT_CLAUDE_CODE_NEXT_METRICS_ENDPOINT
     ) {
       this.endpoint =
-        process.env.ANT_CLAUDE_CODE_METRICS_ENDPOINT +
-        '/api/claude_code/metrics'
+        process.env.ANT_CLAUDE_CODE_NEXT_METRICS_ENDPOINT +
+        '/api/claude_code_next/metrics'
     } else {
       this.endpoint = defaultEndpoint
     }
@@ -89,7 +89,7 @@ export class BigQueryMetricsExporter implements PushMetricExporter {
     resultCallback: (result: ExportResult) => void,
   ): Promise<void> {
     try {
-      // Skip if trust not established in interactive mode
+      
       
       const hasTrust =
         checkHasTrustDialogAccepted() || getIsNonInteractiveSession()
@@ -101,7 +101,7 @@ export class BigQueryMetricsExporter implements PushMetricExporter {
         return
       }
 
-      // Check organization-level metrics opt-out
+      
       const metricsStatus = await checkMetricsEnabled()
       if (!metricsStatus.enabled) {
         logForDebugging('Metrics export disabled by organization setting')
@@ -153,7 +153,7 @@ export class BigQueryMetricsExporter implements PushMetricExporter {
     const attrs = metrics.resource.attributes
 
     const resourceAttributes: Record<string, string> = {
-      'service.name': (attrs['service.name'] as string) || 'claude-code',
+      'service.name': (attrs['service.name'] as string) || 'claude-code-next',
       'service.version': (attrs['service.version'] as string) || 'unknown',
       'os.type': (attrs['os.type'] as string) || 'unknown',
       'os.version': (attrs['os.version'] as string) || 'unknown',
@@ -164,12 +164,12 @@ export class BigQueryMetricsExporter implements PushMetricExporter {
           : 'cumulative',
     }
 
-    // Only add wsl.version if it exists (omit instead of default)
+    
     if (attrs['wsl.version']) {
       resourceAttributes['wsl.version'] = attrs['wsl.version'] as string
     }
 
-    // Add customer type and subscription type
+    
     if (isClaudeAISubscriber()) {
       resourceAttributes['user.customer_type'] = 'claude_ai'
       const subscriptionType = getSubscriptionType()
@@ -244,7 +244,7 @@ export class BigQueryMetricsExporter implements PushMetricExporter {
   }
 
   selectAggregationTemporality(): AggregationTemporality {
-    // DO NOT CHANGE THIS TO CUMULATIVE
+    
     
     
     return AggregationTemporality.DELTA

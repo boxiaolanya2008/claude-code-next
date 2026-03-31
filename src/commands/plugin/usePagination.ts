@@ -9,7 +9,7 @@ type UsePaginationOptions = {
 }
 
 type UsePaginationResult<T> = {
-  // For backwards compatibility with page-based terminology
+  
   currentPage: number
   totalPages: number
   startIndex: number
@@ -26,12 +26,12 @@ type UsePaginationResult<T> = {
   goToPage: (page: number) => void
   nextPage: () => void
   prevPage: () => void
-  // Handle selection - just updates the index, scrolling is automatic
+  
   handleSelectionChange: (
     newIndex: number,
     setSelectedIndex: (index: number) => void,
   ) => void
-  // Page navigation - returns false for continuous scrolling (not needed)
+  
   handlePageNavigation: (
     direction: 'left' | 'right',
     setSelectedIndex: (index: number) => void,
@@ -68,14 +68,14 @@ export function usePagination<T>({
       return selectedIndex
     }
 
-    // If selected item is below the visible window, scroll down
+    
     if (selectedIndex >= prevOffset + maxVisible) {
       const newOffset = selectedIndex - maxVisible + 1
       scrollOffsetRef.current = newOffset
       return newOffset
     }
 
-    // Selected item is within visible window, keep current offset
+    
     
     const maxOffset = Math.max(0, totalItems - maxVisible)
     const clampedOffset = Math.min(prevOffset, maxOffset)
@@ -110,15 +110,15 @@ export function usePagination<T>({
 
   
   const goToPage = useCallback((_page: number) => {
-    // No-op - scrolling is controlled by selectedIndex
+    
   }, [])
 
   const nextPage = useCallback(() => {
-    // No-op - scrolling is controlled by selectedIndex
+    
   }, [])
 
   const prevPage = useCallback(() => {
-    // No-op - scrolling is controlled by selectedIndex
+    
   }, [])
 
   

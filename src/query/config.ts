@@ -8,7 +8,7 @@ export type QueryConfig = {
 
   
   gates: {
-    // Statsig — CACHED_MAY_BE_STALE already admits staleness, so snapshotting
+    
     
     streamingToolExecution: boolean
     emitToolUseSummaries: boolean
@@ -25,13 +25,13 @@ export function buildQueryConfig(): QueryConfig {
         'tengu_streaming_tool_execution2',
       ),
       emitToolUseSummaries: isEnvTruthy(
-        process.env.CLAUDE_CODE_EMIT_TOOL_USE_SUMMARIES,
+        process.env.CLAUDE_CODE_NEXT_EMIT_TOOL_USE_SUMMARIES,
       ),
       isAnt: process.env.USER_TYPE === 'ant',
-      // Inlined from fastMode.ts to avoid pulling its heavy module graph
       
       
-      fastModeEnabled: !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_FAST_MODE),
+      
+      fastModeEnabled: !isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_FAST_MODE),
     },
   }
 }

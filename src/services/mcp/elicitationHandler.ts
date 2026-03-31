@@ -19,7 +19,7 @@ import {
 } from '../analytics/index.js'
 
 export type ElicitationWaitingState = {
-  /** Button label, e.g. "Retry now" or "Skip confirmation" */
+  
   actionLabel: string
   
   showCancel?: boolean
@@ -34,11 +34,11 @@ export type ElicitationRequestEvent = {
   
 
   respond: (response: ElicitResult) => void
-  /** For URL elicitations: shown after user opens the browser. */
+  
   waitingState?: ElicitationWaitingState
   
   onWaitingDismiss?: (action: 'dismiss' | 'retry' | 'cancel') => void
-  /** Set to true by the completion notification handler when the server confirms completion. */
+  
   completed?: boolean
 }
 
@@ -46,7 +46,6 @@ function getElicitationMode(params: ElicitRequestParams): 'form' | 'url' {
   return params.mode === 'url' ? 'url' : 'form'
 }
 
-/** Find a queued elicitation event by server name and elicitationId. */
 function findElicitationInQueue(
   queue: ElicitationRequestEvent[],
   serverName: string,
@@ -66,7 +65,7 @@ export function registerElicitationHandler(
   serverName: string,
   setAppState: (f: (prevState: AppState) => AppState) => void,
 ): void {
-  // Register the elicitation request handler.
+  
   
   
   try {
@@ -83,7 +82,7 @@ export function registerElicitationHandler(
       })
 
       try {
-        // Run elicitation hooks first - they can provide a response programmatically
+        
         const hookResponse = await runElicitationHooks(
           serverName,
           request.params,
@@ -202,7 +201,7 @@ export function registerElicitationHandler(
       },
     )
   } catch {
-    // Client wasn't created with elicitation capability - nothing to register
+    
     return
   }
 }
@@ -252,11 +251,6 @@ export async function runElicitationHooks(
   }
 }
 
-/**
- * Run ElicitationResult hooks after the user has responded, then fire a
- * `elicitation_response` notification. Returns a (potentially modified)
- * ElicitResult — hooks may override the action/content or block the response.
- */
 export async function runElicitationResultHooks(
   serverName: string,
   result: ElicitResult,
@@ -290,7 +284,7 @@ export async function runElicitationResultHooks(
         }
       : result
 
-    // Fire a notification for observability
+    
     void executeNotificationHooks({
       message: `Elicitation response for server "${serverName}": ${finalResult.action}`,
       notificationType: 'elicitation_response',
@@ -299,7 +293,7 @@ export async function runElicitationResultHooks(
     return finalResult
   } catch (error) {
     logMCPError(serverName, `ElicitationResult hook error: ${error}`)
-    // Fire notification even on error
+    
     void executeNotificationHooks({
       message: `Elicitation response for server "${serverName}": ${result.action}`,
       notificationType: 'elicitation_response',

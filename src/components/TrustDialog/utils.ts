@@ -51,10 +51,6 @@ function hasBashPermission(rules: PermissionRule[]): boolean {
   )
 }
 
-/**
- * Get which setting sources have bash allow rules.
- * Returns an array of file paths that have bash permissions.
- */
 export function getBashPermissionSources(): string[] {
   const sources: string[] = []
 
@@ -71,11 +67,6 @@ export function getBashPermissionSources(): string[] {
   return sources
 }
 
-/**
- * Format a list of items with proper "and" conjunction.
- * @param items - Array of items to format
- * @param limit - Optional limit for how many items to show before summarizing (ignored if 0)
- */
 export function formatListWithAnd(items: string[], limit?: number): string {
   if (items.length === 0) return ''
 
@@ -92,7 +83,7 @@ export function formatListWithAnd(items: string[], limit?: number): string {
     return `${allButLast.join(', ')}, and ${lastItem}`
   }
 
-  // If we have more items than the limit, show first few and count the rest
+  
   const shown = items.slice(0, effectiveLimit)
   const remaining = items.length - effectiveLimit
 
@@ -103,17 +94,10 @@ export function formatListWithAnd(items: string[], limit?: number): string {
   return `${shown.join(', ')}, and ${remaining} more`
 }
 
-/**
- * Check if settings have otelHeadersHelper configured
- */
 function hasOtelHeadersHelper(settings: SettingsJson | null): boolean {
   return !!settings?.otelHeadersHelper
 }
 
-/**
- * Get which setting sources have otelHeadersHelper configured.
- * Returns an array of file paths that have otelHeadersHelper.
- */
 export function getOtelHeadersHelperSources(): string[] {
   const sources: string[] = []
 
@@ -130,17 +114,10 @@ export function getOtelHeadersHelperSources(): string[] {
   return sources
 }
 
-/**
- * Check if settings have apiKeyHelper configured
- */
 function hasApiKeyHelper(settings: SettingsJson | null): boolean {
   return !!settings?.apiKeyHelper
 }
 
-/**
- * Get which setting sources have apiKeyHelper configured.
- * Returns an array of file paths that have apiKeyHelper.
- */
 export function getApiKeyHelperSources(): string[] {
   const sources: string[] = []
 
@@ -157,17 +134,10 @@ export function getApiKeyHelperSources(): string[] {
   return sources
 }
 
-/**
- * Check if settings have AWS commands configured
- */
 function hasAwsCommands(settings: SettingsJson | null): boolean {
   return !!(settings?.awsAuthRefresh || settings?.awsCredentialExport)
 }
 
-/**
- * Get which setting sources have AWS commands configured.
- * Returns an array of file paths that have awsAuthRefresh or awsCredentialExport.
- */
 export function getAwsCommandsSources(): string[] {
   const sources: string[] = []
 
@@ -184,17 +154,10 @@ export function getAwsCommandsSources(): string[] {
   return sources
 }
 
-/**
- * Check if settings have GCP commands configured
- */
 function hasGcpCommands(settings: SettingsJson | null): boolean {
   return !!settings?.gcpAuthRefresh
 }
 
-/**
- * Get which setting sources have GCP commands configured.
- * Returns an array of file paths that have gcpAuthRefresh.
- */
 export function getGcpCommandsSources(): string[] {
   const sources: string[] = []
 
@@ -211,10 +174,6 @@ export function getGcpCommandsSources(): string[] {
   return sources
 }
 
-/**
- * Check if settings have dangerous environment variables configured.
- * Any env var NOT in SAFE_ENV_VARS is considered dangerous.
- */
 function hasDangerousEnvVars(settings: SettingsJson | null): boolean {
   if (!settings?.env) {
     return false
@@ -224,10 +183,6 @@ function hasDangerousEnvVars(settings: SettingsJson | null): boolean {
   )
 }
 
-/**
- * Get which setting sources have dangerous environment variables configured.
- * Returns an array of file paths that have env vars not in SAFE_ENV_VARS.
- */
 export function getDangerousEnvVarsSources(): string[] {
   const sources: string[] = []
 

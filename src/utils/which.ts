@@ -3,7 +3,7 @@ import { execSync_DEPRECATED } from './execSyncWrapper.js'
 
 async function whichNodeAsync(command: string): Promise<string | null> {
   if (process.platform === 'win32') {
-    // On Windows, use where.exe and return the first result
+    
     const result = await execa(`where.exe ${command}`, {
       shell: true,
       stderr: 'ignore',
@@ -12,11 +12,11 @@ async function whichNodeAsync(command: string): Promise<string | null> {
     if (result.exitCode !== 0 || !result.stdout) {
       return null
     }
-    // where.exe returns multiple paths separated by newlines, return the first
+    
     return result.stdout.trim().split(/\r?\n/)[0] || null
   }
 
-  // On POSIX systems (macOS, Linux, WSL), use which
+  
   
   
   const result = await execa(`which ${command}`, {

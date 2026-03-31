@@ -21,7 +21,7 @@ const ANTHROPIC_VERSION = '2023-06-01'
 function getDefaultApiBaseUrl(): string {
   return (
     process.env.ANTHROPIC_BASE_URL ||
-    process.env.CLAUDE_CODE_API_BASE_URL ||
+    process.env.CLAUDE_CODE_NEXT_API_BASE_URL ||
     'https://api.anthropic.com'
   )
 }
@@ -34,20 +34,13 @@ function logDebug(message: string): void {
   logForDebugging(`[files-api] ${message}`)
 }
 
-/**
- * File specification parsed from CLI args
- * Format: --file=<file_id>:<relative_path>
- */
 export type File = {
   fileId: string
   relativePath: string
 }
 
-/**
- * Configuration for the files API client
- */
 export type FilesApiConfig = {
-  /** OAuth token for authentication (from session JWT) */
+  
   oauthToken: string
   
   baseUrl?: string
@@ -55,9 +48,6 @@ export type FilesApiConfig = {
   sessionId: string
 }
 
-/**
- * Result of a file download operation
- */
 export type DownloadResult = {
   fileId: string
   path: string
@@ -72,14 +62,6 @@ const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024
 
 type RetryResult<T> = { done: true; value: T } | { done: false; error?: string }
 
-/**
- * Executes an operation with exponential backoff retry logic
- *
- * @param operation - Operation name for logging
- * @param attemptFn - Function to execute on each attempt, returns RetryResult
- * @returns The successful result value
- * @throws Error if all retries exhausted
- */
 async function retryWithBackoff<T>(
   operation: string,
   attemptFn: (attempt: number) => Promise<RetryResult<T>>,
@@ -108,13 +90,6 @@ async function retryWithBackoff<T>(
   throw new Error(`${lastError} after ${MAX_RETRIES} attempts`)
 }
 
-/**
- * Downloads a single file from the Anthropic Public Files API
- *
- * @param fileId - The file ID (e.g., "file_011CNha8iCJcU1wXNR6q4V8w")
- * @param config - Files API configuration
- * @returns The file content as a Buffer
- */
 export async function downloadFile(
   fileId: string,
   config: FilesApiConfig,
@@ -135,7 +110,7 @@ export async function downloadFile(
       const response = await axios.get(url, {
         headers,
         responseType: 'arraybuffer',
-        timeout: 60000, // 60 second timeout for large files
+        timeout: 60000, 
         validateStatus: status => status < 500,
       })
 
@@ -144,7 +119,7 @@ export async function downloadFile(
         return { done: true, value: Buffer.from(response.data) }
       }
 
-      // Non-retriable errors - throw immediately
+      
       if (response.status === 404) {
         throw new Error(`File not found: ${fileId}`)
       }
@@ -165,11 +140,6 @@ export async function downloadFile(
   })
 }
 
-/**
- * Normalizes a relative path, strips redundant prefixes, and builds the full
- * download path under {basePath}/{session_id}/uploads/.
- * Returns null if the path is invalid (e.g., path traversal).
- */
 export function buildDownloadPath(
   basePath: string,
   sessionId: string,
@@ -195,13 +165,6 @@ export function buildDownloadPath(
   return path.join(uploadsBase, cleanPath)
 }
 
-/**
- * Downloads a file and saves it to the session-specific workspace directory
- *
- * @param attachment - The file attachment to download
- * @param config - Files API configuration
- * @returns Download result with success/failure status
- */
 export async function downloadAndSaveFile(
   attachment: File,
   config: FilesApiConfig,
@@ -219,7 +182,7 @@ export async function downloadAndSaveFile(
   }
 
   try {
-    // Download the file content
+    
     const content = await downloadFile(fileId, config)
 
     
@@ -252,7 +215,6 @@ export async function downloadAndSaveFile(
   }
 }
 
-// Default concurrency limit for parallel downloads
 const DEFAULT_CONCURRENCY = 5
 
 async function parallelWithLimit<T, R>(
@@ -273,7 +235,7 @@ async function parallelWithLimit<T, R>(
     }
   }
 
-  // Start workers up to the concurrency limit
+  
   const workers: Promise<void>[] = []
   const workerCount = Math.min(concurrency, items.length)
   for (let i = 0; i < workerCount; i++) {
@@ -284,14 +246,6 @@ async function parallelWithLimit<T, R>(
   return results
 }
 
-/**
- * Downloads all file attachments for a session in parallel
- *
- * @param attachments - List of file attachments to download
- * @param config - Files API configuration
- * @param concurrency - Maximum concurrent downloads (default: 5)
- * @returns Array of download results in the same order as input
- */
 export async function downloadSessionFiles(
   files: File[],
   config: FilesApiConfig,
@@ -322,12 +276,6 @@ export async function downloadSessionFiles(
   return results
 }
 
-// ============================================================================
-// Upload Functions (BYOC mode)
-
-/**
- * Result of a file upload operation
- */
 export type UploadResult =
   | {
       path: string
@@ -341,17 +289,6 @@ export type UploadResult =
       success: false
     }
 
-/**
- * Upload a single file to the Files API (BYOC mode)
- *
- * Size validation is performed after reading the file to avoid TOCTOU race
- * conditions where the file size could change between initial check and upload.
- *
- * @param filePath - Absolute path to the file to upload
- * @param relativePath - Relative path for the file (used as filename in API)
- * @param config - Files API configuration
- * @returns Upload result with success/failure status
- */
 export async function uploadFile(
   filePath: string,
   relativePath: string,
@@ -399,7 +336,7 @@ export async function uploadFile(
     }
   }
 
-  // Use crypto.randomUUID for boundary to avoid collisions when uploads start same millisecond
+  
   const boundary = `----FormBoundary${randomUUID()}`
   const filename = path.basename(relativePath)
 
@@ -440,7 +377,7 @@ export async function uploadFile(
             'Content-Type': `multipart/form-data; boundary=${boundary}`,
             'Content-Length': body.length.toString(),
           },
-          timeout: 120000, // 2 minute timeout for uploads
+          timeout: 120000, 
           signal: opts?.signal,
           validateStatus: status => status < 500,
         })
@@ -465,7 +402,7 @@ export async function uploadFile(
           }
         }
 
-        // Non-retriable errors - throw to exit retry loop
+        
         if (response.status === 401) {
           logEvent('tengu_file_upload_failed', {
             error_type:
@@ -494,14 +431,14 @@ export async function uploadFile(
 
         return { done: false, error: `status ${response.status}` }
       } catch (error) {
-        // Non-retriable errors propagate up
+        
         if (error instanceof UploadNonRetriableError) {
           throw error
         }
         if (axios.isCancel(error)) {
           throw new UploadNonRetriableError('Upload canceled')
         }
-        // Network errors are retriable
+        
         if (axios.isAxiosError(error)) {
           return { done: false, error: error.message }
         }
@@ -528,7 +465,6 @@ export async function uploadFile(
   }
 }
 
-/** Error class for non-retriable upload failures */
 class UploadNonRetriableError extends Error {
   constructor(message: string) {
     super(message)
@@ -536,14 +472,6 @@ class UploadNonRetriableError extends Error {
   }
 }
 
-/**
- * Upload multiple files in parallel with concurrency limit (BYOC mode)
- *
- * @param files - Array of files to upload (path and relativePath)
- * @param config - Files API configuration
- * @param concurrency - Maximum concurrent uploads (default: 5)
- * @returns Array of upload results in the same order as input
- */
 export async function uploadSessionFiles(
   files: Array<{ path: string; relativePath: string }>,
   config: FilesApiConfig,
@@ -569,27 +497,12 @@ export async function uploadSessionFiles(
   return results
 }
 
-// ============================================================================
-// List Files Functions (1P/Cloud mode)
-
-/**
- * File metadata returned from listFilesCreatedAfter
- */
 export type FileMetadata = {
   filename: string
   fileId: string
   size: number
 }
 
-/**
- * List files created after a given timestamp (1P/Cloud mode).
- * Uses the public GET /v1/files endpoint with after_created_at query param.
- * Handles pagination via after_id cursor when has_more is true.
- *
- * @param afterCreatedAt - ISO 8601 timestamp to filter files created after
- * @param config - Files API configuration
- * @returns Array of file metadata for files created after the timestamp
- */
 export async function listFilesCreatedAfter(
   afterCreatedAt: string,
   config: FilesApiConfig,
@@ -672,7 +585,7 @@ export async function listFilesCreatedAfter(
       break
     }
 
-    // Use the last file's ID as cursor for next page
+    
     const lastFile = files.at(-1)
     if (!lastFile?.id) {
       break
@@ -684,21 +597,10 @@ export async function listFilesCreatedAfter(
   return allFiles
 }
 
-// ============================================================================
-// Parse Functions
-// ============================================================================
-
-/**
- * Parse file attachment specs from CLI arguments
- * Format: <file_id>:<relative_path>
- *
- * @param fileSpecs - Array of file spec strings
- * @returns Parsed file attachments
- */
 export function parseFileSpecs(fileSpecs: string[]): File[] {
   const files: File[] = []
 
-  // Sandbox-gateway may pass multiple specs as a single space-separated string
+  
   const expandedSpecs = fileSpecs.flatMap(s => s.split(' ').filter(Boolean))
 
   for (const spec of expandedSpecs) {

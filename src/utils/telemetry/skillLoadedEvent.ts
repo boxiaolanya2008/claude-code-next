@@ -17,7 +17,7 @@ export async function logSkillsLoaded(
     if (skill.type !== 'prompt') continue
 
     logEvent('tengu_skill_loaded', {
-      // _PROTO_skill_name routes to the privileged skill_name BQ column.
+      
       
       _PROTO_skill_name:
         skill.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,

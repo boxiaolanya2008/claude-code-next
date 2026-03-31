@@ -29,13 +29,13 @@ export async function getClaudeDesktopConfigPath(): Promise<string> {
     )
   }
 
-  // First, try using USERPROFILE environment variable if available
+  
   const windowsHome = process.env.USERPROFILE
     ? process.env.USERPROFILE.replace(/\\/g, '/') 
     : null
 
   if (windowsHome) {
-    // Remove drive letter and convert to WSL path format
+    
     const wslPath = windowsHome.replace(/^[A-Z]:/, '')
     const configPath = `/mnt/c${wslPath}/AppData/Roaming/Claude/claude_desktop_config.json`
 
@@ -44,19 +44,19 @@ export async function getClaudeDesktopConfigPath(): Promise<string> {
       await stat(configPath)
       return configPath
     } catch {
-      // File doesn't exist, continue
+      
     }
   }
 
-  // Alternative approach - try to construct path based on typical Windows user location
+  
   try {
-    // List the /mnt/c/Users directory to find potential user directories
+    
     const usersDir = '/mnt/c/Users'
 
     try {
       const userDirs = await readdir(usersDir, { withFileTypes: true })
 
-      // Look for Claude Desktop config in each user directory
+      
       for (const user of userDirs) {
         if (
           user.name === 'Public' ||
@@ -64,7 +64,7 @@ export async function getClaudeDesktopConfigPath(): Promise<string> {
           user.name === 'Default User' ||
           user.name === 'All Users'
         ) {
-          continue // Skip system directories
+          continue 
         }
 
         const potentialConfigPath = join(
@@ -80,11 +80,11 @@ export async function getClaudeDesktopConfigPath(): Promise<string> {
           await stat(potentialConfigPath)
           return potentialConfigPath
         } catch {
-          // File doesn't exist, continue
+          
         }
       }
     } catch {
-      // usersDir doesn't exist or can't be read
+      
     }
   } catch (dirError) {
     logError(dirError)

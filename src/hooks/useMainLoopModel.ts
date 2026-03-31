@@ -7,15 +7,13 @@ import {
   parseUserSpecifiedModel,
 } from '../utils/model/model.js'
 
-// API calls. Use this over getMainLoopModel() when the component needs to
-
 export function useMainLoopModel(): ModelName {
   const mainLoopModel = useAppState(s => s.mainLoopModel)
   const mainLoopModelForSession = useAppState(s => s.mainLoopModelForSession)
 
   
   
-  // that's the stale disk cache; after, it's the in-memory remoteEval map.
+  
   
   
   

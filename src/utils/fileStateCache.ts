@@ -9,12 +9,11 @@ export type FileState = {
   
   
   
-  // Edit/Write must require an explicit Read first. `content` here holds the
+  
   
   isPartialView?: boolean
 }
 
-// Default max entries for read file state caches
 export const READ_FILE_STATE_CACHE_SIZE = 100
 
 const DEFAULT_MAX_CACHE_SIZE_BYTES = 25 * 1024 * 1024
@@ -84,12 +83,6 @@ export class FileStateCache {
   }
 }
 
-/**
- * Factory function to create a size-limited FileStateCache.
- * Uses LRUCache's built-in size-based eviction to prevent memory bloat.
- * Note: Images are not cached (see FileReadTool) so size limit is mainly
- * for large text files, notebooks, and other editable content.
- */
 export function createFileStateCacheWithSizeLimit(
   maxEntries: number,
   maxSizeBytes: number = DEFAULT_MAX_CACHE_SIZE_BYTES,
@@ -97,19 +90,15 @@ export function createFileStateCacheWithSizeLimit(
   return new FileStateCache(maxEntries, maxSizeBytes)
 }
 
-// Helper function to convert cache to object (used by compact.ts)
 export function cacheToObject(
   cache: FileStateCache,
 ): Record<string, FileState> {
   return Object.fromEntries(cache.entries())
 }
 
-// Helper function to get all keys from cache (used by several components)
 export function cacheKeys(cache: FileStateCache): string[] {
   return Array.from(cache.keys())
 }
-
-// Helper function to clone a FileStateCache
 
 export function cloneFileStateCache(cache: FileStateCache): FileStateCache {
   const cloned = createFileStateCacheWithSizeLimit(cache.max, cache.maxSize)
@@ -117,7 +106,6 @@ export function cloneFileStateCache(cache: FileStateCache): FileStateCache {
   return cloned
 }
 
-// Merge two file state caches, with more recent entries (by timestamp) overriding older ones
 export function mergeFileStateCaches(
   first: FileStateCache,
   second: FileStateCache,

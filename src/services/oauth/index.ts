@@ -36,7 +36,7 @@ export class OAuthService {
       skipBrowserOpen?: boolean
     },
   ): Promise<OAuthTokens> {
-    // Create OAuth callback listener and start it
+    
     this.authCodeListener = new AuthCodeListener()
     this.port = await this.authCodeListener.start()
 
@@ -63,7 +63,7 @@ export class OAuthService {
       state,
       async () => {
         if (options?.skipBrowserOpen) {
-          // Hand both URLs to the caller. The automatic one still works
+          
           
           
           await authURLHandler(manualFlowUrl, automaticFlowUrl)
@@ -79,24 +79,24 @@ export class OAuthService {
     logEvent('tengu_oauth_auth_code_received', { automatic: isAutomaticFlow })
 
     try {
-      // Exchange authorization code for tokens
+      
       const tokenResponse = await client.exchangeCodeForTokens(
         authorizationCode,
         state,
         this.codeVerifier,
         this.port!,
-        !isAutomaticFlow, // Pass isManual=true if it's NOT automatic flow
+        !isAutomaticFlow, 
         options?.expiresIn,
       )
 
-      // Fetch profile info (subscription type and rate limit tier) for the
-      // returned OAuthTokens. Logout and account storage are handled by the
-      // caller (installOAuthTokens in auth.ts).
+      
+      
+      
       const profileInfo = await client.fetchProfileInfo(
         tokenResponse.access_token,
       )
 
-      // Handle success redirect for automatic flow
+      
       if (isAutomaticFlow) {
         const scopes = client.parseScopes(tokenResponse.scope)
         this.authCodeListener?.handleSuccessRedirect(scopes)
@@ -109,13 +109,13 @@ export class OAuthService {
         profileInfo.rawProfile,
       )
     } catch (error) {
-      // If we have a pending response, send an error redirect before closing
+      
       if (isAutomaticFlow) {
         this.authCodeListener?.handleErrorRedirect()
       }
       throw error
     } finally {
-      // Always cleanup
+      
       this.authCodeListener?.close()
     }
   }
@@ -125,10 +125,10 @@ export class OAuthService {
     onReady: () => Promise<void>,
   ): Promise<string> {
     return new Promise((resolve, reject) => {
-      // Set up manual auth code resolver
+      
       this.manualAuthCodeResolver = resolve
 
-      // Start automatic flow
+      
       this.authCodeListener
         ?.waitForAuthorization(state, onReady)
         .then(authorizationCode => {
@@ -142,7 +142,7 @@ export class OAuthService {
     })
   }
 
-  // Handle manual flow callback when user pastes the auth code
+  
   handleManualAuthCodeInput(params: {
     authorizationCode: string
     state: string
@@ -150,7 +150,7 @@ export class OAuthService {
     if (this.manualAuthCodeResolver) {
       this.manualAuthCodeResolver(params.authorizationCode)
       this.manualAuthCodeResolver = null
-      // Close the auth code listener since manual input was used
+      
       this.authCodeListener?.close()
     }
   }
@@ -179,7 +179,7 @@ export class OAuthService {
     }
   }
 
-  // Clean up any resources (like the local server)
+  
   cleanup(): void {
     this.authCodeListener?.close()
     this.manualAuthCodeResolver = null

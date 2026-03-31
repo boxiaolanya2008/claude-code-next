@@ -38,7 +38,7 @@ export function resetProToOpusDefault(): void {
       had_custom_model: false,
     })
   } else {
-    // User has a custom model setting, just mark migration complete
+    
     saveGlobalConfig(current => ({
       ...current,
       opusProMigrationComplete: true,

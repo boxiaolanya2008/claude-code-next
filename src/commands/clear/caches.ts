@@ -55,7 +55,7 @@ export function clearSessionCaches(
   setLastEmittedDate(null)
 
   
-  // classifier approvals, speculative checks, and — for main-thread compacts — memory
+  
   
   runPostCompactCleanup()
   
@@ -65,7 +65,7 @@ export function clearSessionCaches(
   resetSentSkillNames()
   
   
-  // the InstructionsLoaded hook would fire with load_reason 'compact' instead of
+  
   
   resetGetMemoryFilesCache('session_start')
 
@@ -86,14 +86,14 @@ export function clearSessionCaches(
       },
     )
   }
-  // Clear attribution caches (file content cache, pending bash states)
+  
   
   if (feature('COMMIT_ATTRIBUTION')) {
     void import('../../utils/attributionHooks.js').then(
       ({ clearAttributionCaches }) => clearAttributionCaches(),
     )
   }
-  // Clear repository detection caches
+  
   clearRepositoryCaches()
   
   clearCommandPrefixCaches()

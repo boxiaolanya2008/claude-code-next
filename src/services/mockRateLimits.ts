@@ -1,7 +1,5 @@
 
 
-// The mock headers may not exactly match the API specification or real-world behavior.
-
 import type { SubscriptionType } from '../services/oauth/types.js'
 import { setMockBillingAccessOverride } from '../utils/billing.js'
 import type { OverageDisabledReason } from './claudeAiLimits.js'
@@ -112,22 +110,22 @@ export function setMockHeader(
     if (key === 'claim') {
       exceededLimits = []
     }
-    // Update retry-after if status changed
+    
     if (key === 'status' || key === 'overage-status') {
       updateRetryAfter()
     }
     return
   } else {
-    // Handle special cases for reset times
+    
     if (key === 'reset' || key === 'overage-reset') {
-      // If user provides a number, treat it as hours from now
+      
       const hours = Number(value)
       if (!isNaN(hours)) {
         value = String(Math.floor(Date.now() / 1000) + hours * 3600)
       }
     }
 
-    // Handle claims - add to exceeded limits
+    
     if (key === 'claim') {
       const validClaims = [
         'five_hour',
@@ -136,7 +134,7 @@ export function setMockHeader(
         'seven_day_sonnet',
       ]
       if (validClaims.includes(value)) {
-        // Determine reset time based on claim type
+        
         let resetsAt: number
         if (value === 'five_hour') {
           resetsAt = Math.floor(Date.now() / 1000) + 5 * 3600
@@ -150,7 +148,7 @@ export function setMockHeader(
           resetsAt = Math.floor(Date.now() / 1000) + 3600
         }
 
-        // Add to exceeded limits (remove if already exists)
+        
         exceededLimits = exceededLimits.filter(l => l.type !== value)
         exceededLimits.push({ type: value as ExceededLimit['type'], resetsAt })
 
@@ -159,7 +157,7 @@ export function setMockHeader(
         return
       }
     }
-    // Widen to a string-valued record so dynamic key assignment is allowed.
+    
     
     
     const headers: Partial<Record<keyof MockHeaders, string>> = mockHeaders
@@ -171,13 +169,12 @@ export function setMockHeader(
     }
   }
 
-  // If all headers are cleared, disable mocking
+  
   if (Object.keys(mockHeaders).length === 0) {
     mockEnabled = false
   }
 }
 
-// Helper to update retry-after based on current state
 function updateRetryAfter(): void {
   const status = mockHeaders['anthropic-ratelimit-unified-status']
   const overageStatus =
@@ -189,7 +186,7 @@ function updateRetryAfter(): void {
     (!overageStatus || overageStatus === 'rejected') &&
     reset
   ) {
-    // Calculate seconds until reset
+    
     const resetTimestamp = Number(reset)
     const secondsUntilReset = Math.max(
       0,
@@ -201,7 +198,6 @@ function updateRetryAfter(): void {
   }
 }
 
-// Update the representative claim based on exceeded limits
 function updateRepresentativeClaim(): void {
   if (exceededLimits.length === 0) {
     delete mockHeaders['anthropic-ratelimit-unified-representative-claim']
@@ -210,7 +206,7 @@ function updateRepresentativeClaim(): void {
     return
   }
 
-  // Find the limit with the furthest reset time
+  
   const furthest = exceededLimits.reduce((prev, curr) =>
     curr.resetsAt > prev.resetsAt ? curr : prev,
   )
@@ -225,14 +221,14 @@ function updateRepresentativeClaim(): void {
     const overageStatus =
       mockHeaders['anthropic-ratelimit-unified-overage-status']
     if (!overageStatus || overageStatus === 'rejected') {
-      // Calculate seconds until reset
+      
       const secondsUntilReset = Math.max(
         0,
         furthest.resetsAt - Math.floor(Date.now() / 1000),
       )
       mockHeaders['retry-after'] = String(secondsUntilReset)
     } else {
-      // Overage is available, no retry-after
+      
       delete mockHeaders['retry-after']
     }
   } else {
@@ -240,7 +236,6 @@ function updateRepresentativeClaim(): void {
   }
 }
 
-// Add function to add exceeded limit with custom reset time
 export function addExceededLimit(
   type: 'five_hour' | 'seven_day' | 'seven_day_opus' | 'seven_day_sonnet',
   hoursFromNow: number,
@@ -263,8 +258,6 @@ export function addExceededLimit(
 
   updateRepresentativeClaim()
 }
-
-// Set mock early warning utilization for time-relative thresholds
 
 export function setMockEarlyWarning(
   claimAbbrev: '5h' | '7d' | 'overage',
@@ -301,7 +294,6 @@ export function setMockEarlyWarning(
   }
 }
 
-// Clear mock early warning headers
 export function clearMockEarlyWarning(): void {
   delete mockHeaders['anthropic-ratelimit-unified-5h-utilization']
   delete mockHeaders['anthropic-ratelimit-unified-5h-reset']
@@ -373,7 +365,7 @@ export function setMockRateLimitScenario(scenario: MockScenario): void {
       break
 
     case 'overage-active': {
-      // If no limits have been exceeded yet, default to 5-hour
+      
       if (exceededLimits.length === 0) {
         exceededLimits = [{ type: 'five_hour', resetsAt: fiveHoursFromNow }]
       }
@@ -391,7 +383,7 @@ export function setMockRateLimitScenario(scenario: MockScenario): void {
     }
 
     case 'overage-warning': {
-      // If no limits have been exceeded yet, default to 5-hour
+      
       if (exceededLimits.length === 0) {
         exceededLimits = [{ type: 'five_hour', resetsAt: fiveHoursFromNow }]
       }
@@ -410,7 +402,7 @@ export function setMockRateLimitScenario(scenario: MockScenario): void {
     }
 
     case 'overage-exhausted': {
-      // If no limits have been exceeded yet, default to 5-hour
+      
       if (exceededLimits.length === 0) {
         exceededLimits = [{ type: 'five_hour', resetsAt: fiveHoursFromNow }]
       }
@@ -429,7 +421,7 @@ export function setMockRateLimitScenario(scenario: MockScenario): void {
     }
 
     case 'out-of-credits': {
-      // Out of credits - subscription limit hit, overage rejected due to insufficient credits
+      
       
       if (exceededLimits.length === 0) {
         exceededLimits = [{ type: 'five_hour', resetsAt: fiveHoursFromNow }]
@@ -449,7 +441,7 @@ export function setMockRateLimitScenario(scenario: MockScenario): void {
     }
 
     case 'org-zero-credit-limit': {
-      // Org service has zero credit limit - admin set org-level spend cap to $0
+      
       
       if (exceededLimits.length === 0) {
         exceededLimits = [{ type: 'five_hour', resetsAt: fiveHoursFromNow }]
@@ -469,7 +461,7 @@ export function setMockRateLimitScenario(scenario: MockScenario): void {
     }
 
     case 'org-spend-cap-hit': {
-      // Org spend cap hit for the month - org overages temporarily disabled
+      
       
       if (exceededLimits.length === 0) {
         exceededLimits = [{ type: 'five_hour', resetsAt: fiveHoursFromNow }]
@@ -489,8 +481,8 @@ export function setMockRateLimitScenario(scenario: MockScenario): void {
     }
 
     case 'member-zero-credit-limit': {
-      // Member has zero credit limit - admin set this user's individual limit to $0
-      // Non-admin Team/Enterprise users SHOULD see "Request extra usage" (admin can allocate more)
+      
+      
       if (exceededLimits.length === 0) {
         exceededLimits = [{ type: 'five_hour', resetsAt: fiveHoursFromNow }]
       }
@@ -509,7 +501,7 @@ export function setMockRateLimitScenario(scenario: MockScenario): void {
     }
 
     case 'seat-tier-zero-credit-limit': {
-      // Seat tier has zero credit limit - admin set this seat tier's limit to $0
+      
       
       if (exceededLimits.length === 0) {
         exceededLimits = [{ type: 'five_hour', resetsAt: fiveHoursFromNow }]
@@ -581,7 +573,7 @@ export function setMockRateLimitScenario(scenario: MockScenario): void {
     }
 
     case 'extra-usage-required': {
-      // Headerless 429 — exercises the entitlement-rejection path in errors.ts
+      
       mockHeaderless429Message =
         'Extra usage is required for long context requests.'
       break
@@ -596,7 +588,7 @@ export function getMockHeaderless429Message(): string | null {
   if (process.env.USER_TYPE !== 'ant') {
     return null
   }
-  // Env var path for -p / SDK testing where slash commands aren't available
+  
   if (process.env.CLAUDE_MOCK_HEADERLESS_429) {
     return process.env.CLAUDE_MOCK_HEADERLESS_429
   }
@@ -628,7 +620,7 @@ export function getMockStatus(): string {
   const lines: string[] = []
   lines.push('Active mock headers:')
 
-  // Show subscription type - either explicitly set or default
+  
   const effectiveSubscription =
     mockSubscriptionType || DEFAULT_MOCK_SUBSCRIPTION
   if (mockSubscriptionType) {
@@ -639,13 +631,13 @@ export function getMockStatus(): string {
 
   Object.entries(mockHeaders).forEach(([key, value]) => {
     if (value !== undefined) {
-      // Format the header name nicely
+      
       const formattedKey = key
         .replace('anthropic-ratelimit-unified-', '')
         .replace(/-/g, ' ')
         .replace(/\b\w/g, c => c.toUpperCase())
 
-      // Format timestamps as human-readable
+      
       if (key.includes('reset') && value) {
         const timestamp = Number(value)
         const date = new Date(timestamp * 1000)
@@ -656,7 +648,7 @@ export function getMockStatus(): string {
     }
   })
 
-  // Show exceeded limits if any
+  
   if (exceededLimits.length > 0) {
     lines.push('\nExceeded limits (contributing to representative claim):')
     exceededLimits.forEach(limit => {
@@ -687,11 +679,11 @@ export function applyMockHeaders(
     return headers
   }
 
-  // Create a new Headers object with original headers
-  // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
+  
+  
   const newHeaders = new globalThis.Headers(headers)
 
-  // Apply mock headers (overwriting originals)
+  
   Object.entries(mock).forEach(([key, value]) => {
     if (value !== undefined) {
       newHeaders.set(key, value)
@@ -701,8 +693,6 @@ export function applyMockHeaders(
   return newHeaders
 }
 
-// Check if we should process rate limits even without subscription
-// This is for Ant employees testing with mocks
 export function shouldProcessMockLimits(): boolean {
   if (process.env.USER_TYPE !== 'ant') {
     return false
@@ -715,7 +705,7 @@ export function getCurrentMockScenario(): MockScenario | null {
     return null
   }
 
-  // Reverse lookup the scenario from current headers
+  
   if (!mockHeaders) return null
 
   const status = mockHeaders['anthropic-ratelimit-unified-status']
@@ -795,7 +785,6 @@ export function getScenarioDescription(scenario: MockScenario): string {
   }
 }
 
-// Mock subscription type management
 export function setMockSubscriptionType(
   subscriptionType: SubscriptionType | null,
 ): void {
@@ -810,11 +799,10 @@ export function getMockSubscriptionType(): SubscriptionType | null {
   if (!mockEnabled || process.env.USER_TYPE !== 'ant') {
     return null
   }
-  // Return the explicitly set subscription type, or default to 'max'
+  
   return mockSubscriptionType || DEFAULT_MOCK_SUBSCRIPTION
 }
 
-// Export a function that checks if we should use mock subscription
 export function shouldUseMockSubscription(): boolean {
   return (
     mockEnabled &&
@@ -823,7 +811,6 @@ export function shouldUseMockSubscription(): boolean {
   )
 }
 
-// Mock billing access (admin vs non-admin)
 export function setMockBillingAccess(hasAccess: boolean | null): void {
   if (process.env.USER_TYPE !== 'ant') {
     return
@@ -832,7 +819,6 @@ export function setMockBillingAccess(hasAccess: boolean | null): void {
   setMockBillingAccessOverride(hasAccess)
 }
 
-// Mock fast mode rate limit handling
 export function isMockFastModeRateLimitScenario(): boolean {
   return mockFastModeRateLimitDurationMs !== null
 }
@@ -844,12 +830,12 @@ export function checkMockFastModeRateLimit(
     return null
   }
 
-  // Only throw when fast mode is active
+  
   if (!isFastModeActive) {
     return null
   }
 
-  // Check if the rate limit has expired
+  
   if (
     mockFastModeRateLimitExpiresAt !== null &&
     Date.now() >= mockFastModeRateLimitExpiresAt
@@ -858,13 +844,13 @@ export function checkMockFastModeRateLimit(
     return null
   }
 
-  // Set expiry on first error (not when scenario is configured)
+  
   if (mockFastModeRateLimitExpiresAt === null) {
     mockFastModeRateLimitExpiresAt =
       Date.now() + mockFastModeRateLimitDurationMs
   }
 
-  // Compute dynamic retry-after based on remaining time
+  
   const remainingMs = mockFastModeRateLimitExpiresAt - Date.now()
   const headersToSend = { ...mockHeaders }
   headersToSend['retry-after'] = String(

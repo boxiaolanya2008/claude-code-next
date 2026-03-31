@@ -28,7 +28,7 @@ async function segmentedCommandPermissionResult(
   ) => Promise<PermissionResult>,
   checkers: CommandIdentityCheckers,
 ): Promise<PermissionResult> {
-  // Check for multiple cd commands across all segments
+  
   const cdCommands = segments.filter(segment => {
     const trimmed = segment.trim()
     return checkers.isNormalizedCdCommand(trimmed)
@@ -46,12 +46,12 @@ async function segmentedCommandPermissionResult(
     }
   }
 
-  // SECURITY: Check for cd+git across pipe segments to prevent bare repo fsmonitor bypass.
   
-  // each segment is checked independently and neither triggers the cd+git check in
-  // bashPermissions.ts. We must detect this cross-segment pattern here.
   
-  // so we split each segment into subcommands before checking.
+  
+  
+  
+  
   {
     let hasCd = false
     let hasGit = false
@@ -95,7 +95,7 @@ async function segmentedCommandPermissionResult(
     segmentResults.set(trimmedSegment, segmentResult)
   }
 
-  // Check if any segment is denied (after evaluating all)
+  
   const deniedSegment = Array.from(segmentResults.entries()).find(
     ([, result]) => result.behavior === 'deny',
   )
@@ -130,7 +130,7 @@ async function segmentedCommandPermissionResult(
     }
   }
 
-  // Collect suggestions from segments that need approval
+  
   const suggestions: PermissionUpdate[] = []
   for (const [, result] of segmentResults) {
     if (
@@ -155,29 +155,19 @@ async function segmentedCommandPermissionResult(
   }
 }
 
-/**
- * Builds a command segment, stripping output redirections to avoid
- * treating filenames as commands in permission checking.
- * Uses ParsedCommand to preserve original quoting.
- */
 async function buildSegmentWithoutRedirections(
   segmentCommand: string,
 ): Promise<string> {
-  // Fast path: skip parsing if no redirection operators present
+  
   if (!segmentCommand.includes('>')) {
     return segmentCommand
   }
 
-  // Use ParsedCommand to strip redirections while preserving quotes
+  
   const parsed = await ParsedCommand.parse(segmentCommand)
   return parsed?.withoutOutputRedirections() ?? segmentCommand
 }
 
-/**
- * Wrapper that resolves an IParsedCommand (from a pre-parsed AST root if
- * available, else via ParsedCommand.parse) and delegates to
- * bashToolCheckCommandOperatorPermissions.
- */
 export async function checkCommandOperatorPermissions(
   input: z.infer<typeof BashTool.inputSchema>,
   bashToolHasPermissionFn: (
@@ -201,10 +191,6 @@ export async function checkCommandOperatorPermissions(
   )
 }
 
-/**
- * Checks if the command has special operators that require behavior beyond
- * simple subcommand checking.
- */
 async function bashToolCheckCommandOperatorPermissions(
   input: z.infer<typeof BashTool.inputSchema>,
   bashToolHasPermissionFn: (
@@ -213,15 +199,15 @@ async function bashToolCheckCommandOperatorPermissions(
   checkers: CommandIdentityCheckers,
   parsed: IParsedCommand,
 ): Promise<PermissionResult> {
-  // 1. Check for unsafe compound commands (subshells, command groups).
+  
   const tsAnalysis = parsed.getTreeSitterAnalysis()
   const isUnsafeCompound = tsAnalysis
     ? tsAnalysis.compoundStructure.hasSubshell ||
       tsAnalysis.compoundStructure.hasCommandGroup
     : isUnsafeCompoundCommand_DEPRECATED(input.command)
   if (isUnsafeCompound) {
-    // This command contains an operator like `>` that we don't support as a subcommand separator
-    // Check if bashCommandIsSafe_DEPRECATED has a more specific message
+    
+    
     const safetyResult = await bashCommandIsSafeAsync_DEPRECATED(input.command)
 
     const decisionReason = {
@@ -235,11 +221,11 @@ async function bashToolCheckCommandOperatorPermissions(
       behavior: 'ask',
       message: createPermissionRequestMessage(BashTool.name, decisionReason),
       decisionReason,
-      // This is an unsafe compound command, so we don't want to suggest rules since we wont be able to allow it
+      
     }
   }
 
-  // 2. Check for piped commands using ParsedCommand (preserves quotes)
+  
   const pipeSegments = parsed.getPipeSegments()
 
   
@@ -250,7 +236,7 @@ async function bashToolCheckCommandOperatorPermissions(
     }
   }
 
-  // Strip output redirections from each segment while preserving quotes
+  
   const segments = await Promise.all(
     pipeSegments.map(segment => buildSegmentWithoutRedirections(segment)),
   )

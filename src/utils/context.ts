@@ -12,13 +12,11 @@ export const COMPACT_MAX_OUTPUT_TOKENS = 20_000
 const MAX_OUTPUT_TOKENS_DEFAULT = 32_000
 const MAX_OUTPUT_TOKENS_UPPER_LIMIT = 64_000
 
-// claude.ts:getMaxOutputTokensForModel to avoid the growthbook→betas→context
-
 export const CAPPED_DEFAULT_MAX_TOKENS = 8_000
 export const ESCALATED_MAX_TOKENS = 64_000
 
 export function is1mContextDisabled(): boolean {
-  return isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_1M_CONTEXT)
+  return isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_1M_CONTEXT)
 }
 
 export function has1mContext(model: string): boolean {
@@ -28,7 +26,6 @@ export function has1mContext(model: string): boolean {
   return /\[1m\]/i.test(model)
 }
 
-// @[MODEL LAUNCH]: Update this pattern if the new model supports 1M context
 export function modelSupports1M(model: string): boolean {
   if (is1mContextDisabled()) {
     return false
@@ -41,21 +38,21 @@ export function getContextWindowForModel(
   model: string,
   betas?: string[],
 ): number {
-  // Allow override via environment variable (ant-only)
   
-  // so users can cap the effective context window for local decisions (auto-compact, etc.)
+  
+  
   
   if (
     process.env.USER_TYPE === 'ant' &&
-    process.env.CLAUDE_CODE_MAX_CONTEXT_TOKENS
+    process.env.CLAUDE_CODE_NEXT_MAX_CONTEXT_TOKENS
   ) {
-    const override = parseInt(process.env.CLAUDE_CODE_MAX_CONTEXT_TOKENS, 10)
+    const override = parseInt(process.env.CLAUDE_CODE_NEXT_MAX_CONTEXT_TOKENS, 10)
     if (!isNaN(override) && override > 0) {
       return override
     }
   }
 
-  // [1m] suffix — explicit client-side opt-in, respected over all detection
+  
   if (has1mContext(model)) {
     return 1_000_000
   }
@@ -90,7 +87,7 @@ export function getSonnet1mExpTreatmentEnabled(model: string): boolean {
   if (is1mContextDisabled()) {
     return false
   }
-  // Only applies to sonnet 4.6 without an explicit [1m] suffix
+  
   if (has1mContext(model)) {
     return false
   }
@@ -100,10 +97,6 @@ export function getSonnet1mExpTreatmentEnabled(model: string): boolean {
   return getGlobalConfig().clientDataCache?.['coral_reef_sonnet'] === 'true'
 }
 
-/**
- * Calculate context window usage percentage from token usage data.
- * Returns used and remaining percentages, or null values if no usage data.
- */
 export function calculateContextPercentages(
   currentUsage: {
     input_tokens: number
@@ -132,9 +125,6 @@ export function calculateContextPercentages(
   }
 }
 
-/**
- * Returns the model's default and upper limit for max output tokens.
- */
 export function getModelMaxOutputTokens(model: string): {
   default: number
   upperLimit: number
@@ -198,13 +188,6 @@ export function getModelMaxOutputTokens(model: string): {
   return { default: defaultTokens, upperLimit }
 }
 
-/**
- * Returns the max thinking budget tokens for a given model. The max
- * thinking tokens should be strictly less than the max output tokens.
- *
- * Deprecated since newer models use adaptive thinking rather than a
- * strict thinking token budget.
- */
 export function getMaxThinkingTokensForModel(model: string): number {
   return getModelMaxOutputTokens(model).upperLimit - 1
 }

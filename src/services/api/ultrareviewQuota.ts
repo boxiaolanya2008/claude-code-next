@@ -11,11 +11,6 @@ export type UltrareviewQuotaResponse = {
   is_overage: boolean
 }
 
-/**
- * Peek the ultrareview quota for display and nudge decisions. Consume
- * happens server-side at session creation. Null when not a subscriber or
- * the endpoint errors.
- */
 export async function fetchUltrareviewQuota(): Promise<UltrareviewQuotaResponse | null> {
   if (!isClaudeAISubscriber()) return null
   try {

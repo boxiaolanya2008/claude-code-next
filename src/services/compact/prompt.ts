@@ -287,12 +287,6 @@ export function getCompactPrompt(customInstructions?: string): string {
   return prompt
 }
 
-/**
- * Formats the compact summary by stripping the <analysis> drafting scratchpad
- * and replacing <summary> XML tags with readable section headers.
- * @param summary The raw summary string potentially containing <analysis> and <summary> XML tags
- * @returns The formatted summary with analysis stripped and summary tags replaced by headers
- */
 export function formatCompactSummary(summary: string): string {
   let formattedSummary = summary
 
@@ -313,7 +307,7 @@ export function formatCompactSummary(summary: string): string {
     )
   }
 
-  // Clean up extra whitespace between sections
+  
   formattedSummary = formattedSummary.replace(/\n\n+/g, '\n\n')
 
   return formattedSummary.trim()

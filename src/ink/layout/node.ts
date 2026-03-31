@@ -90,7 +90,7 @@ export type LayoutMeasureMode =
   (typeof LayoutMeasureMode)[keyof typeof LayoutMeasureMode]
 
 export type LayoutNode = {
-  // Tree
+  
   insertChild(child: LayoutNode, index: number): void
   removeChild(child: LayoutNode): void
   getChildCount(): number
@@ -102,7 +102,7 @@ export type LayoutNode = {
   unsetMeasureFunc(): void
   markDirty(): void
 
-  // Layout reading (post-layout)
+  
   getComputedLeft(): number
   getComputedTop(): number
   getComputedWidth(): number
@@ -145,7 +145,7 @@ export type LayoutNode = {
   setBorder(edge: LayoutEdge, value: number): void
   setGap(gutter: LayoutGutter, value: number): void
 
-  // Lifecycle
+  
   free(): void
   freeRecursive(): void
 }

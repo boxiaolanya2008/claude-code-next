@@ -27,7 +27,7 @@ export function registerMcpXaaIdpCommand(mcp: Command): void {
       'Configure the IdP connection (one-time setup for all XAA-enabled servers)',
     )
     .requiredOption('--issuer <url>', 'IdP issuer URL (OIDC discovery)')
-    .requiredOption('--client-id <id>', "Claude Code's client_id at the IdP")
+    .requiredOption('--client-id <id>', "Claude Code Next's client_id at the IdP")
     .option(
       '--client-secret',
       'Read IdP client secret from MCP_XAA_IDP_CLIENT_SECRET env var',
@@ -37,7 +37,7 @@ export function registerMcpXaaIdpCommand(mcp: Command): void {
       'Fixed loopback callback port (only if IdP does not honor RFC 8252 port-any matching)',
     )
     .action(options => {
-      // Validate everything BEFORE any writes. An exit(1) mid-write leaves
+      
       
       
       
@@ -51,7 +51,7 @@ export function registerMcpXaaIdpCommand(mcp: Command): void {
           `Error: --issuer must be a valid URL (got "${options.issuer}")`,
         )
       }
-      // OIDC discovery + token exchange run against this host. Allow http://
+      
       
       
       if (
@@ -87,7 +87,7 @@ export function registerMcpXaaIdpCommand(mcp: Command): void {
         )
       }
 
-      // Read old config now (before settings overwrite) so we can clear stale
+      
       
       
       
@@ -109,7 +109,7 @@ export function registerMcpXaaIdpCommand(mcp: Command): void {
         return cliError(`Error writing settings: ${error.message}`)
       }
 
-      // Clear stale keychain slots only after settings write succeeded —
+      
       
       
       
@@ -118,12 +118,12 @@ export function registerMcpXaaIdpCommand(mcp: Command): void {
           clearIdpIdToken(oldIssuer)
           clearIdpClientSecret(oldIssuer)
         } else if (oldClientId !== options.clientId) {
-          // Same issuer slot but different OAuth client registration — the
           
           
           
           
-          // re-setup without --client-secret means "tweak port, keep secret".
+          
+          
           clearIdpIdToken(oldIssuer)
           clearIdpClientSecret(oldIssuer)
         }
@@ -156,7 +156,7 @@ export function registerMcpXaaIdpCommand(mcp: Command): void {
     )
     
     
-    // no shell parser), but a real user would want `echo $TOKEN | ... --stdin`.
+    
     .option(
       '--id-token <jwt>',
       'Write this pre-obtained id_token directly to cache, skipping the OIDC browser login',
@@ -169,7 +169,7 @@ export function registerMcpXaaIdpCommand(mcp: Command): void {
         )
       }
 
-      // Direct-inject path: skip cache check, skip OIDC. Writing IS the
+      
       
       
       if (options.idToken) {
@@ -239,7 +239,7 @@ export function registerMcpXaaIdpCommand(mcp: Command): void {
     .command('clear')
     .description('Clear the IdP connection config and cached id_token')
     .action(() => {
-      // Read issuer first so we can clear the right keychain slots.
+      
       const idp = getXaaIdpSettings()
       
       
@@ -249,7 +249,7 @@ export function registerMcpXaaIdpCommand(mcp: Command): void {
       if (error) {
         return cliError(`Error writing settings: ${error.message}`)
       }
-      // Clear keychain only after settings write succeeded — otherwise a
+      
       
       
       if (idp) {

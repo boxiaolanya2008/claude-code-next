@@ -12,11 +12,6 @@ type ParserModule = {
   parse: (source: string, timeoutMs?: number) => TsNode | null
 }
 
-/**
- * 50ms wall-clock cap — bails out on pathological/adversarial input.
- * Pass `Infinity` via `parse(src, Infinity)` to disable (e.g. correctness
- * tests, where CI jitter would otherwise cause spurious null returns).
- */
 const PARSE_TIMEOUT_MS = 50
 
 const MAX_NODES = 50_000
@@ -29,12 +24,9 @@ export function ensureParserInitialized(): Promise<void> {
   return READY
 }
 
-/** Always succeeds — pure-TS needs no init. */
 export function getParserModule(): ParserModule | null {
   return MODULE
 }
-
-// ───────────────────────────── Tokenizer ─────────────────────────────
 
 type TokenType =
   | 'WORD'
@@ -126,7 +118,6 @@ function makeLexer(src: string): Lexer {
   }
 }
 
-/** Advance one JS char, updating byte offset for UTF-8. */
 function advance(L: Lexer): void {
   const c = L.src.charCodeAt(L.i)
   L.i++
@@ -135,7 +126,7 @@ function advance(L: Lexer): void {
   } else if (c < 0x800) {
     L.b += 2
   } else if (c >= 0xd800 && c <= 0xdbff) {
-    // High surrogate — next char completes the pair, total 4 UTF-8 bytes
+    
     L.b += 4
     L.i++
   } else {
@@ -148,9 +139,9 @@ function peek(L: Lexer, off = 0): string {
 }
 
 function byteAt(L: Lexer, charIdx: number): number {
-  // Fast path: ASCII-only prefix means char idx == byte idx
+  
   if (L.byteTable) return L.byteTable[charIdx]!
-  // Build table on first non-trivial lookup
+  
   const t = new Uint32Array(L.len + 1)
   let b = 0
   let i = 0
@@ -178,7 +169,7 @@ function byteAt(L: Lexer, charIdx: number): number {
 }
 
 function isWordChar(c: string): boolean {
-  // Bash word chars: alphanumeric + various punctuation that doesn't start operators
+  
   return (
     (c >= 'a' && c <= 'z') ||
     (c >= 'A' && c <= 'Z') ||
@@ -224,15 +215,10 @@ function isHexDigit(c: string): boolean {
 }
 
 function isBaseDigit(c: string): boolean {
-  // Bash BASE#DIGITS: digits, letters, @ and _ (up to base 64)
+  
   return isIdentChar(c) || c === '@'
 }
 
-/**
- * Unquoted heredoc delimiter chars. Bash accepts most non-metacharacters —
- * not just identifiers. Stop at whitespace, redirects, pipe/list operators,
- * and structural tokens. Allows !, -, ., +, etc. (e.g. <<!HEREDOC!).
- */
 function isHeredocDelimChar(c: string): boolean {
   return (
     c !== '' &&
@@ -257,17 +243,17 @@ function skipBlanks(L: Lexer): void {
   while (L.i < L.len) {
     const c = L.src[L.i]!
     if (c === ' ' || c === '\t' || c === '\r') {
-      // \r is whitespace per tree-sitter-bash extras /\s/ — handles CRLF inputs
+      
       advance(L)
     } else if (c === '\\') {
       const nx = L.src[L.i + 1]
       if (nx === '\n' || (nx === '\r' && L.src[L.i + 2] === '\n')) {
-        // Line continuation — tree-sitter extras: /\\\r?\n/
+        
         advance(L)
         advance(L)
         if (nx === '\r') advance(L)
       } else if (nx === ' ' || nx === '\t') {
-        // \<space> or \<tab> — tree-sitter's _whitespace is /\\?[ \t\v]+/
+        
         advance(L)
         advance(L)
       } else {
@@ -279,10 +265,6 @@ function skipBlanks(L: Lexer): void {
   }
 }
 
-/**
- * Scan next token. Context-sensitive: `cmd` mode treats [ as operator (test
- * command start), `arg` mode treats [ as word char (glob/subscript).
- */
 function nextToken(L: Lexer, ctx: 'cmd' | 'arg' = 'arg'): Token {
   skipBlanks(L)
   const start = L.b
@@ -308,7 +290,7 @@ function nextToken(L: Lexer, ctx: 'cmd' | 'arg' = 'arg'): Token {
     }
   }
 
-  // Multi-char operators (longest match first)
+  
   if (c === '&' && c1 === '&') {
     advance(L)
     advance(L)
@@ -430,7 +412,7 @@ function nextToken(L: Lexer, ctx: 'cmd' | 'arg' = 'arg'): Token {
     return { type: 'OP', value: c, start, end: L.b }
   }
 
-  // In cmd position, [ [[ { start test/group; in arg position they're word chars
+  
   if (ctx === 'cmd') {
     if (c === '[' && c1 === '[') {
       advance(L)
@@ -490,7 +472,7 @@ function nextToken(L: Lexer, ctx: 'cmd' | 'arg' = 'arg'): Token {
       return { type: 'DOLLAR_BRACE', value: '${', start, end: L.b }
     }
     if (c1 === "'") {
-      // ANSI-C string $'...'
+      
       const si = L.i
       advance(L)
       advance(L)
@@ -515,7 +497,7 @@ function nextToken(L: Lexer, ctx: 'cmd' | 'arg' = 'arg'): Token {
     return { type: 'BACKTICK', value: '`', start, end: L.b }
   }
 
-  // File descriptor before redirect: digit+ immediately followed by > or <
+  
   if (isDigit(c)) {
     let j = L.i
     while (j < L.len && isDigit(L.src[j]!)) j++
@@ -532,18 +514,18 @@ function nextToken(L: Lexer, ctx: 'cmd' | 'arg' = 'arg'): Token {
     }
   }
 
-  // Word / number
+  
   if (isWordStart(c) || c === '{' || c === '}') {
     const si = L.i
     while (L.i < L.len) {
       const ch = L.src[L.i]!
       if (ch === '\\') {
         if (L.i + 1 >= L.len) {
-          // Trailing `\` at EOF — tree-sitter excludes it from the word and
-          // emits a sibling ERROR. Stop here so the word ends before `\`.
+          
+          
           break
         }
-        // Escape next char (including \n for line continuation mid-word)
+        
         if (L.src[L.i + 1] === '\n') {
           advance(L)
           advance(L)
@@ -560,32 +542,30 @@ function nextToken(L: Lexer, ctx: 'cmd' | 'arg' = 'arg'): Token {
     }
     if (L.i > si) {
       const v = L.src.slice(si, L.i)
-      // Number: optional sign then digits only
+      
       if (/^-?\d+$/.test(v)) {
         return { type: 'NUMBER', value: v, start, end: L.b }
       }
       return { type: 'WORD', value: v, start, end: L.b }
     }
-    // Empty word (lone `\` at EOF) — fall through to single-char consumer
+    
   }
 
-  // Unknown char — consume as single-char word
+  
   advance(L)
   return { type: 'WORD', value: c, start, end: L.b }
 }
-
-// ───────────────────────────── Parser ─────────────────────────────
 
 type ParseState = {
   L: Lexer
   src: string
   srcBytes: number
-  /** True when byte offsets == char indices (no multi-byte UTF-8) */
+  
   isAscii: boolean
   nodeCount: number
   deadline: number
   aborted: boolean
-  /** Depth of backtick nesting — inside `...`, ` terminates words */
+  
   inBacktick: number
   
   stopToken: string | null
@@ -640,7 +620,6 @@ function checkBudget(P: ParseState): void {
   }
 }
 
-/** Build a node. Slices text from source by byte range via char-index lookup. */
 function mk(
   P: ParseState,
   type: string,
@@ -664,7 +643,7 @@ function sliceBytes(P: ParseState, startByte: number, endByte: number): string {
   const L = P.L
   if (!L.byteTable) byteAt(L, 0)
   const t = L.byteTable!
-  // Binary search for char index where byte offset matches
+  
   let lo = 0
   let hi = P.src.length
   while (lo < hi) {
@@ -715,11 +694,11 @@ function parseProgram(P: ParseState): TsNode {
     const stmts = parseStatements(P, null)
     for (const s of stmts) children.push(s)
     if (stmts.length === 0) {
-      // Couldn't parse — emit ERROR and skip one token
+      
       const errTok = nextToken(P.L, 'cmd')
       if (errTok.type === 'EOF') break
-      // Stray `;;` at program level (e.g., `var=;;` outside case) — tree-sitter
-      // silently elides. Keep leading `;` as ERROR (security: paste artifact).
+      
+      
       if (
         errTok.type === 'OP' &&
         errTok.value === ';;' &&
@@ -730,12 +709,11 @@ function parseProgram(P: ParseState): TsNode {
       children.push(mk(P, 'ERROR', errTok.start, errTok.end, []))
     }
   }
-  // tree-sitter includes trailing whitespace in program extent
+  
   const progEnd = children.length > 0 ? P.srcBytes : progStart
   return mk(P, 'program', progStart, progEnd, children)
 }
 
-/** Packed as (b << 16) | i — avoids heap alloc on every backtrack. */
 type LexSave = number
 function saveLex(L: Lexer): LexSave {
   return L.b * 0x10000 + L.i
@@ -745,11 +723,6 @@ function restoreLex(L: Lexer, s: LexSave): void {
   L.b = s >>> 16
 }
 
-/**
- * Parse a sequence of statements separated by ; & newline. Returns a flat list
- * where ; and & are sibling leaves (NOT wrapped in 'list' — only && || get
- * that). Stops at terminator or EOF.
- */
 function parseStatements(P: ParseState, terminator: string | null): TsNode[] {
   const out: TsNode[] = []
   while (true) {
@@ -761,7 +734,7 @@ function parseStatements(P: ParseState, terminator: string | null): TsNode[] {
       break
     }
     if (t.type === 'NEWLINE') {
-      // Process pending heredocs
+      
       if (P.L.heredocs.length > 0) {
         scanHeredocBodies(P)
       }
@@ -810,12 +783,12 @@ function parseStatements(P: ParseState, terminator: string | null): TsNode[] {
     const stmt = parseAndOr(P)
     if (!stmt) break
     out.push(stmt)
-    // Look for separator
+    
     skipBlanks(P.L)
     const save2 = saveLex(P.L)
     const sep = nextToken(P.L, 'cmd')
     if (sep.type === 'OP' && (sep.value === ';' || sep.value === '&')) {
-      // Check if terminator follows — if so, emit separator but stop
+      
       const save3 = saveLex(P.L)
       const after = nextToken(P.L, 'cmd')
       restoreLex(P.L, save3)
@@ -837,7 +810,7 @@ function parseStatements(P: ParseState, terminator: string | null): TsNode[] {
             after.value === 'done' ||
             after.value === 'esac'))
       ) {
-        // Trailing separator — don't include it at program level unless
+        
         
         continue
       }
@@ -850,16 +823,10 @@ function parseStatements(P: ParseState, terminator: string | null): TsNode[] {
       restoreLex(P.L, save2)
     }
   }
-  // Trim trailing separator if at program level
+  
   return out
 }
 
-/**
- * Parse pipeline chains joined by && ||. Left-associative nesting.
- * tree-sitter quirk: trailing redirect on the last pipeline wraps the ENTIRE
- * list in a redirected_statement — `a > x && b > y` becomes
- * redirected_statement(list(redirected_statement(a,>x), &&, b), >y).
- */
 function parseAndOr(P: ParseState): TsNode | null {
   let left = parsePipeline(P)
   if (!left) return null
@@ -874,7 +841,7 @@ function parseAndOr(P: ParseState): TsNode | null {
         left = mk(P, 'list', left.startIndex, op.endIndex, [left, op])
         break
       }
-      // If right is a redirected_statement, hoist its redirects to wrap the list.
+      
       if (right.type === 'redirected_statement' && right.children.length >= 2) {
         const inner = right.children[0]!
         const redirs = right.children.slice(1)
@@ -913,12 +880,6 @@ function skipNewlines(P: ParseState): void {
   }
 }
 
-/**
- * Parse commands joined by | or |&. Flat children with operator leaves.
- * tree-sitter quirk: `a | b 2>nul | c` hoists the redirect on `b` to wrap
- * the preceding pipeline fragment — pipeline(redirected_statement(
- * pipeline(a,|,b), 2>nul), |, c).
- */
 function parsePipeline(P: ParseState): TsNode | null {
   let first = parseCommand(P)
   if (!first) return null
@@ -934,7 +895,7 @@ function parsePipeline(P: ParseState): TsNode | null {
         parts.push(op)
         break
       }
-      // Hoist trailing redirect on `next` to wrap current pipeline fragment
+      
       if (
         next.type === 'redirected_statement' &&
         next.children.length >= 2 &&
@@ -975,7 +936,6 @@ function parsePipeline(P: ParseState): TsNode | null {
   return mk(P, 'pipeline', parts[0]!.startIndex, last.endIndex, parts)
 }
 
-/** Parse a single command: simple, compound, or control structure. */
 function parseCommand(P: ParseState): TsNode | null {
   skipBlanks(P.L)
   const save = saveLex(P.L)
@@ -986,7 +946,7 @@ function parseCommand(P: ParseState): TsNode | null {
     return null
   }
 
-  // Negation — tree-sitter wraps just the command, redirects go outside.
+  
   
   if (t.type === 'OP' && t.value === '!') {
     const bang = leaf(P, '!', t)
@@ -995,7 +955,7 @@ function parseCommand(P: ParseState): TsNode | null {
       restoreLex(P.L, save)
       return null
     }
-    // If inner is a redirected_statement, hoist redirects outside negation
+    
     if (inner.type === 'redirected_statement' && inner.children.length >= 2) {
       const cmd = inner.children[0]!
       const redirs = inner.children.slice(1)
@@ -1072,8 +1032,8 @@ function parseCommand(P: ParseState): TsNode | null {
     let expr = parseTestExpr(P, closer)
     skipBlanks(P.L)
     if (t.value === '[' && peek(P.L) !== ']') {
-      // Expression parse didn't reach `]` — try as redirected_statement.
-      // Thread `]` stop-token so parseSimpleCommand doesn't eat it as arg.
+      
+      
       restoreLex(P.L, exprSave)
       const prevStop = P.stopToken
       P.stopToken = ']'
@@ -1082,7 +1042,7 @@ function parseCommand(P: ParseState): TsNode | null {
       if (rstmt && rstmt.type === 'redirected_statement') {
         expr = rstmt
       } else {
-        // Neither worked — restore and keep the expression result
+        
         restoreLex(P.L, exprSave)
         expr = parseTestExpr(P, closer)
       }
@@ -1118,10 +1078,6 @@ function parseCommand(P: ParseState): TsNode | null {
   return parseSimpleCommand(P)
 }
 
-/**
- * Parse a simple command: [assignment]* word [arg|redirect]*
- * Returns variable_assignment if only one assignment and no command.
- */
 function parseSimpleCommand(P: ParseState): TsNode | null {
   const start = P.L.b
   const assignments: TsNode[] = []
@@ -1163,7 +1119,7 @@ function parseSimpleCommand(P: ParseState): TsNode | null {
       return assignments[0]!
     }
     if (preRedirects.length > 0 && assignments.length === 0) {
-      // Bare redirect → redirected_statement with just file_redirect children
+      
       const last = preRedirects[preRedirects.length - 1]!
       return mk(
         P,
@@ -1174,7 +1130,7 @@ function parseSimpleCommand(P: ParseState): TsNode | null {
       )
     }
     if (assignments.length > 1 && preRedirects.length === 0) {
-      // `A=1 B=2` with no command → variable_assignments (plural)
+      
       const last = assignments[assignments.length - 1]!
       return mk(
         P,
@@ -1207,8 +1163,8 @@ function parseSimpleCommand(P: ParseState): TsNode | null {
       skipNewlines(P)
       const body = parseCommand(P)
       if (body) {
-        // If body is redirected_statement(compound_statement, file_redirect...),
-        // hoist redirects to function_definition level per tree-sitter grammar
+        
+        
         let bodyKids: TsNode[] = [body]
         if (
           body.type === 'redirected_statement' &&
@@ -1260,8 +1216,8 @@ function parseSimpleCommand(P: ParseState): TsNode | null {
       }
       continue
     }
-    // Once a file_redirect has been seen, command args are done — grammar's
-    // command rule doesn't allow file_redirect in its post-name choice, so
+    
+    
     
     if (redirects.length > 0) break
     
@@ -1292,7 +1248,7 @@ function parseSimpleCommand(P: ParseState): TsNode | null {
     restoreLex(P.L, save2)
     const arg = parseWord(P, 'arg')
     if (!arg) {
-      // Lone `(` in arg position — tree-sitter parses this as subshell arg
+      
       
       if (peek(P.L) === '(') {
         const oTok = nextToken(P.L, 'cmd')
@@ -1314,13 +1270,13 @@ function parseSimpleCommand(P: ParseState): TsNode | null {
       }
       break
     }
-    // Lone `=` in arg position is a parse error in bash — tree-sitter wraps
+    
     
     if (arg.type === 'word' && arg.text === '=') {
       args.push(mk(P, 'ERROR', arg.startIndex, arg.endIndex, [arg]))
       continue
     }
-    // Word immediately followed by `(` (no whitespace) is a parse error —
+    
     
     
     if (
@@ -1334,7 +1290,7 @@ function parseSimpleCommand(P: ParseState): TsNode | null {
     args.push(arg)
   }
 
-  // preRedirects (e.g., `2>&1 cat`, `<<<str cmd`) go INSIDE the command node
+  
   
   const cmdChildren = [...assignments, ...preRedirects, cmdName, ...args]
   const cmdEnd =
@@ -1345,7 +1301,7 @@ function parseSimpleCommand(P: ParseState): TsNode | null {
   const cmd = mk(P, 'command', cmdStart, cmdEnd, cmdChildren)
 
   if (heredocRedirect) {
-    // Scan heredoc body now
+    
     scanHeredocBodies(P)
     const hd = P.L.heredocs.shift()
     if (hd && heredocRedirect.children.length >= 2) {
@@ -1463,7 +1419,7 @@ function tryParseAssignment(P: ParseState): TsNode | null {
   const opNode = mk(P, op, opStart, opEnd, [])
   let val: TsNode | null = null
   if (peek(P.L) === '(') {
-    // Array
+    
     const aoTok = nextToken(P.L, 'cmd')
     const aOpen = leaf(P, '(', aoTok)
     const elems: TsNode[] = [aOpen]
@@ -1502,12 +1458,6 @@ function tryParseAssignment(P: ParseState): TsNode | null {
   return mk(P, 'variable_assignment', startB, end, kids)
 }
 
-/**
- * Parse subscript index content. Parsed arithmetically per tree-sitter grammar:
- * `${a[1+2]}` → binary_expression; `${a[++i]}` → unary_expression(word);
- * `${a[(($n+1))]}` → compound_statement(binary_expression). Falls back to
- * simple patterns (@, *) as word.
- */
 function parseSubscriptIndexInline(P: ParseState): TsNode | null {
   skipBlanks(P.L)
   const c = peek(P.L)
@@ -1517,7 +1467,7 @@ function parseSubscriptIndexInline(P: ParseState): TsNode | null {
     advance(P.L)
     return mk(P, 'word', s, P.L.b, [])
   }
-  // ((expr)) → compound_statement wrapping the inner arithmetic
+  
   if (c === '(' && peek(P.L, 1) === '(') {
     const oStart = P.L.b
     advance(P.L)
@@ -1537,12 +1487,11 @@ function parseSubscriptIndexInline(P: ParseState): TsNode | null {
     const kids = inner ? [open, inner, close] : [open, close]
     return mk(P, 'compound_statement', open.startIndex, close.endIndex, kids)
   }
-  // Arithmetic — but bare identifiers in subscript use 'word' mode per
+  
   
   return parseArithExpr(P, ']', 'word')
 }
 
-/** Legacy byte-range subscript index parser — kept for callers that pre-scan. */
 function parseSubscriptIndex(
   P: ParseState,
   startB: number,
@@ -1564,11 +1513,6 @@ function parseSubscriptIndex(
   return mk(P, 'word', startB, endB, [])
 }
 
-/**
- * Can the current position start a redirect destination literal?
- * Returns false at redirect ops, terminators, or file-descriptor-prefixed ops
- * so file_redirect's repeat1($._literal) stops at the right boundary.
- */
 function isRedirectLiteralStart(P: ParseState): boolean {
   const c = peek(P.L)
   if (c === '' || c === '\n') return false
@@ -1577,33 +1521,26 @@ function isRedirectLiteralStart(P: ParseState): boolean {
     return false
   
   if (c === '<' || c === '>') {
-    // <( >( are process substitutions — those ARE literals
+    
     return peek(P.L, 1) === '('
   }
-  // N< N> file descriptor prefix — starts a new redirect, not a literal
+  
   if (isDigit(c)) {
     let j = P.L.i
     while (j < P.L.len && isDigit(P.L.src[j]!)) j++
     const after = j < P.L.len ? P.L.src[j]! : ''
     if (after === '>' || after === '<') return false
   }
-  // `}` only terminates if we're in a context where it's a closer — but
+  
   
   
   if (c === '}') return false
   
-  // `]` must terminate so parseCommand can return and `[` handler consume it.
+  
   if (P.stopToken === ']' && c === ']') return false
   return true
 }
 
-/**
- * Parse a redirect operator + destination(s).
- * @param greedy When true, file_redirect consumes repeat1($._literal) per
- *   grammar's prec.left — `cmd >f a b c` attaches `a b c` to the redirect.
- *   When false (preRedirect context), takes only 1 destination because
- *   command's dynamic precedence beats redirected_statement's prec(-1).
- */
 function tryParseRedirect(P: ParseState, greedy = false): TsNode | null {
   const save = saveLex(P.L)
   skipBlanks(P.L)
@@ -1656,7 +1593,7 @@ function tryParseRedirect(P: ParseState, greedy = false): TsNode | null {
       }
       if (P.L.i < P.L.len) advance(P.L)
     } else if (dc === '\\') {
-      // Backslash-escaped delimiter: \X — exactly one escaped char, body is
+      
       
       quoted = true
       advance(P.L)
@@ -1664,13 +1601,13 @@ function tryParseRedirect(P: ParseState, greedy = false): TsNode | null {
         delim += peek(P.L)
         advance(P.L)
       }
-      // May be followed by more ident chars (e.g. <<\EOF → delim "EOF")
+      
       while (P.L.i < P.L.len && isIdentChar(peek(P.L))) {
         delim += peek(P.L)
         advance(P.L)
       }
     } else {
-      // Unquoted delimiter: bash accepts most non-metacharacters (not just
+      
       
       while (P.L.i < P.L.len && isHeredocDelimChar(peek(P.L))) {
         delim += peek(P.L)
@@ -1712,7 +1649,7 @@ function tryParseRedirect(P: ParseState, greedy = false): TsNode | null {
         }
         restoreLex(P.L, rSave)
       }
-      // Pipeline after heredoc_start: `one <<EOF | grep two` — tree-sitter
+      
       
       
       if (tc === '|' && peek(P.L, 1) !== '|') {
@@ -1735,15 +1672,15 @@ function tryParseRedirect(P: ParseState, greedy = false): TsNode | null {
         }
         if (pipeCmds.length > 0) {
           const pl = pipeCmds[pipeCmds.length - 1]!
-          // tree-sitter always wraps in pipeline after `|`, even single command
+          
           kids.push(
             mk(P, 'pipeline', pipeCmds[0]!.startIndex, pl.endIndex, pipeCmds),
           )
         }
         continue
       }
-      // && / || after heredoc_start: `cat <<-EOF || die "..."` — tree-sitter
-      // nests just the RHS command (not a list) as a child of heredoc_redirect.
+      
+      
       if (
         (tc === '&' && peek(P.L, 1) === '&') ||
         (tc === '|' && peek(P.L, 1) === '|')
@@ -1755,7 +1692,7 @@ function tryParseRedirect(P: ParseState, greedy = false): TsNode | null {
         if (rhs) kids.push(rhs)
         continue
       }
-      // Terminator / unhandled metachar — consume rest of line as ERROR so
+      
       
       if (tc === '&' || tc === ';' || tc === '(' || tc === ')') {
         const eStart = P.L.b
@@ -1763,13 +1700,13 @@ function tryParseRedirect(P: ParseState, greedy = false): TsNode | null {
         kids.push(mk(P, 'ERROR', eStart, P.L.b, []))
         break
       }
-      // Trailing word argument: newins <<-EOF - org.freedesktop.service
+      
       const w = parseWord(P, 'arg')
       if (w) {
         kids.push(w)
         continue
       }
-      // Unrecognized — consume rest of line as ERROR
+      
       const eStart = P.L.b
       while (P.L.i < P.L.len && peek(P.L) !== '\n') advance(P.L)
       if (P.L.b > eStart) kids.push(mk(P, 'ERROR', eStart, P.L.b, []))
@@ -1777,7 +1714,7 @@ function tryParseRedirect(P: ParseState, greedy = false): TsNode | null {
     }
     return mk(P, 'heredoc_redirect', startIdx, P.L.b, kids)
   }
-  // Close-fd variants: `<&-` `>&-` have OPTIONAL destination (0 or 1)
+  
   if (v === '<&-' || v === '>&-') {
     const op = leaf(P, v, t)
     const kids: TsNode[] = []
@@ -1813,7 +1750,7 @@ function tryParseRedirect(P: ParseState, greedy = false): TsNode | null {
     
     
     
-    // NOT to the command. Structural quirk but required for corpus parity.
+    
     
     
     let end = op.endIndex
@@ -1867,7 +1804,7 @@ function parseProcessSub(P: ParseState): TsNode | null {
 }
 
 function scanHeredocBodies(P: ParseState): void {
-  // Skip to newline if not already there
+  
   while (P.L.i < P.L.len && P.L.src[P.L.i] !== '\n') advance(P.L)
   if (P.L.i < P.L.len) advance(P.L)
   for (const hd of P.L.heredocs) {
@@ -1881,7 +1818,7 @@ function scanHeredocBodies(P: ParseState): void {
       if (hd.stripTabs) {
         while (checkI < P.L.len && P.L.src[checkI] === '\t') checkI++
       }
-      // Check if this line is the delimiter
+      
       if (
         P.L.src.startsWith(hd.delim, checkI) &&
         (checkI + delimLen >= P.L.len ||
@@ -1899,11 +1836,11 @@ function scanHeredocBodies(P: ParseState): void {
         if (P.L.i < P.L.len && P.L.src[P.L.i] === '\n') advance(P.L)
         return
       }
-      // Consume line
+      
       while (P.L.i < P.L.len && P.L.src[P.L.i] !== '\n') advance(P.L)
       if (P.L.i < P.L.len) advance(P.L)
     }
-    // Unterminated
+    
     hd.bodyEnd = P.L.b
     hd.endStart = P.L.b
     hd.endEnd = P.L.b
@@ -1915,7 +1852,7 @@ function parseHeredocBodyContent(
   start: number,
   end: number,
 ): TsNode[] {
-  // Parse expansions inside an unquoted heredoc body.
+  
   const saved = saveLex(P.L)
   
   restoreLexToByte(P, start)
@@ -1961,7 +1898,7 @@ function parseHeredocBodyContent(
     }
     advance(P.L)
   }
-  // Only emit heredoc_content children if there were expansions — otherwise
+  
   
   if (sawExpansion) {
     out.push(mk(P, 'heredoc_content', contentStart, end, []))
@@ -1984,11 +1921,6 @@ function restoreLexToByte(P: ParseState, targetByte: number): void {
   P.L.b = targetByte
 }
 
-/**
- * Parse a word-position element: bare word, string, expansion, or concatenation
- * thereof. Returns a single node; if multiple adjacent fragments, wraps in
- * concatenation.
- */
 function parseWord(P: ParseState, _ctx: 'cmd' | 'arg'): TsNode | null {
   skipBlanks(P.L)
   const parts: TsNode[] = []
@@ -2008,7 +1940,7 @@ function parseWord(P: ParseState, _ctx: 'cmd' | 'arg'): TsNode | null {
     ) {
       break
     }
-    // < > are redirect operators unless <( >( (process substitution)
+    
     if (c === '<' || c === '>') {
       if (peek(P.L, 1) === '(') {
         const ps = parseProcessSub(P)
@@ -2034,7 +1966,7 @@ function parseWord(P: ParseState, _ctx: 'cmd' | 'arg'): TsNode | null {
         continue
       }
       if (c1 === '"') {
-        // Translated string: emit $ leaf + string node
+        
         const dTok: Token = {
           type: 'DOLLAR',
           value: '$',
@@ -2047,7 +1979,7 @@ function parseWord(P: ParseState, _ctx: 'cmd' | 'arg'): TsNode | null {
         continue
       }
       if (c1 === '`') {
-        // `$` followed by backtick — tree-sitter elides the $ entirely
+        
         
         
         advance(P.L)
@@ -2063,14 +1995,14 @@ function parseWord(P: ParseState, _ctx: 'cmd' | 'arg'): TsNode | null {
       if (bt) parts.push(bt)
       continue
     }
-    // Brace expression {1..5} or {a,b,c} — only if looks like one
+    
     if (c === '{') {
       const be = tryParseBraceExpr(P)
       if (be) {
         parts.push(be)
         continue
       }
-      // SECURITY: if `{` is immediately followed by a command terminator
+      
       
       
       
@@ -2090,14 +2022,14 @@ function parseWord(P: ParseState, _ctx: 'cmd' | 'arg'): TsNode | null {
         parts.push(mk(P, 'word', bStart, P.L.b, []))
         continue
       }
-      // Otherwise treat { and } as word fragments
+      
       const cat = tryParseBraceLikeCat(P)
       if (cat) {
         for (const p of cat) parts.push(p)
         continue
       }
     }
-    // Standalone `}` in arg position is a word (e.g., `echo }foo`).
+    
     
     if (c === '}') {
       const bStart = P.L.b
@@ -2105,7 +2037,7 @@ function parseWord(P: ParseState, _ctx: 'cmd' | 'arg'): TsNode | null {
       parts.push(mk(P, 'word', bStart, P.L.b, []))
       continue
     }
-    // `[` and `]` are single-char word fragments (tree-sitter splits at
+    
     
     if (c === '[' || c === ']') {
       const bStart = P.L.b
@@ -2113,7 +2045,7 @@ function parseWord(P: ParseState, _ctx: 'cmd' | 'arg'): TsNode | null {
       parts.push(mk(P, 'word', bStart, P.L.b, []))
       continue
     }
-    // Bare word fragment
+    
     const frag = parseBareWord(P)
     if (!frag) break
     
@@ -2128,7 +2060,7 @@ function parseWord(P: ParseState, _ctx: 'cmd' | 'arg'): TsNode | null {
     ) {
       const exp = parseDollarLike(P)
       if (exp) {
-        // Prefix `NN#` is an anonymous pattern in grammar — only the
+        
         
         parts.push(mk(P, 'number', frag.startIndex, exp.endIndex, [exp]))
         continue
@@ -2138,7 +2070,7 @@ function parseWord(P: ParseState, _ctx: 'cmd' | 'arg'): TsNode | null {
   }
   if (parts.length === 0) return null
   if (parts.length === 1) return parts[0]!
-  // Concatenation
+  
   const first = parts[0]!
   const last = parts[parts.length - 1]!
   return mk(P, 'concatenation', first.startIndex, last.endIndex, parts)
@@ -2151,13 +2083,13 @@ function parseBareWord(P: ParseState): TsNode | null {
     const c = peek(P.L)
     if (c === '\\') {
       if (P.L.i + 1 >= P.L.len) {
-        // Trailing unpaired `\` at true EOF — tree-sitter emits word WITHOUT
-        // the `\` plus a sibling ERROR node. Stop here; caller emits ERROR.
+        
+        
         break
       }
       const nx = P.L.src[P.L.i + 1]
       if (nx === '\n' || (nx === '\r' && P.L.src[P.L.i + 2] === '\n')) {
-        // Line continuation BREAKS the word (tree-sitter quirk) — handles \r?\n
+        
         break
       }
       advance(P.L)
@@ -2197,13 +2129,13 @@ function parseBareWord(P: ParseState): TsNode | null {
 }
 
 function tryParseBraceExpr(P: ParseState): TsNode | null {
-  // {N..M} where N, M are numbers or single chars
+  
   const save = saveLex(P.L)
   if (peek(P.L) !== '{') return null
   const oStart = P.L.b
   advance(P.L)
   const oEnd = P.L.b
-  // First part
+  
   const p1Start = P.L.b
   while (isDigit(peek(P.L)) || isIdentStart(peek(P.L))) advance(P.L)
   const p1End = P.L.b
@@ -2229,7 +2161,7 @@ function tryParseBraceExpr(P: ParseState): TsNode | null {
   const p2Text = sliceBytes(P, p2Start, p2End)
   const p1IsNum = /^\d+$/.test(p1Text)
   const p2IsNum = /^\d+$/.test(p2Text)
-  // Valid brace expression: both numbers OR both single chars. Mixed = reject.
+  
   if (p1IsNum !== p2IsNum) {
     restoreLex(P.L, save)
     return null
@@ -2250,7 +2182,7 @@ function tryParseBraceExpr(P: ParseState): TsNode | null {
 }
 
 function tryParseBraceLikeCat(P: ParseState): TsNode[] | null {
-  // {a,b,c} or {} → split into word fragments like tree-sitter does
+  
   if (peek(P.L) !== '{') return null
   const oStart = P.L.b
   advance(P.L)
@@ -2258,7 +2190,7 @@ function tryParseBraceLikeCat(P: ParseState): TsNode[] | null {
   const inner: TsNode[] = [mk(P, 'word', oStart, oEnd, [])]
   while (P.L.i < P.L.len) {
     const bc = peek(P.L)
-    // SECURITY: stop at command terminators so `{foo;rm x` splits correctly.
+    
     if (
       bc === '}' ||
       bc === '\n' ||
@@ -2274,7 +2206,7 @@ function tryParseBraceLikeCat(P: ParseState): TsNode[] | null {
     ) {
       break
     }
-    // `[` and `]` are single-char words: {o[k]} → { o [ k ] }
+    
     if (bc === '[' || bc === ']') {
       const bStart = P.L.b
       advance(P.L)
@@ -2330,12 +2262,12 @@ function parseDoubleQuoted(P: ParseState): TsNode {
   let contentStartI = P.L.i
   const flushContent = (): void => {
     if (P.L.b > contentStart) {
-      // Tree-sitter's extras rule /\s/ has higher precedence than
-      // string_content (prec -1), so whitespace-only segments are elided.
-      // `" ${x} "` → (string (expansion)) not (string (string_content)(expansion)(string_content)).
-      // Note: this intentionally diverges from preserving all content — cc
-      // tests relying on whitespace-only string_content need updating
-      // (CCReconcile).
+      
+      
+      
+      
+      
+      
       const txt = P.src.slice(contentStartI, P.L.i)
       if (!/^[ \t]+$/.test(txt)) {
         parts.push(mk(P, 'string_content', contentStart, P.L.b, []))
@@ -2351,7 +2283,7 @@ function parseDoubleQuoted(P: ParseState): TsNode {
       continue
     }
     if (c === '\n') {
-      // Split string_content at newline
+      
       flushContent()
       advance(P.L)
       contentStart = P.L.b
@@ -2374,9 +2306,9 @@ function parseDoubleQuoted(P: ParseState): TsNode {
         contentStartI = P.L.i
         continue
       }
-      // Bare $ not at end-of-string: tree-sitter emits it as an anonymous
-      // '$' token, which splits string_content. $ immediately before the
-      // closing " is absorbed into the preceding string_content.
+      
+      
+      
       if (c1 !== '"' && c1 !== '') {
         flushContent()
         const dS = P.L.b
@@ -2414,7 +2346,7 @@ function parseDollarLike(P: ParseState): TsNode | null {
   const c1 = peek(P.L, 1)
   const dStart = P.L.b
   if (c1 === '(' && peek(P.L, 2) === '(') {
-    // $(( arithmetic ))
+    
     advance(P.L)
     advance(P.L)
     advance(P.L)
@@ -2437,7 +2369,7 @@ function parseDollarLike(P: ParseState): TsNode | null {
     ])
   }
   if (c1 === '[') {
-    // $[ arithmetic ] — legacy bash syntax, same as $((...))
+    
     advance(P.L)
     advance(P.L)
     const open = mk(P, '$[', dStart, P.L.b, [])
@@ -2471,8 +2403,8 @@ function parseDollarLike(P: ParseState): TsNode | null {
     } else {
       close = mk(P, ')', P.L.b, P.L.b, [])
     }
-    // $(< file) shorthand: unwrap redirected_statement → bare file_redirect
-    // tree-sitter emits (command_substitution (file_redirect (word))) directly
+    
+    
     if (
       body.length === 1 &&
       body[0]!.type === 'redirected_statement' &&
@@ -2502,12 +2434,12 @@ function parseDollarLike(P: ParseState): TsNode | null {
     }
     return mk(P, 'expansion', dStart, close.endIndex, [open, ...inner, close])
   }
-  // Simple expansion $VAR or $? $$ $@ etc
+  
   advance(P.L)
   const dEnd = P.L.b
   const dollar = mk(P, '$', dStart, dEnd, [])
   const nc = peek(P.L)
-  // $_ is special_variable_name only when not followed by more ident chars
+  
   if (nc === '_' && !isIdentChar(peek(P.L, 1))) {
     const vStart = P.L.b
     advance(P.L)
@@ -2532,17 +2464,17 @@ function parseDollarLike(P: ParseState): TsNode | null {
     const vn = mk(P, 'special_variable_name', vStart, P.L.b, [])
     return mk(P, 'simple_expansion', dStart, P.L.b, [dollar, vn])
   }
-  // Bare $ — just a $ leaf (tree-sitter treats trailing $ as literal)
+  
   return dollar
 }
 
 function parseExpansionBody(P: ParseState): TsNode[] {
   const out: TsNode[] = []
   skipBlanks(P.L)
-  // Bizarre cases: ${#!} ${!#} ${!##} ${!# } ${!## } all emit empty (expansion)
-  // — both # and ! become anonymous nodes when only combined with each other
-  // and optional trailing space before }. Note ${!##/} does NOT match (has
-  // content after), so it parses normally as (special_variable_name)(regex).
+  
+  
+  
+  
   {
     const c0 = peek(P.L)
     const c1 = peek(P.L, 1)
@@ -2552,7 +2484,7 @@ function parseExpansionBody(P: ParseState): TsNode[] {
       return out
     }
     if (c0 === '!' && c1 === '#') {
-      // ${!#} ${!##} with optional trailing space then }
+      
       let j = 2
       if (peek(P.L, j) === '#') j++
       if (peek(P.L, j) === ' ') j++
@@ -2562,15 +2494,15 @@ function parseExpansionBody(P: ParseState): TsNode[] {
       }
     }
   }
-  // Optional # prefix for length
+  
   if (peek(P.L) === '#') {
     const s = P.L.b
     advance(P.L)
     out.push(mk(P, '#', s, P.L.b, []))
   }
-  // Optional ! prefix for indirect expansion: ${!varname} ${!prefix*} ${!prefix@}
-  // Only when followed by an identifier — ${!} alone is special var $!
-  // Also = ~ prefixes (zsh-style ${=var} ${~var})
+  
+  
+  
   const pc = peek(P.L)
   if (
     (pc === '!' || pc === '=' || pc === '~') &&
@@ -2581,7 +2513,7 @@ function parseExpansionBody(P: ParseState): TsNode[] {
     out.push(mk(P, pc, s, P.L.b, []))
   }
   skipBlanks(P.L)
-  // Variable name
+  
   if (isIdentStart(peek(P.L))) {
     const s = P.L.b
     while (isIdentChar(peek(P.L))) advance(P.L)
@@ -2595,7 +2527,7 @@ function parseExpansionBody(P: ParseState): TsNode[] {
     advance(P.L)
     out.push(mk(P, 'special_variable_name', s, P.L.b, []))
   }
-  // Optional subscript [idx] — parsed arithmetically
+  
   if (peek(P.L) === '[') {
     const varNode = out[out.length - 1]
     const brOpen = P.L.b
@@ -2614,8 +2546,8 @@ function parseExpansionBody(P: ParseState): TsNode[] {
     }
   }
   skipBlanks(P.L)
-  // Trailing * or @ for indirect expansion (${!prefix*} ${!prefix@}) or
-  // @operator for parameter transformation (${var@U} ${var@Q}) — anonymous
+  
+  
   const tc = peek(P.L)
   if ((tc === '*' || tc === '@') && peek(P.L, 1) === '}') {
     const s = P.L.b
@@ -2624,23 +2556,23 @@ function parseExpansionBody(P: ParseState): TsNode[] {
     return out
   }
   if (tc === '@' && isIdentStart(peek(P.L, 1))) {
-    // ${var@U} transformation — @ is anonymous, consume op char(s)
+    
     const s = P.L.b
     advance(P.L)
     out.push(mk(P, '@', s, P.L.b, []))
     while (isIdentChar(peek(P.L))) advance(P.L)
     return out
   }
-  // Operator :- := :? :+ - = ? + # ## % %% / // ^ ^^ , ,, etc.
+  
   const c = peek(P.L)
-  // Bare `:` substring operator ${var:off:len} — offset and length parsed
-  // arithmetically. Must come BEFORE the generic operator handling so `(` after
-  // `:` goes to parenthesized_expression not the array path. `:-` `:=` `:?`
-  // `:+` (no space) remain default-value operators; `: -1` (with space before
-  // -1) is substring with negative offset.
+  
+  
+  
+  
+  
   if (c === ':') {
     const c1 = peek(P.L, 1)
-    // `:\n` or `:}` — empty substring expansion, emits nothing (variable_name only)
+    
     if (c1 === '\n' || c1 === '}') {
       advance(P.L)
       while (peek(P.L) === '\n') advance(P.L)
@@ -2649,8 +2581,8 @@ function parseExpansionBody(P: ParseState): TsNode[] {
     if (c1 !== '-' && c1 !== '=' && c1 !== '?' && c1 !== '+') {
       advance(P.L)
       skipBlanks(P.L)
-      // Offset — arithmetic. `-N` at top level is a single number node per
-      // tree-sitter; inside parens it's unary_expression(number).
+      
+      
       const offC = peek(P.L)
       let off: TsNode | null
       if (offC === '-' && isDigit(peek(P.L, 1))) {
@@ -2704,7 +2636,7 @@ function parseExpansionBody(P: ParseState): TsNode[] {
       (c === '#' || c === '%' || c === '/' || c === '^' || c === ',') &&
       c1 === c
     ) {
-      // Doubled operators: ## %% 
+      
       advance(P.L)
       advance(P.L)
       op = c + c
@@ -2713,8 +2645,8 @@ function parseExpansionBody(P: ParseState): TsNode[] {
     }
     out.push(mk(P, op, s, P.L.b, []))
     
-    // Pattern-matching operators (# ## % %% / 
-    // value-substitution operators (:- := :? :+ - = ? + :) emit word.
+    
+    
     
     const isPattern =
       op === '#' ||
@@ -2728,14 +2660,14 @@ function parseExpansionBody(P: ParseState): TsNode[] {
       op === ',' ||
       op === ',,'
     if (op === '/' || op === '//') {
-      // Optional /# or /% anchor prefix — anonymous node
+      
       const ac = peek(P.L)
       if (ac === '#' || ac === '%') {
         const aStart = P.L.b
         advance(P.L)
         out.push(mk(P, ac, aStart, P.L.b, []))
       }
-      // Pattern: per grammar _expansion_regex_replacement, pattern is
+      
       
       
       
@@ -2759,7 +2691,7 @@ function parseExpansionBody(P: ParseState): TsNode[] {
         
         const repl = parseExpansionRest(P, 'replword', false)
         if (repl) {
-          // seq(cmd_sub, word) special case → siblings. Detected when
+          
           
           
           if (
@@ -2775,7 +2707,7 @@ function parseExpansionBody(P: ParseState): TsNode[] {
         }
       }
     } else if (op === '#' || op === '##' || op === '%' || op === '%%') {
-      // Pattern-removal: per grammar _expansion_regex, pattern is
+      
       
       
       
@@ -2793,15 +2725,15 @@ function parseExpansionRest(
   nodeType: string,
   stopAtSlash: boolean,
 ): TsNode | null {
-  // Don't skipBlanks — `${var:- }` space IS the word. Stop at } or newline
-  // (`${var:\n}` emits no word). stopAtSlash=true stops at `/` for pat/repl
-  // split in ${var/pat/repl}. nodeType 'replword' is word-mode for the
-  // replacement in `/` `//` — same as 'word' but `(` is NOT array.
+  
+  
+  
+  
   const start = P.L.b
-  // Value-substitution RHS starting with `(` parses as array: ${var:-(x)} →
-  // (expansion (variable_name) (array (word))). Only for 'word' context (not
-  // pattern-matching operators which emit regex, and not 'replword' where `(`
-  // is a regular char per grammar `_expansion_regex_replacement`).
+  
+  
+  
+  
   if (nodeType === 'word' && peek(P.L) === '(') {
     advance(P.L)
     const open = mk(P, '(', start, P.L.b, [])
@@ -2836,8 +2768,8 @@ function parseExpansionRest(
     while (peek(P.L) === '\n') advance(P.L)
     return mk(P, 'array', start, P.L.b, elems)
   }
-  // REGEX mode: flat single-span scan. Quotes are opaque (skipped past so
-  // `/` inside them doesn't break stopAtSlash), but NOT emitted as separate
+  
+  
   
   if (nodeType === 'regex') {
     let braceDepth = 0
@@ -2862,7 +2794,7 @@ function parseExpansionRest(
         if (peek(P.L) === c) advance(P.L)
         continue
       }
-      // Skip past nested ${...} $(...) $[...] so their } / don't terminate us
+      
       if (c === '$') {
         const c1 = peek(P.L, 1)
         if (c1 === '{') {
@@ -2901,8 +2833,8 @@ function parseExpansionRest(
     if (end === start) return null
     return mk(P, 'regex', start, end, [])
   }
-  // WORD mode: segmenting parser — recognize nested ${...}, $(...), $'...',
-  // "...", '...', $ident, <(...)/>(...); bare chars accumulate into word
+  
+  
   
   const parts: TsNode[] = []
   let segStart = P.L.b
@@ -2934,7 +2866,7 @@ function parseExpansionRest(
         continue
       }
       if (c1 === "'") {
-        // $'...' ANSI-C string
+        
         flushSeg()
         const aStart = P.L.b
         advance(P.L)
@@ -2986,17 +2918,17 @@ function parseExpansionRest(
       segStart = P.L.b
       continue
     }
-    // Brace tracking so nested {a,b} brace-expansion chars don't prematurely
-    // terminate (rare, but the `?` in `${cond}? (` should be treated as word).
+    
+    
     if (c === '{') braceDepth++
     else if (c === '}' && braceDepth > 0) braceDepth--
     advance(P.L)
   }
   flushSeg()
-  // Consume trailing newlines before } so caller sees }
+  
   while (peek(P.L) === '\n') advance(P.L)
-  // Tree-sitter skips leading whitespace (extras) in expansion RHS when
-  // there's content after: `${2+ ${2}}` → just (expansion). But `${v:- }`
+  
+  
   
   
   if (
@@ -3008,14 +2940,11 @@ function parseExpansionRest(
   }
   if (parts.length === 0) return null
   if (parts.length === 1) return parts[0]!
-  // Multiple parts: wrap in concatenation (word mode keeps concat wrapping;
-  // regex mode also concats per tree-sitter for mixed quote+glob patterns).
+  
+  
   const last = parts[parts.length - 1]!
   return mk(P, 'concatenation', parts[0]!.startIndex, last.endIndex, parts)
 }
-
-// Pattern for # ## % %% operators — per grammar _expansion_regex:
-// repeat(choice(regex, string, raw_string, ')', /\s+/→regex)). Each quote
 
 function parseExpansionRegexSegmented(P: ParseState): TsNode[] {
   const out: TsNode[] = []
@@ -3047,7 +2976,7 @@ function parseExpansionRegexSegmented(P: ParseState): TsNode[] {
       segStart = P.L.b
       continue
     }
-    // Nested ${...} $(...) — opaque scan so their } doesn't terminate us
+    
     if (c === '$') {
       const c1 = peek(P.L, 1)
       if (c1 === '{') {
@@ -3087,7 +3016,7 @@ function parseBacktick(P: ParseState): TsNode | null {
   advance(P.L)
   const open = mk(P, '`', start, P.L.b, [])
   P.inBacktick++
-  // Parse statements inline — stop at closing backtick
+  
   const body: TsNode[] = []
   while (true) {
     skipBlanks(P.L)
@@ -3122,9 +3051,9 @@ function parseBacktick(P: ParseState): TsNode | null {
   } else {
     close = mk(P, '`', P.L.b, P.L.b, [])
   }
-  // Empty backticks (whitespace/newline only) are elided entirely by
-  // tree-sitter — used as a line-continuation hack: "foo"`<newline>`"bar"
-  // → (concatenation (string) (string)) with no command_substitution.
+  
+  
+  
   if (body.length === 0) return null
   return mk(P, 'command_substitution', start, close.endIndex, [
     open,
@@ -3184,16 +3113,16 @@ function parseWhile(P: ParseState, kwTok: Token): TsNode {
 function parseFor(P: ParseState, forTok: Token): TsNode {
   const forKw = leaf(P, forTok.value, forTok)
   skipBlanks(P.L)
-  // C-style for (( ; ; )) — only for `for`, not `select`
+  
   if (forTok.value === 'for' && peek(P.L) === '(' && peek(P.L, 1) === '(') {
     const oStart = P.L.b
     advance(P.L)
     advance(P.L)
     const open = mk(P, '((', oStart, P.L.b, [])
     const kids: TsNode[] = [forKw, open]
-    // init; cond; update — all three use 'assign' mode so `c = expr` emits
-    // variable_assignment, while bare idents (c in `c<=5`) → word. Each
-    // clause may be a comma-separated list.
+    
+    
+    
     for (let k = 0; k < 3; k++) {
       skipBlanks(P.L)
       const es = parseArithCommaList(P, k < 2 ? ';' : '))', 'assign')
@@ -3213,7 +3142,7 @@ function parseFor(P: ParseState, forTok: Token): TsNode {
       advance(P.L)
       kids.push(mk(P, '))', cStart, P.L.b, []))
     }
-    // Optional ; or newline
+    
     const save = saveLex(P.L)
     const sep = nextToken(P.L, 'cmd')
     if (sep.type === 'OP' && sep.value === ';') {
@@ -3225,7 +3154,7 @@ function parseFor(P: ParseState, forTok: Token): TsNode {
     if (dg) {
       kids.push(dg)
     } else {
-      // C-style for can also use `{ ... }` body instead of `do ... done`
+      
       skipNewlines(P)
       skipBlanks(P.L)
       if (peek(P.L) === '{') {
@@ -3253,7 +3182,7 @@ function parseFor(P: ParseState, forTok: Token): TsNode {
     const last = kids[kids.length - 1]!
     return mk(P, 'c_style_for_statement', forKw.startIndex, last.endIndex, kids)
   }
-  // Regular for VAR in words; do ... done
+  
   const kids: TsNode[] = [forKw]
   const varTok = nextToken(P.L, 'arg')
   kids.push(mk(P, 'variable_name', varTok.start, varTok.end, []))
@@ -3273,7 +3202,7 @@ function parseFor(P: ParseState, forTok: Token): TsNode {
   } else {
     restoreLex(P.L, save)
   }
-  // Separator
+  
   const save2 = saveLex(P.L)
   const sep = nextToken(P.L, 'cmd')
   if (sep.type === 'OP' && sep.value === ';') {
@@ -3335,13 +3264,13 @@ function parseCaseItem(P: ParseState): TsNode | null {
   skipBlanks(P.L)
   const start = P.L.b
   const kids: TsNode[] = []
-  // Optional leading '(' before pattern — bash allows (pattern) syntax
+  
   if (peek(P.L) === '(') {
     const s = P.L.b
     advance(P.L)
     kids.push(mk(P, '(', s, P.L.b, []))
   }
-  // Pattern(s)
+  
   let isFirstAlt = true
   while (true) {
     skipBlanks(P.L)
@@ -3349,9 +3278,9 @@ function parseCaseItem(P: ParseState): TsNode | null {
     if (c === ')' || c === '') break
     const pats = parseCasePattern(P)
     if (pats.length === 0) break
-    // tree-sitter quirk: first alternative with quotes is inlined as flat
-    // siblings; subsequent alternatives are wrapped in (concatenation) with
-    // `word` instead of `extglob_pattern` for bare segments.
+    
+    
+    
     if (!isFirstAlt && pats.length > 1) {
       const rewritten = pats.map(p =>
         p.type === 'extglob_pattern'
@@ -3368,7 +3297,7 @@ function parseCaseItem(P: ParseState): TsNode | null {
     }
     isFirstAlt = false
     skipBlanks(P.L)
-    // \<newline> line continuation between alternatives
+    
     if (peek(P.L) === '\\' && peek(P.L, 1) === '\n') {
       advance(P.L)
       advance(P.L)
@@ -3378,7 +3307,7 @@ function parseCaseItem(P: ParseState): TsNode | null {
       const s = P.L.b
       advance(P.L)
       kids.push(mk(P, '|', s, P.L.b, []))
-      // \<newline> after | is also a line continuation
+      
       if (peek(P.L) === '\\' && peek(P.L, 1) === '\n') {
         advance(P.L)
         advance(P.L)
@@ -3405,9 +3334,9 @@ function parseCaseItem(P: ParseState): TsNode | null {
     restoreLex(P.L, save)
   }
   if (kids.length === 0) return null
-  // tree-sitter quirk: case_item with EMPTY body and a single pattern matching
-  // extglob-operator-char-prefix (no actual glob metachars) downgrades to word.
-  // `-o) owner=$2 ;;` (has body) → extglob_pattern; `-g) ;;` (empty) → word.
+  
+  
+  
   if (body.length === 0) {
     for (let i = 0; i < kids.length; i++) {
       const k = kids[i]!
@@ -3434,15 +3363,15 @@ function parseCasePattern(P: ParseState): TsNode[] {
   while (P.L.i < P.L.len) {
     const c = peek(P.L)
     if (c === '\\' && P.L.i + 1 < P.L.len) {
-      // Escaped char — consume both (handles `bar\ baz` as single pattern)
-      // \<newline> is a line continuation; eat it but stay in pattern.
+      
+      
       advance(P.L)
       advance(P.L)
       continue
     }
     if (c === '"' || c === "'") {
       hasQuote = true
-      // Skip past the quoted segment so its content (spaces, |, etc.) doesn't
+      
       
       advance(P.L)
       while (P.L.i < P.L.len && peek(P.L) !== c) {
@@ -3452,8 +3381,8 @@ function parseCasePattern(P: ParseState): TsNode[] {
       if (peek(P.L) === c) advance(P.L)
       continue
     }
-    // Paren counting: any ( inside pattern opens a scope; don't break at ) or |
-    // until balanced. Handles extglob *(a|b) and nested shapes *([0-9])([0-9]).
+    
+    
     if (c === '(') {
       parenDepth++
       advance(P.L)
@@ -3477,25 +3406,25 @@ function parseCasePattern(P: ParseState): TsNode[] {
   if (P.L.b === start) return []
   const text = P.src.slice(startI, P.L.i)
   const hasExtglobParen = /[*?+@!]\(/.test(text)
-  // Quoted segments in pattern: tree-sitter splits at quote boundaries into
-  // multiple sibling nodes. `*"foo"*` → (extglob_pattern)(string)(extglob_pattern).
-  // Re-scan with a segmenting pass.
+  
+  
+  
   if (hasQuote && !hasExtglobParen) {
     restoreLex(P.L, save)
     return parseCasePatternSegmented(P)
   }
-  // tree-sitter splits patterns with [ or $ into concatenation via word parsing
-  // UNLESS pattern has extglob parens (those override and emit extglob_pattern).
-  // `*.[1357]` → concat(word word number word); `${PN}.pot` → concat(expansion word);
-  // but `*([0-9])` → extglob_pattern (has extglob paren).
+  
+  
+  
+  
   if (!hasExtglobParen && (hasDollar || hasBracketOutsideParen)) {
     restoreLex(P.L, save)
     const w = parseWord(P, 'arg')
     return w ? [w] : []
   }
-  // Patterns starting with extglob operator chars (+ - ? * @ !) followed by
-  // identifier chars are extglob_pattern per tree-sitter, even without parens
-  // or glob metachars. `-o)` → extglob_pattern; plain `foo)` → word.
+  
+  
+  
   const type =
     hasExtglobParen || /[*?]/.test(text) || /^[-+?*@!][a-zA-Z]/.test(text)
       ? 'extglob_pattern'
@@ -3503,9 +3432,6 @@ function parseCasePattern(P: ParseState): TsNode[] {
   return [mk(P, type, start, P.L.b, [])]
 }
 
-// Segmented scan for case patterns containing quotes: `*"foo"*` →
-// [extglob_pattern, string, extglob_pattern]. Bare segments → extglob_pattern
-// if they have */?, else word. Stops at ) | space tab newline outside quotes.
 function parseCasePatternSegmented(P: ParseState): TsNode[] {
   const parts: TsNode[] = []
   let segStart = P.L.b
@@ -3563,8 +3489,8 @@ function parseFunction(P: ParseState, fnTok: Token): TsNode {
   skipNewlines(P)
   const body = parseCommand(P)
   if (body) {
-    // Hoist redirects from redirected_statement(compound_statement, ...) to
-    // function_definition level per tree-sitter grammar
+    
+    
     if (
       body.type === 'redirected_statement' &&
       body.children.length >= 2 &&
@@ -3602,7 +3528,7 @@ function parseDeclaration(P: ParseState, kwTok: Token): TsNode {
       kids.push(a)
       continue
     }
-    // Quoted string or concatenation: `export "FOO=bar"`, `export 'X'`
+    
     if (c === '"' || c === "'" || c === '$') {
       const w = parseWord(P, 'arg')
       if (w) {
@@ -3611,7 +3537,7 @@ function parseDeclaration(P: ParseState, kwTok: Token): TsNode {
       }
       break
     }
-    // Flag like -a or bare variable name
+    
     const save = saveLex(P.L)
     const tok = nextToken(P.L, 'arg')
     if (tok.type === 'WORD' || tok.type === 'NUMBER') {
@@ -3649,10 +3575,10 @@ function parseUnset(P: ParseState, kwTok: Token): TsNode {
     ) {
       break
     }
-    // SECURITY: use parseWord (not raw nextToken) so quoted strings like
-    // `unset 'a[$(id)]'` emit a raw_string child that ast.ts can reject.
-    // Previously `break` silently dropped non-WORD args — hiding the
-    // arithmetic-subscript code-exec vector from the security walker.
+    
+    
+    
+    
     const arg = parseWord(P, 'arg')
     if (!arg) break
     if (arg.type === 'word') {
@@ -3679,8 +3605,6 @@ function consumeKeyword(P: ParseState, name: string, kids: TsNode[]): void {
     restoreLex(P.L, save)
   }
 }
-
-// ───────────────────── Test & Arithmetic Expressions ─────────────────────
 
 function parseTestExpr(P: ParseState, closer: string): TsNode | null {
   return parseTestOr(P, closer)
@@ -3767,11 +3691,6 @@ function parseTestUnary(P: ParseState, closer: string): TsNode | null {
   return parseTestBinary(P, closer)
 }
 
-/**
- * Parse `!`-negated or test-operator (`-f`) or parenthesized primary — but NOT
- * a binary comparison. Used as LHS of binary_expression so `! x =~ y` binds
- * `!` to `x` only, not the whole `x =~ y`.
- */
 function parseTestNegatablePrimary(
   P: ParseState,
   closer: string,
@@ -3804,13 +3723,13 @@ function parseTestNegatablePrimary(
 
 function parseTestBinary(P: ParseState, closer: string): TsNode | null {
   skipBlanks(P.L)
-  // `!` in test context binds tighter than =~/==.
-  // `[[ ! "x" =~ y ]]` → (binary_expression (unary_expression (string)) (regex))
-  // `[[ ! -f x ]]` → (unary_expression ! (unary_expression (test_operator) (word)))
+  
+  
+  
   const left = parseTestNegatablePrimary(P, closer)
   if (!left) return null
   skipBlanks(P.L)
-  // Binary comparison: == != =~ -eq -lt etc.
+  
   const c = peek(P.L)
   const c1 = peek(P.L, 1)
   let op: TsNode | null = null
@@ -3843,8 +3762,8 @@ function parseTestBinary(P: ParseState, closer: string): TsNode | null {
   }
   if (!op) return left
   skipBlanks(P.L)
-  // In [[ ]], RHS of ==/!=/=/=~ gets special pattern parsing: paren counting
-  // so @(a|b|c) doesn't break on |, and segments become extglob_pattern/regex.
+  
+  
   if (closer === ']]') {
     const opText = op.type
     if (opText === '=~') {
@@ -3886,7 +3805,7 @@ function parseTestBinary(P: ParseState, closer: string): TsNode | null {
         rhs,
       ])
     }
-    // Single `=` emits (regex) per tree-sitter; `==` and `!=` emit extglob_pattern
+    
     if (opText === '=') {
       const rhs = parseTestRegexRhs(P)
       if (!rhs) return left
@@ -3916,8 +3835,6 @@ function parseTestBinary(P: ParseState, closer: string): TsNode | null {
   ])
 }
 
-// RHS of =~ in [[ ]] — scan as single (regex) node with paren/bracket counting
-
 function parseTestRegexRhs(P: ParseState): TsNode | null {
   skipBlanks(P.L)
   const start = P.L.b
@@ -3934,7 +3851,7 @@ function parseTestRegexRhs(P: ParseState): TsNode | null {
     if (parenDepth === 0 && bracketDepth === 0) {
       if (c === ']' && peek(P.L, 1) === ']') break
       if (c === ' ' || c === '\t') {
-        // Peek past blanks for ]] or &&/||
+        
         let j = P.L.i
         while (j < P.L.len && (P.L.src[j] === ' ' || P.L.src[j] === '\t')) j++
         const nc = P.L.src[j] ?? ''
@@ -3959,8 +3876,6 @@ function parseTestRegexRhs(P: ParseState): TsNode | null {
   if (P.L.b === start) return null
   return mk(P, 'regex', start, P.L.b, [])
 }
-
-// RHS of ==/!=/= in [[ ]] — returns array of parts. Bare text → extglob_pattern
 
 function parseTestExtglobRhs(P: ParseState): TsNode[] {
   skipBlanks(P.L)
@@ -4002,8 +3917,8 @@ function parseTestExtglobRhs(P: ParseState): TsNode[] {
         continue
       }
     }
-    // $ " ' must be parsed even inside @( ) extglob parens — parseDollarLike
-    // consumes matching ) so parenDepth stays consistent.
+    
+    
     if (c === '$') {
       const c1 = peek(P.L, 1)
       if (
@@ -4045,21 +3960,14 @@ function parseTestExtglobRhs(P: ParseState): TsNode[] {
 
 function parseTestPrimary(P: ParseState, closer: string): TsNode | null {
   skipBlanks(P.L)
-  // Stop at closer
+  
   if (closer === ']' && peek(P.L) === ']') return null
   if (closer === ']]' && peek(P.L) === ']' && peek(P.L, 1) === ']') return null
   return parseWord(P, 'arg')
 }
 
-/**
- * Arithmetic context modes:
- * - 'var': bare identifiers → variable_name (default, used in $((..)), ((..)))
- * - 'word': bare identifiers → word (c-style for head condition/update clauses)
- * - 'assign': identifiers with = → variable_assignment (c-style for init clause)
- */
 type ArithMode = 'var' | 'word' | 'assign'
 
-/** Operator precedence table (higher = tighter binding). */
 const ARITH_PREC: Record<string, number> = {
   '=': 2,
   '+=': 2,
@@ -4093,7 +4001,6 @@ const ARITH_PREC: Record<string, number> = {
   '**': 14,
 }
 
-/** Right-associative operators (assignment and exponent). */
 const ARITH_RIGHT_ASSOC = new Set([
   '=',
   '+=',
@@ -4117,7 +4024,6 @@ function parseArithExpr(
   return parseArithTernary(P, stop, mode)
 }
 
-/** Top-level: comma-separated list. arithmetic_expansion emits multiple children. */
 function parseArithCommaList(
   P: ParseState,
   stop: string,
@@ -4170,15 +4076,14 @@ function parseArithTernary(
   return cond
 }
 
-/** Scan next arithmetic binary operator; returns [text, length] or null. */
 function scanArithOp(P: ParseState): [string, number] | null {
   const c = peek(P.L)
   const c1 = peek(P.L, 1)
   const c2 = peek(P.L, 2)
-  // 3-char: <<= >>=
+  
   if (c === '<' && c1 === '<' && c2 === '=') return ['<<=', 3]
   if (c === '>' && c1 === '>' && c2 === '=') return ['>>=', 3]
-  // 2-char
+  
   if (c === '*' && c1 === '*') return ['**', 2]
   if (c === '<' && c1 === '<') return ['<<', 2]
   if (c === '>' && c1 === '>') return ['>>', 2]
@@ -4196,7 +4101,7 @@ function scanArithOp(P: ParseState): [string, number] | null {
   if (c === '&' && c1 === '=') return ['&=', 2]
   if (c === '^' && c1 === '=') return ['^=', 2]
   if (c === '|' && c1 === '=') return ['|=', 2]
-  // 1-char — but NOT ++ -- (those are pre/postfix)
+  
   if (c === '+' && c1 !== '+') return ['+', 1]
   if (c === '-' && c1 !== '-') return ['-', 1]
   if (c === '*') return ['*', 1]
@@ -4211,7 +4116,6 @@ function scanArithOp(P: ParseState): [string, number] | null {
   return null
 }
 
-/** Precedence-climbing binary expression parser. */
 function parseArithBinary(
   P: ParseState,
   stop: string,
@@ -4253,7 +4157,7 @@ function parseArithUnary(
   if (isArithStop(P, stop)) return null
   const c = peek(P.L)
   const c1 = peek(P.L, 1)
-  // Prefix ++ --
+  
   if ((c === '+' && c1 === '+') || (c === '-' && c1 === '-')) {
     const s = P.L.b
     advance(P.L)
@@ -4264,8 +4168,8 @@ function parseArithUnary(
     return mk(P, 'unary_expression', op.startIndex, inner.endIndex, [op, inner])
   }
   if (c === '-' || c === '+' || c === '!' || c === '~') {
-    // In 'word'/'assign' mode (c-style for head), `-N` is a single number
-    // literal per tree-sitter, not unary_expression. 'var' mode uses unary.
+    
+    
     if (mode !== 'var' && c === '-' && isDigit(c1)) {
       const s = P.L.b
       advance(P.L)
@@ -4313,7 +4217,7 @@ function parseArithPrimary(
     const s = P.L.b
     advance(P.L)
     const open = mk(P, '(', s, P.L.b, [])
-    // Parenthesized expression may contain comma-separated exprs
+    
     const inners = parseArithCommaList(P, ')', mode)
     skipBlanks(P.L)
     let close: TsNode
@@ -4339,7 +4243,7 @@ function parseArithPrimary(
   if (isDigit(c)) {
     const s = P.L.b
     while (isDigit(peek(P.L))) advance(P.L)
-    // Hex: 0x1f
+    
     if (
       P.L.b - s === 1 &&
       c === '0' &&
@@ -4348,7 +4252,7 @@ function parseArithPrimary(
       advance(P.L)
       while (isHexDigit(peek(P.L))) advance(P.L)
     }
-    // Base notation: BASE#DIGITS e.g. 2#1010, 16#ff
+    
     else if (peek(P.L) === '#') {
       advance(P.L)
       while (isBaseDigit(peek(P.L))) advance(P.L)
@@ -4359,9 +4263,9 @@ function parseArithPrimary(
     const s = P.L.b
     while (isIdentChar(peek(P.L))) advance(P.L)
     const nc = peek(P.L)
-    // Assignment in 'assign' mode (c-style for init): emit variable_assignment
-    // so chained `a = b = c = 1` nests correctly. Other modes treat `=` as a
-    // binary_expression operator via the precedence table.
+    
+    
+    
     if (mode === 'assign') {
       skipBlanks(P.L)
       const ac = peek(P.L)
@@ -4371,14 +4275,14 @@ function parseArithPrimary(
         const es = P.L.b
         advance(P.L)
         const eq = mk(P, '=', es, P.L.b, [])
-        // RHS may itself be another assignment (chained)
+        
         const val = parseArithTernary(P, stop, mode)
         const end = val ? val.endIndex : eq.endIndex
         const kids = val ? [vn, eq, val] : [vn, eq]
         return mk(P, 'variable_assignment', s, end, kids)
       }
     }
-    // Subscript
+    
     if (nc === '[') {
       const vn = mk(P, 'variable_name', s, P.L.b, [])
       const brS = P.L.b
@@ -4397,9 +4301,9 @@ function parseArithPrimary(
       const kids = idx ? [vn, brOpen, idx, brClose] : [vn, brOpen, brClose]
       return mk(P, 'subscript', s, brClose.endIndex, kids)
     }
-    // Bare identifier: variable_name in 'var' mode, word in 'word'/'assign' mode.
-    // 'assign' mode falls through to word when no `=` follows (c-style for
-    // cond/update clauses: `c<=5` → binary_expression(word, number)).
+    
+    
+    
     const identType = mode === 'var' ? 'variable_name' : 'word'
     return mk(P, identType, s, P.L.b, [])
   }

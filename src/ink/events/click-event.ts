@@ -1,7 +1,7 @@
 import { Event } from './event.js'
 
 export class ClickEvent extends Event {
-  /** 0-indexed screen column of the click */
+  
   readonly col: number
   
   readonly row: number

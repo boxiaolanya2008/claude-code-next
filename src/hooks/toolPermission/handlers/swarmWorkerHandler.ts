@@ -23,20 +23,6 @@ type SwarmWorkerPermissionParams = {
   suggestions: PermissionUpdate[] | undefined
 }
 
-/**
- * Handles the swarm worker permission flow.
- *
- * When running as a swarm worker:
- * 1. Tries classifier auto-approval for bash commands
- * 2. Forwards the permission request to the leader via mailbox
- * 3. Registers callbacks for when the leader responds
- * 4. Sets the pending indicator while waiting
- *
- * Returns a PermissionDecision if the classifier auto-approves,
- * or a Promise that resolves when the leader responds.
- * Returns null if swarms are not enabled or this is not a swarm worker,
- * so the caller can fall through to interactive handling.
- */
 async function handleSwarmWorkerPermission(
   params: SwarmWorkerPermissionParams,
 ): Promise<PermissionDecision | null> {
@@ -56,7 +42,7 @@ async function handleSwarmWorkerPermission(
     return classifierResult
   }
 
-  // Forward permission request to the leader via mailbox
+  
   try {
     const clearPendingRequest = (): void =>
       ctx.toolUseContext.setAppState(prev => ({
@@ -87,7 +73,7 @@ async function handleSwarmWorkerPermission(
           feedback?: string,
           contentBlocks?: ContentBlockParam[],
         ) {
-          if (!claim()) return // atomic check-and-mark before await
+          if (!claim()) return 
           clearPendingRequest()
 
           
@@ -133,7 +119,7 @@ async function handleSwarmWorkerPermission(
       }))
 
       
-      // resolve the promise with a cancel decision so it does not hang.
+      
       ctx.toolUseContext.abortController.signal.addEventListener(
         'abort',
         () => {
@@ -148,7 +134,7 @@ async function handleSwarmWorkerPermission(
 
     return decision
   } catch (error) {
-    // If swarm permission submission fails, fall back to local handling
+    
     logError(toError(error))
     
     return null

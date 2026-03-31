@@ -27,8 +27,6 @@ const DEFAULT_BRIEF_CONFIG: BriefConfig = {
   enable_slash_command: false,
 }
 
-// No TTL — this gate controls slash-command *visibility*, not a kill switch.
-
 function getBriefConfig(): BriefConfig {
   const raw = getFeatureValue_CACHED_MAY_BE_STALE<unknown>(
     'tengu_kairos_brief_config',
@@ -73,7 +71,7 @@ const brief = {
           return null
         }
 
-        // Two-way: userMsgOptIn tracks isBriefOnly so the tool is available
+        
         
         
         

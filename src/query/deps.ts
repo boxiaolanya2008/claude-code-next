@@ -4,7 +4,7 @@ import { autoCompactIfNeeded } from '../services/compact/autoCompact.js'
 import { microcompactMessages } from '../services/compact/microCompact.js'
 
 export type QueryDeps = {
-  // -- model
+  
   callModel: typeof queryModelWithStreaming
 
   

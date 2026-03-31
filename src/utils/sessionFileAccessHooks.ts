@@ -59,10 +59,6 @@ function getFilePathFromInput(
   }
 }
 
-/**
- * Extract file type from tool input.
- * Returns the detected session file type or null.
- */
 function getSessionFileTypeFromInput(
   toolName: string,
   toolInput: unknown,
@@ -81,7 +77,7 @@ function getSessionFileTypeFromInput(
         const pathType = detectSessionFileType(parsed.data.path)
         if (pathType) return pathType
       }
-      // Check glob pattern
+      
       if (parsed.data.glob) {
         const globType = detectSessionPatternType(parsed.data.glob)
         if (globType) return globType
@@ -96,7 +92,7 @@ function getSessionFileTypeFromInput(
         const pathType = detectSessionFileType(parsed.data.path)
         if (pathType) return pathType
       }
-      // Check pattern
+      
       const patternType = detectSessionPatternType(parsed.data.pattern)
       if (patternType) return patternType
       return null
@@ -106,11 +102,6 @@ function getSessionFileTypeFromInput(
   }
 }
 
-/**
- * Check if a tool use constitutes a memory file access.
- * Detects session memory (via Read/Grep/Glob) and memdir access (via Read/Edit/Write).
- * Uses the same conditions as the PostToolUse session file access hooks.
- */
 export function isMemoryFileAccess(
   toolName: string,
   toolInput: unknown,
@@ -131,9 +122,6 @@ export function isMemoryFileAccess(
   return false
 }
 
-/**
- * PostToolUse callback to log session file access events.
- */
 async function handleSessionFileAccess(
   input: HookInput,
   _toolUseID: string | null,
@@ -155,7 +143,7 @@ async function handleSessionFileAccess(
     logEvent('tengu_transcript_accessed', { ...subagentProps })
   }
 
-  // Memdir access tracking
+  
   const filePath = getFilePathFromInput(input.tool_name, input.tool_input)
   if (filePath && isAutoMemFile(filePath)) {
     logEvent('tengu_memdir_accessed', {
@@ -176,7 +164,7 @@ async function handleSessionFileAccess(
     }
   }
 
-  // Team memory access tracking
+  
   if (feature('TEAMMEM') && filePath && teamMemPaths!.isTeamMemFile(filePath)) {
     logEvent('tengu_team_mem_accessed', {
       tool: input.tool_name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -217,15 +205,11 @@ async function handleSessionFileAccess(
   return {}
 }
 
-/**
- * Register session file access tracking hooks.
- * Called during CLI initialization.
- */
 export function registerSessionFileAccessHooks(): void {
   const hook: HookCallback = {
     type: 'callback',
     callback: handleSessionFileAccess,
-    timeout: 1, // Very short timeout - just logging
+    timeout: 1, 
     internal: true,
   }
 

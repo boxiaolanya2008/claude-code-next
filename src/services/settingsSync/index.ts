@@ -91,27 +91,17 @@ export async function uploadUserSettingsInBackground(): Promise<void> {
       logEvent('tengu_settings_sync_upload_failed', { entryCount })
     }
   } catch {
-    // Fail-open: log unexpected errors but don't block startup
+    
     logForDiagnosticsNoPII('error', 'settings_sync_unexpected_error')
   }
 }
 
-// Cached so the fire-and-forget at runHeadless entry and the await in
-// installPluginsAndApplyMcpInBackground share one fetch.
 let downloadPromise: Promise<boolean> | null = null
 
-/** Test-only: clear the cached download promise between tests. */
 export function _resetDownloadPromiseForTesting(): void {
   downloadPromise = null
 }
 
-/**
- * Download settings from remote for CCR mode.
- * Fired fire-and-forget at the top of print.ts runHeadless(); awaited in
- * installPluginsAndApplyMcpInBackground before plugin install. First call
- * starts the fetch; subsequent calls join it.
- * Returns true if settings were applied, false otherwise.
- */
 export function downloadUserSettings(): Promise<boolean> {
   if (downloadPromise) {
     return downloadPromise
@@ -120,21 +110,6 @@ export function downloadUserSettings(): Promise<boolean> {
   return downloadPromise
 }
 
-/**
- * Force a fresh download, bypassing the cached startup promise.
- * Called by /reload-plugins in CCR so mid-session settings changes
- * (enabledPlugins, extraKnownMarketplaces) pushed from the user's local
- * CLI are picked up before the plugin-cache sweep.
- *
- * No retries: user-initiated command, one attempt + fail-open. The user
- * can re-run /reload-plugins to retry. Startup path keeps DEFAULT_MAX_RETRIES.
- *
- * Caller is responsible for firing settingsChangeDetector.notifyChange
- * when this returns true — applyRemoteEntriesToLocal uses markInternalWrite
- * to suppress detection (correct for startup, but mid-session needs
- * applySettingsChange to run). Kept out of this module to avoid the
- * settingsSync → changeDetector cycle edge.
- */
 export function redownloadUserSettings(): Promise<boolean> {
   downloadPromise = doDownloadUserSettings(0)
   return downloadPromise
@@ -178,7 +153,7 @@ async function doDownloadUserSettings(
       logEvent('tengu_settings_sync_download_success', { entryCount })
       return true
     } catch {
-      // Fail-open: log error but don't block CCR startup
+      
       logForDiagnosticsNoPII('error', 'settings_sync_download_error')
       logEvent('tengu_settings_sync_download_error', {})
       return false
@@ -187,14 +162,6 @@ async function doDownloadUserSettings(
   return false
 }
 
-/**
- * Check if user is authenticated with first-party OAuth.
- * Required for settings sync in both CLI (upload) and CCR (download) modes.
- *
- * Only checks user:inference (not user:profile) — CCR's file-descriptor token
- * hardcodes scopes to ['user:inference'] only, so requiring profile would make
- * download a no-op there. Upload is independently guarded by getIsInteractive().
- */
 function isUsingOAuth(): boolean {
   if (getAPIProvider() !== 'firstParty' || !isFirstPartyAnthropicBaseUrl()) {
     return false
@@ -207,7 +174,7 @@ function isUsingOAuth(): boolean {
 }
 
 function getSettingsSyncEndpoint(): string {
-  return `${getOauthConfig().BASE_API_URL}/api/claude_code/user_settings`
+  return `${getOauthConfig().BASE_API_URL}/api/claude_code_next/user_settings`
 }
 
 function getSettingsSyncAuthHeaders(): {
@@ -377,10 +344,6 @@ async function uploadUserSettings(
   }
 }
 
-/**
- * Try to read a file for sync, with size limit and error handling.
- * Returns null if file doesn't exist, is empty, or exceeds size limit.
- */
 async function tryReadFileForSync(filePath: string): Promise<string | null> {
   try {
     const stats = await stat(filePath)
@@ -406,7 +369,7 @@ async function buildEntriesFromLocalFiles(
 ): Promise<Record<string, string>> {
   const entries: Record<string, string> = {}
 
-  // Global user settings
+  
   const userSettingsPath = getSettingsFilePathForSource('userSettings')
   if (userSettingsPath) {
     const content = await tryReadFileForSync(userSettingsPath)
@@ -415,16 +378,16 @@ async function buildEntriesFromLocalFiles(
     }
   }
 
-  // Global user memory
+  
   const userMemoryPath = getMemoryPath('User')
   const userMemoryContent = await tryReadFileForSync(userMemoryPath)
   if (userMemoryContent) {
     entries[SYNC_KEYS.USER_MEMORY] = userMemoryContent
   }
 
-  // Project-specific files (only if we have a project ID from git remote)
+  
   if (projectId) {
-    // Project local settings
+    
     const localSettingsPath = getSettingsFilePathForSource('localSettings')
     if (localSettingsPath) {
       const content = await tryReadFileForSync(localSettingsPath)
@@ -433,7 +396,7 @@ async function buildEntriesFromLocalFiles(
       }
     }
 
-    // Project local memory
+    
     const localMemoryPath = getMemoryPath('Local')
     const localMemoryContent = await tryReadFileForSync(localMemoryPath)
     if (localMemoryContent) {
@@ -463,14 +426,6 @@ async function writeFileForSync(
   }
 }
 
-/**
- * Apply remote entries to local files (CCR pull pattern).
- * Only writes files that match expected keys.
- *
- * After writing, invalidates relevant caches:
- * - resetSettingsCache() for settings files
- * - clearMemoryFileCaches() for memory files (CLAUDE.md)
- */
 async function applyRemoteEntriesToLocal(
   entries: Record<string, string>,
   projectId: string | null,
@@ -492,7 +447,7 @@ async function applyRemoteEntriesToLocal(
     return false
   }
 
-  // Apply global user settings
+  
   const userSettingsContent = entries[SYNC_KEYS.USER_SETTINGS]
   if (userSettingsContent) {
     const userSettingsPath = getSettingsFilePathForSource('userSettings')
@@ -500,7 +455,7 @@ async function applyRemoteEntriesToLocal(
       userSettingsPath &&
       !exceedsSizeLimit(userSettingsContent, userSettingsPath)
     ) {
-      // Mark as internal write to prevent spurious change detection
+      
       markInternalWrite(userSettingsPath)
       if (await writeFileForSync(userSettingsPath, userSettingsContent)) {
         appliedCount++
@@ -509,7 +464,7 @@ async function applyRemoteEntriesToLocal(
     }
   }
 
-  // Apply global user memory
+  
   const userMemoryContent = entries[SYNC_KEYS.USER_MEMORY]
   if (userMemoryContent) {
     const userMemoryPath = getMemoryPath('User')
@@ -521,7 +476,7 @@ async function applyRemoteEntriesToLocal(
     }
   }
 
-  // Apply project-specific files (only if project ID matches)
+  
   if (projectId) {
     const projectSettingsKey = SYNC_KEYS.projectSettings(projectId)
     const projectSettingsContent = entries[projectSettingsKey]
@@ -531,7 +486,7 @@ async function applyRemoteEntriesToLocal(
         localSettingsPath &&
         !exceedsSizeLimit(projectSettingsContent, localSettingsPath)
       ) {
-        // Mark as internal write to prevent spurious change detection
+        
         markInternalWrite(localSettingsPath)
         if (await writeFileForSync(localSettingsPath, projectSettingsContent)) {
           appliedCount++
@@ -553,7 +508,7 @@ async function applyRemoteEntriesToLocal(
     }
   }
 
-  // Invalidate caches so subsequent reads pick up new content
+  
   if (settingsWritten) {
     resetSettingsCache()
   }

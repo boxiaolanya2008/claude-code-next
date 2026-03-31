@@ -82,16 +82,11 @@ export type SystemPromptBlock = {
   cacheScope: CacheScope | null
 }
 
-// Fields to filter from tool schemas when swarms are not enabled
 const SWARM_FIELDS_BY_TOOL: Record<string, string[]> = {
   [EXIT_PLAN_MODE_V2_TOOL_NAME]: ['launchSwarm', 'teammateCount'],
   [AGENT_TOOL_NAME]: ['name', 'team_name', 'mode'],
 }
 
-/**
- * Filter swarm-related fields from a tool's input schema.
- * Called at runtime when isAgentSwarmsEnabled() returns false.
- */
 function filterSwarmFieldsFromSchema(
   toolName: string,
   schema: Anthropic.Tool.InputSchema,
@@ -101,7 +96,7 @@ function filterSwarmFieldsFromSchema(
     return schema
   }
 
-  // Clone the schema to avoid mutating the original
+  
   const filtered = { ...schema }
   const props = filtered.properties
   if (props && typeof props === 'object') {
@@ -132,8 +127,6 @@ export async function toolToAPISchema(
     }
   },
 ): Promise<BetaToolUnion> {
-  // Session-stable base schema: name, description, input_schema, strict,
-  // eager_input_streaming. These are computed once per session and cached to
   
   
   
@@ -142,7 +135,9 @@ export async function toolToAPISchema(
   
   
   
-  // so including it preserves their GB-flip cache stability.
+  
+  
+  
   const cacheKey =
     'inputJSONSchema' in tool && tool.inputJSONSchema
       ? `${tool.name}:${jsonStringify(tool.inputJSONSchema)}`
@@ -176,8 +171,8 @@ export async function toolToAPISchema(
       input_schema,
     }
 
-    // Only add strict if:
-    // 1. Feature flag is enabled
+    
+    
     
     
     
@@ -190,7 +185,7 @@ export async function toolToAPISchema(
       base.strict = true
     }
 
-    // Enable fine-grained tool streaming via per-tool API field.
+    
     
     
     
@@ -199,7 +194,7 @@ export async function toolToAPISchema(
       getAPIProvider() === 'firstParty' &&
       isFirstPartyAnthropicBaseUrl() &&
       (getFeatureValue_CACHED_MAY_BE_STALE('tengu_fgts', false) ||
-        isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING))
+        isEnvTruthy(process.env.CLAUDE_CODE_NEXT_ENABLE_FINE_GRAINED_TOOL_STREAMING))
     ) {
       base.eager_input_streaming = true
     }
@@ -207,7 +202,7 @@ export async function toolToAPISchema(
     cache.set(cacheKey, base)
   }
 
-  // Per-request overlay: defer_loading and cache_control vary by call
+  
   
   
   
@@ -219,7 +214,7 @@ export async function toolToAPISchema(
     ...(base.eager_input_streaming && { eager_input_streaming: true }),
   }
 
-  // Add defer_loading if requested (for tool search feature)
+  
   if (options.deferLoading) {
     schema.defer_loading = true
   }
@@ -228,7 +223,6 @@ export async function toolToAPISchema(
     schema.cache_control = options.cacheControl
   }
 
-  // CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS is the kill switch for beta API
   
   
   
@@ -239,7 +233,8 @@ export async function toolToAPISchema(
   
   
   
-  if (isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS)) {
+  
+  if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_EXPERIMENTAL_BETAS)) {
     const allowed = new Set([
       'name',
       'description',
@@ -258,7 +253,7 @@ export async function toolToAPISchema(
     }
   }
 
-  // Note: We cast to BetaTool but the extra fields are still present at runtime
+  
   
   
   return schema as BetaTool
@@ -269,14 +264,10 @@ function logStripOnce(stripped: string[]): void {
   if (loggedStrip) return
   loggedStrip = true
   logForDebugging(
-    `[betas] Stripped from tool schemas: [${stripped.join(', ')}] (CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1)`,
+    `[betas] Stripped from tool schemas: [${stripped.join(', ')}] (CLAUDE_CODE_NEXT_DISABLE_EXPERIMENTAL_BETAS=1)`,
   )
 }
 
-/**
- * Log stats about first block for analyzing prefix matching config
- * (see https://console.statsig.com/4aF3Ewatb6xPVpCwxb5nA3/dynamic_configs/claude_cli_system_prompt_prefixes)
- */
 export function logAPIPrefix(systemPrompt: SystemPrompt): void {
   const [firstSyspromptBlock] = splitSysPromptPrefix(systemPrompt)
   const firstSystemPrompt = firstSyspromptBlock?.text
@@ -292,31 +283,6 @@ export function logAPIPrefix(systemPrompt: SystemPrompt): void {
   })
 }
 
-/**
- * Split system prompt blocks by content type for API matching and cache control.
- * See https://console.statsig.com/4aF3Ewatb6xPVpCwxb5nA3/dynamic_configs/claude_cli_system_prompt_prefixes
- *
- * Behavior depends on feature flags and options:
- *
- * 1. MCP tools present (skipGlobalCacheForSystemPrompt=true):
- *    Returns up to 3 blocks with org-level caching (no global cache on system prompt):
- *    - Attribution header (cacheScope=null)
- *    - System prompt prefix (cacheScope='org')
- *    - Everything else concatenated (cacheScope='org')
- *
- * 2. Global cache mode with boundary marker (1P only, boundary found):
- *    Returns up to 4 blocks:
- *    - Attribution header (cacheScope=null)
- *    - System prompt prefix (cacheScope=null)
- *    - Static content before boundary (cacheScope='global')
- *    - Dynamic content after boundary (cacheScope=null)
- *
- * 3. Default mode (3P providers, or boundary missing):
- *    Returns up to 3 blocks with org-level caching:
- *    - Attribution header (cacheScope=null)
- *    - System prompt prefix (cacheScope='org')
- *    - Everything else concatenated (cacheScope='org')
- */
 export function splitSysPromptPrefix(
   systemPrompt: SystemPrompt,
   options?: { skipGlobalCacheForSystemPrompt?: boolean },
@@ -472,14 +438,11 @@ export function prependUserContext(
   ]
 }
 
-/**
- * Log metrics about context and system prompt size
- */
 export async function logContextMetrics(
   mcpConfigs: Record<string, ScopedMcpServerConfig>,
   toolPermissionContext: ToolPermissionContext,
 ): Promise<void> {
-  // Early return if logging is disabled
+  
   if (isAnalyticsDisabled()) {
     return
   }
@@ -561,7 +524,6 @@ export async function logContextMetrics(
   })
 }
 
-// TODO: Generalize this to all tools
 export function normalizeToolInput<T extends Tool>(
   tool: T,
   input: z.infer<T['inputSchema']>,
@@ -569,7 +531,7 @@ export function normalizeToolInput<T extends Tool>(
 ): z.infer<T['inputSchema']> {
   switch (tool.name) {
     case EXIT_PLAN_MODE_V2_TOOL_NAME: {
-      // Always inject plan content and file path for ExitPlanModeV2 so hooks/SDK get the plan.
+      
       
       const plan = getPlan(agentId)
       const planFilePath = getPlanFilePath(agentId)
@@ -578,7 +540,7 @@ export function normalizeToolInput<T extends Tool>(
       return plan !== null ? { ...input, plan, planFilePath } : input
     }
     case BashTool.name: {
-      // Validated upstream, won't throw
+      
       const parsed = BashTool.inputSchema.parse(input)
       const { command, timeout, description } = parsed
       const cwd = getCwd()
@@ -590,22 +552,19 @@ export function normalizeToolInput<T extends Tool>(
         )
       }
 
-      // Replace \\; with \; (commonly needed for find -exec commands)
+      
       normalizedCommand = normalizedCommand.replace(/\\\\;/g, '\\;')
 
-      // Logging for commands that are only echoing a string. This is to help us understand how often  Claude talks via bash
+      
       if (/^echo\s+["']?[^|&;><]*["']?$/i.test(normalizedCommand.trim())) {
         logEvent('tengu_bash_tool_simple_echo', {})
       }
 
-      // Check for run_in_background (may not exist in schema if CLAUDE_CODE_DISABLE_BACKGROUND_TASKS is set)
       const run_in_background =
         'run_in_background' in parsed ? parsed.run_in_background : undefined
 
-      // SAFETY: Cast is safe because input was validated by .parse() above.
-      // TypeScript can't narrow the generic T based on switch(tool.name), so it
-      // doesn't know the return type matches T['inputSchema']. This is a fundamental
-      // TS limitation with generics, not bypassable without major refactoring.
+      
+      
       return {
         command: normalizedCommand,
         description,
@@ -619,10 +578,10 @@ export function normalizeToolInput<T extends Tool>(
       } as z.infer<T['inputSchema']>
     }
     case FileEditTool.name: {
-      // Validated upstream, won't throw
+      
       const parsedInput = FileEditTool.inputSchema.parse(input)
 
-      // This is a workaround for tokens claude can't see
+      
       const { file_path, edits } = normalizeFileEditInput({
         file_path: parsedInput.file_path,
         edits: [
@@ -634,7 +593,7 @@ export function normalizeToolInput<T extends Tool>(
         ],
       })
 
-      // SAFETY: See comment in BashTool case above
+      
       return {
         replace_all: edits[0]!.replace_all,
         file_path,
@@ -643,13 +602,13 @@ export function normalizeToolInput<T extends Tool>(
       } as z.infer<T['inputSchema']>
     }
     case FileWriteTool.name: {
-      // Validated upstream, won't throw
+      
       const parsedInput = FileWriteTool.inputSchema.parse(input)
 
-      // Markdown uses two trailing spaces as a hard line break — don't strip.
+      
       const isMarkdown = /\.(md|mdx)$/i.test(parsedInput.file_path)
 
-      // SAFETY: See comment in BashTool case above
+      
       return {
         file_path: parsedInput.file_path,
         content: isMarkdown
@@ -658,7 +617,7 @@ export function normalizeToolInput<T extends Tool>(
       } as z.infer<T['inputSchema']>
     }
     case TASK_OUTPUT_TOOL_NAME: {
-      // Normalize legacy parameter names from AgentOutputTool/BashOutputTool
+      
       const legacyInput = input as Record<string, unknown>
       const taskId =
         legacyInput.task_id ?? legacyInput.agentId ?? legacyInput.bash_id
@@ -667,7 +626,7 @@ export function normalizeToolInput<T extends Tool>(
         (typeof legacyInput.wait_up_to === 'number'
           ? legacyInput.wait_up_to * 1000
           : undefined)
-      // SAFETY: See comment in BashTool case above
+      
       return {
         task_id: taskId ?? '',
         block: legacyInput.block ?? true,
@@ -679,15 +638,13 @@ export function normalizeToolInput<T extends Tool>(
   }
 }
 
-// Strips fields that were added by normalizeToolInput before sending to API
-// (e.g., plan field from ExitPlanModeV2 which has an empty input schema)
 export function normalizeToolInputForAPI<T extends Tool>(
   tool: T,
   input: z.infer<T['inputSchema']>,
 ): z.infer<T['inputSchema']> {
   switch (tool.name) {
     case EXIT_PLAN_MODE_V2_TOOL_NAME: {
-      // Strip injected fields before sending to API (schema expects empty object)
+      
       if (
         input &&
         typeof input === 'object' &&
@@ -699,11 +656,11 @@ export function normalizeToolInputForAPI<T extends Tool>(
       return input
     }
     case FileEditTool.name: {
-      // Strip synthetic old_string/new_string/replace_all from OLD sessions
-      // that were resumed from transcripts written before PR #20357, where
-      // normalizeToolInput used to synthesize these. Needed so old --resume'd
-      // transcripts don't send whole-file copies to the API. New sessions
-      // don't need this (synthesis moved to emission time).
+      
+      
+      
+      
+      
       if (input && typeof input === 'object' && 'edits' in input) {
         const { old_string, new_string, replace_all, ...rest } =
           input as Record<string, unknown>

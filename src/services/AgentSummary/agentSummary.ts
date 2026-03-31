@@ -39,7 +39,7 @@ export function startAgentSummarization(
   cacheSafeParams: CacheSafeParams,
   setAppState: TaskContext['setAppState'],
 ): { stop: () => void } {
-  // Drop forkContextMessages from the closure — runSummary rebuilds it each
+  
   
   
   const { forkContextMessages: _drop, ...baseParams } = cacheSafeParams
@@ -54,17 +54,17 @@ export function startAgentSummarization(
     logForDebugging(`[AgentSummary] Timer fired for agent ${agentId}`)
 
     try {
-      // Read current messages from transcript
+      
       const transcript = await getAgentTranscript(agentId)
       if (!transcript || transcript.messages.length < 3) {
-        // Not enough context yet — finally block will schedule next attempt
+        
         logForDebugging(
           `[AgentSummary] Skipping summary for ${taskId}: not enough messages (${transcript?.messages.length ?? 0})`,
         )
         return
       }
 
-      // Filter to clean message state
+      
       const cleanMessages = filterIncompleteToolCalls(transcript.messages)
 
       
@@ -89,7 +89,7 @@ export function startAgentSummarization(
 
       
       
-      // tools, model, messages prefix, thinking config). Setting maxOutputTokens
+      
       
       
       
@@ -110,7 +110,7 @@ export function startAgentSummarization(
 
       if (stopped) return
 
-      // Extract summary text from result
+      
       for (const msg of result.messages) {
         if (msg.type !== 'assistant') continue
         
@@ -162,7 +162,7 @@ export function startAgentSummarization(
     }
   }
 
-  // Start the first timer
+  
   scheduleNext()
 
   return { stop }

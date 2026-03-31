@@ -40,15 +40,15 @@ export async function getImageProcessor(): Promise<SharpFunction> {
   }
 
   if (isInBundledMode()) {
-    // Try to load the native image processor first
+    
     try {
-      // Use the native image processor module
+      
       const imageProcessor = await import('image-processor-napi')
       const sharp = imageProcessor.sharp || imageProcessor.default
       imageProcessorModule = { default: sharp }
       return sharp
     } catch {
-      // Fall back to sharp if native module is not available
+      
       
       console.warn(
         'Native image processor not available, falling back to sharp',
@@ -56,7 +56,7 @@ export async function getImageProcessor(): Promise<SharpFunction> {
     }
   }
 
-  // Use sharp for non-bundled builds or as fallback.
+  
   
   const imported = (await import(
     'sharp'
@@ -66,11 +66,6 @@ export async function getImageProcessor(): Promise<SharpFunction> {
   return sharp
 }
 
-/**
- * Get image creator for generating new images from scratch.
- * Note: image-processor-napi doesn't support image creation,
- * so this always uses sharp directly.
- */
 export async function getImageCreator(): Promise<SharpCreator> {
   if (imageCreatorModule) {
     return imageCreatorModule.default
@@ -84,7 +79,6 @@ export async function getImageCreator(): Promise<SharpCreator> {
   return sharp
 }
 
-// Dynamic import shape varies by module interop mode — ESM yields { default: fn }, CJS yields fn directly.
 type MaybeDefault<T> = T | { default: T }
 
 function unwrapDefault<T extends (...args: never[]) => unknown>(

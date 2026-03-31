@@ -38,7 +38,7 @@ const PermissionAllowResultSchema = lazySchema(() =>
   z.object({
     behavior: z.literal('allow'),
     updatedInput: z.record(z.string(), z.unknown()),
-    // SDK hosts may send malformed entries; fall back to undefined rather
+    
     
     updatedPermissions: z
       .array(permissionUpdateSchema())
@@ -94,9 +94,9 @@ export function permissionPromptToolResultToPermissionDecision(
       }))
       persistPermissionUpdates(updatedPermissions)
     }
-    // Mobile clients responding from a push notification don't have the
-    // original tool input, so they send `{}` to satisfy the schema. Treat an
-    // empty object as "use original" so the tool doesn't run with no args.
+    
+    
+    
     const updatedInput =
       Object.keys(result.updatedInput).length > 0 ? result.updatedInput : input
     return {

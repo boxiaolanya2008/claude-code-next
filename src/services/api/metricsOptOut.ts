@@ -18,10 +18,7 @@ type MetricsStatus = {
   hasError: boolean
 }
 
-// In-memory TTL — dedupes calls within a single process
 const CACHE_TTL_MS = 60 * 60 * 1000
-
-// we skip the network entirely (no background refresh). This is what collapses
 
 const DISK_CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
@@ -37,7 +34,7 @@ async function _fetchMetricsEnabled(): Promise<MetricsEnabledResponse> {
     ...authResult.headers,
   }
 
-  const endpoint = `https://api.anthropic.com/api/claude_code/organizations/metrics_enabled`
+  const endpoint = `https://api.anthropic.com/api/claude_code_next/organizations/metrics_enabled`
   const response = await axios.get<MetricsEnabledResponse>(endpoint, {
     headers,
     timeout: 5000,
@@ -46,7 +43,7 @@ async function _fetchMetricsEnabled(): Promise<MetricsEnabledResponse> {
 }
 
 async function _checkMetricsEnabledAPI(): Promise<MetricsStatus> {
-  // Incident kill switch: skip the network call when nonessential traffic is disabled.
+  
   
   
   if (isEssentialTrafficOnly()) {
@@ -75,7 +72,6 @@ async function _checkMetricsEnabledAPI(): Promise<MetricsStatus> {
   }
 }
 
-// Create memoized version with custom error handling
 const memoizedCheckMetrics = memoizeWithTTLAsync(
   _checkMetricsEnabledAPI,
   CACHE_TTL_MS,
@@ -105,18 +101,8 @@ async function refreshMetricsStatus(): Promise<MetricsStatus> {
   return result
 }
 
-/**
- * Check if metrics are enabled for the current organization.
- *
- * Two-tier cache:
- * - Disk (24h TTL): survives process restarts. Fresh disk cache → zero network.
- * - In-memory (1h TTL): dedupes the background refresh within a process.
- *
- * The caller (bigqueryExporter) tolerates stale reads — a missed export or
- * an extra one during the 24h window is acceptable.
- */
 export async function checkMetricsEnabled(): Promise<MetricsStatus> {
-  // Service key OAuth sessions lack user:profile scope → would 403.
+  
   
   
   
@@ -128,9 +114,9 @@ export async function checkMetricsEnabled(): Promise<MetricsStatus> {
   const cached = getGlobalConfig().metricsStatusCache
   if (cached) {
     if (Date.now() - cached.timestamp > DISK_CACHE_TTL_MS) {
-      // saveGlobalConfig's fallback path (config.ts:731) can throw if both
-      // locked and fallback writes fail — catch here so fire-and-forget
-      // doesn't become an unhandled rejection.
+      
+      
+      
       void refreshMetricsStatus().catch(logError)
     }
     return {
@@ -139,11 +125,10 @@ export async function checkMetricsEnabled(): Promise<MetricsStatus> {
     }
   }
 
-  // First-ever run on this machine: block on the network to populate disk.
+  
   return refreshMetricsStatus()
 }
 
-// Export for testing purposes only
 export const _clearMetricsEnabledCacheForTesting = (): void => {
   memoizedCheckMetrics.cache.clear()
 }

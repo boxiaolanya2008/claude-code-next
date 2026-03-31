@@ -38,7 +38,7 @@ export async function checkEnabledPlugins(): Promise<string[]> {
     }
   }
 
-  // Merged settings (policy > local > project > user) override --add-dir
+  
   if (settings.enabledPlugins) {
     for (const [pluginId, value] of Object.entries(settings.enabledPlugins)) {
       if (!pluginId.includes('@')) {
@@ -50,7 +50,7 @@ export async function checkEnabledPlugins(): Promise<string[]> {
           enabledPlugins.push(pluginId)
         }
       } else {
-        // Explicitly disabled — remove even if --add-dir enabled it
+        
         if (idx !== -1) {
           enabledPlugins.splice(idx, 1)
         }
@@ -61,28 +61,6 @@ export async function checkEnabledPlugins(): Promise<string[]> {
   return enabledPlugins
 }
 
-/**
- * Gets the user-editable scope that "owns" each enabled plugin.
- *
- * Used for scope tracking: determining where to write back when a user
- * enables/disables a plugin. Managed (policy) settings are processed first
- * (lowest priority) because the user cannot edit them — the scope should
- * resolve to the highest user-controllable source.
- *
- * NOTE: This is NOT the authoritative "is this plugin enabled?" check.
- * Use checkEnabledPlugins() for that — it uses merged settings where
- * policy has highest priority and can block user-enabled plugins.
- *
- * Precedence (lowest to highest):
- * 0. addDir (--add-dir directories) - session-only, lowest priority
- * 1. managed (policySettings) - not user-editable
- * 2. user (userSettings)
- * 3. project (projectSettings)
- * 4. local (localSettings)
- * 5. flag (flagSettings) - session-only, not persisted
- *
- * @returns Map of plugin ID to the user-editable scope that owns it
- */
 export function getPluginEditableScopes(): Map<string, ExtendedPluginScope> {
   const result = new Map<string, ExtendedPluginScope>()
 
@@ -99,7 +77,7 @@ export function getPluginEditableScopes(): Map<string, ExtendedPluginScope> {
     }
   }
 
-  // Process standard sources in precedence order (later overrides earlier)
+  
   const scopeSources: Array<{
     scope: ExtendedPluginScope
     source: SettingSource
@@ -118,12 +96,12 @@ export function getPluginEditableScopes(): Map<string, ExtendedPluginScope> {
     }
 
     for (const [pluginId, value] of Object.entries(settings.enabledPlugins)) {
-      // Skip invalid format
+      
       if (!pluginId.includes('@')) {
         continue
       }
 
-      // Log when a standard source overrides an --add-dir plugin
+      
       if (pluginId in addDirPlugins && addDirPlugins[pluginId] !== value) {
         logForDebugging(
           `Plugin ${pluginId} from --add-dir (${addDirPlugins[pluginId]}) overridden by ${source} (${value})`,
@@ -131,13 +109,13 @@ export function getPluginEditableScopes(): Map<string, ExtendedPluginScope> {
       }
 
       if (value === true) {
-        // Plugin enabled at this scope
+        
         result.set(pluginId, scope)
       } else if (value === false) {
-        // Explicitly disabled - remove from result
+        
         result.delete(pluginId)
       }
-      // Note: Other values (like version strings for future P2) are ignored for now
+      
     }
   }
 
@@ -152,40 +130,20 @@ export function getPluginEditableScopes(): Map<string, ExtendedPluginScope> {
   return result
 }
 
-/**
- * Check if a scope is persistable (not session-only).
- * @param scope The scope to check
- * @returns true if the scope should be persisted to installed_plugins.json
- */
 export function isPersistableScope(
   scope: ExtendedPluginScope,
 ): scope is PersistablePluginScope {
   return scope !== 'flag'
 }
 
-/**
- * Convert SettingSource to plugin scope.
- * @param source The settings source
- * @returns The corresponding plugin scope
- */
 export function settingSourceToScope(
   source: SettingSource,
 ): ExtendedPluginScope {
   return SETTING_SOURCE_TO_SCOPE[source]
 }
 
-/**
- * Gets the list of currently installed plugins
- * Reads from installed_plugins.json which tracks global installation state.
- * Automatically runs migration on first call if needed.
- *
- * Always uses V2 format and initializes the in-memory session state
- * (which triggers V1→V2 migration if needed).
- *
- * @returns Array of installed plugin IDs
- */
 export async function getInstalledPlugins(): Promise<string[]> {
-  // Trigger sync in background (don't await - don't block startup)
+  
   
   void migrateFromEnabledPlugins().catch(error => {
     logError(error)
@@ -198,11 +156,6 @@ export async function getInstalledPlugins(): Promise<string[]> {
   return installed
 }
 
-/**
- * Finds plugins that are enabled but not installed
- * @param enabledPlugins Array of enabled plugin IDs
- * @returns Array of missing plugin IDs
- */
 export async function findMissingPlugins(
   enabledPlugins: string[],
 ): Promise<string[]> {
@@ -239,17 +192,11 @@ export async function findMissingPlugins(
   }
 }
 
-/**
- * Result of plugin installation attempt
- */
 export type PluginInstallResult = {
   installed: string[]
   failed: Array<{ name: string; error: string }>
 }
 
-/**
- * Installation scope type for install functions (excludes 'managed' which is read-only)
- */
 type InstallableScope = Exclude<PluginScope, 'managed'>
 
 export async function installSelectedPlugins(
@@ -257,7 +204,7 @@ export async function installSelectedPlugins(
   onProgress?: (name: string, index: number, total: number) => void,
   scope: InstallableScope = 'user',
 ): Promise<PluginInstallResult> {
-  // Get projectPath for non-user scopes
+  
   const projectPath = scope !== 'user' ? getCwd() : undefined
 
   
@@ -285,13 +232,13 @@ export async function installSelectedPlugins(
         continue
       }
 
-      // Cache the plugin if it's from an external source
+      
       const { entry, marketplaceInstallLocation } = pluginInfo
       if (!isLocalPluginSource(entry.source)) {
-        // External plugin - cache and register it with scope
+        
         await cacheAndRegisterPlugin(pluginId, entry, scope, projectPath)
       } else {
-        // Local plugin - just register it with the install path and scope
+        
         registerPluginInstallation(
           {
             pluginId,
@@ -303,7 +250,7 @@ export async function installSelectedPlugins(
         )
       }
 
-      // Mark as enabled in settings
+      
       updatedEnabledPlugins[pluginId] = true
       installed.push(pluginId)
     } catch (error) {
@@ -314,7 +261,7 @@ export async function installSelectedPlugins(
     }
   }
 
-  // Update settings with newly enabled plugins using the correct settings source
+  
   updateSettingsForSource(settingSource, {
     ...settings,
     enabledPlugins: updatedEnabledPlugins,

@@ -18,7 +18,7 @@ const DEBOUNCE_MS = 50
 const FALLBACK_POLL_MS = 5000 
 
 class TasksV2Store {
-  /** Stable array reference; replaced only on fetch. undefined until started. */
+  
   #tasks: Task[] | undefined = undefined
   
 
@@ -40,7 +40,7 @@ class TasksV2Store {
   }
 
   subscribe = (fn: () => void): (() => void) => {
-    // Lazy init on first subscriber. useSyncExternalStore calls this
+    
     
     
     
@@ -50,7 +50,7 @@ class TasksV2Store {
       this.#started = true
       this.#unsubscribeTasksUpdated = onTasksUpdated(this.#debouncedFetch)
       
-      // and the store notifies subscribers when the fetch resolves.
+      
       void this.#fetch()
     }
     let unsubscribed = false
@@ -67,13 +67,10 @@ class TasksV2Store {
     this.#changed.emit()
   }
 
-  /**
-   * Point the file watcher at the current tasks directory. Called on start
-   * and whenever #fetch detects the task list ID has changed (e.g. when
-   * TeamCreateTool sets leaderTeamName mid-session).
-   */
+  
+
   #rewatch(dir: string): void {
-    // Retry even on same dir if the previous watch attempt failed (dir
+    
     
     if (dir === this.#watchedDir && this.#watcher !== null) return
     this.#watcher?.close()
@@ -83,7 +80,7 @@ class TasksV2Store {
       this.#watcher = watch(dir, this.#debouncedFetch)
       this.#watcher.unref()
     } catch {
-      // Directory may not exist yet (ensureTasksDir is called by writers).
+      
       
       
     }
@@ -108,11 +105,11 @@ class TasksV2Store {
     const hasIncomplete = current.some(t => t.status !== 'completed')
 
     if (hasIncomplete || current.length === 0) {
-      // Has unresolved tasks (open/in_progress) or empty — reset hide state
+      
       this.#hidden = current.length === 0
       this.#clearHideTimer()
     } else if (this.#hideTimer === null && !this.#hidden) {
-      // All tasks just became completed — schedule clear
+      
       this.#hideTimer = setTimeout(
         this.#onHideTimerFired.bind(this, taskListId),
         HIDE_DELAY_MS,
@@ -124,7 +121,7 @@ class TasksV2Store {
 
     
     
-    // the fs.watch watcher and onTasksUpdated callback are sufficient to
+    
     
     if (this.#pollTimer) {
       clearTimeout(this.#pollTimer)
@@ -142,7 +139,7 @@ class TasksV2Store {
     
     const currentId = getTaskListId()
     if (currentId !== scheduledForTaskListId) return
-    // Verify all tasks are still completed before clearing
+    
     void listTasks(currentId).then(async tasksToCheck => {
       const allStillCompleted =
         tasksToCheck.length > 0 &&
@@ -163,11 +160,8 @@ class TasksV2Store {
     }
   }
 
-  /**
-   * Tear down the watcher, timers, and in-process subscription. Called when
-   * the last subscriber unsubscribes. Preserves #tasks/#hidden cache so a
-   * subsequent re-subscribe renders the last known state immediately.
-   */
+  
+
   #stop(): void {
     this.#watcher?.close()
     this.#watcher = null
@@ -188,18 +182,10 @@ function getStore(): TasksV2Store {
   return (_store ??= new TasksV2Store())
 }
 
-// Stable no-ops for the disabled path so useSyncExternalStore doesn't
-// churn its subscription on every render.
 const NOOP = (): void => {}
 const NOOP_SUBSCRIBE = (): (() => void) => NOOP
 const NOOP_SNAPSHOT = (): undefined => undefined
 
-/**
- * Hook to get the current task list for the persistent UI display.
- * Returns tasks when TodoV2 is enabled, otherwise returns undefined.
- * All hook instances share a single file watcher via TasksV2Store.
- * Hides the list after 5 seconds if there are no open tasks.
- */
 export function useTasksV2(): Task[] | undefined {
   const teamContext = useAppState(s => s.teamContext)
 
@@ -213,11 +199,6 @@ export function useTasksV2(): Task[] | undefined {
   )
 }
 
-/**
- * Same as useTasksV2, plus collapses the expanded task view when the list
- * becomes hidden. Call this from exactly one always-mounted component (REPL)
- * so the collapse effect runs once instead of N× per consumer.
- */
 export function useTasksV2WithCollapseEffect(): Task[] | undefined {
   const tasks = useTasksV2()
   const setAppState = useSetAppState()

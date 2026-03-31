@@ -2,7 +2,7 @@ import { saveGlobalConfig } from '../utils/config.js'
 
 export function migrateReplBridgeEnabledToRemoteControlAtStartup(): void {
   saveGlobalConfig(prev => {
-    // The old key is no longer in the GlobalConfig type, so access it via
+    
     
     
     const oldValue = (prev as Record<string, unknown>)['replBridgeEnabled']

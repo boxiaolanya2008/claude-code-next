@@ -33,7 +33,6 @@ const QR_OPTIONS = {
   small: true,
 }
 
-/** Generate a QR code and return its lines. */
 async function generateQr(url: string): Promise<string[]> {
   const qr = await qrToString(url, QR_OPTIONS)
   return qr.split('\n').filter((line: string) => line.length > 0)
@@ -90,50 +89,50 @@ export function createBridgeLogger(options: {
   
 
   function countVisualLines(text: string): number {
-    // eslint-disable-next-line custom-rules/prefer-use-terminal-size
+    
     const cols = process.stdout.columns || 80 
     let count = 0
     
     for (const logical of text.split('\n')) {
       if (logical.length === 0) {
-        // Empty segment between consecutive \n — counts as 1 row
+        
         count++
         continue
       }
       const width = stringWidth(logical)
       count += Math.max(1, Math.ceil(width / cols))
     }
-    // The trailing \n in "line\n" produces an empty last element — don't count it
-    // because the cursor sits at the start of the next line, not a new visual row.
+    
+    
     if (text.endsWith('\n')) {
       count--
     }
     return count
   }
 
-  /** Write a status line and track its visual line count. */
+  
   function writeStatus(text: string): void {
     write(text)
     statusLineCount += countVisualLines(text)
   }
 
-  /** Clear any currently displayed status lines. */
+  
   function clearStatusLines(): void {
     if (statusLineCount <= 0) return
     logForDebugging(`[bridge:ui] clearStatusLines count=${statusLineCount}`)
-    // Move cursor up to the start of the status block, then erase everything below
-    write(`\x1b[${statusLineCount}A`) // cursor up N lines
-    write('\x1b[J') // erase from cursor to end of screen
+    
+    write(`\x1b[${statusLineCount}A`) 
+    write('\x1b[J') 
     statusLineCount = 0
   }
 
-  /** Print a permanent log line, clearing status first and restoring after. */
+  
   function printLog(line: string): void {
     clearStatusLines()
     write(line)
   }
 
-  /** Regenerate the QR code with the given URL. */
+  
   function regenerateQr(url: string): void {
     generateQr(url)
       .then(lines => {
@@ -145,7 +144,7 @@ export function createBridgeLogger(options: {
       })
   }
 
-  /** Render the connecting spinner line (shown before first updateIdleStatus). */
+  
   function renderConnectingLine(): void {
     clearStatusLines()
 
@@ -163,7 +162,7 @@ export function createBridgeLogger(options: {
     )
   }
 
-  /** Start the connecting spinner. Stopped by first updateIdleStatus(). */
+  
   function startConnecting(): void {
     stopConnecting()
     renderConnectingLine()
@@ -173,7 +172,7 @@ export function createBridgeLogger(options: {
     }, 150)
   }
 
-  /** Stop the connecting spinner. */
+  
   function stopConnecting(): void {
     if (connectingTimer) {
       clearInterval(connectingTimer)
@@ -181,12 +180,12 @@ export function createBridgeLogger(options: {
     }
   }
 
-  /** Render and write the current status lines based on state. */
+  
   function renderStatusLine(): void {
     if (currentState === 'reconnecting' || currentState === 'failed') {
-      // These states are handled separately (updateReconnectingStatus /
-      // updateFailedStatus). Return before clearing so callers like toggleQr
-      // and setSpawnModeDisplay don't blank the display during these states.
+      
+      
+      
       return
     }
 
@@ -201,7 +200,7 @@ export function createBridgeLogger(options: {
       }
     }
 
-    // Determine indicator and colors based on state
+    
     const indicator = BRIDGE_READY_INDICATOR
     const indicatorColor = isIdle ? chalk.green : chalk.cyan
     const baseColor = isIdle ? chalk.green : chalk.cyan
@@ -212,7 +211,7 @@ export function createBridgeLogger(options: {
     if (repoName) {
       suffix += chalk.dim(' \u00b7 ') + chalk.dim(repoName)
     }
-    // In worktree mode each session gets its own branch, so showing the
+    
     
     if (branch && spawnMode !== 'worktree') {
       suffix += chalk.dim(' \u00b7 ') + chalk.dim(branch)
@@ -249,7 +248,7 @@ export function createBridgeLogger(options: {
       }
     }
 
-    // Mode line for spawn modes with a single slot (or true single-session mode)
+    
     if (sessionMax === 1) {
       const modeText =
         spawnMode === 'single-session'
@@ -260,7 +259,7 @@ export function createBridgeLogger(options: {
       writeStatus(`    ${chalk.dim(modeText)}\n`)
     }
 
-    // Tool activity line for single-session mode
+    
     if (
       sessionMax === 1 &&
       !isIdle &&
@@ -270,7 +269,7 @@ export function createBridgeLogger(options: {
       writeStatus(`  ${chalk.dim(truncatePrompt(lastToolSummary, 60))}\n`)
     }
 
-    // Blank line separator before footer
+    
     const url = activeSessionUrl ?? connectUrl
     if (url) {
       writeStatus('\n')
@@ -450,7 +449,7 @@ export function createBridgeLogger(options: {
       activity: SessionActivity,
       _trail: string[],
     ): void {
-      // Cache tool activity for the second status line
+      
       if (activity.type === 'tool_start') {
         lastToolSummary = activity.summary
         lastToolTime = Date.now()
@@ -506,7 +505,7 @@ export function createBridgeLogger(options: {
       
       if (currentState === 'reconnecting' || currentState === 'failed') return
       if (sessionMax === 1) {
-        // Single-session: show title in the main status line too.
+        
         currentState = 'titled'
         currentStateText = truncatePrompt(title, 40)
       }
@@ -518,7 +517,7 @@ export function createBridgeLogger(options: {
     },
 
     refreshDisplay(): void {
-      // Skip during reconnecting/failed — renderStatusLine clears then returns
+      
       
       if (currentState === 'reconnecting' || currentState === 'failed') return
       renderStatusLine()

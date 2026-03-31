@@ -14,10 +14,6 @@ export function parseMemoryType(raw: unknown): MemoryType | undefined {
   return MEMORY_TYPES.find(t => t === raw)
 }
 
-/**
- * `## Types of memory` section for COMBINED mode (private + team directories).
- * Includes <scope> tags and team/private qualifiers in examples.
- */
 export const TYPES_SECTION_COMBINED: readonly string[] = [
   '## Types of memory',
   '',
@@ -165,8 +161,8 @@ export const WHAT_NOT_TO_SAVE_SECTION: readonly string[] = [
   '- Anything already documented in CLAUDE.md files.',
   '- Ephemeral task details: in-progress work, temporary state, current conversation context.',
   '',
-  // H2: explicit-save gate. Eval-validated (memory-prompt-iteration case 3,
-  // 0/2 → 3/3): prevents "save this week's PR list" → activity-log noise.
+  
+  
   'These exclusions apply even when the user explicitly asks you to save. If they ask you to save a PR list or activity summary, ask what was *surprising* or *non-obvious* about it — that is the part worth keeping.',
 ]
 

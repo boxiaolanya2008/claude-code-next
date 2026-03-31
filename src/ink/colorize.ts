@@ -9,39 +9,18 @@ function boostChalkLevelForXtermJs(): boolean {
   return false
 }
 
-/**
- * tmux parses truecolor SGR (\e[48;2;r;g;bm) into its cell buffer correctly,
- * but its client-side emitter only re-emits truecolor to the outer terminal if
- * the outer terminal advertises Tc/RGB capability (via terminal-overrides).
- * Default tmux config doesn't set this, so tmux emits the cell to iTerm2/etc
- * WITHOUT the bg sequence — outer terminal's buffer has bg=default → black on
- * dark profiles. Clamping to level 2 makes chalk emit 256-color (\e[48;5;Nm),
- * which tmux passes through cleanly. grey93 (255) is visually identical to
- * rgb(240,240,240).
- *
- * Users who HAVE set `terminal-overrides ,*:Tc` get a technically-unnecessary
- * downgrade, but the visual difference is imperceptible. Querying
- * `tmux show -gv terminal-overrides` to detect this would add a subprocess on
- * startup — not worth it.
- *
- * $TMUX is a pty-lifecycle env var set by tmux itself; it never comes from
- * globalSettings.env, so reading it here is correct. chalk is a singleton, so
- * this clamps ALL truecolor output (fg+bg+hex) across the entire app.
- */
 function clampChalkLevelForTmux(): boolean {
-  // bg.ts sets terminal-overrides :Tc before attach, so truecolor passes
-  // through — skip the clamp. General escape hatch for anyone who's
-  // configured their tmux correctly.
-  if (process.env.CLAUDE_CODE_TMUX_TRUECOLOR) return false
+  
+  
+  
+  if (process.env.CLAUDE_CODE_NEXT_TMUX_TRUECOLOR) return false
   if (process.env.TMUX && chalk.level > 2) {
     chalk.level = 2
     return true
   }
   return false
 }
-// Computed once at module load — terminal/tmux environment doesn't change mid-session.
-// Order matters: boost first so the tmux clamp can re-clamp if tmux is running
-// inside a VS Code terminal. Exported for debugging — tree-shaken if unused.
+
 export const CHALK_BOOSTED_FOR_XTERMJS = boostChalkLevelForXtermJs()
 export const CHALK_CLAMPED_FOR_TMUX = clampChalkLevelForTmux()
 
@@ -152,18 +131,13 @@ export const colorize = (
   return str
 }
 
-/**
- * Apply TextStyles to a string using chalk.
- * This is the inverse of parsing ANSI codes - we generate them from structured styles.
- * Theme resolution happens at component layer, not here.
- */
 export function applyTextStyles(text: string, styles: TextStyles): string {
   let result = text
 
   
   
   
-  //   background > foreground > text modifiers
+  
   
 
   if (styles.inverse) {
@@ -191,22 +165,18 @@ export function applyTextStyles(text: string, styles: TextStyles): string {
   }
 
   if (styles.color) {
-    // Color is now always a raw color value (theme resolution happens at component layer)
+    
     result = colorize(result, styles.color, 'foreground')
   }
 
   if (styles.backgroundColor) {
-    // backgroundColor is now always a raw color value
+    
     result = colorize(result, styles.backgroundColor, 'background')
   }
 
   return result
 }
 
-/**
- * Apply a raw color value to text.
- * Theme resolution should happen at component layer, not here.
- */
 export function applyColor(text: string, color: Color | undefined): string {
   if (!color) {
     return text

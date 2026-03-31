@@ -37,8 +37,6 @@ function fileNameWords(filePath: string): string[] {
   return splitIdentifier(stem)
 }
 
-// ─── Public API ─────────────────────────────────────────────────────
-
 const MAX_KEYTERMS = 50
 
 export async function getVoiceKeyterms(
@@ -58,10 +56,10 @@ export async function getVoiceKeyterms(
       }
     }
   } catch {
-    // getProjectRoot() may throw if not initialised yet — ignore
+    
   }
 
-  // Git branch words (e.g. "feat/voice-keyterms" → "feat", "voice", "keyterms")
+  
   try {
     const branch = await getBranch()
     if (branch) {
@@ -70,10 +68,10 @@ export async function getVoiceKeyterms(
       }
     }
   } catch {
-    // getBranch() may fail if not in a git repo — ignore
+    
   }
 
-  // Recent file names — only scan enough to fill remaining slots
+  
   if (recentFiles) {
     for (const filePath of recentFiles) {
       if (terms.size >= MAX_KEYTERMS) break

@@ -24,13 +24,6 @@ export function useAnimationTimer(intervalMs: number): number {
   return time
 }
 
-/**
- * Interval hook backed by the shared Clock.
- *
- * Unlike `useInterval` from `usehooks-ts` (which creates its own setInterval),
- * this piggybacks on the single shared clock so all timers consolidate into
- * one wake-up. Pass `null` for intervalMs to pause.
- */
 export function useInterval(
   callback: () => void,
   intervalMs: number | null,

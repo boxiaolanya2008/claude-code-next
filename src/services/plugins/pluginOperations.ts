@@ -78,46 +78,22 @@ export function assertInstallableScope(
   }
 }
 
-/**
- * Type guard to check if a scope is an installable scope (not 'managed').
- * Use this for type narrowing in conditional blocks.
- */
 export function isInstallableScope(
   scope: PluginScope,
 ): scope is InstallableScope {
   return VALID_INSTALLABLE_SCOPES.includes(scope as InstallableScope)
 }
 
-/**
- * Get the project path for scopes that are project-specific.
- * Returns the original cwd for 'project' and 'local' scopes, undefined otherwise.
- */
 export function getProjectPathForScope(scope: PluginScope): string | undefined {
   return scope === 'project' || scope === 'local' ? getOriginalCwd() : undefined
 }
 
-/**
- * Is this plugin enabled (value === true) in .claude/settings.json?
- *
- * Distinct from V2 installed_plugins.json scope: that file tracks where a
- * plugin was *installed from*, but the same plugin can also be enabled at
- * project scope via settings. The uninstall UI needs to check THIS, because
- * a user-scope install with a project-scope enablement means "uninstall"
- * would succeed at removing the user install while leaving the project
- * enablement active — the plugin keeps running.
- */
 export function isPluginEnabledAtProjectScope(pluginId: string): boolean {
   return (
     getSettingsForSource('projectSettings')?.enabledPlugins?.[pluginId] === true
   )
 }
 
-// ============================================================================
-// Result Types
-
-/**
- * Result of a plugin operation
- */
 export type PluginOperationResult = {
   success: boolean
   message: string
@@ -128,9 +104,6 @@ export type PluginOperationResult = {
   reverseDependents?: string[]
 }
 
-/**
- * Result of a plugin update operation
- */
 export type PluginUpdateResult = {
   success: boolean
   message: string
@@ -141,21 +114,6 @@ export type PluginUpdateResult = {
   scope?: PluginScope
 }
 
-// ============================================================================
-// Helper Functions
-
-/**
- * Search all editable settings scopes for a plugin ID matching the given input.
- *
- * If `plugin` contains `@`, it's treated as a full pluginId and returned if
- * found in any scope. If `plugin` is a bare name, searches for any key
- * starting with `{plugin}@` in any scope.
- *
- * Returns the most specific scope where the plugin is mentioned (regardless
- * of enabled/disabled state) plus the resolved full pluginId.
- *
- * Precedence: local > project > user (most specific wins).
- */
 function findPluginInSettings(plugin: string): {
   pluginId: string
   scope: InstallableScope
@@ -179,9 +137,6 @@ function findPluginInSettings(plugin: string): {
   return null
 }
 
-/**
- * Helper function to find a plugin from loaded plugins
- */
 function findPluginByIdentifier(
   plugin: string,
   plugins: LoadedPlugin[],
@@ -189,7 +144,7 @@ function findPluginByIdentifier(
   const { name, marketplace } = parsePluginIdentifier(plugin)
 
   return plugins.find(p => {
-    // Check exact name match
+    
     if (p.name === plugin || p.name === name) return true
 
     
@@ -201,11 +156,6 @@ function findPluginByIdentifier(
   })
 }
 
-/**
- * Resolve a plugin ID from V2 installed plugins data for a plugin that may
- * have been delisted from its marketplace. Returns null if the plugin is not
- * found in V2 data.
- */
 function resolveDelistedPluginId(
   plugin: string,
 ): { pluginId: string; pluginName: string } | null {
@@ -229,11 +179,6 @@ function resolveDelistedPluginId(
   return null
 }
 
-/**
- * Get the most relevant installation for a plugin from V2 data.
- * For project/local scoped plugins, prioritizes installations matching the current project.
- * Priority order: local (matching project) > project (matching project) > user > first available
- */
 export function getPluginInstallationFromV2(pluginId: string): {
   scope: PluginScope
   projectPath?: string
@@ -270,32 +215,13 @@ export function getPluginInstallationFromV2(pluginId: string): {
     return { scope: userInstall.scope }
   }
 
-  // Fall back to first installation (could be managed)
+  
   return {
     scope: installations[0]!.scope,
     projectPath: installations[0]!.projectPath,
   }
 }
 
-// ============================================================================
-// Core Operations
-
-/**
- * Install a plugin (settings-first).
- *
- * Order of operations:
- *   1. Search materialized marketplaces for the plugin
- *   2. Write settings (THE ACTION — declares intent)
- *   3. Cache plugin + record version hint (materialization)
- *
- * Marketplace reconciliation is NOT this function's responsibility — startup
- * reconcile handles declared-but-not-materialized marketplaces. If the
- * marketplace isn't found, "not found" is the correct error.
- *
- * @param plugin Plugin identifier (name or plugin@marketplace)
- * @param scope Installation scope: user, project, or local (defaults to 'user')
- * @returns Result indicating success/failure
- */
 export async function installPluginOp(
   plugin: string,
   scope: InstallableScope = 'user',
@@ -395,19 +321,12 @@ export async function installPluginOp(
   }
 }
 
-/**
- * Uninstall a plugin
- *
- * @param plugin Plugin name or plugin@marketplace identifier
- * @param scope Uninstall from scope: user, project, or local (defaults to 'user')
- * @returns Result indicating success/failure
- */
 export async function uninstallPluginOp(
   plugin: string,
   scope: InstallableScope = 'user',
   deleteDataDir = true,
 ): Promise<PluginOperationResult> {
-  // Validate scope at runtime for early error detection
+  
   assertInstallableScope(scope)
 
   const { enabled, disabled } = await loadAllPlugins()
@@ -423,7 +342,7 @@ export async function uninstallPluginOp(
   let pluginName: string
 
   if (foundPlugin) {
-    // Find the matching settings key for this plugin (may differ from `plugin`
+    
     
     pluginId =
       Object.keys(settings?.enabledPlugins ?? {}).find(
@@ -434,7 +353,7 @@ export async function uninstallPluginOp(
       ) ?? (plugin.includes('@') ? plugin : foundPlugin.name)
     pluginName = foundPlugin.name
   } else {
-    // Plugin not found via marketplace lookup — it may have been delisted.
+    
     
     
     const resolved = resolveDelistedPluginId(plugin)
@@ -448,7 +367,7 @@ export async function uninstallPluginOp(
     pluginName = resolved.pluginName
   }
 
-  // Check if the plugin is installed in this scope (in V2 file)
+  
   const projectPath = getProjectPathForScope(scope)
   const installedData = loadInstalledPluginsV2()
   const installations = installedData.plugins[pluginId]
@@ -457,10 +376,10 @@ export async function uninstallPluginOp(
   )
 
   if (!scopeInstallation) {
-    // Try to find where the plugin is actually installed to provide a helpful error
+    
     const { scope: actualScope } = getPluginInstallationFromV2(pluginId)
     if (actualScope !== scope && installations && installations.length > 0) {
-      // Project scope is special: .claude/settings.json is shared with the team.
+      
       
       if (actualScope === 'project') {
         return {
@@ -503,10 +422,10 @@ export async function uninstallPluginOp(
   if (isLastScope && installPath) {
     await markPluginVersionOrphaned(installPath)
   }
-  // Separate from the `&& installPath` guard above — deletePluginOptions only
   
   
-  // settings.pluginConfigs (including the legacy ungated mcpServers sub-key
+  
+  
   
   
   
@@ -518,8 +437,8 @@ export async function uninstallPluginOp(
     }
   }
 
-  // Warn (don't block) if other enabled plugins depend on this one.
-  // Blocking creates tombstones — can't tear down a graph with a delisted
+  
+  
   
   const reverseDependents = findReverseDependents(pluginId, allPlugins)
   const depWarn = formatReverseDependentsSuffix(reverseDependents)
@@ -535,19 +454,6 @@ export async function uninstallPluginOp(
   }
 }
 
-/**
- * Set plugin enabled/disabled status (settings-first).
- *
- * Resolves the plugin ID and scope from settings — does NOT pre-gate on
- * installed_plugins.json. Settings declares intent; if the plugin isn't
- * cached yet, the next load will cache it.
- *
- * @param plugin Plugin name or plugin@marketplace identifier
- * @param enabled true to enable, false to disable
- * @param scope Optional scope. If not provided, auto-detects the most specific
- *   scope where the plugin is mentioned in settings.
- * @returns Result indicating success/failure
- */
 export async function setPluginEnabledOp(
   plugin: string,
   enabled: boolean,
@@ -555,8 +461,8 @@ export async function setPluginEnabledOp(
 ): Promise<PluginOperationResult> {
   const operation = enabled ? 'enable' : 'disable'
 
-  // Built-in plugins: always use user-scope settings, bypass the normal
-  // scope-resolution + installed_plugins lookup (they're not installed).
+  
+  
   if (isBuiltinPluginId(plugin)) {
     const { error } = updateSettingsForSource('userSettings', {
       enabledPlugins: {
@@ -585,7 +491,7 @@ export async function setPluginEnabledOp(
     assertInstallableScope(scope)
   }
 
-  // ── Resolve pluginId and scope from settings ──
+  
   
   
   let pluginId: string
@@ -594,8 +500,8 @@ export async function setPluginEnabledOp(
   const found = findPluginInSettings(plugin)
 
   if (scope) {
-    // Explicit scope: use it. Resolve pluginId from settings if possible,
-    // otherwise require a full plugin@marketplace identifier.
+    
+    
     resolvedScope = scope
     if (found) {
       pluginId = found.pluginId
@@ -608,12 +514,12 @@ export async function setPluginEnabledOp(
       }
     }
   } else if (found) {
-    // Auto-detect scope: use the most specific scope where the plugin is
+    
     
     pluginId = found.pluginId
     resolvedScope = found.scope
   } else if (plugin.includes('@')) {
-    // Not in any settings scope, but full pluginId given — default to user
+    
     
     
     pluginId = plugin
@@ -625,7 +531,7 @@ export async function setPluginEnabledOp(
     }
   }
 
-  // ── Policy guard ──
+  
   
   
   if (enabled && isPluginBlockedByPolicy(pluginId)) {
@@ -665,7 +571,7 @@ export async function setPluginEnabledOp(
     }
   }
 
-  // ── Check current state (for idempotency messaging) ──
+  
   
   
   
@@ -684,8 +590,8 @@ export async function setPluginEnabledOp(
     }
   }
 
-  // On disable: capture reverse dependents from the PRE-disable snapshot,
-  // before we write settings and clear the memoized plugin cache.
+  
+  
   let reverseDependents: string[] | undefined
   if (!enabled) {
     const { enabled: loadedEnabled, disabled } = await loadAllPlugins()
@@ -696,7 +602,7 @@ export async function setPluginEnabledOp(
     if (rdeps.length > 0) reverseDependents = rdeps
   }
 
-  // ── ACTION: write settings ──
+  
   const { error } = updateSettingsForSource(settingSource, {
     enabledPlugins: {
       ...getSettingsForSource(settingSource)?.enabledPlugins,
@@ -724,13 +630,6 @@ export async function setPluginEnabledOp(
   }
 }
 
-/**
- * Enable a plugin
- *
- * @param plugin Plugin name or plugin@marketplace identifier
- * @param scope Optional scope. If not provided, finds the most specific scope for the current project.
- * @returns Result indicating success/failure
- */
 export async function enablePluginOp(
   plugin: string,
   scope?: InstallableScope,
@@ -738,13 +637,6 @@ export async function enablePluginOp(
   return setPluginEnabledOp(plugin, true, scope)
 }
 
-/**
- * Disable a plugin
- *
- * @param plugin Plugin name or plugin@marketplace identifier
- * @param scope Optional scope. If not provided, finds the most specific scope for the current project.
- * @returns Result indicating success/failure
- */
 export async function disablePluginOp(
   plugin: string,
   scope?: InstallableScope,
@@ -752,11 +644,6 @@ export async function disablePluginOp(
   return setPluginEnabledOp(plugin, false, scope)
 }
 
-/**
- * Disable all enabled plugins
- *
- * @returns Result indicating success/failure with count of disabled plugins
- */
 export async function disableAllPluginsOp(): Promise<PluginOperationResult> {
   const enabledPlugins = getPluginEditableScopes()
 
@@ -789,26 +676,11 @@ export async function disableAllPluginsOp(): Promise<PluginOperationResult> {
   }
 }
 
-/**
- * Update a plugin to the latest version.
- *
- * This function performs a NON-INPLACE update:
- * 1. Gets the plugin info from the marketplace
- * 2. For remote plugins: downloads to temp dir and calculates version
- * 3. For local plugins: calculates version from marketplace source
- * 4. If version differs from currently installed, copies to new versioned cache directory
- * 5. Updates installation in V2 file (memory stays unchanged until restart)
- * 6. Cleans up old version if no longer referenced by any installation
- *
- * @param plugin Plugin name or plugin@marketplace identifier
- * @param scope Scope to update. Unlike install/uninstall/enable/disable, managed scope IS allowed.
- * @returns Result indicating success/failure with version info
- */
 export async function updatePluginOp(
   plugin: string,
   scope: PluginScope,
 ): Promise<PluginUpdateResult> {
-  // Parse the plugin identifier to get the full plugin ID
+  
   const { name: pluginName, marketplace: marketplaceName } =
     parsePluginIdentifier(plugin)
   const pluginId = marketplaceName ? `${pluginName}@${marketplaceName}` : plugin
@@ -839,7 +711,7 @@ export async function updatePluginOp(
     }
   }
 
-  // Determine projectPath based on scope
+  
   const projectPath = getProjectPathForScope(scope)
 
   
@@ -867,10 +739,6 @@ export async function updatePluginOp(
   })
 }
 
-/**
- * Perform the actual plugin update: fetch source, calculate version, copy to cache, update disk.
- * This is the core update execution extracted from updatePluginOp.
- */
 async function performPluginUpdate({
   pluginId,
   pluginName,
@@ -898,7 +766,7 @@ async function performPluginUpdate({
 
   
   if (typeof entry.source !== 'string') {
-    // Remote plugin: download to temp directory first
+    
     const cacheResult = await cachePlugin(entry.source, {
       manifest: { name: entry.name },
     })
@@ -907,7 +775,7 @@ async function performPluginUpdate({
     gitCommitSha = cacheResult.gitCommitSha
 
     
-    // cachePlugin captured the commit SHA before discarding the ephemeral
+    
     
     
     newVersion = await calculatePluginVersion(
@@ -919,7 +787,7 @@ async function performPluginUpdate({
       cacheResult.gitCommitSha,
     )
   } else {
-    // Local plugin: use path from marketplace
+    
     
     let marketplaceStats
     try {
@@ -942,7 +810,7 @@ async function performPluginUpdate({
 
     
     
-    //   1. calculatePluginVersion → findGitRoot walks UP past a missing dir
+    
     
     
     
@@ -962,7 +830,7 @@ async function performPluginUpdate({
       throw e
     }
 
-    // Try to load manifest from plugin directory (for version info)
+    
     let pluginManifest: PluginManifest | undefined
     const manifestPath = join(sourcePath, '.claude-plugin', 'plugin.json')
     try {
@@ -972,10 +840,10 @@ async function performPluginUpdate({
         entry.source,
       )
     } catch {
-      // Failed to load - will use other version sources
+      
     }
 
-    // Calculate version from plugin source path
+    
     newVersion = await calculatePluginVersion(
       pluginId,
       entry.source,
@@ -985,9 +853,9 @@ async function performPluginUpdate({
     )
   }
 
-  // Use try/finally to ensure temp directory cleanup on any error
+  
   try {
-    // Check if this version already exists in cache
+    
     let versionedPath = getVersionedCachePath(pluginId, newVersion)
 
     
@@ -1008,7 +876,7 @@ async function performPluginUpdate({
       }
     }
 
-    // Copy to versioned cache (returns actual path, which may be .zip)
+    
     versionedPath = await copyPluginToVersionedCache(
       sourcePath,
       pluginId,
@@ -1055,7 +923,7 @@ async function performPluginUpdate({
       scope,
     }
   } finally {
-    // Clean up temp source if it was a remote download
+    
     if (
       shouldCleanupSource &&
       sourcePath !== getVersionedCachePath(pluginId, newVersion)

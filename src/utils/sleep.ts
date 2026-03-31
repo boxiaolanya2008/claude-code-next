@@ -6,7 +6,7 @@ export function sleep(
   opts?: { throwOnAbort?: boolean; abortError?: () => Error; unref?: boolean },
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Check aborted state BEFORE setting up the timer. If we defined
+    
     
     
     if (signal?.aborted) {
@@ -46,16 +46,6 @@ function rejectWithTimeout(reject: (e: Error) => void, message: string): void {
   reject(new Error(message))
 }
 
-/**
- * Race a promise against a timeout. Rejects with `Error(message)` if the
- * promise doesn't settle within `ms`. The timeout timer is cleared when
- * the promise settles (no dangling timer) and unref'd so it doesn't
- * block process exit.
- *
- * Note: this doesn't cancel the underlying work — if the promise is
- * backed by a runaway async operation, that keeps running. This just
- * returns control to the caller.
- */
 export function withTimeout<T>(
   promise: Promise<T>,
   ms: number,
@@ -63,7 +53,7 @@ export function withTimeout<T>(
 ): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined
   const timeoutPromise = new Promise<never>((_, reject) => {
-    // eslint-disable-next-line no-restricted-syntax -- not a sleep: REJECTS after ms (timeout guard)
+    
     timer = setTimeout(rejectWithTimeout, ms, reject, message)
     if (typeof timer === 'object') timer.unref?.()
   })

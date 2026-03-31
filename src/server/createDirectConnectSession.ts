@@ -12,14 +12,6 @@ export class DirectConnectError extends Error {
   }
 }
 
-/**
- * Create a session on a direct-connect server.
- *
- * Posts to `${serverUrl}/sessions`, validates the response, and returns
- * a DirectConnectConfig ready for use by the REPL or headless runner.
- *
- * Throws DirectConnectError on network, HTTP, or response-parsing failures.
- */
 export async function createDirectConnectSession({
   serverUrl,
   authToken,

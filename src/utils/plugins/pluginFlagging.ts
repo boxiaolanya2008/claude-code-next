@@ -91,16 +91,11 @@ async function writeToDisk(
     try {
       await unlink(tempPath)
     } catch {
-      // Ignore cleanup errors
+      
     }
   }
 }
 
-/**
- * Load flagged plugins from disk into the module cache.
- * Must be called (and awaited) before getFlaggedPlugins() returns
- * meaningful data. Called by useManagePlugins during plugin refresh.
- */
 export async function loadFlaggedPlugins(): Promise<void> {
   const all = await readFromDisk()
   const now = Date.now()
@@ -122,19 +117,10 @@ export async function loadFlaggedPlugins(): Promise<void> {
   }
 }
 
-/**
- * Get all flagged plugins from the in-memory cache.
- * Returns an empty object if loadFlaggedPlugins() has not been called yet.
- */
 export function getFlaggedPlugins(): Record<string, FlaggedPlugin> {
   return cache ?? {}
 }
 
-/**
- * Add a plugin to the flagged list.
- *
- * @param pluginId "name@marketplace" format
- */
 export async function addFlaggedPlugin(pluginId: string): Promise<void> {
   if (cache === null) {
     cache = await readFromDisk()
@@ -151,11 +137,6 @@ export async function addFlaggedPlugin(pluginId: string): Promise<void> {
   logForDebugging(`Flagged plugin: ${pluginId}`)
 }
 
-/**
- * Mark flagged plugins as seen. Called when the Installed view renders
- * flagged plugins. Sets seenAt on entries that don't already have it.
- * After 48 hours from seenAt, entries are auto-cleared on next load.
- */
 export async function markFlaggedPluginsSeen(
   pluginIds: string[],
 ): Promise<void> {
@@ -179,10 +160,6 @@ export async function markFlaggedPluginsSeen(
   }
 }
 
-/**
- * Remove a plugin from the flagged list. Called when the user dismisses
- * a flagged plugin notification in /plugins.
- */
 export async function removeFlaggedPlugin(pluginId: string): Promise<void> {
   if (cache === null) {
     cache = await readFromDisk()

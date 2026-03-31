@@ -19,8 +19,6 @@ export type HookEventMetadata = {
   matcherMetadata?: MatcherMetadata
 }
 
-// Hook event metadata configuration.
-
 export const getHookEventMetadata = memoize(
   function (toolNames: string[]): Record<HookEvent, HookEventMetadata> {
     return {
@@ -118,7 +116,7 @@ export const getHookEventMetadata = memoize(
           'Input to command is JSON with agent_id and agent_type.\nExit code 0 - stdout shown to subagent\nBlocking errors are ignored\nOther exit codes - show stderr to user only',
         matcherMetadata: {
           fieldToMatch: 'agent_type',
-          values: [], // Will be populated with available agent types
+          values: [], 
         },
       },
       SubagentStop: {
@@ -128,7 +126,7 @@ export const getHookEventMetadata = memoize(
           'Input to command is JSON with agent_id, agent_type, and agent_transcript_path.\nExit code 0 - stdout/stderr not shown\nExit code 2 - show stderr to subagent and continue having it run\nOther exit codes - show stderr to user only',
         matcherMetadata: {
           fieldToMatch: 'agent_type',
-          values: [], // Will be populated with available agent types
+          values: [], 
         },
       },
       PreCompact: {
@@ -304,7 +302,7 @@ export function groupHooksByEventAndMatcher(
   getAllHooks(appState).forEach(hook => {
     const eventGroup = grouped[hook.event]
     if (eventGroup) {
-      // For events without matchers, use empty string as key
+      
       const matcherKey =
         metadata[hook.event].matcherMetadata !== undefined
           ? hook.matcher || ''
@@ -361,7 +359,6 @@ export function groupHooksByEventAndMatcher(
   return grouped
 }
 
-// Get sorted matchers for a specific event
 export function getSortedMatchersForEvent(
   hooksByEventAndMatcher: Record<
     HookEvent,
@@ -373,7 +370,6 @@ export function getSortedMatchersForEvent(
   return sortMatchersByPriority(matchers, hooksByEventAndMatcher, event)
 }
 
-// Get hooks for a specific event and matcher
 export function getHooksForMatcher(
   hooksByEventAndMatcher: Record<
     HookEvent,
@@ -382,13 +378,12 @@ export function getHooksForMatcher(
   event: HookEvent,
   matcher: string | null,
 ): IndividualHookConfig[] {
-  // For events without matchers, hooks are stored with empty string as key
+  
   
   const matcherKey = matcher ?? ''
   return hooksByEventAndMatcher[event]?.[matcherKey] ?? []
 }
 
-// Get metadata for a specific event's matcher
 export function getMatcherMetadata(
   event: HookEvent,
   toolNames: string[],

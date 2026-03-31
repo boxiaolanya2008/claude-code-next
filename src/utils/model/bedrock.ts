@@ -50,12 +50,12 @@ export function findFirstMatch(
 async function createBedrockClient() {
   const { BedrockClient } = await import('@aws-sdk/client-bedrock')
   
-  // - Reads AWS_REGION or AWS_DEFAULT_REGION env vars (not AWS config files)
+  
   
   
   const region = getAWSRegion()
 
-  const skipAuth = isEnvTruthy(process.env.CLAUDE_CODE_SKIP_BEDROCK_AUTH)
+  const skipAuth = isEnvTruthy(process.env.CLAUDE_CODE_NEXT_SKIP_BEDROCK_AUTH)
 
   const clientConfig: ConstructorParameters<typeof BedrockClient>[0] = {
     region,
@@ -79,7 +79,7 @@ async function createBedrockClient() {
   }
 
   if (!skipAuth && !process.env.AWS_BEARER_TOKEN_BEDROCK) {
-    // Only refresh credentials if not using API key authentication
+    
     const cachedCredentials = await refreshAndGetAwsCredentials()
     if (cachedCredentials) {
       clientConfig.credentials = {
@@ -98,7 +98,7 @@ export async function createBedrockRuntimeClient() {
     '@aws-sdk/client-bedrock-runtime'
   )
   const region = getAWSRegion()
-  const skipAuth = isEnvTruthy(process.env.CLAUDE_CODE_SKIP_BEDROCK_AUTH)
+  const skipAuth = isEnvTruthy(process.env.CLAUDE_CODE_NEXT_SKIP_BEDROCK_AUTH)
 
   const clientConfig: ConstructorParameters<typeof BedrockRuntimeClient>[0] = {
     region,
@@ -107,7 +107,7 @@ export async function createBedrockRuntimeClient() {
     }),
     ...(await getAWSClientProxyConfig()),
     ...(skipAuth && {
-      // BedrockRuntimeClient defaults to HTTP/2 without fallback
+      
       
       requestHandler: new (
         await import('@smithy/node-http-handler')
@@ -124,7 +124,7 @@ export async function createBedrockRuntimeClient() {
   }
 
   if (!skipAuth && !process.env.AWS_BEARER_TOKEN_BEDROCK) {
-    // Only refresh credentials if not using API key authentication
+    
     const cachedCredentials = await refreshAndGetAwsCredentials()
     if (cachedCredentials) {
       clientConfig.credentials = {
@@ -155,7 +155,7 @@ export const getInferenceProfileBackingModel = memoize(async function (
       return null
     }
 
-    // Use the first model as the primary backing model for cost calculation
+    
     
     
     const primaryModel = response.models[0]
@@ -163,7 +163,7 @@ export const getInferenceProfileBackingModel = memoize(async function (
       return null
     }
 
-    // Extract model name from ARN
+    
     
     const lastSlashIndex = primaryModel.modelArn.lastIndexOf('/')
     return lastSlashIndex >= 0
@@ -179,10 +179,6 @@ export function isFoundationModel(modelId: string): boolean {
   return modelId.startsWith('anthropic.')
 }
 
-/**
- * Cross-region inference profile prefixes for Bedrock.
- * These prefixes allow routing requests to models in specific regions.
- */
 const BEDROCK_REGION_PREFIXES = ['us', 'eu', 'apac', 'global'] as const
 
 export function extractModelIdFromArn(modelId: string): string {
@@ -201,7 +197,7 @@ export type BedrockRegionPrefix = (typeof BEDROCK_REGION_PREFIXES)[number]
 export function getBedrockRegionPrefix(
   modelId: string,
 ): BedrockRegionPrefix | undefined {
-  // Extract the inference profile ID from ARN format if present
+  
   
   const effectiveModelId = extractModelIdFromArn(modelId)
 
@@ -213,32 +209,21 @@ export function getBedrockRegionPrefix(
   return undefined
 }
 
-/**
- * Apply a region prefix to a Bedrock model ID.
- * If the model already has a different region prefix, it will be replaced.
- * If the model is a foundation model (anthropic.*), the prefix will be added.
- * If the model is not a Bedrock model, it will be returned as-is.
- *
- * For example:
- * - applyBedrockRegionPrefix("us.anthropic.claude-sonnet-4-5-v1:0", "eu") → "eu.anthropic.claude-sonnet-4-5-v1:0"
- * - applyBedrockRegionPrefix("anthropic.claude-sonnet-4-5-v1:0", "eu") → "eu.anthropic.claude-sonnet-4-5-v1:0"
- * - applyBedrockRegionPrefix("claude-sonnet-4-5-20250929", "eu") → "claude-sonnet-4-5-20250929" (not a Bedrock model)
- */
 export function applyBedrockRegionPrefix(
   modelId: string,
   prefix: BedrockRegionPrefix,
 ): string {
-  // Check if it already has a region prefix and replace it
+  
   const existingPrefix = getBedrockRegionPrefix(modelId)
   if (existingPrefix) {
     return modelId.replace(`${existingPrefix}.`, `${prefix}.`)
   }
 
-  // Check if it's a foundation model (anthropic.*) and add the prefix
+  
   if (isFoundationModel(modelId)) {
     return `${prefix}.${modelId}`
   }
 
-  // Not a Bedrock model format, return as-is
+  
   return modelId
 }

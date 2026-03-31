@@ -48,14 +48,14 @@ export function getComputerUseHostAdapter(): ComputerUseHostAdapter {
     },
     isDisabled: () => !getChicagoEnabled(),
     getSubGates: getChicagoSubGates,
-    // cleanup.ts always unhides at turn end — no user preference to disable it.
+    
     getAutoUnhideEnabled: () => true,
 
-    // Pixel-validation JPEG decode+crop. MUST be synchronous (the package
     
     
     
-    // click proceeds — the designed fallback per `PixelCompareResult.skipped`.
+    
+    
     
     cropRawPatch: () => null,
   }

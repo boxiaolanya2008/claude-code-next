@@ -54,7 +54,7 @@ export function usePromptSuggestion({
     prevShownAt.current = 0
   }
 
-  // Record first keystroke while suggestion is visible
+  
   if (
     inputValue.length > 0 &&
     firstKeystrokeAt.current === 0 &&
@@ -90,10 +90,10 @@ export function usePromptSuggestion({
   }, [isValidSuggestion, setAppState])
 
   const markShown = useCallback(() => {
-    // Check shownAt inside setAppState callback to avoid depending on it
+    
     
     setAppState(prev => {
-      // Only mark shown if not already shown and suggestion exists
+      
       if (prev.promptSuggestion.shownAt !== 0 || !prev.promptSuggestion.text) {
         return prev
       }
@@ -111,7 +111,7 @@ export function usePromptSuggestion({
     (finalInput: string, opts?: { skipReset: boolean }) => {
       if (!isValidSuggestion) return
 
-      // Determine if accepted: either Tab was pressed (acceptedAt set) OR
+      
       
       const tabWasPressed = acceptedAt > shownAt
       const wasAccepted = tabWasPressed || finalInput === suggestionText

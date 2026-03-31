@@ -16,8 +16,6 @@ import { TEAM_CREATE_TOOL_NAME } from '../tools/TeamCreateTool/constants.js'
 import { TEAM_DELETE_TOOL_NAME } from '../tools/TeamDeleteTool/constants.js'
 import { isEnvTruthy } from '../utils/envUtils.js'
 
-// utils/permissions/filesystem.ts. Duplicated here because importing
-
 function isScratchpadGateEnabled(): boolean {
   return checkStatsigFeatureGate_CACHED_MAY_BE_STALE('tengu_scratch')
 }
@@ -31,21 +29,15 @@ const INTERNAL_WORKER_TOOLS = new Set([
 
 export function isCoordinatorMode(): boolean {
   if (feature('COORDINATOR_MODE')) {
-    return isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE)
+    return isEnvTruthy(process.env.CLAUDE_CODE_NEXT_COORDINATOR_MODE)
   }
   return false
 }
 
-/**
- * Checks if the current coordinator mode matches the session's stored mode.
- * If mismatched, flips the environment variable so isCoordinatorMode() returns
- * the correct value for the resumed session. Returns a warning message if
- * the mode was switched, or undefined if no switch was needed.
- */
 export function matchSessionMode(
   sessionMode: 'coordinator' | 'normal' | undefined,
 ): string | undefined {
-  // No stored mode (old session before mode tracking) — do nothing
+  
   if (!sessionMode) {
     return undefined
   }
@@ -57,11 +49,11 @@ export function matchSessionMode(
     return undefined
   }
 
-  // Flip the env var — isCoordinatorMode() reads it live, no caching
+  
   if (sessionIsCoordinator) {
-    process.env.CLAUDE_CODE_COORDINATOR_MODE = '1'
+    process.env.CLAUDE_CODE_NEXT_COORDINATOR_MODE = '1'
   } else {
-    delete process.env.CLAUDE_CODE_COORDINATOR_MODE
+    delete process.env.CLAUDE_CODE_NEXT_COORDINATOR_MODE
   }
 
   logEvent('tengu_coordinator_mode_switched', {
@@ -81,7 +73,7 @@ export function getCoordinatorUserContext(
     return {}
   }
 
-  const workerTools = isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)
+  const workerTools = isEnvTruthy(process.env.CLAUDE_CODE_NEXT_SIMPLE)
     ? [BASH_TOOL_NAME, FILE_READ_TOOL_NAME, FILE_EDIT_TOOL_NAME]
         .sort()
         .join(', ')
@@ -105,11 +97,11 @@ export function getCoordinatorUserContext(
 }
 
 export function getCoordinatorSystemPrompt(): string {
-  const workerCapabilities = isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)
+  const workerCapabilities = isEnvTruthy(process.env.CLAUDE_CODE_NEXT_SIMPLE)
     ? 'Workers have access to Bash, Read, and Edit tools, plus MCP tools from configured MCP servers.'
     : 'Workers have access to standard tools, MCP tools from configured MCP servers, and project skills via the Skill tool. Delegate skill invocations (e.g. /commit, /verify) to workers.'
 
-  return `You are Claude Code, an AI assistant that orchestrates software engineering tasks across multiple workers.
+  return `You are Claude Code Next, an AI assistant that orchestrates software engineering tasks across multiple workers.
 
 ## 1. Your Role
 
@@ -233,14 +225,10 @@ When a worker reports failure (tests failed, build errors, file not found):
 Use ${TASK_STOP_TOOL_NAME} to stop a worker you sent in the wrong direction — for example, when you realize mid-flight that the approach is wrong, or the user changes requirements after you launched the worker. Pass the \`task_id\` from the ${AGENT_TOOL_NAME} tool's launch result. Stopped workers can be continued with ${SEND_MESSAGE_TOOL_NAME}.
 
 \`\`\`
-// Launched a worker to refactor auth to use JWT
 ${AGENT_TOOL_NAME}({ description: "Refactor auth to JWT", subagent_type: "worker", prompt: "Replace session-based auth with JWT..." })
-// ... returns task_id: "agent-x7q" ...
 
-// User clarifies: "Actually, keep sessions — just fix the null pointer"
 ${TASK_STOP_TOOL_NAME}({ task_id: "agent-x7q" })
 
-// Continue with corrected instructions
 ${SEND_MESSAGE_TOOL_NAME}({ to: "agent-x7q", message: "Stop the JWT refactor. Instead, fix the null pointer in src/auth/validate.ts:42..." })
 \`\`\`
 
@@ -255,11 +243,9 @@ When workers report research findings, **you must understand them before directi
 Never write "based on your findings" or "based on the research." These phrases delegate understanding to the worker instead of doing it yourself. You never hand off understanding to another worker.
 
 \`\`\`
-// Anti-pattern — lazy delegation (bad whether continuing or spawning)
 ${AGENT_TOOL_NAME}({ prompt: "Based on your findings, fix the auth bug", ... })
 ${AGENT_TOOL_NAME}({ prompt: "The worker found an issue in the auth module. Please fix it.", ... })
 
-// Good — synthesized spec (works with either continue or spawn)
 ${AGENT_TOOL_NAME}({ prompt: "Fix the null pointer in src/auth/validate.ts:42. The user field on Session (src/auth/types.ts:15) is undefined when sessions expire but the token remains cached. Add a null check before user.id access — if null, return 401 with 'Session expired'. Commit and report the hash.", ... })
 \`\`\`
 
@@ -292,12 +278,10 @@ There is no universal default. Think about how much of the worker's context over
 
 When continuing a worker with ${SEND_MESSAGE_TOOL_NAME}, it has full context from its previous run:
 \`\`\`
-// Continuation — worker finished research, now give it a synthesized implementation spec
 ${SEND_MESSAGE_TOOL_NAME}({ to: "xyz-456", message: "Fix the null pointer in src/auth/validate.ts:42. The user field is undefined when Session.expired is true but the token is still cached. Add a null check before accessing user.id — if null, return 401 with 'Session expired'. Commit and report the hash." })
 \`\`\`
 
 \`\`\`
-// Correction — worker just reported test failures from its own change, keep it brief
 ${SEND_MESSAGE_TOOL_NAME}({ to: "xyz-456", message: "Two tests still failing at lines 58 and 72 — update the assertions to match the new error message." })
 \`\`\`
 
@@ -307,7 +291,7 @@ ${SEND_MESSAGE_TOOL_NAME}({ to: "xyz-456", message: "Two tests still failing at 
 
 1. Implementation: "Fix the null pointer in src/auth/validate.ts:42. The user field can be undefined when the session expires. Add a null check and return early with an appropriate error. Commit and report the hash."
 
-2. Precise git operation: "Create a new branch from main called 'fix/session-expiry'. Cherry-pick only commit abc123 onto it. Push and create a draft PR targeting main. Add anthropics/claude-code as reviewer. Report the PR URL."
+2. Precise git operation: "Create a new branch from main called 'fix/session-expiry'. Cherry-pick only commit abc123 onto it. Push and create a draft PR targeting main. Add anthropics/claude-code-next as reviewer. Report the PR URL."
 
 3. Correction (continued worker, short): "The tests failed on the null check you added — validate.test.ts:58 expects 'Invalid session' but you changed it to 'Session expired'. Fix the assertion. Commit and report the hash."
 

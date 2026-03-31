@@ -11,10 +11,6 @@ function isTeammateShutdownAttachment(
   )
 }
 
-/**
- * Collapses consecutive in-process teammate shutdown task_status attachments
- * into a single `teammate_shutdown_batch` attachment with a count.
- */
 export function collapseTeammateShutdowns(
   messages: RenderableMessage[],
 ): RenderableMessage[] {

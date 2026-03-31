@@ -44,7 +44,7 @@ export function useShellPermissionFeedback({
 
   
   function handleInputModeToggle(option: string) {
-    // Notify that user is interacting with the dialog
+    
     toolUseConfirm.onUserInteraction()
     const analyticsProps = {
       toolName: sanitizeToolNameForAnalytics(
@@ -111,12 +111,12 @@ export function useShellPermissionFeedback({
   }
 
   function handleFocus(value: string) {
-    // Notify that user is interacting with the dialog (only if focus changed)
+    
     
     if (value !== focusedOption) {
       toolUseConfirm.onUserInteraction()
     }
-    // Reset input mode when navigating away, but only if no text typed
+    
     if (value !== 'yes' && yesInputMode && !acceptFeedback.trim()) {
       setYesInputMode(false)
     }

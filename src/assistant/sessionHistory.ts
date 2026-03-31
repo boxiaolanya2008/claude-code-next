@@ -7,7 +7,7 @@ import { getOAuthHeaders, prepareApiRequest } from '../utils/teleport/api.js'
 export const HISTORY_PAGE_SIZE = 100
 
 export type HistoryPage = {
-  /** Chronological order within the page. */
+  
   events: SDKMessage[]
   
   firstId: string | null
@@ -27,7 +27,6 @@ export type HistoryAuthCtx = {
   headers: Record<string, string>
 }
 
-/** Prepare auth + headers + base URL once, reuse across pages. */
 export async function createHistoryAuthCtx(
   sessionId: string,
 ): Promise<HistoryAuthCtx> {
@@ -66,10 +65,6 @@ async function fetchPage(
   }
 }
 
-/**
- * Newest page: last `limit` events, chronological, via anchor_to_latest.
- * has_more=true means older events exist.
- */
 export async function fetchLatestEvents(
   ctx: HistoryAuthCtx,
   limit = HISTORY_PAGE_SIZE,
@@ -77,7 +72,6 @@ export async function fetchLatestEvents(
   return fetchPage(ctx, { limit, anchor_to_latest: true }, 'fetchLatestEvents')
 }
 
-/** Older page: events immediately before `beforeId` cursor. */
 export async function fetchOlderEvents(
   ctx: HistoryAuthCtx,
   beforeId: string,

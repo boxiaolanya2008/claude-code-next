@@ -8,13 +8,8 @@ export function getSwarmSocketName(): string {
   return `claude-swarm-${process.pid}`
 }
 
-/**
- * Environment variable to override the command used to spawn teammate instances.
- * If not set, defaults to process.execPath (the current Claude binary).
- * This allows customization for different environments or testing.
- */
-export const TEAMMATE_COMMAND_ENV_VAR = 'CLAUDE_CODE_TEAMMATE_COMMAND'
+export const TEAMMATE_COMMAND_ENV_VAR = 'CLAUDE_CODE_NEXT_TEAMMATE_COMMAND'
 
-export const TEAMMATE_COLOR_ENV_VAR = 'CLAUDE_CODE_AGENT_COLOR'
+export const TEAMMATE_COLOR_ENV_VAR = 'CLAUDE_CODE_NEXT_AGENT_COLOR'
 
-export const PLAN_MODE_REQUIRED_ENV_VAR = 'CLAUDE_CODE_PLAN_MODE_REQUIRED'
+export const PLAN_MODE_REQUIRED_ENV_VAR = 'CLAUDE_CODE_NEXT_PLAN_MODE_REQUIRED'

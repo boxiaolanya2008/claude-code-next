@@ -29,16 +29,6 @@ export function hashPluginId(name: string, marketplace?: string): string {
     .slice(0, 16)
 }
 
-/**
- * 4-value scope enum for plugin origin. Distinct from PluginScope
- * (managed/user/project/local) which is installation-target — this is
- * marketplace-origin.
- *
- * - official: from an allowlisted Anthropic marketplace
- * - default-bundle: ships with product (@builtin), auto-enabled
- * - org: enterprise admin-pushed via managed settings (policySettings)
- * - user-local: user added marketplace or local plugin
- */
 export type TelemetryPluginScope =
   | 'official'
   | 'org'
@@ -56,11 +46,6 @@ export function getTelemetryPluginScope(
   return 'user-local'
 }
 
-/**
- * How a plugin arrived in the session. Splits self-selected from org-pushed
- * — plugin_scope alone doesn't (an official plugin can be user-installed OR
- * org-pushed; both are scope='official').
- */
 export type EnabledVia =
   | 'user-install'
   | 'org-policy'
@@ -98,11 +83,6 @@ export function getEnabledVia(
   return 'user-install'
 }
 
-/**
- * Common plugin telemetry fields keyed off name@marketplace. Returns the
- * hash, scope enum, and the redacted-twin columns. Callers add the raw
- * _PROTO_* fields separately (those require the PII-tagged marker type).
- */
 export function buildPluginTelemetryFields(
   name: string,
   marketplace: string | undefined,
@@ -136,13 +116,6 @@ export function buildPluginTelemetryFields(
   }
 }
 
-/**
- * Per-invocation callers (SkillTool, processSlashCommand) pass
- * managedNames=null — the session-level tengu_plugin_enabled_for_session
- * event carries the authoritative plugin_scope, and per-invocation rows can
- * join on plugin_id_hash to recover it. This keeps hot-path call sites free
- * of the extra settings read.
- */
 export function buildPluginCommandTelemetryFields(
   pluginInfo: { pluginManifest: PluginManifest; repository: string },
   managedNames: Set<string> | null = null,
@@ -155,12 +128,6 @@ export function buildPluginCommandTelemetryFields(
   )
 }
 
-/**
- * Emit tengu_plugin_enabled_for_session once per enabled plugin at session
- * start. Supplements tengu_skill_loaded (which still fires per-skill) — use
- * this for plugin-level aggregates instead of DISTINCT-on-prefix hacks.
- * A plugin with 5 skills emits 5 skill_loaded rows but 1 of these.
- */
 export function logPluginsEnabledForSession(
   plugins: LoadedPlugin[],
   managedNames: Set<string> | null,
@@ -196,11 +163,6 @@ export function logPluginsEnabledForSession(
   }
 }
 
-/**
- * Bounded-cardinality error bucket for CLI plugin operation failures.
- * Maps free-form error messages to 5 stable categories so dashboard
- * GROUP BY stays tractable.
- */
 export type PluginCommandErrorCategory =
   | 'network'
   | 'not-found'
@@ -231,12 +193,6 @@ export function classifyPluginCommandError(
   return 'unknown'
 }
 
-/**
- * Emit tengu_plugin_load_failed once per error surfaced by session-start
- * plugin loading. Pairs with tengu_plugin_enabled_for_session so dashboards
- * can compute a load-success rate. PluginError.type is already a bounded
- * enum — use it directly as error_category.
- */
 export function logPluginLoadErrors(
   errors: PluginError[],
   managedNames: Set<string> | null,
@@ -244,8 +200,8 @@ export function logPluginLoadErrors(
   for (const err of errors) {
     const { name, marketplace } = parsePluginIdentifier(err.source)
     
-    // some are marketplace-level). Use the 'plugin' property if present,
-    // fall back to the name parsed from err.source.
+    
+    
     const pluginName = 'plugin' in err && err.plugin ? err.plugin : name
     logEvent('tengu_plugin_load_failed', {
       error_category:

@@ -15,12 +15,12 @@ function getHooksFromAllowedSources(): HooksSettings {
     return {}
   }
 
-  // If allowManagedHooksOnly is set in managed settings, only use managed hooks
+  
   if (policySettings?.allowManagedHooksOnly === true) {
     return policySettings.hooks ?? {}
   }
 
-  // strictPluginOnlyCustomization: block user/project/local settings hooks.
+  
   
   
   
@@ -40,24 +40,17 @@ function getHooksFromAllowedSources(): HooksSettings {
     return policySettings?.hooks ?? {}
   }
 
-  // Otherwise, use all hooks (merged from all sources) - backwards compatible
+  
   return mergedSettings.hooks ?? {}
 }
 
-/**
- * Check if only managed hooks should run.
- * This is true when:
- * - policySettings has allowManagedHooksOnly: true, OR
- * - disableAllHooks is set in non-managed settings (non-managed settings
- *   cannot disable managed hooks, so they effectively become managed-only)
- */
 export function shouldAllowManagedHooksOnly(): boolean {
   const policySettings = settingsModule.getSettingsForSource('policySettings')
   if (policySettings?.allowManagedHooksOnly === true) {
     return true
   }
-  // If disableAllHooks is set but NOT from managed settings,
-  // treat as managed-only (non-managed hooks disabled, managed hooks still run)
+  
+  
   if (
     settingsModule.getSettings_DEPRECATED().disableAllHooks === true &&
     policySettings?.disableAllHooks !== true
@@ -67,11 +60,6 @@ export function shouldAllowManagedHooksOnly(): boolean {
   return false
 }
 
-/**
- * Check if all hooks (including managed) should be disabled.
- * This is only true when managed/policy settings has disableAllHooks: true.
- * When disableAllHooks is set in non-managed settings, managed hooks still run.
- */
 export function shouldDisableAllHooksIncludingManaged(): boolean {
   return (
     settingsModule.getSettingsForSource('policySettings')?.disableAllHooks ===
@@ -79,22 +67,12 @@ export function shouldDisableAllHooksIncludingManaged(): boolean {
   )
 }
 
-/**
- * Capture a snapshot of the current hooks configuration
- * This should be called once during application startup
- * Respects the allowManagedHooksOnly setting
- */
 export function captureHooksConfigSnapshot(): void {
   initialHooksConfig = getHooksFromAllowedSources()
 }
 
-/**
- * Update the hooks configuration snapshot
- * This should be called when hooks are modified through the settings
- * Respects the allowManagedHooksOnly setting
- */
 export function updateHooksConfigSnapshot(): void {
-  // Reset the session cache to ensure we read fresh settings from disk.
+  
   
   
   
@@ -103,11 +81,6 @@ export function updateHooksConfigSnapshot(): void {
   initialHooksConfig = getHooksFromAllowedSources()
 }
 
-/**
- * Get the current hooks configuration from snapshot
- * Falls back to settings if no snapshot exists
- * @returns The hooks configuration
- */
 export function getHooksConfigFromSnapshot(): HooksSettings | null {
   if (initialHooksConfig === null) {
     captureHooksConfigSnapshot()
@@ -115,10 +88,6 @@ export function getHooksConfigFromSnapshot(): HooksSettings | null {
   return initialHooksConfig
 }
 
-/**
- * Reset the hooks configuration snapshot (useful for testing)
- * Also resets SDK init state to prevent test pollution
- */
 export function resetHooksConfigSnapshot(): void {
   initialHooksConfig = null
   resetSdkInitState()

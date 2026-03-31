@@ -48,13 +48,6 @@ export class CCRInitError extends Error {
   }
 }
 
-/**
- * Consecutive 401/403 with a VALID-LOOKING token before giving up. An
- * expired JWT short-circuits this (exits immediately — deterministic,
- * retry is futile). This threshold is for the uncertain case: token's
- * exp is in the future but server says 401 (userauth down, KMS hiccup,
- * clock skew). 10 × 20s heartbeat ≈ 200s to ride it out.
- */
 const MAX_CONSECUTIVE_AUTH_FAILURES = 10
 
 type EventPayload = {
@@ -68,11 +61,6 @@ type ClientEvent = {
   ephemeral?: boolean
 }
 
-/**
- * Structural subset of a stream_event carrying a text_delta. Not a narrowing
- * of SDKPartialAssistantMessage — RawMessageStreamEvent's delta is a union and
- * narrowing through two levels defeats the discriminant.
- */
 type CoalescedStreamEvent = {
   type: 'stream_event'
   uuid: string
@@ -85,14 +73,8 @@ type CoalescedStreamEvent = {
   }
 }
 
-/**
- * Accumulator state for text_delta coalescing. Keyed by API message ID so
- * lifetime is tied to the assistant message — cleared when the complete
- * SDKAssistantMessage arrives (writeEvent), which is reliable even when
- * abort/error paths skip content_block_stop/message_stop delivery.
- */
 export type StreamAccumulatorState = {
-  /** API message ID (msg_...) → blocks[blockIndex] → chunk array. */
+  
   byMessage: Map<string, string[][]>
   
 
@@ -110,20 +92,6 @@ function scopeKey(m: {
   return `${m.session_id}:${m.parent_tool_use_id ?? ''}`
 }
 
-/**
- * Accumulate text_delta stream_events into full-so-far snapshots per content
- * block. Each flush emits ONE event per touched block containing the FULL
- * accumulated text from the start of the block — a client connecting
- * mid-stream receives a self-contained snapshot, not a fragment.
- *
- * Non-text-delta events pass through unchanged. message_start records the
- * active message ID for the scope; content_block_delta appends chunks;
- * the snapshot event reuses the first text_delta UUID seen for that block in
- * this flush so server-side idempotency remains stable across retries.
- *
- * Cleanup happens in writeEvent when the complete assistant message arrives
- * (reliable), not here on stop events (abort/error paths skip those).
- */
 export function accumulateStreamEvents(
   buffer: SDKPartialAssistantMessage[],
   state: StreamAccumulatorState,
@@ -152,8 +120,8 @@ export function accumulateStreamEvents(
         const messageId = state.scopeToMessage.get(scopeKey(msg))
         const blocks = messageId ? state.byMessage.get(messageId) : undefined
         if (!blocks) {
-          // Delta without a preceding message_start (reconnect mid-stream,
-          // or message_start was in a prior buffer that got dropped). Pass
+          
+          
           
           
           out.push(msg)
@@ -188,11 +156,6 @@ export function accumulateStreamEvents(
   return out
 }
 
-/**
- * Clear accumulator entries for a completed assistant message. Called from
- * writeEvent when the SDKAssistantMessage arrives — the reliable end-of-stream
- * signal that fires even when abort/interrupt/error skip SSE stop events.
- */
 export function clearStreamAccumulatorForMessage(
   state: StreamAccumulatorState,
   assistant: {
@@ -237,14 +200,6 @@ type WorkerStateResponse = {
   }
 }
 
-/**
- * Manages the worker lifecycle protocol with CCR v2:
- * - Epoch management: reads worker_epoch from CLAUDE_CODE_WORKER_EPOCH env var
- * - Runtime state reporting: PUT /sessions/{id}/worker
- * - Heartbeat: POST /sessions/{id}/worker/heartbeat for liveness detection
- *
- * All writes go through this.request().
- */
 export class CCRClient {
   private workerEpoch = 0
   private readonly heartbeatIntervalMs: number
@@ -300,7 +255,7 @@ export class CCRClient {
     this.onEpochMismatch =
       opts?.onEpochMismatch ??
       (() => {
-        // eslint-disable-next-line custom-rules/no-process-exit
+        
         process.exit(1)
       })
     this.heartbeatIntervalMs =
@@ -334,7 +289,7 @@ export class CCRClient {
     this.eventUploader = new SerialBatchEventUploader<ClientEvent>({
       maxBatchSize: 100,
       maxBatchBytes: 10 * 1024 * 1024,
-      // flushStreamEventBuffer() enqueues a full 100ms window of accumulated
+      
       
       
       
@@ -420,24 +375,15 @@ export class CCRClient {
     })
   }
 
-  /**
-   * Initialize the session worker:
-   * 1. Take worker_epoch from the argument, or fall back to
-   *    CLAUDE_CODE_WORKER_EPOCH (set by env-manager / bridge spawner)
-   * 2. Report state as 'idle'
-   * 3. Start heartbeat timer
-   *
-   * In-process callers (replBridge) pass the epoch directly — they
-   * registered the worker themselves and there is no parent process
-   * setting env vars.
-   */
+  
+
   async initialize(epoch?: number): Promise<Record<string, unknown> | null> {
     const startMs = Date.now()
     if (Object.keys(this.getAuthHeaders()).length === 0) {
       throw new CCRInitError('no_auth_headers')
     }
     if (epoch === undefined) {
-      const rawEpoch = process.env.CLAUDE_CODE_WORKER_EPOCH
+      const rawEpoch = process.env.CLAUDE_CODE_NEXT_WORKER_EPOCH
       epoch = rawEpoch ? parseInt(rawEpoch, 10) : NaN
     }
     if (isNaN(epoch)) {
@@ -454,7 +400,7 @@ export class CCRClient {
       {
         worker_status: 'idle',
         worker_epoch: this.workerEpoch,
-        // Clear stale pending_action/task_summary left by a prior
+        
         
         external_metadata: {
           pending_action: null,
@@ -464,7 +410,7 @@ export class CCRClient {
       'PUT worker (init)',
     )
     if (!result.ok) {
-      // 409 → onEpochMismatch may throw, but request() catches it and returns
+      
       
       
       
@@ -500,7 +446,7 @@ export class CCRClient {
     return metadata
   }
 
-  // Control_requests are marked processed and not re-delivered on
+  
   
   private async getWorkerState(): Promise<{
     metadata: Record<string, unknown> | null
@@ -522,12 +468,8 @@ export class CCRClient {
     }
   }
 
-  /**
-   * Send an authenticated HTTP request to CCR. Handles auth headers,
-   * 409 epoch mismatch, and error logging. Returns { ok: true } on 2xx.
-   * On 429, reads Retry-After (integer seconds) so the uploader can honor
-   * the server's backoff hint instead of blindly exponentiating.
-   */
+  
+
   private async request(
     method: 'post' | 'put',
     path: string,
@@ -562,7 +504,7 @@ export class CCRClient {
         this.handleEpochMismatch()
       }
       if (response.status === 401 || response.status === 403) {
-        // A 401 with an expired JWT is deterministic — no retry will
+        
         
         
         const tok = getSessionIngressAuthToken()
@@ -575,7 +517,7 @@ export class CCRClient {
           logForDiagnosticsNoPII('error', 'cli_worker_token_expired_no_refresh')
           this.onEpochMismatch()
         }
-        // Token looks valid but server says 401 — possible server-side
+        
         
         this.consecutiveAuthFailures++
         if (this.consecutiveAuthFailures >= MAX_CONSECUTIVE_AUTH_FAILURES) {
@@ -616,7 +558,7 @@ export class CCRClient {
     }
   }
 
-  /** Report worker state to CCR via PUT /sessions/{id}/worker. */
+  
   reportState(state: SessionState, details?: RequiresActionDetails): void {
     if (state === this.currentState && !details) return
     this.currentState = state
@@ -632,15 +574,13 @@ export class CCRClient {
     })
   }
 
-  /** Report external metadata to CCR via PUT /worker. */
+  
   reportMetadata(metadata: Record<string, unknown>): void {
     this.workerState.enqueue({ external_metadata: metadata })
   }
 
-  /**
-   * Handle epoch mismatch (409 Conflict). A newer CC instance has replaced
-   * this one — exit immediately.
-   */
+  
+
   private handleEpochMismatch(): never {
     logForDebugging('CCRClient: Epoch mismatch (409), shutting down', {
       level: 'error',
@@ -649,7 +589,7 @@ export class CCRClient {
     this.onEpochMismatch()
   }
 
-  /** Start periodic heartbeat. */
+  
   private startHeartbeat(): void {
     this.stopHeartbeat()
     const schedule = (): void => {
@@ -669,7 +609,7 @@ export class CCRClient {
     schedule()
   }
 
-  /** Stop heartbeat timer. */
+  
   private stopHeartbeat(): void {
     if (this.heartbeatTimer) {
       clearTimeout(this.heartbeatTimer)
@@ -677,7 +617,7 @@ export class CCRClient {
     }
   }
 
-  /** Send a heartbeat via POST /sessions/{id}/worker/heartbeat. */
+  
   private async sendHeartbeat(): Promise<void> {
     if (this.heartbeatInFlight) return
     this.heartbeatInFlight = true
@@ -697,16 +637,8 @@ export class CCRClient {
     }
   }
 
-  /**
-   * Write a StdoutMessage as a client event via POST /sessions/{id}/worker/events.
-   * These events are visible to frontend clients via the SSE stream.
-   * Injects a UUID if missing to ensure server-side idempotency on retry.
-   *
-   * stream_event messages are held in a 100ms delay buffer and accumulated
-   * (text_deltas for the same content block emit a full-so-far snapshot per
-   * flush). A non-stream_event write flushes the buffer first so downstream
-   * ordering is preserved.
-   */
+  
+
   async writeEvent(message: StdoutMessage): Promise<void> {
     if (message.type === 'stream_event') {
       this.streamEventBuffer.push(message)
@@ -725,7 +657,7 @@ export class CCRClient {
     await this.eventUploader.enqueue(this.toClientEvent(message))
   }
 
-  /** Wrap a StdoutMessage as a ClientEvent, injecting a UUID if missing. */
+  
   private toClientEvent(message: StdoutMessage): ClientEvent {
     const msg = message as unknown as Record<string, unknown>
     return {
@@ -736,13 +668,8 @@ export class CCRClient {
     }
   }
 
-  /**
-   * Drain the stream_event delay buffer: accumulate text_deltas into
-   * full-so-far snapshots, clear the timer, enqueue the resulting events.
-   * Called from the timer, from writeEvent on a non-stream message, and from
-   * flush(). close() drops the buffer — call flush() first if you need
-   * delivery.
-   */
+  
+
   private async flushStreamEventBuffer(): Promise<void> {
     if (this.streamEventTimer) {
       clearTimeout(this.streamEventTimer)
@@ -760,11 +687,8 @@ export class CCRClient {
     )
   }
 
-  /**
-   * Write an internal worker event via POST /sessions/{id}/worker/internal-events.
-   * These events are NOT visible to frontend clients — they store worker-internal
-   * state (transcript messages, compaction markers) needed for session resume.
-   */
+  
+
   async writeInternalEvent(
     eventType: string,
     payload: Record<string, unknown>,
@@ -788,42 +712,27 @@ export class CCRClient {
     await this.internalEventUploader.enqueue(event)
   }
 
-  /**
-   * Flush pending internal events. Call between turns and on shutdown
-   * to ensure transcript entries are persisted.
-   */
+  
+
   flushInternalEvents(): Promise<void> {
     return this.internalEventUploader.flush()
   }
 
-  /**
-   * Flush pending client events (writeEvent queue). Call before close()
-   * when the caller needs delivery confirmation — close() abandons the
-   * queue. Resolves once the uploader drains or rejects; returns
-   * regardless of whether individual POSTs succeeded (check server state
-   * separately if that matters).
-   */
+  
+
   async flush(): Promise<void> {
     await this.flushStreamEventBuffer()
     return this.eventUploader.flush()
   }
 
-  /**
-   * Read foreground agent internal events from
-   * GET /sessions/{id}/worker/internal-events.
-   * Returns transcript entries from the last compaction boundary, or null on failure.
-   * Used for session resume.
-   */
+  
+
   async readInternalEvents(): Promise<InternalEvent[] | null> {
     return this.paginatedGet('/worker/internal-events', {}, 'internal_events')
   }
 
-  /**
-   * Read all subagent internal events from
-   * GET /sessions/{id}/worker/internal-events?subagents=true.
-   * Returns a merged stream across all non-foreground agents, each from its
-   * compaction point. Used for session resume.
-   */
+  
+
   async readSubagentInternalEvents(): Promise<InternalEvent[] | null> {
     return this.paginatedGet(
       '/worker/internal-events',
@@ -832,10 +741,8 @@ export class CCRClient {
     )
   }
 
-  /**
-   * Paginated GET with retry. Fetches all pages from a list endpoint,
-   * retrying each page on failure with exponential backoff + jitter.
-   */
+  
+
   private async paginatedGet(
     path: string,
     params: Record<string, string>,
@@ -873,10 +780,8 @@ export class CCRClient {
     return allEvents
   }
 
-  /**
-   * Single GET request with retry. Returns the parsed response body
-   * on success, null if all retries are exhausted.
-   */
+  
+
   private async getWithRetry<T>(
     url: string,
     authHeaders: Record<string, string>,
@@ -932,10 +837,8 @@ export class CCRClient {
     return null
   }
 
-  /**
-   * Report delivery status for a client-to-worker event.
-   * POST /v1/code/sessions/{id}/worker/events/delivery (batch endpoint)
-   */
+  
+
   reportDelivery(
     eventId: string,
     status: 'received' | 'processing' | 'processed',
@@ -943,17 +846,17 @@ export class CCRClient {
     void this.deliveryUploader.enqueue({ eventId, status })
   }
 
-  /** Get the current epoch (for external use). */
+  
   getWorkerEpoch(): number {
     return this.workerEpoch
   }
 
-  /** Internal-event queue depth — shutdown-snapshot backpressure signal. */
+  
   get internalEventsPending(): number {
     return this.internalEventUploader.pendingCount
   }
 
-  /** Clean up uploaders and timers. */
+  
   close(): void {
     this.closed = true
     this.stopHeartbeat()

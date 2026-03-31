@@ -7,7 +7,7 @@ const NUMERIC = /^\d+$/
 const ENV_VAR = /^[A-Za-z_][A-Za-z0-9_]*=/
 
 const WRAPPER_COMMANDS = new Set([
-  'nice', // command position varies based on options
+  'nice', 
 ])
 
 const toArray = <T>(val: T | T[]): T[] => (Array.isArray(val) ? val : [val])
@@ -41,7 +41,7 @@ export async function getCommandPrefixStatic(
   const [cmd, ...args] = cmdArgs
   if (!cmd) return { commandPrefix: null }
 
-  // Check if this is a wrapper command by looking at its spec
+  
   const spec = await getCommandSpec(cmd)
   
   let isWrapper =
@@ -49,7 +49,7 @@ export async function getCommandPrefixStatic(
     (spec?.args && toArray(spec.args).some(arg => arg?.isCommand))
 
   
-  // treat it as a regular command, not a wrapper
+  
   if (isWrapper && args[0] && isKnownSubcommand(args[0], spec)) {
     isWrapper = false
   }
@@ -117,18 +117,6 @@ async function handleWrapper(
   return !result?.commandPrefix ? null : `${command} ${result.commandPrefix}`
 }
 
-/**
- * Computes prefixes for a compound command (with && / || / ;).
- * For single commands, returns a single-element array with the prefix.
- *
- * For compound commands, computes per-subcommand prefixes and collapses
- * them: subcommands sharing a root (first word) are collapsed via
- * word-aligned longest common prefix.
- *
- * @param excludeSubcommand — optional filter; return true for subcommands
- *   that should be excluded from the prefix suggestion (e.g. read-only
- *   commands that are already auto-allowed).
- */
 export async function getCompoundCommandPrefixesStatic(
   command: string,
   excludeSubcommand?: (subcommand: string) => boolean,
@@ -163,7 +151,7 @@ export async function getCompoundCommandPrefixesStatic(
     }
   }
 
-  // Collapse each group via word-aligned LCP
+  
   const collapsed: string[] = []
   for (const [, group] of groups) {
     collapsed.push(longestCommonPrefix(group))
@@ -171,11 +159,6 @@ export async function getCompoundCommandPrefixesStatic(
   return collapsed
 }
 
-/**
- * Compute the longest common prefix of strings, aligned to word boundaries.
- * e.g. ["git fetch", "git worktree"] → "git"
- *      ["npm run test", "npm run lint"] → "npm run"
- */
 function longestCommonPrefix(strings: string[]): string {
   if (strings.length === 0) return ''
   if (strings.length === 1) return strings[0]!

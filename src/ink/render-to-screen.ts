@@ -28,8 +28,6 @@ export type MatchPosition = {
   len: number
 }
 
-// Shared across calls. Pools accumulate style/char interns — reusing them
-
 let root: DOMElement | undefined
 let container: ReturnType<typeof reconciler.createContainer> | undefined
 let stylePool: StylePool | undefined
@@ -82,7 +80,7 @@ export function renderToScreen(
   
   const screen = createScreen(
     width,
-    Math.max(1, height), // avoid 0-height Screen (createScreen may choke)
+    Math.max(1, height), 
     stylePool!,
     charPool!,
     hyperlinkPool!,
@@ -122,14 +120,6 @@ export function renderToScreen(
   return { screen: rendered, height }
 }
 
-/** Scan a Screen buffer for all occurrences of query. Returns positions
- *  relative to the buffer (row 0 = buffer top). Same cell-skip logic as
- *  applySearchHighlight (SpacerTail/SpacerHead/noSelect) so positions
- *  match what the overlay highlight would find. Case-insensitive.
- *
- *  For the side-render use: this Screen is the FULL message (natural
- *  height, not viewport-clipped). Positions are stable — to highlight
- *  on the real screen, add the message's screen offset (lo). */
 export function scanPositions(screen: Screen, query: string): MatchPosition[] {
   const lq = query.toLowerCase()
   if (!lq) return []
@@ -142,11 +132,11 @@ export function scanPositions(screen: Screen, query: string): MatchPosition[] {
   const t0 = performance.now()
   for (let row = 0; row < h; row++) {
     const rowOff = row * w
-    // Same text-build as applySearchHighlight. Keep in sync — or extract
-    // to a shared helper (TODO once both are stable). codeUnitToCell
-    // maps indexOf positions (code units in the LOWERCASED text) to cell
-    // indices in colOf — surrogate pairs (emoji) and multi-unit lowercase
-    // (Turkish İ → i + U+0307) make text.length > colOf.length.
+    
+    
+    
+    
+    
     let text = ''
     const colOf: number[] = []
     const codeUnitToCell: number[] = []
@@ -168,7 +158,7 @@ export function scanPositions(screen: Screen, query: string): MatchPosition[] {
       text += lc
       colOf.push(col)
     }
-    // Non-overlapping — same advance as applySearchHighlight.
+    
     let pos = text.indexOf(lq)
     while (pos >= 0) {
       const startCi = codeUnitToCell[pos]!
@@ -184,15 +174,6 @@ export function scanPositions(screen: Screen, query: string): MatchPosition[] {
   return positions
 }
 
-/** Write CURRENT (yellow+bold+underline) at positions[currentIdx] +
- *  rowOffset. OTHER positions are NOT styled here — the scan-highlight
- *  (applySearchHighlight with null hint) does inverse for all visible
- *  matches, including these. Two-layer: scan = 'you could go here',
- *  position = 'you ARE here'. Writing inverse again here would be a
- *  no-op (withInverse idempotent) but wasted work.
- *
- *  Positions are message-relative (row 0 = message top). rowOffset =
- *  message's current screen-top (lo). Clips outside [0, height). */
 export function applyPositionedHighlight(
   screen: Screen,
   stylePool: StylePool,

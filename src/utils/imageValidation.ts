@@ -7,9 +7,6 @@ export type OversizedImage = {
   size: number
 }
 
-/**
- * Error thrown when one or more images exceed the API size limit.
- */
 export class ImageSizeError extends Error {
   constructor(oversizedImages: OversizedImage[], maxSize: number) {
     let message: string
@@ -31,9 +28,6 @@ export class ImageSizeError extends Error {
   }
 }
 
-/**
- * Type guard to check if a block is a base64 image block
- */
 function isBase64ImageBlock(
   block: unknown,
 ): block is { type: 'image'; source: { type: 'base64'; data: string } } {
@@ -45,20 +39,6 @@ function isBase64ImageBlock(
   return source.type === 'base64' && typeof source.data === 'string'
 }
 
-/**
- * Validates that all images in messages are within the API size limit.
- * This is a safety net at the API boundary to catch any oversized images
- * that may have slipped through upstream processing.
- *
- * Note: The API's 5MB limit applies to the base64-encoded string length,
- * not the decoded raw bytes.
- *
- * Works with both UserMessage/AssistantMessage types (which have { type, message })
- * and raw MessageParam types (which have { role, content }).
- *
- * @param messages - Array of messages to validate
- * @throws ImageSizeError if any image exceeds the API limit
- */
 export function validateImagesForAPI(messages: unknown[]): void {
   const oversizedImages: OversizedImage[] = []
   let imageIndex = 0
@@ -69,7 +49,7 @@ export function validateImagesForAPI(messages: unknown[]): void {
     const m = msg as Record<string, unknown>
 
     
-    // Only check user messages
+    
     if (m.type !== 'user') continue
 
     const innerMessage = m.message as Record<string, unknown> | undefined

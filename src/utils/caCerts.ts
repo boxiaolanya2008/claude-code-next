@@ -18,18 +18,18 @@ export const getCACertificates = memoize((): string[] | undefined => {
     return undefined
   }
 
-  // Deferred load: Bun's node:tls module eagerly materializes ~150 Mozilla
-  // root certificates (~750KB heap) on import, even if tls.rootCertificates
-  // is never accessed. Most users hit the early return above, so we only
-  // pay this cost when custom CA handling is actually needed.
-  /* eslint-disable @typescript-eslint/no-require-imports */
+  
+  
+  
+  
+  
   const tls = require('tls') as typeof import('tls')
-  /* eslint-enable @typescript-eslint/no-require-imports */
+  
 
   const certs: string[] = []
 
   if (useSystemCA) {
-    // Load system CA store (Bun API)
+    
     const getCACerts = (
       tls as typeof tls & { getCACertificates?: (type: string) => string[] }
     ).getCACertificates
@@ -40,28 +40,28 @@ export const getCACertificates = memoize((): string[] | undefined => {
         `CA certs: Loaded ${certs.length} system CA certificates (--use-system-ca)`,
       )
     } else if (!getCACerts && !extraCertsPath) {
-      // Under Node.js where getCACertificates doesn't exist and no extra certs,
-      // return undefined to let Node.js handle --use-system-ca natively.
+      
+      
       logForDebugging(
         'CA certs: --use-system-ca set but system CA API unavailable, deferring to runtime',
       )
       return undefined
     } else {
-      // System CA API returned empty or unavailable; fall back to bundled root certs
+      
       certs.push(...tls.rootCertificates)
       logForDebugging(
         `CA certs: Loaded ${certs.length} bundled root certificates as base (--use-system-ca fallback)`,
       )
     }
   } else {
-    // Must include bundled Mozilla CAs as base since ca replaces defaults
+    
     certs.push(...tls.rootCertificates)
     logForDebugging(
       `CA certs: Loaded ${certs.length} bundled root certificates as base`,
     )
   }
 
-  // Append extra certs from file
+  
   if (extraCertsPath) {
     try {
       const extraCert = getFsImplementation().readFileSync(extraCertsPath, {

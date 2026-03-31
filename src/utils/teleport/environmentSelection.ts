@@ -11,18 +11,8 @@ export type EnvironmentSelectionInfo = {
   selectedEnvironmentSource: SettingSource | null
 }
 
-/**
- * Gets information about available environments and the currently selected one.
- *
- * @returns Promise<EnvironmentSelectionInfo> containing:
- *   - availableEnvironments: all environments from the API
- *   - selectedEnvironment: the environment that would be used (based on settings or first available),
- *     or null if no environments are available
- *   - selectedEnvironmentSource: the SettingSource where defaultEnvironmentId is configured,
- *     or null if using the default (first environment)
- */
 export async function getEnvironmentSelectionInfo(): Promise<EnvironmentSelectionInfo> {
-  // Fetch available environments
+  
   const environments = await fetchEnvironments()
 
   if (environments.length === 0) {
@@ -33,7 +23,7 @@ export async function getEnvironmentSelectionInfo(): Promise<EnvironmentSelectio
     }
   }
 
-  // Get the merged settings to see what would actually be used
+  
   const mergedSettings = getSettings_DEPRECATED()
   const defaultEnvironmentId = mergedSettings?.remote?.defaultEnvironmentId
 
@@ -55,7 +45,7 @@ export async function getEnvironmentSelectionInfo(): Promise<EnvironmentSelectio
       for (let i = SETTING_SOURCES.length - 1; i >= 0; i--) {
         const source = SETTING_SOURCES[i]
         if (!source || source === 'flagSettings') {
-          // Skip flagSettings as it's not a normal source we check
+          
           continue
         }
         const sourceSettings = getSettingsForSource(source)

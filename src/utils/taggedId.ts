@@ -20,9 +20,6 @@ function base58Encode(n: bigint): string {
   return result.join('')
 }
 
-/**
- * Parse a UUID string (with or without hyphens) into a 128-bit bigint.
- */
 function uuidToBigInt(uuid: string): bigint {
   const hex = uuid.replace(/-/g, '')
   if (hex.length !== 32) {
@@ -31,13 +28,6 @@ function uuidToBigInt(uuid: string): bigint {
   return BigInt('0x' + hex)
 }
 
-/**
- * Convert an account UUID to a tagged ID in the API's format.
- *
- * @param tag - The tag prefix (e.g. "user", "org")
- * @param uuid - A UUID string (with or without hyphens)
- * @returns Tagged ID string like "user_01PaGUP2rbg1XDh7Z9W1CEpd"
- */
 export function toTaggedId(tag: string, uuid: string): string {
   const n = uuidToBigInt(uuid)
   return `${tag}_${VERSION}${base58Encode(n)}`

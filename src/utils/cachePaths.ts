@@ -28,7 +28,7 @@ export const CACHE_PATHS = {
     join(
       paths.cache,
       getProjectDir(getFsImplementation().cwd()),
-      // Sanitize server name for Windows compatibility (colons are reserved for drive letters)
+      
       `mcp-logs-${sanitizePath(serverName)}`,
     ),
 }

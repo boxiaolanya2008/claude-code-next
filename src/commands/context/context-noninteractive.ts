@@ -42,7 +42,7 @@ export async function collectContextData(
 
   let apiView = getMessagesAfterCompactBoundary(messages)
   if (feature('CONTEXT_COLLAPSE')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
+    
     const { projectView } =
       require('../../services/contextCollapse/operations.js') as typeof import('../../services/contextCollapse/operations.js')
     
@@ -58,15 +58,15 @@ export async function collectContextData(
     async () => appState.toolPermissionContext,
     tools,
     agentDefinitions,
-    undefined, // terminalWidth
+    undefined, 
     
-    // but its signature declares the full Pick<ToolUseContext, 'options'>.
+    
     { options: { customSystemPrompt, appendSystemPrompt } } as Pick<
       ToolUseContext,
       'options'
     >,
-    undefined, // mainThreadAgentDefinition
-    apiView, // original messages for API usage extraction
+    undefined, 
+    apiView, 
   )
 }
 
@@ -105,7 +105,7 @@ function formatContextAsMarkdownTable(data: ContextData): string {
   
   
   if (feature('CONTEXT_COLLAPSE')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
+    
     const { getStats, isContextCollapseEnabled } =
       require('../../services/contextCollapse/index.js') as typeof import('../../services/contextCollapse/index.js')
     
@@ -182,7 +182,7 @@ function formatContextAsMarkdownTable(data: ContextData): string {
     output += `\n`
   }
 
-  // MCP tools
+  
   if (mcpTools.length > 0) {
     output += `### MCP Tools\n\n`
     output += `| Tool | Server | Tokens |\n`
@@ -193,7 +193,7 @@ function formatContextAsMarkdownTable(data: ContextData): string {
     output += `\n`
   }
 
-  // System tools (ant-only)
+  
   if (
     systemTools &&
     systemTools.length > 0 &&
@@ -208,7 +208,7 @@ function formatContextAsMarkdownTable(data: ContextData): string {
     output += `\n`
   }
 
-  // System prompt sections (ant-only)
+  
   if (
     systemPromptSections &&
     systemPromptSections.length > 0 &&
@@ -223,7 +223,7 @@ function formatContextAsMarkdownTable(data: ContextData): string {
     output += `\n`
   }
 
-  // Custom agents
+  
   if (agents.length > 0) {
     output += `### Custom Agents\n\n`
     output += `| Agent Type | Source | Tokens |\n`
@@ -260,7 +260,7 @@ function formatContextAsMarkdownTable(data: ContextData): string {
     output += `\n`
   }
 
-  // Memory files
+  
   if (memoryFiles.length > 0) {
     output += `### Memory Files\n\n`
     output += `| Type | Path | Tokens |\n`
@@ -271,7 +271,7 @@ function formatContextAsMarkdownTable(data: ContextData): string {
     output += `\n`
   }
 
-  // Skills
+  
   if (skills && skills.tokens > 0 && skills.skillFrontmatter.length > 0) {
     output += `### Skills\n\n`
     output += `| Skill | Source | Tokens |\n`
@@ -282,7 +282,7 @@ function formatContextAsMarkdownTable(data: ContextData): string {
     output += `\n`
   }
 
-  // Message breakdown (ant-only)
+  
   if (messageBreakdown && process.env.USER_TYPE === 'ant') {
     output += `### [ANT-ONLY] Message Breakdown\n\n`
     output += `| Category | Tokens |\n`

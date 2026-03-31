@@ -78,7 +78,7 @@ export async function generateSessionTitle(
       options: {
         querySource: 'generate_session_title',
         agents: [],
-        // Reflect the actual session mode — this module is called from
+        
         
         
         isNonInteractiveSession: getIsNonInteractiveSession(),

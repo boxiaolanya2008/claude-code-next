@@ -40,7 +40,7 @@ export function getTelemetryAttributes(): Attributes {
     attributes['app.version'] = MACRO.VERSION
   }
 
-  // Only include OAuth account data when actively using OAuth authentication
+  
   const oauthAccount = getOauthAccountInfo()
   if (oauthAccount) {
     const orgId = oauthAccount.organizationUuid
@@ -56,12 +56,12 @@ export function getTelemetryAttributes(): Attributes {
     ) {
       attributes['user.account_uuid'] = accountUuid
       attributes['user.account_id'] =
-        process.env.CLAUDE_CODE_ACCOUNT_TAGGED_ID ||
+        process.env.CLAUDE_CODE_NEXT_ACCOUNT_TAGGED_ID ||
         toTaggedId('user', accountUuid)
     }
   }
 
-  // Add terminal type if available
+  
   if (envDynamic.terminal) {
     attributes['terminal.type'] = envDynamic.terminal
   }

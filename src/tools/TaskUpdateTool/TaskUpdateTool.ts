@@ -31,7 +31,7 @@ import { TASK_UPDATE_TOOL_NAME } from './constants.js'
 import { DESCRIPTION, PROMPT } from './prompt.js'
 
 const inputSchema = lazySchema(() => {
-  // Extended status schema that includes 'deleted' as a special action
+  
   const TaskUpdateStatusSchema = TaskStatusSchema().or(z.literal('deleted'))
 
   return z.strictObject({
@@ -182,7 +182,7 @@ export const TaskUpdateTool = buildTool({
       updates.owner = owner
       updatedFields.push('owner')
     }
-    // Auto-set owner when a teammate marks a task as in_progress without
+    
     
     
     if (
@@ -210,7 +210,7 @@ export const TaskUpdateTool = buildTool({
       updatedFields.push('metadata')
     }
     if (status !== undefined) {
-      // Handle deletion - delete the task file and return early
+      
       if (status === 'deleted') {
         const deleted = await deleteTask(taskListId, taskId)
         return {
@@ -226,9 +226,9 @@ export const TaskUpdateTool = buildTool({
         }
       }
 
-      // For regular status updates, validate and apply if different
+      
       if (status !== existingTask.status) {
-        // Run TaskCompleted hooks when marking a task as completed
+        
         if (status === 'completed') {
           const blockingErrors: string[] = []
 
@@ -273,7 +273,7 @@ export const TaskUpdateTool = buildTool({
       await updateTask(taskListId, taskId, updates)
     }
 
-    // Notify new owner via mailbox when ownership changes
+    
     if (updates.owner && isAgentSwarmsEnabled()) {
       const senderName = getAgentName() || 'team-lead'
       const senderColor = getTeammateColor()
@@ -297,7 +297,7 @@ export const TaskUpdateTool = buildTool({
       )
     }
 
-    // Add blocks if provided and not already present
+    
     if (addBlocks && addBlocks.length > 0) {
       const newBlocks = addBlocks.filter(
         id => !existingTask.blocks.includes(id),
@@ -310,7 +310,7 @@ export const TaskUpdateTool = buildTool({
       }
     }
 
-    // Add blockedBy if provided and not already present (reverse: the blocker blocks this task)
+    
     if (addBlockedBy && addBlockedBy.length > 0) {
       const newBlockedBy = addBlockedBy.filter(
         id => !existingTask.blockedBy.includes(id),
@@ -323,9 +323,9 @@ export const TaskUpdateTool = buildTool({
       }
     }
 
-    // Structural verification nudge: if the main-thread agent just closed
     
-    // append a reminder to the tool result. Fires at the loop-exit moment
+    
+    
     
     
     
@@ -371,9 +371,9 @@ export const TaskUpdateTool = buildTool({
       verificationNudgeNeeded,
     } = content as Output
     if (!success) {
-      // Return as non-error so it doesn't trigger sibling tool cancellation
-      // in StreamingToolExecutor. "Task not found" is a benign condition
-      // (e.g., task list already cleaned up) that the model can handle.
+      
+      
+      
       return {
         tool_use_id: toolUseID,
         type: 'tool_result',
@@ -383,7 +383,7 @@ export const TaskUpdateTool = buildTool({
 
     let resultContent = `Updated task #${taskId} ${updatedFields.join(', ')}`
 
-    // Add reminder for teammates when they complete a task (supports in-process teammates)
+    
     if (
       statusChange?.to === 'completed' &&
       getAgentId() &&

@@ -23,7 +23,7 @@ export const ChannelMessageNotificationSchema = lazySchema(() =>
     method: z.literal('notifications/claude/channel'),
     params: z.object({
       content: z.string(),
-      // Opaque passthrough — thread_id, user, whatever the channel wants the
+      
       
       meta: z.record(z.string(), z.string()).optional(),
     }),
@@ -53,13 +53,6 @@ export type ChannelPermissionRequestParams = {
   input_preview: string
 }
 
-/**
- * Meta keys become XML attribute NAMES — a crafted key like
- * `x="" injected="y` would break out of the attribute structure. Only
- * accept keys that look like plain identifiers. This is stricter than
- * the XML spec (which allows `:`, `.`, `-`) but channel servers only
- * send `chat_id`, `user`, `thread_ts`, `message_id` in practice.
- */
 const SAFE_META_KEY = /^[a-zA-Z_][a-zA-Z0-9_]*$/
 
 export function wrapChannelMessage(
@@ -74,15 +67,6 @@ export function wrapChannelMessage(
   return `<${CHANNEL_TAG} source="${escapeXmlAttr(serverName)}"${attrs}>\n${content}\n</${CHANNEL_TAG}>`
 }
 
-/**
- * Effective allowlist for the current session. Team/enterprise orgs can set
- * allowedChannelPlugins in managed settings — when set, it REPLACES the
- * GrowthBook ledger (admin owns the trust decision). Undefined falls back
- * to the ledger. Unmanaged users always get the ledger.
- *
- * Callers already read sub/policy for the policy gate — pass them in to
- * avoid double-reading getSettingsForSource (uncached).
- */
 export function getEffectiveChannelAllowlist(
   sub: ReturnType<typeof getSubscriptionType>,
   orgList: ChannelAllowlistEntry[] | undefined,
@@ -111,17 +95,11 @@ export type ChannelGateResult =
       reason: string
     }
 
-/**
- * Match a connected MCP server against the user's parsed --channels entries.
- * server-kind is exact match on bare name; plugin-kind matches on the second
- * segment of plugin:X:Y. Returns the matching entry so callers can read its
- * kind — that's the user's trust declaration, not inferred from runtime shape.
- */
 export function findChannelEntry(
   serverName: string,
   channels: readonly ChannelEntry[],
 ): ChannelEntry | undefined {
-  // split unconditionally — for a bare name like 'slack', parts is ['slack']
+  
   
   const parts = serverName.split(':')
   return channels.find(c =>
@@ -131,31 +109,15 @@ export function findChannelEntry(
   )
 }
 
-/**
- * Gate an MCP server's channel-notification path. Caller checks
- * feature('KAIROS') || feature('KAIROS_CHANNELS') first (build-time
- * elimination). Gate order: capability → runtime gate (tengu_harbor) →
- * auth (OAuth only) → org policy → session --channels → allowlist.
- * API key users are blocked at the auth layer — channels requires
- * claude.ai auth; console orgs have no admin opt-in surface yet.
- *
- *   skip      Not a channel server, or managed org hasn't opted in, or
- *             not in session --channels. Connection stays up; handler
- *             not registered.
- *   register  Subscribe to notifications/claude/channel.
- *
- * Which servers can connect at all is governed by allowedMcpServers —
- * this gate only decides whether the notification handler registers.
- */
 export function gateChannelServer(
   serverName: string,
   capabilities: ServerCapabilities | undefined,
   pluginSource: string | undefined,
 ): ChannelGateResult {
-  // Channel servers declare `experimental['claude/channel']: {}` (MCP's
-  // presence-signal idiom — same as `tools: {}`). Truthy covers `{}` and
-  // `true`; absent/undefined/explicit-`false` all fail. Key matches the
-  // notification method namespace (notifications/claude/channel).
+  
+  
+  
+  
   if (!capabilities?.experimental?.['claude/channel']) {
     return {
       action: 'skip',
@@ -164,9 +126,9 @@ export function gateChannelServer(
     }
   }
 
-  // Overall runtime gate. After capability so normal MCP servers never hit
-  // this path. Before auth/policy so the killswitch works regardless of
-  // session state.
+  
+  
+  
   if (!isChannelsEnabled()) {
     return {
       action: 'skip',
@@ -175,9 +137,9 @@ export function gateChannelServer(
     }
   }
 
-  // OAuth-only. API key users (console) are blocked — there's no
   
-  // flow doesn't exist for them. Drop this when console parity lands.
+  
+  
   if (!getClaudeAIOAuthTokens()?.accessToken) {
     return {
       action: 'skip',
@@ -186,11 +148,11 @@ export function gateChannelServer(
     }
   }
 
-  // Teams/Enterprise opt-in. Managed orgs must explicitly enable channels.
-  // Default OFF — absent or false blocks. Keyed off subscription tier, not
-  // "policy settings exist" — a team org with zero configured policy keys
-  // (remote endpoint returns 404) is still a managed org and must not fall
-  // through to the unmanaged path.
+  
+  
+  
+  
+  
   const sub = getSubscriptionType()
   const managed = sub === 'team' || sub === 'enterprise'
   const policy = managed ? getSettingsForSource('policySettings') : undefined
@@ -203,9 +165,9 @@ export function gateChannelServer(
     }
   }
 
-  // User-level session opt-in. A server must be explicitly listed in
-  // --channels to push inbound this session — protects against a trusted
-  // server surprise-adding the capability.
+  
+  
+  
   const entry = findChannelEntry(serverName, getAllowedChannels())
   if (!entry) {
     return {
@@ -216,13 +178,13 @@ export function gateChannelServer(
   }
 
   if (entry.kind === 'plugin') {
-    // Marketplace verification: the tag is intent (plugin:slack@anthropic),
-    // the runtime name is just plugin:slack:X — could be slack@anthropic or
-    // slack@evil depending on what's installed. Verify they match before
     
     
-    // shouldn't happen for plugin-kind entry) or @-less (builtin/inline)
-    // both fail the comparison.
+    
+    
+    
+    
+    
     const actual = pluginSource
       ? parsePluginIdentifier(pluginSource).marketplace
       : undefined
@@ -234,10 +196,10 @@ export function gateChannelServer(
       }
     }
 
-    // Approved-plugin allowlist. Marketplace gate already verified
-    // tag == reality, so this is a pure entry check. entry.dev (per-entry,
-    // not the session-wide bit) bypasses — so accepting the dev dialog for
-    // one entry doesn't leak allowlist-bypass to --channels entries.
+    
+    
+    
+    
     if (!entry.dev) {
       const { entries, source } = getEffectiveChannelAllowlist(
         sub,
@@ -259,7 +221,7 @@ export function gateChannelServer(
       }
     }
   } else {
-    // server-kind: allowlist schema is {marketplace, plugin} — a server entry
+    
     
     
     if (!entry.dev) {

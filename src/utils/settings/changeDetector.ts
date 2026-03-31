@@ -62,7 +62,7 @@ export async function initialize(): Promise<void> {
   registerCleanup(dispose)
 
   const { dirs, settingsFiles, dropInDir } = await getWatchTargets()
-  if (disposed) return // dispose() ran during the await
+  if (disposed) return 
   if (dirs.length === 0) return
 
   logForDebugging(
@@ -72,7 +72,7 @@ export async function initialize(): Promise<void> {
   watcher = chokidar.watch(dirs, {
     persistent: true,
     ignoreInitial: true,
-    depth: 0, // Only watch immediate children, not subdirectories
+    depth: 0, 
     awaitWriteFinish: {
       stabilityThreshold:
         testOverrides?.stabilityThreshold ?? FILE_STABILITY_THRESHOLD_MS,
@@ -80,7 +80,7 @@ export async function initialize(): Promise<void> {
         testOverrides?.pollInterval ?? FILE_STABILITY_POLL_INTERVAL_MS,
     },
     ignored: (path, stats) => {
-      // Ignore special file types (sockets, FIFOs, devices) - they cannot be watched
+      
       
       if (stats && !stats.isFile() && !stats.isDirectory()) return true
       
@@ -103,10 +103,10 @@ export async function initialize(): Promise<void> {
       }
       return true
     },
-    // Additional options for stability
+    
     ignorePermissionErrors: true,
-    usePolling: false, // Use native file system events
-    atomic: true, // Handle atomic writes better
+    usePolling: false, 
+    atomic: true, 
   })
 
   watcher.on('change', handleChange)
@@ -114,12 +114,6 @@ export async function initialize(): Promise<void> {
   watcher.on('add', handleAdd)
 }
 
-/**
- * Clean up file watcher. Returns a promise that resolves when chokidar's
- * close() settles — callers that need the watcher fully stopped before
- * removing the watched directory (e.g. test teardown) must await this.
- * Fire-and-forget is still valid where timing doesn't matter.
- */
 export function dispose(): Promise<void> {
   disposed = true
   if (mdmPollTimer) {
@@ -136,9 +130,6 @@ export function dispose(): Promise<void> {
   return w ? w.close() : Promise.resolve()
 }
 
-/**
- * Subscribe to settings changes
- */
 export const subscribe = settingsChanged.subscribe
 
 async function getWatchTargets(): Promise<{
@@ -146,12 +137,12 @@ async function getWatchTargets(): Promise<{
   settingsFiles: Set<string>
   dropInDir: string | null
 }> {
-  // Map from directory to all potential settings files in that directory
+  
   const dirToSettingsFiles = new Map<string, Set<string>>()
   const dirsWithExistingFiles = new Set<string>()
 
   for (const source of SETTING_SOURCES) {
-    // Skip flagSettings - they're provided via CLI and won't change during the session.
+    
     
     
     
@@ -178,11 +169,11 @@ async function getWatchTargets(): Promise<{
         dirsWithExistingFiles.add(dir)
       }
     } catch {
-      // File doesn't exist, that's fine
+      
     }
   }
 
-  // For watched directories, include ALL potential settings file paths
+  
   
   const settingsFiles = new Set<string>()
   for (const dir of dirsWithExistingFiles) {
@@ -194,7 +185,7 @@ async function getWatchTargets(): Promise<{
     }
   }
 
-  // Also watch the managed-settings.d/ drop-in directory for policy fragments.
+  
   
   
   
@@ -207,7 +198,7 @@ async function getWatchTargets(): Promise<{
       dropInDir = managedDropIn
     }
   } catch {
-    // Drop-in directory doesn't exist, that's fine
+    
   }
 
   return { dirs: [...dirsWithExistingFiles], settingsFiles, dropInDir }
@@ -233,8 +224,8 @@ function handleChange(path: string): void {
   const source = getSourceForPath(path)
   if (!source) return
 
-  // If a deletion was pending for this path (delete-and-recreate pattern),
-  // cancel the deletion — we'll process this as a change instead.
+  
+  
   const pendingTimer = pendingDeletions.get(path)
   if (pendingTimer) {
     clearTimeout(pendingTimer)
@@ -244,15 +235,15 @@ function handleChange(path: string): void {
     )
   }
 
-  // Check if this was an internal write
+  
   if (consumeInternalWrite(path, INTERNAL_WRITE_WINDOW_MS)) {
     return
   }
 
   logForDebugging(`Detected change to ${path}`)
 
-  // Fire ConfigChange hook first — if blocked (exit code 2 or decision: 'block'),
-  // skip applying the change to the session
+  
+  
   void executeConfigChangeHooks(
     settingSourceToConfigChangeSource(source),
     path,
@@ -265,15 +256,11 @@ function handleChange(path: string): void {
   })
 }
 
-/**
- * Handle a file being re-added (e.g. after a delete-and-recreate). Cancels any
- * pending deletion grace timer and treats the event as a change.
- */
 function handleAdd(path: string): void {
   const source = getSourceForPath(path)
   if (!source) return
 
-  // Cancel any pending deletion — the file is back
+  
   const pendingTimer = pendingDeletions.get(path)
   if (pendingTimer) {
     clearTimeout(pendingTimer)
@@ -281,23 +268,17 @@ function handleAdd(path: string): void {
     logForDebugging(`Cancelled pending deletion of ${path} — file was re-added`)
   }
 
-  // Treat as a change (re-read settings)
+  
   handleChange(path)
 }
 
-/**
- * Handle a file being deleted. Uses a grace period to absorb delete-and-recreate
- * patterns (e.g. auto-updater, another session starting up). If the file is
- * recreated within the grace period (detected via 'add' or 'change' event),
- * the deletion is cancelled and treated as a normal change instead.
- */
 function handleDelete(path: string): void {
   const source = getSourceForPath(path)
   if (!source) return
 
   logForDebugging(`Detected deletion of ${path}`)
 
-  // If there's already a pending deletion for this path, let it run
+  
   if (pendingDeletions.has(path)) return
 
   const timer = setTimeout(
@@ -324,7 +305,7 @@ function handleDelete(path: string): void {
 }
 
 function getSourceForPath(path: string): SettingSource | undefined {
-  // Normalize path because chokidar uses forward slashes on Windows
+  
   const normalizedPath = platformPath.normalize(path)
 
   
@@ -338,12 +319,8 @@ function getSourceForPath(path: string): SettingSource | undefined {
   )
 }
 
-/**
- * Start polling for MDM settings changes (registry/plist).
- * Takes a snapshot of current MDM settings and compares on each tick.
- */
 function startMdmPoll(): void {
-  // Capture initial snapshot (includes both admin MDM and user-writable HKCU)
+  
   const initial = getMdmSettings()
   const initialHkcu = getHkcuSettings()
   lastMdmSnapshot = jsonStringify({
@@ -381,47 +358,16 @@ function startMdmPoll(): void {
   mdmPollTimer.unref()
 }
 
-/**
- * Reset the settings cache, then notify all listeners.
- *
- * The cache reset MUST happen here (single producer), not in each listener
- * (N consumers). Previously, listeners like useSettingsChange and
- * applySettingsChange reset defensively because some notification paths
- * (file-watch at :289/340, MDM poll at :385) did not reset before iterating
- * listeners. That defense caused N-way thrashing when N listeners were
- * subscribed: each listener cleared the cache, re-read from disk (populating
- * it), then the next listener cleared it again — N full disk reloads per
- * notification. Profile showed 5 loadSettingsFromDisk calls in 12ms when
- * remote managed settings resolved at startup.
- *
- * With the reset centralized here, one notification = one disk reload: the
- * first listener to call getSettingsWithErrors() pays the miss and
- * repopulates; all subsequent listeners hit the cache.
- */
 function fanOut(source: SettingSource): void {
   resetSettingsCache()
   settingsChanged.emit(source)
 }
 
-/**
- * Manually notify listeners of a settings change.
- * Used for programmatic settings changes (e.g., remote managed settings refresh)
- * that don't involve file system changes.
- */
 export function notifyChange(source: SettingSource): void {
   logForDebugging(`Programmatic settings change notification for ${source}`)
   fanOut(source)
 }
 
-/**
- * Reset internal state for testing purposes only.
- * This allows re-initialization after dispose().
- * Optionally accepts timing overrides for faster test execution.
- *
- * Closes the watcher and returns the close promise so preload's afterEach
- * can await it BEFORE nuking perTestSettingsDir. Without this, chokidar's
- * pending awaitWriteFinish poll fires on the deleted dir → ENOENT (#25253).
- */
 export function resetForTesting(overrides?: {
   stabilityThreshold?: number
   pollInterval?: number

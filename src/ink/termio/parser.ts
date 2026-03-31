@@ -11,8 +11,6 @@ import { createTokenizer, type Token, type Tokenizer } from './tokenize.js'
 import type { Action, Grapheme, TextStyle } from './types.js'
 import { defaultStyle } from './types.js'
 
-// Grapheme Utilities
-
 function isEmoji(codePoint: number): boolean {
   return (
     (codePoint >= 0x2600 && codePoint <= 0x26ff) ||
@@ -61,15 +59,11 @@ function* segmentGraphemes(str: string): Generator<Grapheme> {
   }
 }
 
-// =============================================================================
-// Sequence Parsing
-
 function parseCSIParams(paramStr: string): number[] {
   if (paramStr === '') return []
   return paramStr.split(/[;:]/).map(s => (s === '' ? 0 : parseInt(s, 10)))
 }
 
-/** Parse a raw CSI sequence (e.g., "\x1b[31m") into an action */
 function parseCSI(rawSequence: string): Action | null {
   const inner = rawSequence.slice(2)
   if (inner.length === 0) return null
@@ -101,7 +95,7 @@ function parseCSI(rawSequence: string): Action | null {
     return { type: 'sgr', params: paramStr }
   }
 
-  // Cursor movement
+  
   if (finalByte === CSI.CUU) {
     return {
       type: 'cursor',
@@ -142,7 +136,7 @@ function parseCSI(rawSequence: string): Action | null {
     return { type: 'cursor', action: { type: 'row', row: p0 } }
   }
 
-  // Erase
+  
   if (finalByte === CSI.ED) {
     const region = ERASE_DISPLAY[params[0] ?? 0] ?? 'toEnd'
     return { type: 'erase', action: { type: 'display', region } }
@@ -155,7 +149,7 @@ function parseCSI(rawSequence: string): Action | null {
     return { type: 'erase', action: { type: 'chars', count: p0 } }
   }
 
-  // Scroll
+  
   if (finalByte === CSI.SU) {
     return { type: 'scroll', action: { type: 'up', count: p0 } }
   }
@@ -169,7 +163,7 @@ function parseCSI(rawSequence: string): Action | null {
     }
   }
 
-  // Cursor save/restore
+  
   if (finalByte === CSI.SCOSC) {
     return { type: 'cursor', action: { type: 'save' } }
   }
@@ -177,13 +171,13 @@ function parseCSI(rawSequence: string): Action | null {
     return { type: 'cursor', action: { type: 'restore' } }
   }
 
-  // Cursor style
+  
   if (finalByte === CSI.DECSCUSR && intermediate === ' ') {
     const styleInfo = CURSOR_STYLES[p0] ?? CURSOR_STYLES[0]!
     return { type: 'cursor', action: { type: 'style', ...styleInfo } }
   }
 
-  // Private modes
+  
   if (privateMode === '?' && (finalByte === CSI.SM || finalByte === CSI.RM)) {
     const enabled = finalByte === CSI.SM
 
@@ -225,9 +219,6 @@ function parseCSI(rawSequence: string): Action | null {
   return { type: 'unknown', sequence: rawSequence }
 }
 
-/**
- * Identify the type of escape sequence from its raw form.
- */
 function identifySequence(
   seq: string,
 ): 'csi' | 'osc' | 'esc' | 'ss3' | 'unknown' {
@@ -241,19 +232,6 @@ function identifySequence(
   return 'esc'
 }
 
-// =============================================================================
-// Main Parser
-
-/**
- * Parser class - maintains state for streaming/incremental parsing
- *
- * Usage:
- * ```typescript
- * const parser = new Parser()
- * const actions1 = parser.feed('partial\x1b[')
- * const actions2 = parser.feed('31mred')  // state maintained internally
- * ```
- */
 export class Parser {
   private tokenizer: Tokenizer = createTokenizer()
 
@@ -268,7 +246,7 @@ export class Parser {
     this.linkUrl = undefined
   }
 
-  /** Feed input and get resulting actions */
+  
   feed(input: string): Action[] {
     const tokens = this.tokenizer.feed(input)
     const actions: Action[] = []
@@ -292,7 +270,7 @@ export class Parser {
   }
 
   private processText(text: string): Action[] {
-    // Handle BEL characters embedded in text
+    
     const actions: Action[] = []
     let current = ''
 
@@ -336,7 +314,7 @@ export class Parser {
       }
 
       case 'osc': {
-        // Extract OSC content (between ESC ] and terminator)
+        
         let content = seq.slice(2)
         
         if (content.endsWith('\x07')) {
@@ -368,7 +346,7 @@ export class Parser {
       }
 
       case 'ss3':
-        // SS3 sequences are typically cursor keys in application mode
+        
         
         return [{ type: 'unknown', sequence: seq }]
 

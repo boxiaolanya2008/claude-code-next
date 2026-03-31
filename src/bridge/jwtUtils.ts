@@ -11,12 +11,6 @@ function formatDuration(ms: number): string {
   return s > 0 ? `${m}m ${s}s` : `${m}m`
 }
 
-/**
- * Decode a JWT's payload segment without verifying the signature.
- * Strips the `sk-ant-si-` session-ingress prefix if present.
- * Returns the parsed JSON payload as `unknown`, or `null` if the
- * token is malformed or the payload is not valid JSON.
- */
 export function decodeJwtPayload(token: string): unknown | null {
   const jwt = token.startsWith('sk-ant-si-')
     ? token.slice('sk-ant-si-'.length)
@@ -30,10 +24,6 @@ export function decodeJwtPayload(token: string): unknown | null {
   }
 }
 
-/**
- * Decode the `exp` (expiry) claim from a JWT without verifying the signature.
- * @returns The `exp` value in Unix seconds, or `null` if unparseable
- */
 export function decodeJwtExpiry(token: string): number | null {
   const payload = decodeJwtPayload(token)
   if (
@@ -47,7 +37,6 @@ export function decodeJwtExpiry(token: string): number | null {
   return null
 }
 
-/** Refresh buffer: request a new token before expiry. */
 const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000
 
 const FALLBACK_REFRESH_INTERVAL_MS = 30 * 60 * 1000 
@@ -89,7 +78,7 @@ export function createTokenRefreshScheduler({
   function schedule(sessionId: string, token: string): void {
     const expiry = decodeJwtExpiry(token)
     if (!expiry) {
-      // Token is not a decodable JWT (e.g. an OAuth token passed from the
+      
       
       
       
@@ -99,13 +88,13 @@ export function createTokenRefreshScheduler({
       return
     }
 
-    // Clear any existing refresh timer — we have a concrete expiry to replace it.
+    
     const existing = timers.get(sessionId)
     if (existing) {
       clearTimeout(existing)
     }
 
-    // Bump generation to invalidate any in-flight async doRefresh.
+    
     const gen = nextGeneration(sessionId)
 
     const expiryDate = new Date(expiry * 1000).toISOString()
@@ -126,11 +115,8 @@ export function createTokenRefreshScheduler({
     timers.set(sessionId, timer)
   }
 
-  /**
-   * Schedule refresh using an explicit TTL (seconds until expiry) rather
-   * than decoding a JWT's exp claim. Used by callers whose JWT is opaque
-   * (e.g. POST /v1/code/sessions/{id}/bridge returns expires_in directly).
-   */
+  
+
   function scheduleFromExpiresIn(
     sessionId: string,
     expiresInSeconds: number,
@@ -160,8 +146,8 @@ export function createTokenRefreshScheduler({
       )
     }
 
-    // If the session was cancelled or rescheduled while we were awaiting,
-    // the generation will have changed — bail out to avoid orphaned timers.
+    
+    
     if (generations.get(sessionId) !== gen) {
       logForDebugging(
         `[${label}:token] doRefresh for sessionId=${sessionId} stale (gen ${gen} vs ${generations.get(sessionId)}), skipping`,
@@ -192,7 +178,7 @@ export function createTokenRefreshScheduler({
       return
     }
 
-    // Reset failure counter on successful token retrieval
+    
     failureCounts.delete(sessionId)
 
     logForDebugging(
@@ -217,7 +203,7 @@ export function createTokenRefreshScheduler({
   }
 
   function cancel(sessionId: string): void {
-    // Bump generation to invalidate any in-flight async doRefresh.
+    
     nextGeneration(sessionId)
     const timer = timers.get(sessionId)
     if (timer) {
@@ -228,7 +214,7 @@ export function createTokenRefreshScheduler({
   }
 
   function cancelAll(): void {
-    // Bump all generations so in-flight doRefresh calls are invalidated.
+    
     for (const sessionId of generations.keys()) {
       nextGeneration(sessionId)
     }

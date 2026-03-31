@@ -11,14 +11,6 @@ import { jsonStringify } from './slowOperations.js'
 
 type CachedParse = { ok: true; value: unknown } | { ok: false }
 
-// Memoized inner parse. Uses a discriminated-union wrapper because:
-// 1. memoizeWithLRU requires NonNullable<unknown>, but JSON.parse can return
-//    null (e.g. JSON.parse("null")).
-
-// .mcp.json, notebooks, tool results), causing a significant memory leak.
-
-// so a 200KB config file would pin ~10MB in #keyList across 50 slots. Large
-
 const PARSE_CACHE_MAX_KEY_BYTES = 8 * 1024
 
 function parseJSONUncached(json: string, shouldLogError: boolean): CachedParse {
@@ -54,20 +46,13 @@ export function safeParseJSONC(json: string | null | undefined): unknown {
     return null
   }
   try {
-    // Strip BOM before parsing - PowerShell 5.x adds BOM to UTF-8 files
+    
     return parseJsonc(stripBOM(json))
   } catch (e) {
     logError(e)
     return null
   }
 }
-
-/**
- * Modify a jsonc string by adding a new item to an array, preserving comments and formatting.
- * @param content The jsonc string to modify
- * @param newItem The new item to add to the array
- * @returns The modified jsonc string
- */
 
 type BunJSONLParseChunk = (
   data: string | Buffer,
@@ -89,7 +74,7 @@ function parseJSONLBun<T>(data: string | Buffer): T[] {
   if (!result.error || result.done || result.read >= len) {
     return result.values as T[]
   }
-  // Had an error mid-stream — collect what we got and keep going
+  
   let values = result.values as T[]
   let offset = result.read
   while (offset < len) {
@@ -129,7 +114,7 @@ function parseJSONLBuffer<T>(buf: Buffer): T[] {
     try {
       results.push(JSON.parse(line) as T)
     } catch {
-      // Skip malformed lines
+      
     }
   }
   return results
@@ -151,17 +136,12 @@ function parseJSONLString<T>(data: string): T[] {
     try {
       results.push(JSON.parse(line) as T)
     } catch {
-      // Skip malformed lines
+      
     }
   }
   return results
 }
 
-/**
- * Parses JSONL data from a string or Buffer, skipping malformed lines.
- * Uses Bun.JSONL.parseChunk when available for better performance,
- * falls back to indexOf-based scanning otherwise.
- */
 export function parseJSONL<T>(data: string | Buffer): T[] {
   if (bunJSONLParse) {
     return parseJSONLBun<T>(data)
@@ -193,7 +173,7 @@ export async function readJSONLFile<T>(filePath: string): Promise<T[]> {
     if (bytesRead === 0) break
     totalRead += bytesRead
   }
-  // Skip the first partial line
+  
   const newlineIndex = buf.indexOf(0x0a)
   if (newlineIndex !== -1 && newlineIndex < totalRead - 1) {
     return parseJSONL<T>(buf.subarray(newlineIndex + 1, totalRead))
@@ -203,12 +183,12 @@ export async function readJSONLFile<T>(filePath: string): Promise<T[]> {
 
 export function addItemToJSONCArray(content: string, newItem: unknown): string {
   try {
-    // If the content is empty or whitespace, create a new JSON file
+    
     if (!content || content.trim() === '') {
       return jsonStringify([newItem], null, 4)
     }
 
-    // Strip BOM before parsing - PowerShell 5.x adds BOM to UTF-8 files
+    
     const cleanContent = stripBOM(content)
 
     
@@ -216,7 +196,7 @@ export function addItemToJSONCArray(content: string, newItem: unknown): string {
 
     
     if (Array.isArray(parsedContent)) {
-      // Get the length of the array
+      
       const arrayLength = parsedContent.length
 
       
@@ -237,16 +217,16 @@ export function addItemToJSONCArray(content: string, newItem: unknown): string {
         return jsonStringify(copy, null, 4)
       }
 
-      // Apply the edits to preserve comments (use cleanContent without BOM)
+      
       return applyEdits(cleanContent, edits)
     }
-    // If it's not an array at all, create a new array with the item
+    
     else {
-      // If the content exists but is not an array, we'll replace it completely
+      
       return jsonStringify([newItem], null, 4)
     }
   } catch (e) {
-    // If parsing fails for any reason, log the error and fallback to creating a new JSON array
+    
     logError(e)
     return jsonStringify([newItem], null, 4)
   }

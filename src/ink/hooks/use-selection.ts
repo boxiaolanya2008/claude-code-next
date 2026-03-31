@@ -17,29 +17,26 @@ export function useSelection(): {
   getState: () => SelectionState | null
   
   subscribe: (cb: () => void) => () => void
-  /** Shift the anchor row by dRow, clamped to [minRow, maxRow]. */
+  
   shiftAnchor: (dRow: number, minRow: number, maxRow: number) => void
-  /** Shift anchor AND focus by dRow (keyboard scroll: whole selection
-   *  tracks content). Clamped points get col reset to the full-width edge
-   *  since their content was captured by captureScrolledRows. Reads
-   *  screen.width from the ink instance for the col-reset boundary. */
+  
+
   shiftSelection: (dRow: number, minRow: number, maxRow: number) => void
-  /** Keyboard selection extension (shift+arrow): move focus, anchor fixed.
-   *  Left/right wrap across rows; up/down clamp at viewport edges. */
+  
+
   moveFocus: (move: FocusMove) => void
-  /** Capture text from rows about to scroll out of the viewport (call
-   *  BEFORE scrollBy so the screen buffer still has the outgoing rows). */
+  
+
   captureScrolledRows: (
     firstRow: number,
     lastRow: number,
     side: 'above' | 'below',
   ) => void
-  /** Set the selection highlight bg color (theme-piping; solid bg
-   *  replaces the old SGR-7 inverse so syntax highlighting stays readable
-   *  under selection). Call once on mount + whenever theme changes. */
+  
+
   setSelectionBgColor: (color: string) => void
 } {
-  // Look up the Ink instance via stdout — same pattern as instances map.
+  
   
   
   

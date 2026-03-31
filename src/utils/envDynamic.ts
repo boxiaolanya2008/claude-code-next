@@ -16,11 +16,9 @@ const getIsDocker = memoize(async (): Promise<boolean> => {
 function getIsBubblewrapSandbox(): boolean {
   return (
     process.platform === 'linux' &&
-    isEnvTruthy(process.env.CLAUDE_CODE_BUBBLEWRAP)
+    isEnvTruthy(process.env.CLAUDE_CODE_NEXT_BUBBLEWRAP)
   )
 }
-
-// Cache for the runtime musl detection fallback (node/unbundled only).
 
 let muslRuntimeCache: boolean | null = null
 
@@ -36,22 +34,15 @@ if (process.platform === 'linux') {
   )
 }
 
-/**
- * Checks if the system is using MUSL libc instead of glibc.
- * In native linux builds, this is statically known at compile time via IS_LIBC_MUSL/IS_LIBC_GLIBC flags.
- * In node (unbundled), both flags are false and we fall back to a runtime async stat check
- * whose result is cached at module load. If the cache isn't populated yet, returns false.
- */
 function isMuslEnvironment(): boolean {
   if (feature('IS_LIBC_MUSL')) return true
   if (feature('IS_LIBC_GLIBC')) return false
 
-  // Fallback for node: runtime detection via pre-populated cache
+  
   if (process.platform !== 'linux') return false
   return muslRuntimeCache ?? false
 }
 
-// Cache for async JetBrains detection
 let jetBrainsIDECache: string | null | undefined
 
 async function detectJetBrainsIDEFromParentProcessAsync(): Promise<
@@ -63,16 +54,16 @@ async function detectJetBrainsIDEFromParentProcessAsync(): Promise<
 
   if (process.platform === 'darwin') {
     jetBrainsIDECache = null
-    return null // macOS uses bundle ID detection which is already handled
+    return null 
   }
 
   try {
-    // Get ancestor commands in a single call (avoids sync bash in loop)
+    
     const commands = await getAncestorCommandsAsync(process.pid, 10)
 
     for (const command of commands) {
       const lowerCommand = command.toLowerCase()
-      // Check for specific JetBrains IDEs in the command line
+      
       for (const ide of JETBRAINS_IDES) {
         if (lowerCommand.includes(ide)) {
           jetBrainsIDECache = ide
@@ -81,7 +72,7 @@ async function detectJetBrainsIDEFromParentProcessAsync(): Promise<
       }
     }
   } catch {
-    // Silently fail - this is a best-effort detection
+    
   }
 
   jetBrainsIDECache = null
@@ -91,9 +82,9 @@ async function detectJetBrainsIDEFromParentProcessAsync(): Promise<
 export async function getTerminalWithJetBrainsDetectionAsync(): Promise<
   string | null
 > {
-  // Check for JetBrains terminal on Linux/Windows
+  
   if (process.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm') {
-    // For macOS, bundle ID detection above already handles JetBrains IDEs
+    
     if (env.platform !== 'darwin') {
       const specificIDE = await detectJetBrainsIDEFromParentProcessAsync()
       return specificIDE || 'pycharm'
@@ -102,39 +93,31 @@ export async function getTerminalWithJetBrainsDetectionAsync(): Promise<
   return env.terminal
 }
 
-// Synchronous version that returns cached result or falls back to env.terminal
-// Used for backward compatibility - callers should migrate to async version
 export function getTerminalWithJetBrainsDetection(): string | null {
-  // Check for JetBrains terminal on Linux/Windows
+  
   if (process.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm') {
-    // For macOS, bundle ID detection above already handles JetBrains IDEs
+    
     if (env.platform !== 'darwin') {
-      // Return cached value if available, otherwise fall back to generic detection
-      // The async version should be called early in app initialization to populate cache
+      
+      
       if (jetBrainsIDECache !== undefined) {
         return jetBrainsIDECache || 'pycharm'
       }
-      // Fall back to generic 'pycharm' if cache not populated yet
+      
       return 'pycharm'
     }
   }
   return env.terminal
 }
 
-/**
- * Initialize JetBrains IDE detection asynchronously.
- * Call this early in app initialization to populate the cache.
- * After this resolves, getTerminalWithJetBrainsDetection() will return accurate results.
- */
 export async function initJetBrainsDetection(): Promise<void> {
   if (process.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm') {
     await detectJetBrainsIDEFromParentProcessAsync()
   }
 }
 
-// Combined export that includes all env properties plus dynamic functions
 export const envDynamic = {
-  ...env, // Include all properties from env
+  ...env, 
   terminal: getTerminalWithJetBrainsDetection(),
   getIsDocker,
   getIsBubblewrapSandbox,

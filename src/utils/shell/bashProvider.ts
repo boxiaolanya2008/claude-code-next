@@ -25,21 +25,21 @@ import { windowsPathToPosixPath } from '../windowsPaths.js'
 import type { ShellProvider } from './shellProvider.js'
 
 function getDisableExtglobCommand(shellPath: string): string | null {
-  // When CLAUDE_CODE_SHELL_PREFIX is set, the wrapper may use a different shell
   
-  if (process.env.CLAUDE_CODE_SHELL_PREFIX) {
-    // Redirect both stdout and stderr because zsh's command_not_found_handler
-    // writes to stdout instead of stderr
+  
+  if (process.env.CLAUDE_CODE_NEXT_SHELL_PREFIX) {
+    
+    
     return '{ shopt -u extglob || setopt NO_EXTENDED_GLOB; } >/dev/null 2>&1 || true'
   }
 
-  // No shell prefix - use shell-specific command
+  
   if (shellPath.includes('bash')) {
     return 'shopt -u extglob 2>/dev/null || true'
   } else if (shellPath.includes('zsh')) {
     return 'setopt NO_EXTENDED_GLOB 2>/dev/null || true'
   }
-  // Unknown shell - do nothing, we don't know the right command
+  
   return null
 }
 
@@ -75,7 +75,7 @@ export async function createBashShellProvider(
       
       
       
-      // `source ... || true` silently fails and commands run with NO shell
+      
       
       
       if (snapshotFilePath) {
@@ -130,13 +130,13 @@ export async function createBashShellProvider(
         )
       }
 
-      // Special handling for pipes: move stdin redirect after first command
       
       
       
       
       
-      // not the raw command (since PR #9189).
+      
+      
       if (normalizedCommand.includes('|') && addStdinRedirect) {
         quotedCommand = rearrangePipeCommand(normalizedCommand)
       }
@@ -154,30 +154,30 @@ export async function createBashShellProvider(
         commandParts.push(`source ${quote([finalPath])} 2>/dev/null || true`)
       }
 
-      // Source session environment variables captured from session start hooks
+      
       const sessionEnvScript = await getSessionEnvironmentScript()
       if (sessionEnvScript) {
         commandParts.push(sessionEnvScript)
       }
 
-      // Disable extended glob patterns for security (after sourcing user config to override)
+      
       const disableExtglobCmd = getDisableExtglobCommand(shellPath)
       if (disableExtglobCmd) {
         commandParts.push(disableExtglobCmd)
       }
 
-      // When sourcing a file with aliases, they won't be expanded in the same command line
-      // because the shell parses the entire line before execution. Using eval after
-      // sourcing causes a second parsing pass where aliases are now available for expansion.
+      
+      
+      
       commandParts.push(`eval ${quotedCommand}`)
-      // Use `pwd -P` to get the physical path of the current working directory for consistency with `process.cwd()`
+      
       commandParts.push(`pwd -P >| ${quote([shellCwdFilePath])}`)
       let commandString = commandParts.join(' && ')
 
-      // Apply CLAUDE_CODE_SHELL_PREFIX if set
-      if (process.env.CLAUDE_CODE_SHELL_PREFIX) {
+      
+      if (process.env.CLAUDE_CODE_NEXT_SHELL_PREFIX) {
         commandString = formatShellPrefixCommand(
-          process.env.CLAUDE_CODE_SHELL_PREFIX,
+          process.env.CLAUDE_CODE_NEXT_SHELL_PREFIX,
           commandString,
         )
       }
@@ -196,8 +196,8 @@ export async function createBashShellProvider(
     async getEnvironmentOverrides(
       command: string,
     ): Promise<Record<string, string>> {
-      // TMUX SOCKET ISOLATION (DEFERRED):
-      // We initialize Claude's tmux socket ONLY AFTER the Tmux tool has been used
+      
+      
       
       
       
@@ -214,9 +214,9 @@ export async function createBashShellProvider(
       }
       const claudeTmuxEnv = getClaudeTmuxEnv()
       const env: Record<string, string> = {}
-      // CRITICAL: Override TMUX to isolate ALL tmux commands to Claude's socket.
-      // This is NOT the user's TMUX value - it points to Claude's isolated socket.
-      // When null (before socket initializes), user's TMUX is preserved.
+      
+      
+      
       if (claudeTmuxEnv) {
         env.TMUX = claudeTmuxEnv
       }
@@ -226,14 +226,14 @@ export async function createBashShellProvider(
           posixTmpDir = windowsPathToPosixPath(posixTmpDir)
         }
         env.TMPDIR = posixTmpDir
-        env.CLAUDE_CODE_TMPDIR = posixTmpDir
+        env.CLAUDE_CODE_NEXT_TMPDIR = posixTmpDir
         
-        // not TMPDIR. Set it to a path inside the sandbox tmp dir so
+        
         
         
         env.TMPPREFIX = posixJoin(posixTmpDir, 'zsh')
       }
-      // Apply session env vars set via /env (child processes only, not the REPL)
+      
       for (const [key, value] of getSessionEnvVars()) {
         env[key] = value
       }

@@ -9,8 +9,6 @@ import inkRender, {
 
 export type { RenderOptions, Instance, Root }
 
-// Wrap all CC render calls with ThemeProvider so ThemedBox/ThemedText work
-
 function withTheme(node: ReactNode): ReactNode {
   return createElement(ThemeProvider, null, node)
 }

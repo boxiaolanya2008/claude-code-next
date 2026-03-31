@@ -125,7 +125,7 @@ export async function generateUnifiedSuggestions(
       type: 'file' as const,
       displayText: suggestion.displayText,
       description: suggestion.description,
-      path: suggestion.displayText, // Use displayText as path for files
+      path: suggestion.displayText, 
       filename: basename(suggestion.displayText),
       score: (suggestion.metadata as { score?: number } | undefined)?.score,
     }),
@@ -162,15 +162,15 @@ export async function generateUnifiedSuggestions(
   for (const fileSource of fileSources) {
     scoredResults.push({
       source: fileSource,
-      score: fileSource.score ?? 0.5, // Default to middle score if missing
+      score: fileSource.score ?? 0.5, 
     })
   }
 
-  // Score non-file sources with Fuse.js and add them
+  
   if (nonFileSources.length > 0) {
     const fuse = new Fuse(nonFileSources, {
       includeScore: true,
-      threshold: 0.6, // Allow more matches through, we'll sort by score
+      threshold: 0.6, 
       keys: [
         { name: 'displayText', weight: 2 },
         { name: 'name', weight: 3 },
@@ -189,7 +189,7 @@ export async function generateUnifiedSuggestions(
     }
   }
 
-  // Sort all results by score (lower is better) and return top results
+  
   scoredResults.sort((a, b) => a.score - b.score)
 
   return scoredResults

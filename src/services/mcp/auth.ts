@@ -99,41 +99,17 @@ function redactSensitiveUrlParams(url: string): string {
     }
     return parsedUrl.toString()
   } catch {
-    // Return as-is if not a valid URL
+    
     return url
   }
 }
 
-/**
- * Some OAuth servers (notably Slack) return HTTP 200 for all responses,
- * signaling errors via the JSON body instead. The SDK's executeTokenRequest
- * only calls parseErrorResponse when !response.ok, so a 200 with
- * {"error":"invalid_grant"} gets fed to OAuthTokensSchema.parse() and
- * surfaces as a ZodError — which the refresh retry/invalidation logic
- * treats as opaque request_failed instead of invalid_grant.
- *
- * This wrapper peeks at 2xx POST response bodies and rewrites ones that
- * match OAuthErrorResponseSchema (but not OAuthTokensSchema) to a 400
- * Response, so the SDK's normal error-class mapping applies. The same
- * fetchFn is also used for DCR POSTs, but DCR success responses have no
- * {error: string} field so they don't match the rewrite condition.
- *
- * Slack uses non-standard error codes (invalid_refresh_token observed live
- * at oauth.v2.user.access; expired_refresh_token/token_expired per Slack's
- * token rotation docs) where RFC 6749 specifies invalid_grant. We normalize
- * those so OAUTH_ERRORS['invalid_grant'] → InvalidGrantError matches and
- * token invalidation fires correctly.
- */
 const NONSTANDARD_INVALID_GRANT_ALIASES = new Set([
   'invalid_refresh_token',
   'expired_refresh_token',
   'token_expired',
 ])
 
-/* eslint-disable eslint-plugin-n/no-unsupported-features/node-builtins --
- * Response has been stable in Node since 18; the rule flags it as
- * experimental-until-21 which is incorrect. Pattern matches existing
- * createAuthFetch suppressions in this file. */
 export async function normalizeOAuthErrorBody(
   response: Response,
 ): Promise<Response> {
@@ -168,33 +144,27 @@ export async function normalizeOAuthErrorBody(
     headers: response.headers,
   })
 }
-/* eslint-enable eslint-plugin-n/no-unsupported-features/node-builtins */
 
-/**
- * Creates a fetch function with a fresh 30-second timeout for each OAuth request.
- * Used by ClaudeAuthProvider for metadata discovery and token refresh.
- * Prevents stale timeout signals from affecting auth operations.
- */
 function createAuthFetch(): FetchLike {
   return async (url: string | URL, init?: RequestInit) => {
     const timeoutSignal = AbortSignal.timeout(AUTH_REQUEST_TIMEOUT_MS)
     const isPost = init?.method?.toUpperCase() === 'POST'
 
-    // No existing signal - just use timeout
+    
     if (!init?.signal) {
-      // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
+      
       const response = await fetch(url, { ...init, signal: timeoutSignal })
       return isPost ? normalizeOAuthErrorBody(response) : response
     }
 
-    // Combine signals: abort when either fires
+    
     const controller = new AbortController()
     const abort = () => controller.abort()
 
     init.signal.addEventListener('abort', abort)
     timeoutSignal.addEventListener('abort', abort)
 
-    // Cleanup to prevent event listener leaks after fetch completes
+    
     const cleanup = () => {
       init.signal?.removeEventListener('abort', abort)
       timeoutSignal.removeEventListener('abort', abort)
@@ -205,7 +175,7 @@ function createAuthFetch(): FetchLike {
     }
 
     try {
-      // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
+      
       const response = await fetch(url, { ...init, signal: controller.signal })
       cleanup()
       return isPost ? normalizeOAuthErrorBody(response) : response
@@ -216,23 +186,6 @@ function createAuthFetch(): FetchLike {
   }
 }
 
-/**
- * Fetches authorization server metadata, using a configured metadata URL if available,
- * otherwise performing RFC 9728 → RFC 8414 discovery via the SDK.
- *
- * Discovery order when no configured URL:
- * 1. RFC 9728: probe /.well-known/oauth-protected-resource on the MCP server,
- *    read authorization_servers[0], then RFC 8414 against that URL.
- * 2. Fallback: RFC 8414 directly against the MCP server URL (path-aware). Covers
- *    legacy servers that co-host auth metadata at /.well-known/oauth-authorization-server/{path}
- *    without implementing RFC 9728. The SDK's own fallback strips the path, so this
- *    preserves the pre-existing path-aware probe for backward compatibility.
- *
- * Note: configuredMetadataUrl is user-controlled via .mcp.json. Project-scoped MCP
- * servers require user approval before connecting (same trust level as the MCP server
- * URL itself). The HTTPS requirement here is defense-in-depth beyond schema validation
- * — RFC 8414 mandates OAuth metadata retrieval over TLS.
- */
 async function fetchAuthServerMetadata(
   serverName: string,
   serverUrl: string,
@@ -270,7 +223,7 @@ async function fetchAuthServerMetadata(
       return authorizationServerMetadata
     }
   } catch (err) {
-    // Any error from the RFC 9728 → RFC 8414 chain (5xx from the root or
+    
     
     
     logMCPDebug(
@@ -279,8 +232,8 @@ async function fetchAuthServerMetadata(
     )
   }
 
-  // Fallback only when the URL has a path component; for root URLs the SDK's
-  // own fallback already probed the same endpoints.
+  
+  
   const url = new URL(serverUrl)
   if (url.pathname === '/') {
     return undefined
@@ -297,11 +250,6 @@ export class AuthenticationCancelledError extends Error {
   }
 }
 
-/**
- * Generates a unique key for server credentials based on both name and config hash
- * This prevents credentials from being reused across different servers
- * with the same name or different configurations
- */
 export function getServerKey(
   serverName: string,
   serverConfig: McpSSEServerConfig | McpHTTPServerConfig,
@@ -320,20 +268,14 @@ export function getServerKey(
   return `${serverName}|${hash}`
 }
 
-/**
- * True when we have probed this server before (OAuth discovery state is
- * stored) but hold no credentials to try. A connection attempt in this
- * state is guaranteed to 401 — the only way out is the user running
- * /mcp to authenticate.
- */
 export function hasMcpDiscoveryButNoToken(
   serverName: string,
   serverConfig: McpSSEServerConfig | McpHTTPServerConfig,
 ): boolean {
-  // XAA servers can silently re-auth via cached id_token even without an
-  // access/refresh token — tokens() fires the xaaRefresh path. Skipping the
-  // connection here would make that auto-auth branch unreachable after
-  // invalidateCredentials('tokens') clears the stored tokens.
+  
+  
+  
+  
   if (isXaaEnabled() && serverConfig.oauth?.xaa) {
     return false
   }
@@ -342,22 +284,6 @@ export function hasMcpDiscoveryButNoToken(
   return entry !== undefined && !entry.accessToken && !entry.refreshToken
 }
 
-/**
- * Revokes a single token on the OAuth server.
- *
- * Per RFC 7009, public clients (like Claude Code) should authenticate by including
- * client_id in the request body, NOT via an Authorization header. The Bearer token
- * in an Authorization header is meant for resource owner authentication, not client
- * authentication.
- *
- * However, the MCP spec doesn't explicitly define token revocation behavior, so some
- * servers may not be RFC 7009 compliant. As defensive programming, we:
- * 1. First try the RFC 7009 compliant approach (client_id in body, no Authorization header)
- * 2. If we get a 401, retry with Bearer auth as a fallback for non-compliant servers
- *
- * This fallback should rarely be needed - most servers either accept the compliant
- * approach or ignore unexpected headers.
- */
 async function revokeToken({
   serverName,
   endpoint,
@@ -385,7 +311,7 @@ async function revokeToken({
     'Content-Type': 'application/x-www-form-urlencoded',
   }
 
-  // RFC 7009 §2.1 requires client auth per RFC 6749 §2.3. XAA always uses a
+  
   
   
   if (clientId && clientSecret) {
@@ -411,7 +337,7 @@ async function revokeToken({
     await axios.post(endpoint, params, { headers })
     logMCPDebug(serverName, `Successfully revoked ${tokenTypeHint}`)
   } catch (error: unknown) {
-    // Fallback for non-RFC-7009-compliant servers that require Bearer auth
+    
     if (
       axios.isAxiosError(error) &&
       error.response?.status === 401 &&
@@ -438,12 +364,6 @@ async function revokeToken({
   }
 }
 
-/**
- * Revokes tokens on the OAuth server if a revocation endpoint is available.
- * Per RFC 7009, we revoke the refresh token first (the long-lived credential),
- * then the access token. Revoking the refresh token prevents generation of new
- * access tokens and many servers implicitly invalidate associated access tokens.
- */
 export async function revokeServerTokens(
   serverName: string,
   serverConfig: McpSSEServerConfig | McpHTTPServerConfig,
@@ -459,7 +379,7 @@ export async function revokeServerTokens(
   
   if (tokenData?.accessToken || tokenData?.refreshToken) {
     try {
-      // For XAA (and any PRM-discovered auth), the AS is at a different host
+      
       
       const asUrl =
         tokenData.discoveryState?.authorizationServerUrl ?? serverConfig.url
@@ -514,7 +434,7 @@ export async function revokeServerTokens(
                 authMethod,
               })
             } catch (error: unknown) {
-              // Log but continue
+              
               logMCPDebug(
                 serverName,
                 `Failed to revoke refresh token: ${errorMessage(error)}`,
@@ -522,7 +442,7 @@ export async function revokeServerTokens(
             }
           }
 
-          // Then revoke access token (may already be invalidated by refresh token revocation)
+          
           if (tokenData.accessToken) {
             try {
               await revokeToken({
@@ -545,19 +465,19 @@ export async function revokeServerTokens(
         }
       }
     } catch (error: unknown) {
-      // Log error but don't throw - revocation is best-effort
+      
       logMCPDebug(serverName, `Failed to revoke tokens: ${errorMessage(error)}`)
     }
   } else {
     logMCPDebug(serverName, 'No tokens to revoke')
   }
 
-  // Always clear local tokens, regardless of server-side revocation result.
+  
   clearServerTokensFromLocalStorage(serverName, serverConfig)
 
-  // When re-authenticating, preserve step-up auth state (scope + discovery)
-  // so the next performMCPOAuthFlow can use cached scope instead of
-  // re-probing. For "Clear Auth" (default), wipe everything.
+  
+  
+  
   if (
     preserveStepUpState &&
     tokenData &&
@@ -579,8 +499,8 @@ export async function revokeServerTokens(
             : {}),
           ...(tokenData.discoveryState
             ? {
-                // Strip legacy bulky metadata fields here too so users with
-                // existing overflowed blobs recover on next re-auth (#30337).
+                
+                
                 discoveryState: {
                   authorizationServerUrl:
                     tokenData.discoveryState.authorizationServerUrl,
@@ -624,23 +544,6 @@ type XaaFailureStage =
   | 'token_exchange'
   | 'jwt_bearer'
 
-/**
- * XAA (Cross-App Access) auth.
- *
- * One IdP browser login is reused across all XAA-configured MCP servers:
- * 1. Acquire an id_token from the IdP (cached in keychain by issuer; if
- *    missing/expired, runs a standard OIDC authorization_code+PKCE flow
- *    — this is the one browser pop)
- * 2. Run the RFC 8693 + RFC 7523 exchange (no browser)
- * 3. Save tokens to the same keychain slot as normal OAuth
- *
- * IdP connection details come from settings.xaaIdp (configured once via
- * `claude mcp xaa setup`). Per-server config is just `oauth.xaa: true`
- * plus the AS clientId/clientSecret.
- *
- * No silent fallback: if `oauth.xaa` is set, XAA is the only path.
- * All errors are actionable — they tell the user what to run.
- */
 async function performMCPXaaAuth(
   serverName: string,
   serverConfig: McpSSEServerConfig | McpHTTPServerConfig,
@@ -649,10 +552,10 @@ async function performMCPXaaAuth(
   skipBrowserOpen?: boolean,
 ): Promise<void> {
   if (!serverConfig.oauth?.xaa) {
-    throw new Error('XAA: oauth.xaa must be set') // guarded by caller
+    throw new Error('XAA: oauth.xaa must be set') 
   }
 
-  // IdP config comes from user-level settings, not per-server.
+  
   const idp = getXaaIdpSettings()
   if (!idp) {
     throw new Error(
@@ -670,8 +573,8 @@ async function performMCPXaaAuth(
   const clientConfig = getMcpClientConfig(serverName, serverConfig)
   const clientSecret = clientConfig?.clientSecret
   if (!clientSecret) {
-    // Diagnostic context for serverKey mismatch debugging. Only computed
-    // on the error path so there's no perf cost on success.
+    
+    
     const wantedKey = getServerKey(serverName, serverConfig)
     const haveKeys = Object.keys(
       getSecureStorage().read()?.mcpOAuthClientConfig ?? {},
@@ -693,7 +596,7 @@ async function performMCPXaaAuth(
   logMCPDebug(serverName, 'XAA: starting cross-app access flow')
 
   
-  // NOT the AS secret — different trust domain. Optional: if absent, PKCE-only.
+  
   const idpClientSecret = getIdpClientSecret(idp.issuer)
 
   
@@ -719,12 +622,12 @@ async function performMCPXaaAuth(
       throw e
     }
 
-    // Discover the IdP's token endpoint for the RFC 8693 exchange.
+    
     failureStage = 'discovery'
     const oidc = await discoverOidc(idp.issuer)
 
-    // Run the exchange. performCrossAppAccess throws XaaTokenExchangeError
-    // for the IdP leg and "jwt-bearer grant failed" for the AS leg.
+    
+    
     failureStage = 'token_exchange'
     let tokens
     try {
@@ -744,10 +647,10 @@ async function performMCPXaaAuth(
     } catch (e) {
       if (abortSignal?.aborted) throw new AuthenticationCancelledError()
       const msg = errorMessage(e)
-      // If the IdP says the id_token is bad, drop it from the cache so the
-      // next attempt does a fresh IdP login. XaaTokenExchangeError carries
-      // shouldClearIdToken so we key off OAuth semantics (4xx / invalid body
-      // → clear; 5xx IdP outage → preserve) rather than substring matching.
+      
+      
+      
+      
       if (e instanceof XaaTokenExchangeError) {
         if (e.shouldClearIdToken) {
           clearIdpIdToken(idp.issuer)
@@ -761,8 +664,8 @@ async function performMCPXaaAuth(
         msg.includes('AS metadata discovery failed') ||
         msg.includes('no authorization server supports jwt-bearer')
       ) {
-        // performCrossAppAccess runs PRM + AS discovery before the actual
-        // exchange — don't attribute their failures to 'token_exchange'.
+        
+        
         failureStage = 'discovery'
       } else if (msg.includes('jwt-bearer')) {
         failureStage = 'jwt_bearer'
@@ -770,7 +673,7 @@ async function performMCPXaaAuth(
       throw e
     }
 
-    // Save tokens via the same storage path as normal OAuth. We write directly
+    
     
     
     const storage = getSecureStorage()
@@ -786,13 +689,13 @@ async function performMCPXaaAuth(
           serverName,
           serverUrl: serverConfig.url,
           accessToken: tokens.access_token,
-          // AS may omit refresh_token on jwt-bearer — preserve any existing one
+          
           refreshToken: tokens.refresh_token ?? prev?.refreshToken,
           expiresAt: Date.now() + (tokens.expires_in || 3600) * 1000,
           scope: tokens.scope,
           clientId,
           clientSecret,
-          // Persist the AS URL so _doRefresh and revokeServerTokens can locate
+          
           
           
           discoveryState: {
@@ -809,7 +712,7 @@ async function performMCPXaaAuth(
       idTokenCacheHit,
     })
   } catch (e) {
-    // User-initiated cancel (Esc during IdP browser pop) isn't a failure.
+    
     if (e instanceof AuthenticationCancelledError) {
       throw e
     }
@@ -834,8 +737,8 @@ export async function performMCPOAuthFlow(
     onWaitingForCallback?: (submit: (callbackUrl: string) => void) => void
   },
 ): Promise<void> {
-  // XAA (SEP-990): if configured, bypass the per-server consent dance.
-  // If the IdP id_token isn't cached, this pops the browser once at the IdP
+  
+  
   
   
   
@@ -851,7 +754,7 @@ export async function performMCPOAuthFlow(
   if (serverConfig.oauth?.xaa) {
     if (!isXaaEnabled()) {
       throw new Error(
-        `XAA is not enabled (set CLAUDE_CODE_ENABLE_XAA=1). Remove 'oauth.xaa' from server '${serverName}' to use the standard consent flow.`,
+        `XAA is not enabled (set CLAUDE_CODE_NEXT_ENABLE_XAA=1). Remove 'oauth.xaa' from server '${serverName}' to use the standard consent flow.`,
       )
     }
     logEvent('tengu_mcp_oauth_flow_start', {
@@ -880,7 +783,7 @@ export async function performMCPOAuthFlow(
     return
   }
 
-  // Check for cached step-up scope and resource metadata URL before clearing
+  
   
   
   const storage = getSecureStorage()
@@ -892,7 +795,7 @@ export async function performMCPOAuthFlow(
 
   
   
-  // but we already read the cached values above.
+  
   clearServerTokensFromLocalStorage(serverName, serverConfig)
 
   
@@ -936,7 +839,7 @@ export async function performMCPOAuthFlow(
   let authorizationCodeObtained = false
 
   try {
-    // Use configured callback port for pre-configured OAuth, otherwise find an available port
+    
     const configuredCallbackPort = serverConfig.oauth?.callbackPort
     const port = configuredCallbackPort ?? (await findAvailablePort())
     const redirectUri = buildRedirectUri(port)
@@ -964,7 +867,7 @@ export async function performMCPOAuthFlow(
         wwwAuthParams.resourceMetadataUrl,
       )
       if (metadata) {
-        // Store metadata in provider for scope information
+        
         provider.setMetadata(metadata)
         logMCPDebug(
           serverName,
@@ -978,7 +881,7 @@ export async function performMCPOAuthFlow(
       )
     }
 
-    // Get the OAuth state from the provider for validation
+    
     const oauthState = await provider.state()
 
     
@@ -1005,7 +908,7 @@ export async function performMCPOAuthFlow(
       logMCPDebug(serverName, `MCP OAuth server cleaned up`)
     }
 
-    // Setup a server to receive the callback
+    
     const authorizationCode = await new Promise<string>((resolve, reject) => {
       let resolved = false
       const resolveOnce = (code: string) => {
@@ -1031,7 +934,7 @@ export async function performMCPOAuthFlow(
         abortSignal.addEventListener('abort', abortHandler)
       }
 
-      // Allow manual callback URL paste for remote/browser-based environments
+      
       
       if (options?.onWaitingForCallback) {
         options.onWaitingForCallback((callbackUrl: string) => {
@@ -1052,7 +955,7 @@ export async function performMCPOAuthFlow(
             }
 
             if (!code) {
-              // Not a valid callback URL, ignore so the user can try again
+              
               return
             }
 
@@ -1071,7 +974,7 @@ export async function performMCPOAuthFlow(
             cleanup()
             resolveOnce(code)
           } catch {
-            // Invalid URL, ignore so the user can try again
+            
           }
         })
       }
@@ -1122,7 +1025,7 @@ export async function performMCPOAuthFlow(
           if (code) {
             res.writeHead(200, { 'Content-Type': 'text/html' })
             res.end(
-              `<h1>Authentication Successful</h1><p>You can close this window. Return to Claude Code.</p>`,
+              `<h1>Authentication Successful</h1><p>You can close this window. Return to Claude Code Next.</p>`,
             )
             cleanup()
             resolveOnce(code)
@@ -1186,7 +1089,7 @@ export async function performMCPOAuthFlow(
           cleanup()
           rejectOnce(new Error('Authentication timeout'))
         },
-        5 * 60 * 1000, // 5 minutes
+        5 * 60 * 1000, 
         cleanup,
         rejectOnce,
       )
@@ -1206,7 +1109,7 @@ export async function performMCPOAuthFlow(
     logMCPDebug(serverName, `Auth result: ${result}`)
 
     if (result === 'AUTHORIZED') {
-      // Debug: Check if tokens were properly saved
+      
       const savedTokens = await provider.tokens()
       logMCPDebug(
         serverName,
@@ -1270,8 +1173,8 @@ export async function performMCPOAuthFlow(
       }
     }
 
-    // sdkAuth uses native fetch and throws OAuthError subclasses (InvalidGrantError,
-    // ServerError, InvalidClientError, etc.) via parseErrorResponse. Extract the
+    
+    
     
     if (error instanceof OAuthError) {
       oauthErrorCode = error.errorCode
@@ -1282,7 +1185,7 @@ export async function performMCPOAuthFlow(
       if (statusMatch) {
         httpStatus = Number(statusMatch[1])
       }
-      // If client not found, clear the stored client ID and suggest retry
+      
       if (
         error.errorCode === 'invalid_client' &&
         error.message.includes('Client not found')
@@ -1321,16 +1224,6 @@ export async function performMCPOAuthFlow(
   }
 }
 
-/**
- * Wraps fetch to detect 403 insufficient_scope responses and mark step-up
- * pending on the provider BEFORE the SDK's 403 handler calls auth(). Without
- * this, the SDK's authInternal sees refresh_token → refreshes (uselessly, since
- * RFC 6749 §6 forbids scope elevation via refresh) → returns 'AUTHORIZED' →
- * retry → 403 again → aborts with "Server returned 403 after trying upscoping",
- * never reaching redirectToAuthorization where step-up scope is persisted.
- * With this flag set, tokens() omits refresh_token so the SDK falls through
- * to the PKCE flow. See github.com/anthropics/claude-code/issues/28258.
- */
 export function wrapFetchWithStepUpDetection(
   baseFetch: FetchLike,
   provider: ClaudeAuthProvider,
@@ -1340,7 +1233,7 @@ export function wrapFetchWithStepUpDetection(
     if (response.status === 403) {
       const wwwAuth = response.headers.get('WWW-Authenticate')
       if (wwwAuth?.includes('insufficient_scope')) {
-        // Match both quoted and unquoted values (RFC 6750 §3 allows either).
+        
         
         const match = wwwAuth.match(/scope=(?:"([^"]+)"|([^\s,]+))/)
         const scope = match?.[1] ?? match?.[2]
@@ -1396,14 +1289,14 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
 
   get clientMetadata(): OAuthClientMetadata {
     const metadata: OAuthClientMetadata = {
-      client_name: `Claude Code (${this.serverName})`,
+      client_name: `Claude Code Next (${this.serverName})`,
       redirect_uris: [this.redirectUri],
       grant_types: ['authorization_code', 'refresh_token'],
       response_types: ['code'],
-      token_endpoint_auth_method: 'none', // Public client
+      token_endpoint_auth_method: 'none', 
     }
 
-    // Include scope from metadata if available
+    
     const metadataScope = getScopeFromMetadata(this._metadata)
     if (metadataScope) {
       metadata.scope = metadataScope
@@ -1416,12 +1309,8 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
     return metadata
   }
 
-  /**
-   * CIMD (SEP-991): URL-based client_id. When the auth server advertises
-   * client_id_metadata_document_supported: true, the SDK uses this URL as the
-   * client_id instead of performing Dynamic Client Registration.
-   * Override via MCP_OAUTH_CLIENT_METADATA_URL env var (e.g. for testing, FedStart).
-   */
+  
+
   get clientMetadataUrl(): string | undefined {
     const override = process.env.MCP_OAUTH_CLIENT_METADATA_URL
     if (override) {
@@ -1437,21 +1326,15 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
     this._metadata = metadata
   }
 
-  /**
-   * Called by the fetch wrapper when a 403 insufficient_scope response is
-   * detected. Setting this causes tokens() to omit refresh_token, forcing
-   * the SDK's authInternal to skip its (useless) refresh path and fall through
-   * to startAuthorization → redirectToAuthorization → step-up persistence.
-   * RFC 6749 §6 forbids scope elevation via refresh, so refreshing would just
-   * return the same-scoped token and the retry would 403 again.
-   */
+  
+
   markStepUpPending(scope: string): void {
     this._pendingStepUpScope = scope
     logMCPDebug(this.serverName, `Marked step-up pending: ${scope}`)
   }
 
   async state(): Promise<string> {
-    // Generate state if not already generated for this instance
+    
     if (!this._state) {
       this._state = randomBytes(32).toString('base64url')
       logMCPDebug(this.serverName, 'Generated new OAuth state')
@@ -1474,7 +1357,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       }
     }
 
-    // Fallback: pre-configured client ID from server config
+    
     const configClientId = this.serverConfig.oauth?.clientId
     if (configClientId) {
       const clientConfig = data?.mcpOAuthClientConfig?.[serverKey]
@@ -1485,7 +1368,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       }
     }
 
-    // If we don't have stored client info, return undefined to trigger registration
+    
     logMCPDebug(this.serverName, `No client info found`)
     return undefined
   }
@@ -1507,7 +1390,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
           serverUrl: this.serverConfig.url,
           clientId: clientInformation.client_id,
           clientSecret: clientInformation.client_secret,
-          // Provide default values for required fields if not present
+          
           accessToken: existingData.mcpOAuth?.[serverKey]?.accessToken || '',
           expiresAt: existingData.mcpOAuth?.[serverKey]?.expiresAt || 0,
         },
@@ -1518,10 +1401,10 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
   }
 
   async tokens(): Promise<OAuthTokens | undefined> {
-    // Cross-process token changes (another CC instance refreshed or invalidated)
-    // are picked up via the keychain cache TTL (see macOsKeychainStorage.ts).
-    // In-process writes already invalidate the cache via storage.update().
-    // We do NOT clearKeychainCache() here — tokens() is called by the MCP SDK's
+    
+    
+    
+    
     
     
     
@@ -1537,13 +1420,13 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
     
     
     
-    // the normal refresh path (below) is cheaper — 1 request vs the 4-request
     
     
     
     
     
-    //   - never authed (!tokenData)                 → first connect, auto-auth
+    
+    
     
     
     
@@ -1589,9 +1472,9 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
           `XAA silent exchange failed: ${errorMessage(e)}`,
         )
       }
-      // Fall through. Either id_token isn't cached (xaaRefresh returned
-      // undefined) or the exchange errored. Normal path below handles both:
-      // !tokenData → undefined → 401 → needs-auth; expired → undefined → same.
+      
+      
+      
     }
 
     if (!tokenData) {
@@ -1599,11 +1482,11 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       return undefined
     }
 
-    // Check if token is expired
+    
     const expiresIn = (tokenData.expiresAt - Date.now()) / 1000
 
-    // Step-up check: if a 403 insufficient_scope was detected and the current
-    // token doesn't have the requested scope, omit refresh_token below so the
+    
+    
     
     const currentScopes = tokenData.scope?.split(' ') ?? []
     const needsStepUp =
@@ -1616,19 +1499,19 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       )
     }
 
-    // If token is expired and we don't have a refresh token, return undefined
+    
     if (expiresIn <= 0 && !tokenData.refreshToken) {
       logMCPDebug(this.serverName, `Token expired without refresh token`)
       return undefined
     }
 
-    // If token is expired or about to expire (within 5 minutes) and we have a refresh token, refresh it proactively.
-    // This proactive refresh is a UX improvement - it avoids the latency of a failed request followed by token refresh.
-    // While MCP servers should return 401 for expired tokens (which triggers SDK-level refresh), proactively refreshing
-    // before expiry provides a smoother user experience.
-    // Skip when step-up is pending — refreshing can't elevate scope (RFC 6749 §6).
+    
+    
+    
+    
+    
     if (expiresIn <= 300 && tokenData.refreshToken && !needsStepUp) {
-      // Reuse existing refresh promise if one is in progress to prevent concurrent refreshes
+      
       if (!this._refreshInProgress) {
         logMCPDebug(
           this.serverName,
@@ -1664,7 +1547,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       }
     }
 
-    // Return current tokens (may be expired if refresh failed or not needed yet)
+    
     const tokens = {
       access_token: tokenData.accessToken,
       refresh_token: needsStepUp ? undefined : tokenData.refreshToken,
@@ -1710,27 +1593,11 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
     storage.update(updatedData)
   }
 
-  /**
-   * XAA silent refresh: cached id_token → Layer-2 exchange → new access_token.
-   * No browser.
-   *
-   * Returns undefined if the id_token is gone from cache — caller treats this
-   * as needs-interactive-reauth (transport will 401, CC surfaces it).
-   *
-   * On exchange failure, clears the id_token cache so the next interactive
-   * auth does a fresh IdP login (the cached id_token is likely stale/revoked).
-   *
-   * TODO(xaa-ga): add cross-process lockfile before GA. `_refreshInProgress`
-   * only dedupes within one process — two CC instances with expiring tokens
-   * both fire the full 4-request XAA chain and race on storage.update().
-   * Unlike inc-4829 the id_token is not single-use so both access_tokens
-   * stay valid (wasted round-trips + keychain write race, not brickage),
-   * but this is the shape CLAUDE.md flags under "Token/auth caching across
-   * process boundaries". Mirror refreshAuthorization()'s lockfile pattern.
-   */
+  
+
   private async xaaRefresh(): Promise<OAuthTokens | undefined> {
     const idp = getXaaIdpSettings()
-    if (!idp) return undefined // config was removed mid-session
+    if (!idp) return undefined 
 
     const idToken = getCachedIdpIdToken(idp.issuer)
     if (!idToken) {
@@ -1748,7 +1615,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
         this.serverName,
         'XAA: missing clientId or clientSecret in config — skipping silent refresh',
       )
-      return undefined // shouldn't happen if `mcp add` was correct
+      return undefined 
     }
 
     const idpClientSecret = getIdpClientSecret(idp.issuer)
@@ -1782,9 +1649,9 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
         this.serverName,
       )
       
-      // storage even when this is the first write for serverKey. saveTokens
       
-      // revokeServerTokens would later read tokenData.clientId as undefined
+      
+      
       
       const storage = getSecureStorage()
       const existingData = storage.read() || {}
@@ -1830,7 +1697,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
   }
 
   async redirectToAuthorization(authorizationUrl: URL): Promise<void> {
-    // Store the authorization URL
+    
     this._authorizationUrl = authorizationUrl.toString()
 
     
@@ -1848,7 +1715,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
         `Captured scopes from authorization URL: ${scopes}`,
       )
     } else {
-      // If no scope in URL, try to get it from metadata
+      
       const metadataScope = getScopeFromMetadata(this._metadata)
       if (metadataScope) {
         this._scopes = metadataScope
@@ -1861,7 +1728,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       }
     }
 
-    // Persist scope for step-up auth: only when the transport-attached provider
+    
     
     
     
@@ -1887,7 +1754,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       return
     }
 
-    // Validate URL scheme for security
+    
     const urlString = authorizationUrl.toString()
     if (!urlString.startsWith('http://') && !urlString.startsWith('https://')) {
       throw new Error(
@@ -1900,7 +1767,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
     logMCPDebug(this.serverName, `Authorization URL: ${redactedUrl}`)
 
     
-    // so users can see the URL as a fallback if the browser fails to open
+    
     if (this.onAuthorizationUrlCallback) {
       this.onAuthorizationUrlCallback(urlString)
     }
@@ -2036,7 +1903,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
       }
     }
 
-    // Check config hint for direct metadata URL
+    
     const metadataUrl = this.serverConfig.oauth?.authServerMetadataUrl
     if (metadataUrl) {
       logMCPDebug(
@@ -2116,7 +1983,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
     }
 
     try {
-      // Re-read tokens after acquiring lock — another process may have refreshed
+      
       clearKeychainCache()
       const storage = getSecureStorage()
       const data = storage.read()
@@ -2136,7 +2003,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
             token_type: 'Bearer',
           }
         }
-        // Use the freshest refresh token from storage
+        
         if (tokenData.refreshToken) {
           refreshToken = tokenData.refreshToken
         }
@@ -2193,9 +2060,9 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
         const authFetch = createAuthFetch()
 
         
-        // since metadata (token endpoint URL, etc.) is static per auth server.
         
-        // 1. In-memory cache (same-session refreshes)
+        
+        
         
         
         
@@ -2232,7 +2099,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
           emitRefreshEvent('failure', 'metadata_discovery_failed')
           return undefined
         }
-        // Cache for future refreshes
+        
         this._metadata = metadata
 
         const clientInfo = await this.clientInformation()
@@ -2264,7 +2131,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
         emitRefreshEvent('failure', 'no_tokens_returned')
         return undefined
       } catch (error) {
-        // Invalid grant means the refresh token itself is invalid/revoked/expired.
+        
         
         if (error instanceof InvalidGrantError) {
           logMCPDebug(
@@ -2304,7 +2171,7 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
           return undefined
         }
 
-        // Retry on timeouts or transient server errors
+        
         const isTimeoutError =
           error instanceof Error &&
           /timeout|timed out|etimedout|econnreset/i.test(error.message)
@@ -2417,11 +2284,6 @@ export function getMcpClientConfig(
   return data?.mcpOAuthClientConfig?.[serverKey]
 }
 
-/**
- * Safely extracts scope information from AuthorizationServerMetadata.
- * The metadata can be either OAuthMetadata or OpenIdProviderDiscoveryMetadata,
- * and different providers use different fields for scope information.
- */
 function getScopeFromMetadata(
   metadata: AuthorizationServerMetadata | undefined,
 ): string | undefined {
@@ -2430,14 +2292,14 @@ function getScopeFromMetadata(
   if ('scope' in metadata && typeof metadata.scope === 'string') {
     return metadata.scope
   }
-  // Try 'default_scope' (non-standard but used by some providers)
+  
   if (
     'default_scope' in metadata &&
     typeof metadata.default_scope === 'string'
   ) {
     return metadata.default_scope
   }
-  // Fall back to scopes_supported (standard OAuth 2.0 field)
+  
   if (metadata.scopes_supported && Array.isArray(metadata.scopes_supported)) {
     return metadata.scopes_supported.join(' ')
   }

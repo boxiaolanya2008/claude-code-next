@@ -57,7 +57,6 @@ const RARITY_FLOOR: Record<Rarity, number> = {
   legendary: 50,
 }
 
-// One peak stat, one dump stat, rest scattered. Rarity bumps the floor.
 function rollStats(
   rng: () => number,
   rarity: Rarity,
@@ -100,8 +99,6 @@ function rollFrom(rng: () => number): Roll {
   return { bones, inspirationSeed: Math.floor(rng() * 1e9) }
 }
 
-// Called from three hot paths (500ms sprite tick, per-keystroke PromptInput,
-// per-turn observer) with the same userId → cache the deterministic result.
 let rollCache: { key: string; value: Roll } | undefined
 export function roll(userId: string): Roll {
   const key = userId + SALT
@@ -120,13 +117,10 @@ export function companionUserId(): string {
   return config.oauthAccount?.accountUuid ?? config.userID ?? 'anon'
 }
 
-// Regenerate bones from userId, merge with stored soul. Bones never persist
-
-// and editing config.companion can't fake a rarity.
 export function getCompanion(): Companion | undefined {
   const stored = getGlobalConfig().companion
   if (!stored) return undefined
   const { bones } = roll(companionUserId())
-  // bones last so stale bones fields in old-format configs get overridden
+  
   return { ...stored, ...bones }
 }

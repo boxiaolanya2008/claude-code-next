@@ -58,29 +58,29 @@ export class RemoteIO extends StructuredIO {
       })
     }
 
-    // Add environment runner version if available (set by Environment Manager)
-    const erVersion = process.env.CLAUDE_CODE_ENVIRONMENT_RUNNER_VERSION
+    
+    const erVersion = process.env.CLAUDE_CODE_NEXT_ENVIRONMENT_RUNNER_VERSION
     if (erVersion) {
       headers['x-environment-runner-version'] = erVersion
     }
 
-    // Provide a callback that re-reads the session token dynamically.
     
-    // the transport can pick it up on reconnection.
+    
+    
     const refreshHeaders = (): Record<string, string> => {
       const h: Record<string, string> = {}
       const freshToken = getSessionIngressAuthToken()
       if (freshToken) {
         h['Authorization'] = `Bearer ${freshToken}`
       }
-      const freshErVersion = process.env.CLAUDE_CODE_ENVIRONMENT_RUNNER_VERSION
+      const freshErVersion = process.env.CLAUDE_CODE_NEXT_ENVIRONMENT_RUNNER_VERSION
       if (freshErVersion) {
         h['x-environment-runner-version'] = freshErVersion
       }
       return h
     }
 
-    // Get appropriate transport based on URL protocol
+    
     this.transport = getTransportForUrl(
       this.url,
       headers,
@@ -89,7 +89,7 @@ export class RemoteIO extends StructuredIO {
     )
 
     
-    this.isBridge = process.env.CLAUDE_CODE_ENVIRONMENT_KIND === 'bridge'
+    this.isBridge = process.env.CLAUDE_CODE_NEXT_ENVIRONMENT_KIND === 'bridge'
     this.isDebug = isDebugMode()
     this.transport.setOnData((data: string) => {
       this.inputStream.write(data)
@@ -100,7 +100,7 @@ export class RemoteIO extends StructuredIO {
 
     
     this.transport.setOnClose(() => {
-      // End the input stream to trigger graceful shutdown
+      
       this.inputStream.end()
     })
 
@@ -109,10 +109,10 @@ export class RemoteIO extends StructuredIO {
     
     
     
-    if (isEnvTruthy(process.env.CLAUDE_CODE_USE_CCR_V2)) {
-      // CCR v2 is SSE+POST by definition. getTransportForUrl returns
+    if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_USE_CCR_V2)) {
       
-      // different files — assert the invariant so a future decoupling
+      
+      
       
       if (!(this.transport instanceof SSETransport)) {
         throw new Error(
@@ -163,15 +163,15 @@ export class RemoteIO extends StructuredIO {
       })
     }
 
-    // Start connection only after all callbacks are wired (setOnData above,
-    // setOnEvent inside new CCRClient() when CCR v2 is enabled).
+    
+    
     void this.transport.connect()
 
     
     
     
     
-    // web/iOS/Android never see it in their message loop). Interval comes
+    
     
     
     
@@ -191,12 +191,12 @@ export class RemoteIO extends StructuredIO {
       this.keepAliveTimer.unref?.()
     }
 
-    // Register for graceful shutdown cleanup
+    
     registerCleanup(async () => this.close())
 
     
     if (initialPrompt) {
-      // Convert the initial prompt to the input stream format.
+      
       
       
       
@@ -218,12 +218,8 @@ export class RemoteIO extends StructuredIO {
     return this.ccrClient?.internalEventsPending ?? 0
   }
 
-  /**
-   * Send output to the transport.
-   * In bridge mode, control_request messages are always echoed to stdout so the
-   * bridge parent can detect permission requests. Other messages are echoed only
-   * in debug mode.
-   */
+  
+
   async write(message: StdoutMessage): Promise<void> {
     if (this.ccrClient) {
       await this.ccrClient.writeEvent(message)
@@ -237,9 +233,8 @@ export class RemoteIO extends StructuredIO {
     }
   }
 
-  /**
-   * Clean up connections gracefully
-   */
+  
+
   close(): void {
     if (this.keepAliveTimer) {
       clearInterval(this.keepAliveTimer)

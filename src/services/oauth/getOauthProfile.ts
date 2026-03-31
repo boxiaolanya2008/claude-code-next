@@ -7,7 +7,7 @@ import { logError } from 'src/utils/log.js'
 export async function getOauthProfileFromApiKey(): Promise<
   OAuthProfileResponse | undefined
 > {
-  // Assumes interactive session
+  
   const config = getGlobalConfig()
   const accountUuid = config.oauthAccount?.accountUuid
   const apiKey = getAnthropicApiKey()

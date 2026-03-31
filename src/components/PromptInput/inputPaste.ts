@@ -9,19 +9,11 @@ type TruncatedMessage = {
   placeholderContent: string
 }
 
-/**
- * Determines whether the input text should be truncated. If so, it adds a
- * truncated text placeholder and neturns
- *
- * @param text The input text
- * @param nextPasteId The reference id to use
- * @returns The new text to display and separate placeholder content if applicable.
- */
 export function maybeTruncateMessageForInput(
   text: string,
   nextPasteId: number,
 ): TruncatedMessage {
-  // If the text is short enough, return it as-is
+  
   if (text.length <= TRUNCATION_THRESHOLD) {
     return {
       truncatedText: text,
@@ -29,7 +21,7 @@ export function maybeTruncateMessageForInput(
     }
   }
 
-  // Calculate how much text to keep from start and end
+  
   const startLength = Math.floor(PREVIEW_LENGTH / 2)
   const endLength = Math.floor(PREVIEW_LENGTH / 2)
 
@@ -62,7 +54,7 @@ export function maybeTruncateInput(
   input: string,
   pastedContents: Record<number, PastedContent>,
 ): { newInput: string; newPastedContents: Record<number, PastedContent> } {
-  // Get the next available ID for the truncated content
+  
   const existingIds = Object.keys(pastedContents).map(Number)
   const nextPasteId = existingIds.length > 0 ? Math.max(...existingIds) + 1 : 1
 

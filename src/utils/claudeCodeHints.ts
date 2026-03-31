@@ -6,7 +6,7 @@ import { createSignal } from './signal.js'
 export type ClaudeCodeHintType = 'plugin'
 
 export type ClaudeCodeHint = {
-  /** Spec version declared by the emitter. Unknown versions are dropped. */
+  
   v: number
   
   type: ClaudeCodeHintType
@@ -18,12 +18,11 @@ export type ClaudeCodeHint = {
   sourceCommand: string
 }
 
-/** Spec versions this harness understands. */
 const SUPPORTED_VERSIONS = new Set([1])
 
 const SUPPORTED_TYPES = new Set<string>(['plugin'])
 
-const HINT_TAG_RE = /^[ \t]*<claude-code-hint\s+([^>]*?)\s*\/>[ \t]*$/gm
+const HINT_TAG_RE = /^[ \t]*<claude-code-next-hint\s+([^>]*?)\s*\/>[ \t]*$/gm
 
 const ATTR_RE = /(\w+)=(?:"([^"]*)"|([^\s/>]+))/g
 
@@ -31,8 +30,8 @@ export function extractClaudeCodeHints(
   output: string,
   command: string,
 ): { hints: ClaudeCodeHint[]; stripped: string } {
-  // Fast path: no tag open sequence → no work, no allocation.
-  if (!output.includes('<claude-code-hint')) {
+  
+  if (!output.includes('<claude-code-next-hint')) {
     return { hints: [], stripped: output }
   }
 
@@ -91,9 +90,6 @@ function firstCommandToken(command: string): string {
   return spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx)
 }
 
-// ============================================================================
-// Pending-hint store (useSyncExternalStore interface)
-
 let pendingHint: ClaudeCodeHint | null = null
 let shownThisSession = false
 const pendingHintChanged = createSignal()
@@ -105,7 +101,6 @@ export function setPendingHint(hint: ClaudeCodeHint): void {
   notify()
 }
 
-/** Clear the slot without flipping the session flag — for rejected hints. */
 export function clearPendingHint(): void {
   if (pendingHint !== null) {
     pendingHint = null
@@ -113,7 +108,6 @@ export function clearPendingHint(): void {
   }
 }
 
-/** Flip the once-per-session flag. Call only when a dialog is actually shown. */
 export function markShownThisSession(): void {
   shownThisSession = true
 }
@@ -128,7 +122,6 @@ export function hasShownHintThisSession(): boolean {
   return shownThisSession
 }
 
-/** Test-only reset. */
 export function _resetClaudeCodeHintStore(): void {
   pendingHint = null
   shownThisSession = false

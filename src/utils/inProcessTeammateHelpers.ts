@@ -14,13 +14,6 @@ import {
 
 type SetAppState = (updater: (prev: AppState) => AppState) => void
 
-/**
- * Find the task ID for an in-process teammate by agent name.
- *
- * @param agentName - The agent name (e.g., "researcher")
- * @param appState - Current AppState
- * @returns Task ID if found, undefined otherwise
- */
 export function findInProcessTeammateTaskId(
   agentName: string,
   appState: AppState,
@@ -36,13 +29,6 @@ export function findInProcessTeammateTaskId(
   return undefined
 }
 
-/**
- * Set awaitingPlanApproval state for an in-process teammate.
- *
- * @param taskId - Task ID of the in-process teammate
- * @param setAppState - AppState setter
- * @param awaiting - Whether teammate is awaiting plan approval
- */
 export function setAwaitingPlanApproval(
   taskId: string,
   setAppState: SetAppState,
@@ -54,17 +40,6 @@ export function setAwaitingPlanApproval(
   }))
 }
 
-/**
- * Handle plan approval response for an in-process teammate.
- * Called by the message callback when a plan_approval_response arrives.
- *
- * This resets awaitingPlanApproval to false. The permissionMode from the
- * response is handled separately by the agent loop (Task #11).
- *
- * @param taskId - Task ID of the in-process teammate
- * @param _response - The plan approval response message (for future use)
- * @param setAppState - AppState setter
- */
 export function handlePlanApprovalResponse(
   taskId: string,
   _response: PlanApprovalResponseMessage,
@@ -73,18 +48,6 @@ export function handlePlanApprovalResponse(
   setAwaitingPlanApproval(taskId, setAppState, false)
 }
 
-// ============ Permission Delegation Helpers ============
-
-/**
- * Check if a message is a permission-related response.
- * Used by in-process teammate message handlers to detect and process
- * permission responses from the team leader.
- *
- * Handles both tool permissions and sandbox (network host) permissions.
- *
- * @param messageText - The raw message text to check
- * @returns true if the message is a permission response
- */
 export function isPermissionRelatedResponse(messageText: string): boolean {
   return (
     !!isPermissionResponse(messageText) ||

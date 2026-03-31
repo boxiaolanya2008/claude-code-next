@@ -18,10 +18,8 @@ function isGateEnabled(): boolean {
   return getFeatureValue_CACHED_MAY_BE_STALE(TRUSTED_DEVICE_GATE, false)
 }
 
-// Memoized — secureStorage.read() spawns a macOS `security` subprocess (~40ms).
-
 const readStoredToken = memoize((): string | undefined => {
-  // Env var takes precedence for testing/canary.
+  
   const envToken = process.env.CLAUDE_TRUSTED_DEVICE_TOKEN
   if (envToken) {
     return envToken
@@ -40,13 +38,6 @@ export function clearTrustedDeviceTokenCache(): void {
   readStoredToken.cache?.clear?.()
 }
 
-/**
- * Clear the stored trusted device token from secure storage and the memo cache.
- * Called before enrollTrustedDevice() during /login so a stale token from the
- * previous account isn't sent as X-Trusted-Device-Token while enrollment is
- * in-flight (enrollTrustedDevice is async — bridge API calls between login and
- * enrollment completion would otherwise still read the old cached token).
- */
 export function clearTrustedDeviceToken(): void {
   if (!isGateEnabled()) {
     return
@@ -59,43 +50,34 @@ export function clearTrustedDeviceToken(): void {
       secureStorage.update(data)
     }
   } catch {
-    // Best-effort — don't block login if storage is inaccessible
+    
   }
   readStoredToken.cache?.clear?.()
 }
 
-/**
- * Enroll this device via POST /auth/trusted_devices and persist the token
- * to keychain. Best-effort — logs and returns on failure so callers
- * (post-login hooks) don't block the login flow.
- *
- * The server gates enrollment on account_session.created_at < 10min, so
- * this must be called immediately after a fresh /login. Calling it later
- * (e.g. lazy enrollment on /bridge 403) will fail with 403 stale_session.
- */
 export async function enrollTrustedDevice(): Promise<void> {
   try {
-    // checkGate_CACHED_OR_BLOCKING awaits any in-flight GrowthBook re-init
-    // (triggered by refreshGrowthBookAfterAuthChange in login.tsx) before
-    // reading the gate, so we get the post-refresh value.
+    
+    
+    
     if (!(await checkGate_CACHED_OR_BLOCKING(TRUSTED_DEVICE_GATE))) {
       logForDebugging(
         `[trusted-device] Gate ${TRUSTED_DEVICE_GATE} is off, skipping enrollment`,
       )
       return
     }
-    // If CLAUDE_TRUSTED_DEVICE_TOKEN is set (e.g. by an enterprise wrapper),
-    // skip enrollment — the env var takes precedence in readStoredToken() so
-    // any enrolled token would be shadowed and never used.
+    
+    
+    
     if (process.env.CLAUDE_TRUSTED_DEVICE_TOKEN) {
       logForDebugging(
         '[trusted-device] CLAUDE_TRUSTED_DEVICE_TOKEN env var is set, skipping enrollment (env var takes precedence)',
       )
       return
     }
-    // Lazy require — utils/auth.ts transitively pulls ~1300 modules
-    // (config → file → permissions → sessionStorage → commands). Daemon callers
-    // of getTrustedDeviceToken() don't need this; only /login does.
+    
+    
+    
     
     const { getClaudeAIOAuthTokens } =
       require('../utils/auth.js') as typeof import('../utils/auth.js')
@@ -105,7 +87,7 @@ export async function enrollTrustedDevice(): Promise<void> {
       logForDebugging('[trusted-device] No OAuth token, skipping enrollment')
       return
     }
-    // Always re-enroll on /login — the existing token may belong to a
+    
     
     
     const secureStorage = getSecureStorage()
@@ -125,7 +107,7 @@ export async function enrollTrustedDevice(): Promise<void> {
         device_id?: string
       }>(
         `${baseUrl}/api/auth/trusted_devices`,
-        { display_name: `Claude Code on ${hostname()} · ${process.platform}` },
+        { display_name: `Claude Code Next on ${hostname()} · ${process.platform}` },
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,

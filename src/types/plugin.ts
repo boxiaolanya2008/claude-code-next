@@ -10,13 +10,8 @@ import type { HooksSettings } from '../utils/settings/types.js'
 
 export type { PluginAuthor, PluginManifest, CommandMetadata }
 
-/**
- * Definition for a built-in plugin that ships with the CLI.
- * Built-in plugins appear in the /plugin UI and can be enabled/disabled by
- * users (persisted to user settings).
- */
 export type BuiltinPluginDefinition = {
-  /** Plugin name (used in `{name}@builtin` identifier) */
+  
   name: string
   
   description: string
@@ -266,10 +261,6 @@ export type PluginLoadResult = {
   errors: PluginError[]
 }
 
-/**
- * Helper function to get a display message from any PluginError
- * Useful for logging and simple error displays
- */
 export function getPluginErrorMessage(error: PluginError): string {
   switch (error.type) {
     case 'generic-error':

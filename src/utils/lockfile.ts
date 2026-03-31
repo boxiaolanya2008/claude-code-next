@@ -8,7 +8,7 @@ let _lockfile: Lockfile | undefined
 
 function getLockfile(): Lockfile {
   if (!_lockfile) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    
     _lockfile = require('proper-lockfile') as Lockfile
   }
   return _lockfile

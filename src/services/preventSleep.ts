@@ -22,10 +22,6 @@ export function startPreventSleep(): void {
   }
 }
 
-/**
- * Decrement the reference count and allow sleep if no more work is pending.
- * Call this when work completes.
- */
 export function stopPreventSleep(): void {
   if (refCount > 0) {
     refCount--
@@ -37,10 +33,6 @@ export function stopPreventSleep(): void {
   }
 }
 
-/**
- * Force stop preventing sleep, regardless of reference count.
- * Use this for cleanup on exit.
- */
 export function forceStopPreventSleep(): void {
   refCount = 0
   stopRestartInterval()
@@ -48,18 +40,18 @@ export function forceStopPreventSleep(): void {
 }
 
 function startRestartInterval(): void {
-  // Only run on macOS
+  
   if (process.platform !== 'darwin') {
     return
   }
 
-  // Already running
+  
   if (restartInterval !== null) {
     return
   }
 
   restartInterval = setInterval(() => {
-    // Only restart if we still need sleep prevention
+    
     if (refCount > 0) {
       logForDebugging('Restarting caffeinate to maintain sleep prevention')
       killCaffeinate()
@@ -79,17 +71,17 @@ function stopRestartInterval(): void {
 }
 
 function spawnCaffeinate(): void {
-  // Only run on macOS
+  
   if (process.platform !== 'darwin') {
     return
   }
 
-  // Already running
+  
   if (caffeinateProcess !== null) {
     return
   }
 
-  // Register cleanup on first use to ensure caffeinate is killed on exit
+  
   if (!cleanupRegistered) {
     cleanupRegistered = true
     registerCleanup(async () => {
@@ -98,7 +90,7 @@ function spawnCaffeinate(): void {
   }
 
   try {
-    // -i: Create an assertion to prevent idle sleep
+    
     
     
     
@@ -125,7 +117,7 @@ function spawnCaffeinate(): void {
 
     logForDebugging('Started caffeinate to prevent sleep')
   } catch {
-    // Silently fail - caffeinate not available or spawn failed
+    
     caffeinateProcess = null
   }
 }
@@ -135,11 +127,11 @@ function killCaffeinate(): void {
     const proc = caffeinateProcess
     caffeinateProcess = null
     try {
-      // SIGKILL for immediate termination - SIGTERM could be delayed
+      
       proc.kill('SIGKILL')
       logForDebugging('Stopped caffeinate, allowing sleep')
     } catch {
-      // Process may have already exited
+      
     }
   }
 }

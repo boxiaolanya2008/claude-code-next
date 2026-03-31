@@ -8,29 +8,28 @@ export type AnsiColor = {
   b: number
 }
 
-// Default terminal color palette (similar to most terminals)
 const ANSI_COLORS: Record<number, AnsiColor> = {
-  30: { r: 0, g: 0, b: 0 }, // black
-  31: { r: 205, g: 49, b: 49 }, // red
-  32: { r: 13, g: 188, b: 121 }, // green
-  33: { r: 229, g: 229, b: 16 }, // yellow
-  34: { r: 36, g: 114, b: 200 }, // blue
-  35: { r: 188, g: 63, b: 188 }, // magenta
-  36: { r: 17, g: 168, b: 205 }, // cyan
-  37: { r: 229, g: 229, b: 229 }, // white
+  30: { r: 0, g: 0, b: 0 }, 
+  31: { r: 205, g: 49, b: 49 }, 
+  32: { r: 13, g: 188, b: 121 }, 
+  33: { r: 229, g: 229, b: 16 }, 
+  34: { r: 36, g: 114, b: 200 }, 
+  35: { r: 188, g: 63, b: 188 }, 
+  36: { r: 17, g: 168, b: 205 }, 
+  37: { r: 229, g: 229, b: 229 }, 
   
-  90: { r: 102, g: 102, b: 102 }, // bright black (gray)
-  91: { r: 241, g: 76, b: 76 }, // bright red
-  92: { r: 35, g: 209, b: 139 }, // bright green
-  93: { r: 245, g: 245, b: 67 }, // bright yellow
-  94: { r: 59, g: 142, b: 234 }, // bright blue
-  95: { r: 214, g: 112, b: 214 }, // bright magenta
-  96: { r: 41, g: 184, b: 219 }, // bright cyan
-  97: { r: 255, g: 255, b: 255 }, // bright white
+  90: { r: 102, g: 102, b: 102 }, 
+  91: { r: 241, g: 76, b: 76 }, 
+  92: { r: 35, g: 209, b: 139 }, 
+  93: { r: 245, g: 245, b: 67 }, 
+  94: { r: 59, g: 142, b: 234 }, 
+  95: { r: 214, g: 112, b: 214 }, 
+  96: { r: 41, g: 184, b: 219 }, 
+  97: { r: 255, g: 255, b: 255 }, 
 }
 
-export const DEFAULT_FG: AnsiColor = { r: 229, g: 229, b: 229 } // light gray
-export const DEFAULT_BG: AnsiColor = { r: 30, g: 30, b: 30 } // dark gray
+export const DEFAULT_FG: AnsiColor = { r: 229, g: 229, b: 229 } 
+export const DEFAULT_BG: AnsiColor = { r: 30, g: 30, b: 30 } 
 
 export type TextSpan = {
   text: string
@@ -51,16 +50,16 @@ export function parseAnsi(text: string): ParsedLine[] {
     let i = 0
 
     while (i < line.length) {
-      // Check for ANSI escape sequence
+      
       if (line[i] === '\x1b' && line[i + 1] === '[') {
-        // Find the end of the escape sequence
+        
         let j = i + 2
         while (j < line.length && !/[A-Za-z]/.test(line[j]!)) {
           j++
         }
 
         if (line[j] === 'm') {
-          // Color/style code
+          
           const codes = line
             .slice(i + 2, j)
             .split(';')
@@ -70,7 +69,7 @@ export function parseAnsi(text: string): ParsedLine[] {
           while (k < codes.length) {
             const code = codes[k]!
             if (code === 0) {
-              // Reset
+              
               currentColor = DEFAULT_FG
               bold = false
             } else if (code === 1) {
@@ -82,9 +81,9 @@ export function parseAnsi(text: string): ParsedLine[] {
             } else if (code === 39) {
               currentColor = DEFAULT_FG
             } else if (code === 38) {
-              // Extended color - check next code
+              
               if (codes[k + 1] === 5 && codes[k + 2] !== undefined) {
-                // 256-color mode: 38;5;n
+                
                 const colorIndex = codes[k + 2]!
                 currentColor = get256Color(colorIndex)
                 k += 2
@@ -94,7 +93,7 @@ export function parseAnsi(text: string): ParsedLine[] {
                 codes[k + 3] !== undefined &&
                 codes[k + 4] !== undefined
               ) {
-                // 24-bit true color: 38;2;r;g;b
+                
                 currentColor = {
                   r: codes[k + 2]!,
                   g: codes[k + 3]!,
@@ -111,7 +110,7 @@ export function parseAnsi(text: string): ParsedLine[] {
         continue
       }
 
-      // Regular character - find extent of same-styled text
+      
       const textStart = i
       while (i < line.length && line[i] !== '\x1b') {
         i++
@@ -123,7 +122,7 @@ export function parseAnsi(text: string): ParsedLine[] {
       }
     }
 
-    // Add empty span if line is empty (to preserve line)
+    
     if (spans.length === 0) {
       spans.push({ text: '', color: DEFAULT_FG, bold: false })
     }
@@ -134,34 +133,31 @@ export function parseAnsi(text: string): ParsedLine[] {
   return lines
 }
 
-/**
- * Get color from 256-color palette
- */
 function get256Color(index: number): AnsiColor {
-  // Standard colors (0-15)
+  
   if (index < 16) {
     const standardColors: AnsiColor[] = [
-      { r: 0, g: 0, b: 0 }, // 0 black
-      { r: 128, g: 0, b: 0 }, // 1 red
-      { r: 0, g: 128, b: 0 }, // 2 green
-      { r: 128, g: 128, b: 0 }, // 3 yellow
-      { r: 0, g: 0, b: 128 }, // 4 blue
-      { r: 128, g: 0, b: 128 }, // 5 magenta
-      { r: 0, g: 128, b: 128 }, // 6 cyan
-      { r: 192, g: 192, b: 192 }, // 7 white
-      { r: 128, g: 128, b: 128 }, // 8 bright black
-      { r: 255, g: 0, b: 0 }, // 9 bright red
-      { r: 0, g: 255, b: 0 }, // 10 bright green
-      { r: 255, g: 255, b: 0 }, // 11 bright yellow
-      { r: 0, g: 0, b: 255 }, // 12 bright blue
-      { r: 255, g: 0, b: 255 }, // 13 bright magenta
-      { r: 0, g: 255, b: 255 }, // 14 bright cyan
-      { r: 255, g: 255, b: 255 }, // 15 bright white
+      { r: 0, g: 0, b: 0 }, 
+      { r: 128, g: 0, b: 0 }, 
+      { r: 0, g: 128, b: 0 }, 
+      { r: 128, g: 128, b: 0 }, 
+      { r: 0, g: 0, b: 128 }, 
+      { r: 128, g: 0, b: 128 }, 
+      { r: 0, g: 128, b: 128 }, 
+      { r: 192, g: 192, b: 192 }, 
+      { r: 128, g: 128, b: 128 }, 
+      { r: 255, g: 0, b: 0 }, 
+      { r: 0, g: 255, b: 0 }, 
+      { r: 255, g: 255, b: 0 }, 
+      { r: 0, g: 0, b: 255 }, 
+      { r: 255, g: 0, b: 255 }, 
+      { r: 0, g: 255, b: 255 }, 
+      { r: 255, g: 255, b: 255 }, 
     ]
     return standardColors[index] || DEFAULT_FG
   }
 
-  // 216 color cube (16-231)
+  
   if (index < 232) {
     const i = index - 16
     const r = Math.floor(i / 36)
@@ -174,7 +170,7 @@ function get256Color(index: number): AnsiColor {
     }
   }
 
-  // Grayscale (232-255)
+  
   const gray = (index - 232) * 10 + 8
   return { r: gray, g: gray, b: gray }
 }
@@ -189,11 +185,6 @@ export type AnsiToSvgOptions = {
   borderRadius?: number
 }
 
-/**
- * Convert ANSI text to SVG
- * Uses <tspan> elements within a single <text> per line so the renderer
- * handles character spacing natively (no manual charWidth calculation)
- */
 export function ansiToSvg(
   ansiText: string,
   options: AnsiToSvgOptions = {},
@@ -218,7 +209,7 @@ export function ansiToSvg(
     lines.pop()
   }
 
-  // Estimate width based on max line length (for SVG dimensions only)
+  
   
   const charWidthEstimate = fontSize * 0.6
   const maxLineLength = Math.max(

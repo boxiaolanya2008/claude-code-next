@@ -61,8 +61,6 @@ async function fetchChannels(
   }
 }
 
-// The Slack MCP server wraps its markdown in a JSON envelope:
-// {"results":"# Search Results...\nName: #chan\n..."}
 const resultsEnvelopeSchema = lazySchema(() =>
   z.object({ results: z.string() }),
 )
@@ -74,12 +72,10 @@ function unwrapResults(text: string): string {
     const parsed = resultsEnvelopeSchema().safeParse(jsonParse(trimmed))
     if (parsed.success) return parsed.data.results
   } catch {
-    // jsonParse threw — fall through
+    
   }
   return text
 }
-
-// Parse channel names from slack_search_channels text output.
 
 function parseChannels(text: string): string[] {
   const channels: string[] = []
@@ -118,11 +114,6 @@ export function findSlackChannelPositions(
   return positions
 }
 
-// Slack's search tokenizes on hyphens and requires whole-word matches, so
-// "claude-code-team-en" returns 0 results. Strip the trailing partial segment
-// so the MCP query is "claude-code-team" (complete words only), then filter
-// locally. This keeps the query maximally specific (avoiding the 20-result
-// cap) while never sending a partial word that kills the search.
 function mcpQueryFor(searchToken: string): string {
   const lastSep = Math.max(
     searchToken.lastIndexOf('-'),
@@ -131,9 +122,6 @@ function mcpQueryFor(searchToken: string): string {
   return lastSep > 0 ? searchToken.slice(0, lastSep) : searchToken
 }
 
-// Find a cached entry whose key is a prefix of mcpQuery and still has
-// matches for searchToken. Lets typing "c"→"cl"→"cla" reuse the "c" cache
-// instead of issuing a new MCP call per keystroke.
 function findReusableCacheEntry(
   mcpQuery: string,
   searchToken: string,

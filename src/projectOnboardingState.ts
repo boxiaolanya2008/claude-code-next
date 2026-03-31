@@ -47,7 +47,7 @@ export function isProjectOnboardingComplete(): boolean {
 }
 
 export function maybeMarkProjectOnboardingComplete(): void {
-  // Short-circuit on cached config — isProjectOnboardingComplete() hits
+  
   
   if (getCurrentProjectConfig().hasCompletedProjectOnboarding) {
     return

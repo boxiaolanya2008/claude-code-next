@@ -19,7 +19,7 @@ function wrapText(
     if (visibleWidth <= wrapWidth) {
       wrappedLines.push(line.trimEnd())
     } else {
-      // Break long lines into chunks of wrapWidth visible characters
+      
       
       let position = 0
       while (position < visibleWidth) {
@@ -40,25 +40,17 @@ function wrapText(
         .slice(0, MAX_LINES_TO_SHOW + 1)
         .join('\n')
         .trimEnd(),
-      remainingLines: 0, // All lines are shown, nothing remaining
+      remainingLines: 0, 
     }
   }
 
-  // Otherwise show the standard MAX_LINES_TO_SHOW
+  
   return {
     aboveTheFold: wrappedLines.slice(0, MAX_LINES_TO_SHOW).join('\n').trimEnd(),
     remainingLines: Math.max(0, remainingLines),
   }
 }
 
-/**
- * Renders the content with line-based truncation for terminal display.
- * If the content exceeds the maximum number of lines, it truncates the content
- * and adds a message indicating the number of additional lines.
- * @param content The content to render.
- * @param terminalWidth Terminal width for wrapping lines.
- * @returns The rendered content with truncation if needed.
- */
 export function renderTruncatedContent(
   content: string,
   terminalWidth: number,
@@ -103,10 +95,6 @@ export function renderTruncatedContent(
     .join('\n')
 }
 
-/** Fast check: would OutputLine truncate this content? Counts raw newlines
- *  only (ignores terminal-width wrapping), so it may return false for a single
- *  very long line that wraps past 3 visual rows — acceptable, since the common
- *  case is multi-line output. */
 export function isOutputLineTruncated(content: string): boolean {
   let pos = 0
   
@@ -116,7 +104,7 @@ export function isOutputLineTruncated(content: string): boolean {
     if (pos === -1) return false
     pos++
   }
-  // A trailing newline is a terminator, not a new line — match
+  
   
   return pos < content.length
 }

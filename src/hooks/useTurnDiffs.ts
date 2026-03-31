@@ -90,13 +90,6 @@ function computeTurnStats(turn: TurnDiff): void {
   }
 }
 
-/**
- * Extract turn-based diffs from messages.
- * A turn is defined as a user prompt followed by assistant responses and tool results.
- * Each turn with file edits is included in the result.
- *
- * Uses incremental accumulation - only processes new messages since last render.
- */
 export function useTurnDiffs(messages: Message[]): TurnDiff[] {
   const cache = useRef<TurnDiffCache>({
     completedTurns: [],
@@ -116,7 +109,7 @@ export function useTurnDiffs(messages: Message[]): TurnDiff[] {
       c.lastTurnIndex = 0
     }
 
-    // Process only new messages
+    
     for (let i = c.lastProcessedIndex; i < messages.length; i++) {
       const message = messages[i]
       if (!message || message.type !== 'user') continue
@@ -128,7 +121,7 @@ export function useTurnDiffs(messages: Message[]): TurnDiff[] {
           message.message.content[0]?.type === 'tool_result')
 
       if (!isToolResult && !message.isMeta) {
-        // Start a new turn on user prompt
+        
         if (c.currentTurn && c.currentTurn.files.size > 0) {
           computeTurnStats(c.currentTurn)
           c.completedTurns.push(c.currentTurn)
@@ -143,7 +136,7 @@ export function useTurnDiffs(messages: Message[]): TurnDiff[] {
           stats: { filesChanged: 0, linesAdded: 0, linesRemoved: 0 },
         }
       } else if (c.currentTurn && message.toolUseResult) {
-        // Collect file edits from tool results
+        
         const result = message.toolUseResult
         if (isFileEditResult(result)) {
           const { filePath, structuredPatch } = result
@@ -162,7 +155,7 @@ export function useTurnDiffs(messages: Message[]): TurnDiff[] {
             c.currentTurn.files.set(filePath, fileEntry)
           }
 
-          // For new files, generate synthetic hunk from content
+          
           if (
             isNewFile &&
             structuredPatch.length === 0 &&
@@ -180,7 +173,7 @@ export function useTurnDiffs(messages: Message[]): TurnDiff[] {
             fileEntry.hunks.push(syntheticHunk)
             fileEntry.linesAdded += lines.length
           } else {
-            // Append hunks (same file may be edited multiple times in a turn)
+            
             fileEntry.hunks.push(...structuredPatch)
 
             
@@ -189,7 +182,7 @@ export function useTurnDiffs(messages: Message[]): TurnDiff[] {
             fileEntry.linesRemoved += removed
           }
 
-          // If file was created and then edited, it's still a new file
+          
           if (isNewFile) {
             fileEntry.isNewFile = true
           }
@@ -199,15 +192,15 @@ export function useTurnDiffs(messages: Message[]): TurnDiff[] {
 
     c.lastProcessedIndex = messages.length
 
-    // Build result: completed turns + current turn if it has files
+    
     const result = [...c.completedTurns]
     if (c.currentTurn && c.currentTurn.files.size > 0) {
-      // Compute stats for current turn before including
+      
       computeTurnStats(c.currentTurn)
       result.push(c.currentTurn)
     }
 
-    // Return in reverse order (most recent first)
+    
     return result.reverse()
   }, [messages])
 }

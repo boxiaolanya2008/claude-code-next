@@ -35,11 +35,6 @@ async function fetchOverageCreditGrant(): Promise<OverageCreditGrantInfo | null>
   }
 }
 
-/**
- * Get cached grant info. Returns null if no cache or cache is stale.
- * Callers should render nothing (not block) when this returns null —
- * refreshOverageCreditGrantCache fires lazily to populate it.
- */
 export function getCachedOverageCreditGrant(): OverageCreditGrantInfo | null {
   const orgId = getOauthAccountInfo()?.organizationUuid
   if (!orgId) return null
@@ -49,10 +44,6 @@ export function getCachedOverageCreditGrant(): OverageCreditGrantInfo | null {
   return cached.info
 }
 
-/**
- * Drop the current org's cached entry so the next read refetches.
- * Leaves other orgs' entries intact.
- */
 export function invalidateOverageCreditGrantCache(): void {
   const orgId = getOauthAccountInfo()?.organizationUuid
   if (!orgId) return
@@ -65,24 +56,20 @@ export function invalidateOverageCreditGrantCache(): void {
   })
 }
 
-/**
- * Fetch and cache grant info. Fire-and-forget; call when an upsell surface
- * is about to render and the cache is empty.
- */
 export async function refreshOverageCreditGrantCache(): Promise<void> {
   if (isEssentialTrafficOnly()) return
   const orgId = getOauthAccountInfo()?.organizationUuid
   if (!orgId) return
   const info = await fetchOverageCreditGrant()
   if (!info) return
-  // Skip rewriting info if grant data is unchanged — avoids config write
+  
   
   
   
   saveGlobalConfig(prev => {
-    // Derive from prev (lock-fresh) rather than a pre-lock getGlobalConfig()
     
-    // so another CLI instance may have written between any outer read and lock
+    
+    
     
     const prevCached = prev.overageCreditGrantCache?.[orgId]
     const existing = prevCached?.info
@@ -115,16 +102,12 @@ export async function refreshOverageCreditGrantCache(): Promise<void> {
   })
 }
 
-/**
- * Format the grant amount for display. Returns null if amount isn't available
- * (not eligible, or currency we don't know how to format).
- */
 export function formatGrantAmount(info: OverageCreditGrantInfo): string | null {
   if (info.amount_minor_units == null || !info.currency) return null
   
   if (info.currency.toUpperCase() === 'USD') {
     const dollars = info.amount_minor_units / 100
-    return Number.isInteger(dollars) ? `$${dollars}` : `$${dollars.toFixed(2)}`
+    return Number.isInteger(dollars) ? `${dollars}` : `${dollars.toFixed(2)}`
   }
   return null
 }

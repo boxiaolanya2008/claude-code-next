@@ -41,7 +41,7 @@ function taggedIdToUUID(taggedId: string): string | null {
     n = n * 58n + BigInt(idx)
   }
 
-  // Convert to UUID hex string
+  
   const hex = n.toString(16).padStart(32, '0')
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`
 }
@@ -158,7 +158,7 @@ Set \`header: "Action"\` and offer the four actions (create/list/update/run) as 
 
   return `# Schedule Remote Agents
 
-You are helping the user schedule, update, list, or run **remote** Claude Code agents. These are NOT local cron jobs — each trigger spawns a fully isolated remote session (CCR) in Anthropic's cloud infrastructure on a cron schedule. The agent runs in a sandboxed environment with its own git checkout, tools, and optional MCP connections.
+You are helping the user schedule, update, list, or run **remote** Claude Code Next agents. These are NOT local cron jobs — each trigger spawns a fully isolated remote session (CCR) in Anthropic's cloud infrastructure on a cron schedule. The agent runs in a sandboxed environment with its own git checkout, tools, and optional MCP connections.
 
 ## First Step
 
@@ -312,7 +312,7 @@ export function registerScheduleRemoteAgentsSkill(): void {
     description:
       'Create, update, list, or run scheduled remote agents (triggers) that execute on a cron schedule.',
     whenToUse:
-      'When the user wants to schedule a recurring remote agent, set up automated tasks, create a cron job for Claude Code, or manage their scheduled agents/triggers.',
+      'When the user wants to schedule a recurring remote agent, set up automated tasks, create a cron job for Claude Code Next, or manage their scheduled agents/triggers.',
     userInvocable: true,
     isEnabled: () =>
       getFeatureValue_CACHED_MAY_BE_STALE('tengu_surreal_dali', false) &&
@@ -347,7 +347,7 @@ export function registerScheduleRemoteAgentsSkill(): void {
       if (environments.length === 0) {
         try {
           createdEnvironment = await createDefaultCloudEnvironment(
-            'claude-code-default',
+            'claude-code-next-default',
           )
           environments = [createdEnvironment]
         } catch (err) {
@@ -363,7 +363,7 @@ export function registerScheduleRemoteAgentsSkill(): void {
         }
       }
 
-      // Soft setup checks — collected as upfront notes embedded in the initial
+      
       
       
       
@@ -392,7 +392,7 @@ export function registerScheduleRemoteAgentsSkill(): void {
           setupNotes.push(msg)
         }
       }
-      // Non-github.com hosts (GHE/GitLab/etc.): silently skip. The GitHub
+      
       
       
       

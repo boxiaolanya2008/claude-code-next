@@ -11,9 +11,8 @@ import OptionMap from './option-map.js'
 import type { OptionWithDescription } from './select.js'
 
 type State<T> = {
-  /**
-   * Map where key is option's value and value is option's index.
-   */
+  
+
   optionMap: OptionMap<T>
 
   
@@ -80,14 +79,14 @@ const reducer = <T>(state: State<T>, action: Action<T>): State<T> => {
         return state
       }
 
-      // Wrap to first item if at the end
+      
       const next = item.next || state.optionMap.first
 
       if (!next) {
         return state
       }
 
-      // When wrapping to first, reset viewport to start
+      
       if (!item.next && next === state.optionMap.first) {
         return {
           ...state,
@@ -132,14 +131,14 @@ const reducer = <T>(state: State<T>, action: Action<T>): State<T> => {
         return state
       }
 
-      // Wrap to last item if at the beginning
+      
       const previous = item.previous || state.optionMap.last
 
       if (!previous) {
         return state
       }
 
-      // When wrapping to last, reset viewport to end
+      
       if (!item.previous && previous === state.optionMap.last) {
         const nextVisibleToIndex = state.optionMap.size
         const nextVisibleFromIndex = Math.max(
@@ -186,7 +185,7 @@ const reducer = <T>(state: State<T>, action: Action<T>): State<T> => {
         return state
       }
 
-      // Move by a full page (visibleOptionCount items)
+      
       const targetIndex = Math.min(
         state.optionMap.size - 1,
         item.index + state.visibleOptionCount,
@@ -206,7 +205,7 @@ const reducer = <T>(state: State<T>, action: Action<T>): State<T> => {
         return state
       }
 
-      // Update the visible range to include the new focused item
+      
       const nextVisibleToIndex = Math.min(
         state.optionMap.size,
         targetItem.index + 1,
@@ -235,7 +234,7 @@ const reducer = <T>(state: State<T>, action: Action<T>): State<T> => {
         return state
       }
 
-      // Move by a full page (visibleOptionCount items)
+      
       const targetIndex = Math.max(0, item.index - state.visibleOptionCount)
 
       
@@ -252,7 +251,7 @@ const reducer = <T>(state: State<T>, action: Action<T>): State<T> => {
         return state
       }
 
-      // Update the visible range to include the new focused item
+      
       const nextVisibleFromIndex = Math.max(0, targetItem.index)
       const nextVisibleToIndex = Math.min(
         state.optionMap.size,
@@ -272,7 +271,7 @@ const reducer = <T>(state: State<T>, action: Action<T>): State<T> => {
     }
 
     case 'set-focus': {
-      // Early return if already focused on this value
+      
       if (state.focusedValue === action.value) {
         return state
       }
@@ -282,32 +281,32 @@ const reducer = <T>(state: State<T>, action: Action<T>): State<T> => {
         return state
       }
 
-      // Check if the item is already in view
+      
       if (
         item.index >= state.visibleFromIndex &&
         item.index < state.visibleToIndex
       ) {
-        // Already visible, just update focus
+        
         return {
           ...state,
           focusedValue: action.value,
         }
       }
 
-      // Need to scroll to make the item visible
+      
       
       let nextVisibleFromIndex: number
       let nextVisibleToIndex: number
 
       if (item.index < state.visibleFromIndex) {
-        // Item is above viewport - scroll up to put it at the top
+        
         nextVisibleFromIndex = item.index
         nextVisibleToIndex = Math.min(
           state.optionMap.size,
           nextVisibleFromIndex + state.visibleOptionCount,
         )
       } else {
-        // Item is below viewport - scroll down to put it at the bottom
+        
         nextVisibleToIndex = Math.min(state.optionMap.size, item.index + 1)
         nextVisibleFromIndex = Math.max(
           0,
@@ -326,11 +325,8 @@ const reducer = <T>(state: State<T>, action: Action<T>): State<T> => {
 }
 
 export type UseSelectNavigationProps<T> = {
-  /**
-   * Number of items to display.
-   *
-   * @default 5
-   */
+  
+
   visibleOptionCount?: number
 
   
@@ -345,16 +341,14 @@ export type UseSelectNavigationProps<T> = {
 
   onFocus?: (value: T) => void
 
-  /**
-   * Value to focus
-   */
+  
+
   focusValue?: T
 }
 
 export type SelectNavigation<T> = {
-  /**
-   * Value of the currently focused option.
-   */
+  
+
   focusedValue: T | undefined
 
   
@@ -385,24 +379,20 @@ export type SelectNavigation<T> = {
 
   focusNextOption: () => void
 
-  /**
-   * Focus previous option and scroll the list up, if needed.
-   */
+  
+
   focusPreviousOption: () => void
 
-  /**
-   * Focus next page and scroll the list down by a page.
-   */
+  
+
   focusNextPage: () => void
 
-  /**
-   * Focus previous page and scroll the list up by a page.
-   */
+  
+
   focusPreviousPage: () => void
 
-  /**
-   * Focus a specific option by value.
-   */
+  
+
   focusOption: (value: T | undefined) => void
 }
 
@@ -433,41 +423,41 @@ const createDefaultState = <T>({
     const focusedIndex = focusedItem.index
 
     if (currentViewport) {
-      // If focused item is already in the current viewport range, try to preserve it
+      
       if (
         focusedIndex >= currentViewport.visibleFromIndex &&
         focusedIndex < currentViewport.visibleToIndex
       ) {
-        // Keep the same viewport if it's valid
+        
         visibleFromIndex = currentViewport.visibleFromIndex
         visibleToIndex = Math.min(
           optionMap.size,
           currentViewport.visibleToIndex,
         )
       } else {
-        // Need to adjust viewport to show focused item
-        // Use minimal scrolling - put item at edge of viewport
+        
+        
         if (focusedIndex < currentViewport.visibleFromIndex) {
-          // Item is above current viewport - scroll up to put it at the top
+          
           visibleFromIndex = focusedIndex
           visibleToIndex = Math.min(
             optionMap.size,
             visibleFromIndex + visibleOptionCount,
           )
         } else {
-          // Item is below current viewport - scroll down to put it at the bottom
+          
           visibleToIndex = Math.min(optionMap.size, focusedIndex + 1)
           visibleFromIndex = Math.max(0, visibleToIndex - visibleOptionCount)
         }
       }
     } else if (focusedIndex >= visibleOptionCount) {
-      // No current viewport but focused item is outside default viewport
-      // Scroll to show the focused item at the bottom of the viewport
+      
+      
       visibleToIndex = Math.min(optionMap.size, focusedIndex + 1)
       visibleFromIndex = Math.max(0, visibleToIndex - visibleOptionCount)
     }
 
-    // Ensure viewport bounds are valid
+    
     visibleFromIndex = Math.max(
       0,
       Math.min(visibleFromIndex, optionMap.size - 1),
@@ -504,7 +494,7 @@ export function useSelectNavigation<T>({
     createDefaultState<T>,
   )
 
-  // Store onFocus in a ref to avoid re-running useEffect when callback changes
+  
   const onFocusRef = useRef(onFocus)
   onFocusRef.current = onFocus
 
@@ -570,9 +560,9 @@ export function useSelectNavigation<T>({
       .slice(state.visibleFromIndex, state.visibleToIndex)
   }, [options, state.visibleFromIndex, state.visibleToIndex])
 
-  // Validate that focusedValue exists in current options.
-  // This handles the case where options change during render but the reset
-  // action hasn't been processed yet - without this, the cursor would disappear
+  
+  
+  
   
   const validatedFocusedValue = useMemo(() => {
     if (state.focusedValue === undefined) {
@@ -582,7 +572,7 @@ export function useSelectNavigation<T>({
     if (exists) {
       return state.focusedValue
     }
-    // Fall back to first option if focused value doesn't exist
+    
     return options[0]?.value
   }, [state.focusedValue, options])
 
@@ -593,8 +583,8 @@ export function useSelectNavigation<T>({
     return focusedOption?.type === 'input'
   }, [validatedFocusedValue, options])
 
-  // Call onFocus with the validated value (what's actually displayed),
-  // not the internal state value which may be stale if options changed.
+  
+  
   
   useEffect(() => {
     if (validatedFocusedValue !== undefined) {

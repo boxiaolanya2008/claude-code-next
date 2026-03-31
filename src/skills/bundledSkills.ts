@@ -31,7 +31,6 @@ export type BundledSkillDefinition = {
   ) => Promise<ContentBlockParam[]>
 }
 
-// Internal registry for bundled skills
 const bundledSkills: Command[] = []
 
 export function registerBundledSkill(definition: BundledSkillDefinition): void {
@@ -44,7 +43,7 @@ export function registerBundledSkill(definition: BundledSkillDefinition): void {
     skillRoot = getBundledSkillExtractDir(definition.name)
     
     
-    // the same extraction instead of racing into separate writes.
+    
     let extractionPromise: Promise<string | null> | undefined
     const inner = definition.getPromptForCommand
     getPromptForCommand = async (args, ctx) => {
@@ -68,7 +67,7 @@ export function registerBundledSkill(definition: BundledSkillDefinition): void {
     model: definition.model,
     disableModelInvocation: definition.disableModelInvocation ?? false,
     userInvocable: definition.userInvocable ?? true,
-    contentLength: 0, // Not applicable for bundled skills
+    contentLength: 0, 
     source: 'bundled',
     loadedFrom: 'bundled',
     hooks: definition.hooks,
@@ -83,35 +82,18 @@ export function registerBundledSkill(definition: BundledSkillDefinition): void {
   bundledSkills.push(command)
 }
 
-/**
- * Get all registered bundled skills.
- * Returns a copy to prevent external mutation.
- */
 export function getBundledSkills(): Command[] {
   return [...bundledSkills]
 }
 
-/**
- * Clear bundled skills registry (for testing).
- */
 export function clearBundledSkills(): void {
   bundledSkills.length = 0
 }
 
-/**
- * Deterministic extraction directory for a bundled skill's reference files.
- */
 export function getBundledSkillExtractDir(skillName: string): string {
   return join(getBundledSkillsRoot(), skillName)
 }
 
-/**
- * Extract a bundled skill's reference files to disk so the model can
- * Read/Grep them on demand. Called lazily on first skill invocation.
- *
- * Returns the directory written to, or null if write failed (skill
- * continues to work, just without the base-directory prefix).
- */
 async function extractBundledSkillFiles(
   skillName: string,
   files: Record<string, string>,
@@ -132,7 +114,7 @@ async function writeSkillFiles(
   dir: string,
   files: Record<string, string>,
 ): Promise<void> {
-  // Group by parent dir so we mkdir each subtree once, then write.
+  
   const byParent = new Map<string, [string, string][]>()
   for (const [relPath, content] of Object.entries(files)) {
     const target = resolveSkillFilePath(dir, relPath)
@@ -149,8 +131,6 @@ async function writeSkillFiles(
     }),
   )
 }
-
-// The per-process nonce in getBundledSkillsRoot() is the primary defense
 
 const O_NOFOLLOW = fsConstants.O_NOFOLLOW ?? 0
 
@@ -171,7 +151,6 @@ async function safeWriteFile(p: string, content: string): Promise<void> {
   }
 }
 
-/** Normalize and validate a skill-relative path; throws on traversal. */
 function resolveSkillFilePath(baseDir: string, relPath: string): string {
   const normalized = normalize(relPath)
   if (

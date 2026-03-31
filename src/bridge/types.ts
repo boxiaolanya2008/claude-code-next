@@ -34,7 +34,7 @@ export type WorkSecret = {
     git_info?: { type: string; repo: string; ref?: string; token?: string }
   }>
   auth: Array<{ type: string; token: string }>
-  claude_code_args?: Record<string, string> | null
+  claude_code_next_args?: Record<string, string> | null
   mcp_config?: unknown | null
   environment_variables?: Record<string, string> | null
   
@@ -52,15 +52,9 @@ export type SessionActivity = {
   timestamp: number
 }
 
-/**
- * How `claude remote-control` chooses session working directories.
- * - `single-session`: one session in cwd, bridge tears down when it ends
- * - `worktree`: persistent server, every session gets an isolated git worktree
- * - `same-dir`: persistent server, every session shares cwd (can stomp each other)
- */
 export type SpawnMode = 'single-session' | 'worktree' | 'same-dir'
 
-export type BridgeWorkerType = 'claude_code' | 'claude_code_assistant'
+export type BridgeWorkerType = 'claude_code_next' | 'claude_code_next_assistant'
 
 export type BridgeConfig = {
   dir: string
@@ -90,8 +84,6 @@ export type BridgeConfig = {
   
   sessionTimeoutMs?: number
 }
-
-// --- Dependency interfaces (for testability) ---
 
 export type PermissionResponseEvent = {
   type: 'control_response'
@@ -151,7 +143,7 @@ export type SessionHandle = {
   currentActivity: SessionActivity | null 
   accessToken: string 
   lastStderr: string[] 
-  writeStdin(data: string): void // write directly to child stdin
+  writeStdin(data: string): void 
   
   updateAccessToken(token: string): void
 }
@@ -181,11 +173,11 @@ export type BridgeLogger = {
   logStatus(message: string): void
   logVerbose(message: string): void
   logError(message: string): void
-  /** Log a reconnection success event after recovering from connection errors. */
+  
   logReconnected(disconnectedMs: number): void
-  /** Show idle status with repo/branch info and shimmer animation. */
+  
   updateIdleStatus(): void
-  /** Show reconnecting status in the live display. */
+  
   updateReconnectingStatus(delayStr: string, elapsedStr: string): void
   updateSessionStatus(
     sessionId: string,
@@ -194,32 +186,29 @@ export type BridgeLogger = {
     trail: string[],
   ): void
   clearStatus(): void
-  /** Set repository info for status line display. */
+  
   setRepoInfo(repoName: string, branch: string): void
-  /** Set debug log glob shown above the status line (ant users). */
+  
   setDebugLogPath(path: string): void
-  /** Transition to "Attached" state when a session starts. */
+  
   setAttached(sessionId: string): void
-  /** Show failed status in the live display. */
+  
   updateFailedStatus(error: string): void
-  /** Toggle QR code visibility. */
+  
   toggleQr(): void
-  /** Update the "<n> of <m> sessions" indicator and spawn mode hint. */
+  
   updateSessionCount(active: number, max: number, mode: SpawnMode): void
-  /** Update the spawn mode shown in the session-count line. Pass null to hide (single-session or toggle unavailable). */
+  
   setSpawnModeDisplay(mode: 'same-dir' | 'worktree' | null): void
-  /** Register a new session for multi-session display (called after spawn succeeds). */
+  
   addSession(sessionId: string, url: string): void
-  /** Update the per-session activity summary (tool being run) in the multi-session list. */
+  
   updateSessionActivity(sessionId: string, activity: SessionActivity): void
-  /**
-   * Set a session's display title. In multi-session mode, updates the bullet list
-   * entry. In single-session mode, also shows the title in the main status line.
-   * Triggers a render (guarded against reconnecting/failed states).
-   */
+  
+
   setSessionTitle(sessionId: string, title: string): void
-  /** Remove a session from the multi-session display when it ends. */
+  
   removeSession(sessionId: string): void
-  /** Force a re-render of the status display (for multi-session activity refresh). */
+  
   refreshDisplay(): void
 }

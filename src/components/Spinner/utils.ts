@@ -10,11 +10,10 @@ export function getDefaultCharacters(): string[] {
     : ['·', '✢', '*', '✶', '✻', '✽']
 }
 
-// Interpolate between two RGB colors
 export function interpolateColor(
   color1: RGBColorType,
   color2: RGBColorType,
-  t: number, // 0 to 1
+  t: number, 
 ): RGBColorType {
   return {
     r: Math.round(color1.r + (color2.r - color1.r) * t),
@@ -23,12 +22,10 @@ export function interpolateColor(
   }
 }
 
-// Convert RGB object to rgb() color string for Text component
 export function toRGBColor(color: RGBColorType): RGBColorString {
   return `rgb(${color.r},${color.g},${color.b})`
 }
 
-// HSL hue (0-360) to RGB, using voice-mode waveform parameters (s=0.7, l=0.6).
 export function hueToRgb(hue: number): RGBColorType {
   const h = ((hue % 360) + 360) % 360
   const s = 0.7

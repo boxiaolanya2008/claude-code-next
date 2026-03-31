@@ -26,16 +26,12 @@ type TreeCharacters = {
 }
 
 const DEFAULT_TREE_CHARS: TreeCharacters = {
-  branch: figures.lineUpDownRight, // '├'
-  lastBranch: figures.lineUpRight, // '└'
-  line: figures.lineVertical, // '│'
+  branch: figures.lineUpDownRight, 
+  lastBranch: figures.lineUpRight, 
+  line: figures.lineVertical, 
   empty: ' ',
 }
 
-/**
- * Custom treeify implementation with Ink theme color support
- * Based on https://github.com/notatestuser/treeify
- */
 export function treeify(obj: TreeNode, options: TreeifyOptions = {}): string {
   const {
     showValues = true,
@@ -71,7 +67,7 @@ export function treeify(obj: TreeNode, options: TreeifyOptions = {}): string {
       return
     }
 
-    // Check for circular references
+    
     if (visited.has(node)) {
       lines.push(prefix + colorize('[Circular]', treeCharColors.value))
       return
@@ -122,7 +118,7 @@ export function treeify(obj: TreeNode, options: TreeifyOptions = {}): string {
         const nextPrefix = nodePrefix + coloredContinuation + ' '
         growBranch(value, nextPrefix, isLastKey, depth + 1)
       } else if (Array.isArray(value)) {
-        // Handle arrays
+        
         lines.push(
           line +
             (shouldAddColon ? ': ' : line ? ' ' : '') +
@@ -131,7 +127,7 @@ export function treeify(obj: TreeNode, options: TreeifyOptions = {}): string {
             ')]',
         )
       } else if (showValues) {
-        // Add value if showValues is true
+        
         const valueStr =
           typeof value === 'function' ? '[Function]' : String(value)
         const coloredValue = colorize(valueStr, treeCharColors.value)
@@ -143,13 +139,13 @@ export function treeify(obj: TreeNode, options: TreeifyOptions = {}): string {
     })
   }
 
-  // Start growing the tree
+  
   const keys = Object.keys(obj)
   if (keys.length === 0) {
     return colorize('(empty)', treeCharColors.value)
   }
 
-  // Special case for single empty/whitespace string key
+  
   if (
     keys.length === 1 &&
     keys[0] !== undefined &&

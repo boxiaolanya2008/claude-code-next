@@ -53,7 +53,7 @@ export function getDefaultOptionForUser(fastMode = false): ModelOption {
     }
   }
 
-  // Subscribers
+  
   if (isClaudeAISubscriber()) {
     return {
       value: null,
@@ -62,7 +62,7 @@ export function getDefaultOptionForUser(fastMode = false): ModelOption {
     }
   }
 
-  // PAYG
+  
   const is3P = getAPIProvider() !== 'firstParty'
   return {
     value: null,
@@ -88,8 +88,6 @@ function getCustomSonnetOption(): ModelOption | undefined {
     }
   }
 }
-
-// @[MODEL LAUNCH]: Update or add model option functions (getSonnetXXOption, getOpusXXOption, etc.)
 
 function getSonnet46Option(): ModelOption {
   const is3P = getAPIProvider() !== 'firstParty'
@@ -199,7 +197,7 @@ function getHaiku35Option(): ModelOption {
 }
 
 function getHaikuOption(): ModelOption {
-  // Return correct Haiku option based on provider
+  
   const haikuModel = getDefaultHaikuModel()
   return haikuModel === getModelStrings().haiku45
     ? getHaiku45Option()
@@ -264,11 +262,9 @@ function getOpusPlanOption(): ModelOption {
   }
 }
 
-// @[MODEL LAUNCH]: Update the model picker lists below to include/reorder options for the new model.
-
 function getModelOptionsBase(fastMode = false): ModelOption[] {
   if (process.env.USER_TYPE === 'ant') {
-    // Build options from antModels config
+    
     const antModelOptions: ModelOption[] = getAntModels().map(m => ({
       value: m.alias,
       label: m.label,
@@ -287,7 +283,7 @@ function getModelOptionsBase(fastMode = false): ModelOption[] {
 
   if (isClaudeAISubscriber()) {
     if (isMaxSubscriber() || isTeamPremiumSubscriber()) {
-      // Max and Team Premium users: Opus is default, show Sonnet as alternative
+      
       const premiumOptions = [getDefaultOptionForUser(fastMode)]
       if (!isOpus1mMergeEnabled() && checkOpus1mAccess()) {
         premiumOptions.push(getMaxOpus46_1MOption(fastMode))
@@ -302,7 +298,7 @@ function getModelOptionsBase(fastMode = false): ModelOption[] {
       return premiumOptions
     }
 
-    // Pro/Team Standard/Enterprise users: Sonnet is default, show Opus as alternative
+    
     const standardOptions = [getDefaultOptionForUser(fastMode)]
     if (checkSonnet1mAccess()) {
       standardOptions.push(getMaxSonnet46_1MOption())
@@ -321,7 +317,7 @@ function getModelOptionsBase(fastMode = false): ModelOption[] {
     return standardOptions
   }
 
-  // PAYG 1P API: Default (Sonnet) + Sonnet 1M + Opus 4.6 + Opus 1M + Haiku
+  
   if (getAPIProvider() === 'firstParty') {
     const payg1POptions = [getDefaultOptionForUser(fastMode)]
     if (checkSonnet1mAccess()) {
@@ -339,14 +335,14 @@ function getModelOptionsBase(fastMode = false): ModelOption[] {
     return payg1POptions
   }
 
-  // PAYG 3P: Default (Sonnet 4.5) + Sonnet (3P custom) or Sonnet 4.6/1M + Opus (3P custom) or Opus 4.1/Opus 4.6/Opus1M + Haiku + Opus 4.1
+  
   const payg3pOptions = [getDefaultOptionForUser(fastMode)]
 
   const customSonnet = getCustomSonnetOption()
   if (customSonnet !== undefined) {
     payg3pOptions.push(customSonnet)
   } else {
-    // Add Sonnet 4.6 since Sonnet 4.5 is the default
+    
     payg3pOptions.push(getSonnet46Option())
     if (checkSonnet1mAccess()) {
       payg3pOptions.push(getSonnet46_1MOption())
@@ -357,7 +353,7 @@ function getModelOptionsBase(fastMode = false): ModelOption[] {
   if (customOpus !== undefined) {
     payg3pOptions.push(customOpus)
   } else {
-    // Add Opus 4.1, Opus 4.6 and Opus 4.6 1M
+    
     payg3pOptions.push(getOpus41Option()) 
     payg3pOptions.push(getOpus46Option(fastMode))
     if (checkOpus1mAccess()) {
@@ -372,8 +368,6 @@ function getModelOptionsBase(fastMode = false): ModelOption[] {
   }
   return payg3pOptions
 }
-
-// @[MODEL LAUNCH]: Add the new model ID to the appropriate family pattern below
 
 function getModelFamilyInfo(
   model: string,
@@ -394,7 +388,7 @@ function getModelFamilyInfo(
     }
   }
 
-  // Opus family
+  
   if (canonical.includes('claude-opus-4')) {
     const currentName = getMarketingNameForModel(getDefaultOpusModel())
     if (currentName) {
@@ -402,7 +396,7 @@ function getModelFamilyInfo(
     }
   }
 
-  // Haiku family
+  
   if (
     canonical.includes('claude-haiku') ||
     canonical.includes('claude-3-5-haiku')
@@ -416,11 +410,6 @@ function getModelFamilyInfo(
   return null
 }
 
-/**
- * Returns a ModelOption for a known Anthropic model with a human-readable
- * label, and an upgrade hint if a newer version is available via the alias.
- * Returns null if the model is not recognized.
- */
 function getKnownModelOption(model: string): ModelOption | null {
   const marketingName = getMarketingNameForModel(model)
   if (!marketingName) return null
@@ -434,7 +423,7 @@ function getKnownModelOption(model: string): ModelOption | null {
     }
   }
 
-  // Check if the alias currently resolves to a different (newer) version
+  
   if (marketingName !== familyInfo.currentVersionName) {
     return {
       value: model,
@@ -443,7 +432,7 @@ function getKnownModelOption(model: string): ModelOption | null {
     }
   }
 
-  // Same version as the alias — just show the friendly name
+  
   return {
     value: model,
     label: marketingName,
@@ -469,14 +458,14 @@ export function getModelOptions(fastMode = false): ModelOption[] {
     })
   }
 
-  // Append additional model options fetched during bootstrap
+  
   for (const opt of getGlobalConfig().additionalModelOptionsCache ?? []) {
     if (!options.some(existing => existing.value === opt.value)) {
       options.push(opt)
     }
   }
 
-  // Add custom model from either the current model value or the initial one
+  
   
   let customModel: ModelSetting = null
   const currentMainLoopModel = getUserSpecifiedModelSetting()
@@ -501,7 +490,7 @@ export function getModelOptions(fastMode = false): ModelOption[] {
       getMergedOpus1MOption(fastMode),
     ])
   } else {
-    // Try to show a human-readable label for known Anthropic models, with an
+    
     
     const knownOption = getKnownModelOption(customModel)
     if (knownOption) {
@@ -517,10 +506,6 @@ export function getModelOptions(fastMode = false): ModelOption[] {
   }
 }
 
-/**
- * Filter model options by the availableModels allowlist.
- * Always preserves the "Default" option (value: null).
- */
 function filterModelOptionsByAllowlist(options: ModelOption[]): ModelOption[] {
   const settings = getSettings_DEPRECATED() || {}
   if (!settings.availableModels) {

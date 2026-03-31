@@ -11,26 +11,14 @@ function getPasteStoreDir(): string {
   return join(getClaudeConfigHomeDir(), PASTE_STORE_DIR)
 }
 
-/**
- * Generate a hash for paste content to use as filename.
- * Exported so callers can get the hash synchronously before async storage.
- */
 export function hashPastedText(content: string): string {
   return createHash('sha256').update(content).digest('hex').slice(0, 16)
 }
 
-/**
- * Get the file path for a paste by its content hash.
- */
 function getPastePath(hash: string): string {
   return join(getPasteStoreDir(), `${hash}.txt`)
 }
 
-/**
- * Store pasted text content to disk.
- * The hash should be pre-computed with hashPastedText() so the caller
- * can use it immediately without waiting for the async disk write.
- */
 export async function storePastedText(
   hash: string,
   content: string,
@@ -49,16 +37,12 @@ export async function storePastedText(
   }
 }
 
-/**
- * Retrieve pasted text content by its hash.
- * Returns null if not found or on error.
- */
 export async function retrievePastedText(hash: string): Promise<string | null> {
   try {
     const pastePath = getPastePath(hash)
     return await readFile(pastePath, { encoding: 'utf8' })
   } catch (error) {
-    // ENOENT is expected when paste doesn't exist
+    
     if (!isENOENT(error)) {
       logForDebugging(`Failed to retrieve paste ${hash}: ${error}`)
     }
@@ -66,10 +50,6 @@ export async function retrievePastedText(hash: string): Promise<string | null> {
   }
 }
 
-/**
- * Clean up old paste files that are no longer referenced.
- * This is a simple time-based cleanup - removes files older than cutoffDate.
- */
 export async function cleanupOldPastes(cutoffDate: Date): Promise<void> {
   const pasteDir = getPasteStoreDir()
 
@@ -77,7 +57,7 @@ export async function cleanupOldPastes(cutoffDate: Date): Promise<void> {
   try {
     files = await readdir(pasteDir)
   } catch {
-    // Directory doesn't exist or can't be read - nothing to clean up
+    
     return
   }
 
@@ -95,7 +75,7 @@ export async function cleanupOldPastes(cutoffDate: Date): Promise<void> {
         logForDebugging(`Cleaned up old paste: ${filePath}`)
       }
     } catch {
-      // Ignore errors for individual files
+      
     }
   }
 }

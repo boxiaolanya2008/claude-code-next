@@ -12,27 +12,22 @@ export function isVimModeEnabled(): boolean {
 }
 
 export function getNewlineInstructions(): string {
-  // Apple Terminal on macOS uses native modifier key detection for Shift+Enter
+  
   if (env.terminal === 'Apple_Terminal' && process.platform === 'darwin') {
     return 'shift + ⏎ for newline'
   }
 
-  // For iTerm2 and VSCode, show Shift+Enter instructions if installed
+  
   if (isShiftEnterKeyBindingInstalled()) {
     return 'shift + ⏎ for newline'
   }
 
-  // Otherwise show backslash+return instructions
+  
   return hasUsedBackslashReturn()
     ? '\\⏎ for newline'
     : 'backslash (\\) + return (⏎) for newline'
 }
 
-/**
- * True when the keystroke is a printable character that does not begin
- * with whitespace — i.e., a normal letter/digit/symbol the user typed.
- * Used to gate the lazy space inserted after an image pill.
- */
 export function isNonSpacePrintable(input: string, key: Key): boolean {
   if (
     key.ctrl ||

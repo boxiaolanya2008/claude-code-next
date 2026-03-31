@@ -26,15 +26,9 @@ const KNOWN_PUBLIC_HOSTS = new Set([
   'codeberg.org',
   'dev.azure.com',
   'ssh.dev.azure.com',
-  'storage.googleapis.com', // GCS — where Dickson's migration points
+  'storage.googleapis.com', 
 ])
 
-/**
- * Extract hostname from a URL or git spec and bucket to the allowlist.
- * Handles `https://host/...`, `git@host:path`, `ssh://host/...`.
- * Returns a known public host, 'other' (parseable but not allowlisted —
- * don't leak private hostnames), or 'unknown' (unparseable / local path).
- */
 function extractHost(urlOrSpec: string): string {
   let host: string
   const scpMatch = /^[^@/]+@([^:/]+):/.exec(urlOrSpec)
@@ -51,11 +45,6 @@ function extractHost(urlOrSpec: string): string {
   return KNOWN_PUBLIC_HOSTS.has(normalized) ? normalized : 'other'
 }
 
-/**
- * True if the URL/spec points at anthropics/claude-plugins-official — the
- * repo GitHub complained about. Lets the dashboard separate "our problem"
- * traffic from user-configured marketplaces.
- */
 function isOfficialRepo(urlOrSpec: string): boolean {
   return urlOrSpec.includes(`anthropics/${OFFICIAL_MARKETPLACE_NAME}`)
 }
@@ -67,8 +56,8 @@ export function logPluginFetch(
   durationMs: number,
   errorKind?: string,
 ): void {
-  // String values are bounded enums / hostname-only — no code, no paths,
-  // no raw error messages. Same privacy envelope as tengu_web_fetch_host.
+  
+  
   logEvent('tengu_plugin_remote_fetch', {
     source: source as SafeString,
     host: (urlOrSpec ? extractHost(urlOrSpec) : 'unknown') as SafeString,
@@ -79,16 +68,6 @@ export function logPluginFetch(
   })
 }
 
-/**
- * Classify an error into a stable bucket for the error_kind field. Keeps
- * cardinality bounded — raw error messages would explode dashboard grouping.
- *
- * Handles both axios Error objects (Node.js error codes like ENOTFOUND) and
- * git stderr strings (human phrases like "Could not resolve host"). DNS
- * checked BEFORE timeout because gitClone's error enhancement at
- * marketplaceManager.ts:~950 rewrites DNS failures to include the word
- * "timeout" — ordering the other way would misclassify git DNS as timeout.
- */
 export function classifyFetchError(error: unknown): string {
   const msg = String((error as { message?: unknown })?.message ?? error)
   if (

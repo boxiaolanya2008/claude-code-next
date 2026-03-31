@@ -23,7 +23,7 @@ export function getMacOSPlistPaths(): Array<{ path: string; label: string }> {
   try {
     username = userInfo().username
   } catch {
-    // ignore
+    
   }
 
   const paths: Array<{ path: string; label: string }> = []

@@ -43,31 +43,18 @@ export function getPlanSlug(sessionId?: SessionId): string {
   return slug!
 }
 
-/**
- * Set a specific plan slug for a session (used when resuming a session)
- */
 export function setPlanSlug(sessionId: SessionId, slug: string): void {
   getPlanSlugCache().set(sessionId, slug)
 }
 
-/**
- * Clear the plan slug for the current session.
- * This should be called on /clear to ensure a fresh plan file is used.
- */
 export function clearPlanSlug(sessionId?: SessionId): void {
   const id = sessionId ?? getSessionId()
   getPlanSlugCache().delete(id)
 }
 
-/**
- * Clear ALL plan slug entries (all sessions).
- * Use this on /clear to free sub-session slug entries.
- */
 export function clearAllPlanSlugs(): void {
   getPlanSlugCache().clear()
 }
-
-// Memoized: called from render bodies (FileReadTool/FileEditTool/FileWriteTool UI.tsx)
 
 export const getPlansDirectory = memoize(function getPlansDirectory(): string {
   const settings = getInitialSettings()
@@ -75,7 +62,7 @@ export const getPlansDirectory = memoize(function getPlansDirectory(): string {
   let plansPath: string
 
   if (settingsDir) {
-    // Settings.json (relative to project root)
+    
     const cwd = getCwd()
     const resolved = resolve(cwd, settingsDir)
 
@@ -89,11 +76,11 @@ export const getPlansDirectory = memoize(function getPlansDirectory(): string {
       plansPath = resolved
     }
   } else {
-    // Default
+    
     plansPath = join(getClaudeConfigHomeDir(), 'plans')
   }
 
-  // Ensure directory exists (mkdirSync with recursive: true is a no-op if it exists)
+  
   try {
     getFsImplementation().mkdirSync(plansPath)
   } catch (error) {
@@ -111,14 +98,10 @@ export function getPlanFilePath(agentId?: AgentId): string {
     return join(getPlansDirectory(), `${planSlug}.md`)
   }
 
-  // Subagents: include agent ID
+  
   return join(getPlansDirectory(), `${planSlug}-agent-${agentId}.md`)
 }
 
-/**
- * Get the plan content for a session
- * @param agentId Optional agent ID for subagents. If not provided, returns main session plan.
- */
 export function getPlan(agentId?: AgentId): string | null {
   const filePath = getPlanFilePath(agentId)
   try {
@@ -130,24 +113,10 @@ export function getPlan(agentId?: AgentId): string | null {
   }
 }
 
-/**
- * Extract the plan slug from a log's message history.
- */
 function getSlugFromLog(log: LogOption): string | undefined {
   return log.messages.find(m => m.slug)?.slug
 }
 
-/**
- * Restore plan slug from a resumed session.
- * Sets the slug in the session cache so getPlanSlug returns it.
- * If the plan file is missing, attempts to recover it from a file snapshot
- * (written incrementally during the session) or from message history.
- * Returns true if a plan file exists (or was recovered) for the slug.
- * @param log The log to restore from
- * @param targetSessionId The session ID to associate the plan slug with.
- *                        This should be the ORIGINAL session ID being resumed,
- *                        not the temporary session ID from before resume.
- */
 export async function copyPlanForResume(
   log: LogOption,
   targetSessionId?: SessionId,
@@ -157,7 +126,7 @@ export async function copyPlanForResume(
     return false
   }
 
-  // Set the slug for the target session ID (or current if not provided)
+  
   const sessionId = targetSessionId ?? getSessionId()
   setPlanSlug(sessionId, slug)
 
@@ -168,11 +137,11 @@ export async function copyPlanForResume(
     return true
   } catch (e: unknown) {
     if (!isENOENT(e)) {
-      // Don't throw — called fire-and-forget (void copyPlanForResume(...)) with no .catch()
+      
       logError(e)
       return false
     }
-    // Only attempt recovery in remote sessions (CCR) where files don't persist
+    
     if (getEnvironmentKind() === null) {
       return false
     }
@@ -191,7 +160,7 @@ export async function copyPlanForResume(
         { level: 'info' },
       )
     } else {
-      // Fall back to searching message history
+      
       recovered = recoverPlanFromMessages(log)
       if (recovered) {
         logForDebugging(
@@ -217,12 +186,6 @@ export async function copyPlanForResume(
   }
 }
 
-/**
- * Copy a plan file for a forked session. Unlike copyPlanForResume (which reuses
- * the original slug), this generates a NEW slug for the forked session and
- * writes the original plan content to the new file. This prevents the original
- * and forked sessions from clobbering each other's plan files.
- */
 export async function copyPlanForFork(
   log: LogOption,
   targetSessionId: SessionId,
@@ -250,19 +213,6 @@ export async function copyPlanForFork(
   }
 }
 
-/**
- * Recover plan content from the message history. Plan content can appear in
- * three forms depending on what happened during the session:
- *
- * 1. ExitPlanMode tool_use input — normalizeToolInput injects the plan content
- *    into the tool_use input, which persists in the transcript.
- *
- * 2. planContent field on user messages — set during the "clear context and
- *    implement" flow when ExitPlanMode is approved.
- *
- * 3. plan_file_reference attachment — created by auto-compact to preserve the
- *    plan across compaction boundaries.
- */
 function recoverPlanFromMessages(log: LogOption): string | null {
   for (let i = log.messages.length - 1; i >= 0; i--) {
     const msg = log.messages[i]
@@ -312,10 +262,6 @@ function recoverPlanFromMessages(log: LogOption): string | null {
   return null
 }
 
-/**
- * Find a file entry in the most recent file-snapshot system message in the transcript.
- * Scans backwards to find the latest snapshot.
- */
 function findFileSnapshotEntry(
   messages: LogOption['messages'],
   key: string,
@@ -339,11 +285,6 @@ function findFileSnapshotEntry(
   return undefined
 }
 
-/**
- * Persist a snapshot of session files (plan, todos) to the transcript.
- * Called incrementally whenever these files change. Only active in remote
- * sessions (CCR) where local files don't persist between sessions.
- */
 export async function persistFileSnapshotIfRemote(): Promise<void> {
   if (getEnvironmentKind() === null) {
     return

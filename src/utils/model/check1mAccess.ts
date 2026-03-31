@@ -9,13 +9,13 @@ function isExtraUsageEnabled(): boolean {
   if (reason === undefined) {
     return false
   }
-  // null = no disabled reason from API, extra usage is enabled
+  
   if (reason === null) {
     return true
   }
-  // Check which disabled reasons still mean "provisioned"
+  
   switch (reason as OverageDisabledReason) {
-    // Provisioned but credits depleted — still counts as enabled
+    
     case 'out_of_credits':
       return true
     
@@ -37,18 +37,17 @@ function isExtraUsageEnabled(): boolean {
   }
 }
 
-// @[MODEL LAUNCH]: Add check if the new model supports 1M context
 export function checkOpus1mAccess(): boolean {
   if (is1mContextDisabled()) {
     return false
   }
 
   if (isClaudeAISubscriber()) {
-    // Subscribers have access if extra usage is enabled for their account
+    
     return isExtraUsageEnabled()
   }
 
-  // Non-subscribers (API/PAYG) have access
+  
   return true
 }
 
@@ -58,10 +57,10 @@ export function checkSonnet1mAccess(): boolean {
   }
 
   if (isClaudeAISubscriber()) {
-    // Subscribers have access if extra usage is enabled for their account
+    
     return isExtraUsageEnabled()
   }
 
-  // Non-subscribers (API/PAYG) have access
+  
   return true
 }

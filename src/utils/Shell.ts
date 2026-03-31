@@ -52,9 +52,9 @@ function isExecutable(shellPath: string): boolean {
     accessSync(shellPath, fsConstants.X_OK)
     return true
   } catch (_err) {
-    // Fallback for Nix and other environments where X_OK check might fail
+    
     try {
-      // Try to execute the shell with --version, which should exit quickly
+      
       
       execFileSync(shellPath, ['--version'], {
         timeout: 1000,
@@ -67,30 +67,27 @@ function isExecutable(shellPath: string): boolean {
   }
 }
 
-/**
- * Determines the best available shell to use.
- */
 export async function findSuitableShell(): Promise<string> {
-  // Check for explicit shell override first
-  const shellOverride = process.env.CLAUDE_CODE_SHELL
+  
+  const shellOverride = process.env.CLAUDE_CODE_NEXT_SHELL
   if (shellOverride) {
-    // Validate it's a supported shell type
+    
     const isSupported =
       shellOverride.includes('bash') || shellOverride.includes('zsh')
     if (isSupported && isExecutable(shellOverride)) {
       logForDebugging(`Using shell override: ${shellOverride}`)
       return shellOverride
     } else {
-      // Note, if we ever want to add support for new shells here we'll need to update or Bash tool parsing to account for this
+      
       logForDebugging(
-        `CLAUDE_CODE_SHELL="${shellOverride}" is not a valid bash/zsh path, falling back to detection`,
+        `CLAUDE_CODE_NEXT_SHELL="${shellOverride}" is not a valid bash/zsh path, falling back to detection`,
       )
     }
   }
 
-  // Check user's preferred shell from environment
+  
   const env_shell = process.env.SHELL
-  // Only consider SHELL if it's bash or zsh
+  
   const isEnvShellSupported =
     env_shell && (env_shell.includes('bash') || env_shell.includes('zsh'))
   const preferBash = env_shell?.includes('bash')
@@ -117,14 +114,14 @@ export async function findSuitableShell(): Promise<string> {
     if (bashPath) supportedShells.push(bashPath)
   }
 
-  // Always prioritize SHELL env variable if it's a supported shell type
+  
   if (isEnvShellSupported && isExecutable(env_shell)) {
     supportedShells.unshift(env_shell)
   }
 
   const shellPath = supportedShells.find(shell => shell && isExecutable(shell))
 
-  // If no valid shell found, throw a helpful error
+  
   if (!shellPath) {
     const errorMsg =
       'No suitable shell found. Claude CLI requires a Posix shell environment. ' +
@@ -142,7 +139,6 @@ async function getShellConfigImpl(): Promise<ShellConfig> {
   return { provider }
 }
 
-// Memoize the entire shell config so it only happens once per session
 export const getShellConfig = memoize(getShellConfigImpl)
 
 export const getPsProvider = memoize(async (): Promise<ShellProvider> => {
@@ -170,14 +166,10 @@ export type ExecOptions = {
   preventCwdChanges?: boolean
   shouldUseSandbox?: boolean
   shouldAutoBackground?: boolean
-  /** When provided, stdout is piped (not sent to file) and this callback fires on each data chunk. */
+  
   onStdout?: (data: string) => void
 }
 
-/**
- * Execute a shell command using the environment snapshot
- * Creates a new shell process for each command execution
- */
 export async function exec(
   command: string,
   abortSignal: AbortSignal,
@@ -200,9 +192,9 @@ export async function exec(
     .toString(16)
     .padStart(4, '0')
 
-  // Sandbox temp directory - use per-user directory name to prevent multi-user permission conflicts
+  
   const sandboxTmpDir = posixJoin(
-    process.env.CLAUDE_CODE_TMPDIR || '/tmp',
+    process.env.CLAUDE_CODE_NEXT_TMPDIR || '/tmp',
     getClaudeTempDirName(),
   )
 
@@ -217,8 +209,8 @@ export async function exec(
 
   let cwd = pwd()
 
-  // Recover if the current working directory no longer exists on disk.
-  // This can happen when a command deletes its own CWD (e.g., temp dir cleanup).
+  
+  
   try {
     await realpath(cwd)
   } catch {
@@ -237,7 +229,7 @@ export async function exec(
     }
   }
 
-  // If already aborted, don't spawn the process at all
+  
   if (abortSignal.aborted) {
     return createAbortedCommand()
   }
@@ -247,7 +239,7 @@ export async function exec(
   
   
   
-  //   • powershellProvider.buildExecCommand (useSandbox) pre-wraps as
+  
   
   
   
@@ -295,7 +287,7 @@ export async function exec(
   
   
   
-  // which serializes all I/O through a single kernel lock.
+  
   
   
   let outputHandle: FileHandle | undefined
@@ -322,7 +314,7 @@ export async function exec(
         ...envOverrides,
         ...(process.env.USER_TYPE === 'ant'
           ? {
-              CLAUDE_CODE_SESSION_ID: getSessionId(),
+              CLAUDE_CODE_NEXT_SESSION_ID: getSessionId(),
             }
           : {}),
       },
@@ -330,9 +322,9 @@ export async function exec(
       stdio: usePipeMode
         ? ['pipe', 'pipe', 'pipe']
         : ['pipe', outputHandle?.fd, outputHandle?.fd],
-      // Don't pass the signal - we'll handle termination ourselves with tree-kill
+      
       detached: provider.detached,
-      // Prevent visible console window on Windows (no-op on other platforms)
+      
       windowsHide: true,
     })
 
@@ -346,36 +338,36 @@ export async function exec(
 
     
     
-    // yields and the child's ENOENT 'error' event can fire in that window.
-    // Wrapped in its own try/catch so a close failure (e.g. EIO) doesn't fall
+    
+    
     
     if (outputHandle !== undefined) {
       try {
         await outputHandle.close()
       } catch {
-        // fd may already be closed by the child; safe to ignore
+        
       }
     }
 
-    // In pipe mode, attach the caller's callbacks alongside StreamWrapper.
-    // Both listeners receive the same data chunks (Node.js ReadableStream supports
-    // multiple 'data' listeners). StreamWrapper feeds TaskOutput for persistence;
-    // these callbacks give the caller real-time access.
+    
+    
+    
+    
     if (childProcess.stdout && onStdout) {
       childProcess.stdout.on('data', (chunk: string | Buffer) => {
         onStdout(typeof chunk === 'string' ? chunk : chunk.toString())
       })
     }
 
-    // Attach cleanup to the command result
-    // NOTE: readFileSync/unlinkSync are intentional here — these must complete
-    // synchronously within the .then() microtask so that callers who
-    // `await shellCommand.result` see the updated cwd immediately after.
-    // Using async readFile would introduce a microtask boundary, causing
-    // a race where cwd hasn't been updated yet when the caller continues.
+    
+    
+    
+    
+    
+    
 
     
-    // but Node.js needs a native Windows path for readFileSync/unlinkSync.
+    
     
     const nativeCwdFilePath =
       getPlatform() === 'windows'
@@ -383,7 +375,7 @@ export async function exec(
         : cwdFilePath
 
     void shellCommand.result.then(async result => {
-      // On Linux, bwrap creates 0-byte mount-point files on the host to deny
+      
       
       
       
@@ -391,7 +383,7 @@ export async function exec(
       if (shouldUseSandbox) {
         SandboxManager.cleanupAfterCommand()
       }
-      // Only foreground tasks update the cwd
+      
       if (result && !preventCwdChanges && !result.backgroundTaskId) {
         try {
           let newCwd = readFileSync(nativeCwdFilePath, {
@@ -400,7 +392,7 @@ export async function exec(
           if (getPlatform() === 'windows') {
             newCwd = posixPathToWindowsPath(newCwd)
           }
-          // cwd is NFC-normalized (setCwdState); newCwd from `pwd -P` may be
+          
           
           
           if (newCwd.normalize('NFC') !== cwd) {
@@ -412,22 +404,22 @@ export async function exec(
           logEvent('tengu_shell_set_cwd', { success: false })
         }
       }
-      // Clean up the temp file used for cwd tracking
+      
       try {
         unlinkSync(nativeCwdFilePath)
       } catch {
-        // File may not exist if command failed before pwd -P ran
+        
       }
     })
 
     return shellCommand
   } catch (error) {
-    // Close the fd if spawn failed (child never got its dup)
+    
     if (outputHandle !== undefined) {
       try {
         await outputHandle.close()
       } catch {
-        // May already be closed
+        
       }
     }
     taskOutput.clear()
@@ -435,15 +427,12 @@ export async function exec(
     logForDebugging(`Shell exec error: ${errorMessage(error)}`)
 
     return createAbortedCommand(undefined, {
-      code: 126, // Standard Unix code for execution errors
+      code: 126, 
       stderr: errorMessage(error),
     })
   }
 }
 
-/**
- * Set the current working directory
- */
 export function setCwd(path: string, relativeTo?: string): void {
   const resolved = isAbsolute(path)
     ? path
@@ -468,7 +457,7 @@ export function setCwd(path: string, relativeTo?: string): void {
         success: true,
       })
     } catch (_error) {
-      // Ignore logging errors to prevent test failures
+      
     }
   }
 }

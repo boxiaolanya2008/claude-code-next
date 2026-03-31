@@ -35,7 +35,7 @@ export async function fetchUtilization(): Promise<Utilization | null> {
     return {}
   }
 
-  // Skip API call if OAuth token is expired to avoid 401 errors
+  
   const tokens = getClaudeAIOAuthTokens()
   if (tokens && isOAuthTokenExpired(tokens.expiresAt)) {
     return null
@@ -56,7 +56,7 @@ export async function fetchUtilization(): Promise<Utilization | null> {
 
   const response = await axios.get<Utilization>(url, {
     headers,
-    timeout: 5000, // 5 second timeout
+    timeout: 5000, 
   })
 
   return response.data

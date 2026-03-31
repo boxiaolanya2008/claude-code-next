@@ -5,7 +5,7 @@ export function checkTeamMemSecrets(
   content: string,
 ): string | null {
   if (feature('TEAMMEM')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
+    
     const { isTeamMemPath } =
       require('../../memdir/teamMemPaths.js') as typeof import('../../memdir/teamMemPaths.js')
     const { scanForSecrets } =

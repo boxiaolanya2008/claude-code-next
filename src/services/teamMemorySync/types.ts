@@ -6,8 +6,8 @@ import { lazySchema } from '../../utils/lazySchema.js'
 export const TeamMemoryContentSchema = lazySchema(() =>
   z.object({
     entries: z.record(z.string(), z.string()),
-    // Per-key SHA-256 of entry content (`sha256:<hex>`). Added in
-    // anthropic/anthropic#283027. Optional for forward-compat with older
+    
+    
     
     entryChecksums: z.record(z.string(), z.string()).optional(),
   }),
@@ -18,8 +18,8 @@ export const TeamMemoryDataSchema = lazySchema(() =>
     organizationId: z.string(),
     repo: z.string(),
     version: z.number(),
-    lastModified: z.string(), // ISO 8601 timestamp
-    checksum: z.string(), // SHA256 with 'sha256:' prefix
+    lastModified: z.string(), 
+    checksum: z.string(), 
     content: TeamMemoryContentSchema(),
   }),
 )
@@ -46,9 +46,6 @@ export type SkippedSecretFile = {
   label: string
 }
 
-/**
- * Result from fetching team memory
- */
 export type TeamMemorySyncFetchResult = {
   success: boolean
   data?: TeamMemoryData
@@ -61,11 +58,6 @@ export type TeamMemorySyncFetchResult = {
   httpStatus?: number
 }
 
-/**
- * Lightweight metadata-only probe result (GET ?view=hashes).
- * Contains per-key checksums without entry bodies. Used to refresh
- * serverChecksums cheaply during 412 conflict resolution.
- */
 export type TeamMemoryHashesResult = {
   success: boolean
   version?: number
@@ -76,9 +68,6 @@ export type TeamMemoryHashesResult = {
   httpStatus?: number
 }
 
-/**
- * Result from uploading team memory with conflict info
- */
 export type TeamMemorySyncPushResult = {
   success: boolean
   filesUploaded: number
@@ -98,9 +87,6 @@ export type TeamMemorySyncPushResult = {
   httpStatus?: number
 }
 
-/**
- * Result from uploading team memory
- */
 export type TeamMemorySyncUploadResult = {
   success: boolean
   checksum?: string

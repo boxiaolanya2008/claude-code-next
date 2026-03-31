@@ -33,12 +33,8 @@ export type OverageGate =
   | { kind: 'low-balance'; available: number }
   | { kind: 'needs-confirm' }
 
-/**
- * Determine whether the user can launch an ultrareview and under what
- * billing terms. Fetches quota and utilization in parallel.
- */
 export async function checkOverageGate(): Promise<OverageGate> {
-  // Team and Enterprise plans include ultrareview — no free-review quota
+  
   
   
   if (isTeamSubscriber() || isEnterpriseSubscriber()) {
@@ -51,7 +47,7 @@ export async function checkOverageGate(): Promise<OverageGate> {
   ])
 
   
-  // server-side billing will handle it.
+  
   if (!quota) {
     return { kind: 'proceed', billingNote: '' }
   }
@@ -63,20 +59,20 @@ export async function checkOverageGate(): Promise<OverageGate> {
     }
   }
 
-  // Utilization fetch failed (transient network error, timeout, etc.) —
+  
   
   if (!utilization) {
     return { kind: 'proceed', billingNote: '' }
   }
 
-  // Free reviews exhausted — check Extra Usage setup.
+  
   const extraUsage = utilization.extra_usage
   if (!extraUsage?.is_enabled) {
     logEvent('tengu_review_overage_not_enabled', {})
     return { kind: 'not-enabled' }
   }
 
-  // Check available balance (null monthly_limit = unlimited).
+  
   const monthlyLimit = extraUsage.monthly_limit
   const usedCredits = extraUsage.used_credits ?? 0
   const available =
@@ -100,19 +96,6 @@ export async function checkOverageGate(): Promise<OverageGate> {
   }
 }
 
-/**
- * Launch a teleported review session. Returns ContentBlockParam[] describing
- * the launch outcome for injection into the local conversation (model is then
- * queried with this content, so it can narrate the launch to the user).
- *
- * Returns ContentBlockParam[] with user-facing error messages on recoverable
- * failures (missing merge-base, empty diff, bundle too large), or null on
- * other failures so the caller falls through to the local-review prompt.
- * Reason is captured in analytics.
- *
- * Caller must run checkOverageGate() BEFORE calling this function
- * (ultrareviewCommand.tsx handles the dialog).
- */
 export async function launchRemoteReview(
   args: string,
   context: ToolUseContext,
@@ -150,10 +133,10 @@ export async function launchRemoteReview(
   const prNumber = args.trim()
   const isPrNumber = /^\d+$/.test(prNumber)
   
-  // UUID{...,0x02}) encodes with version prefix '01' — NOT Python's
-  // legacy tagged_id() format. Verified in prod.
+  
+  
   const CODE_REVIEW_ENV_ID = 'env_011111111111111111111113'
-  // Lite-review bypasses bughunter.go entirely, so it doesn't see the
+  
   
   
   
@@ -172,7 +155,7 @@ export async function launchRemoteReview(
     if (n <= 0) return fallback
     return max !== undefined && n > max ? fallback : n
   }
-  // Upper bounds: 27min on wallclock leaves ~3min for finalization under
+  
   
   
   const commonEnvVars = {
@@ -194,7 +177,7 @@ export async function launchRemoteReview(
   let command
   let target
   if (isPrNumber) {
-    // PR mode: refs/pull/N/head via github.com. Orchestrator --pr N.
+    
     const repo = await detectCurrentRepositoryWithHost()
     if (!repo || repo.host !== 'github.com') {
       logEvent('tengu_review_remote_precondition_failed', {})
@@ -215,7 +198,7 @@ export async function launchRemoteReview(
     command = `/ultrareview ${prNumber}`
     target = `${repo.owner}/${repo.name}#${prNumber}`
   } else {
-    // Branch mode: bundle the working tree, orchestrator diffs against
+    
     
     const baseBranch = (await getDefaultBranch()) || 'main'
     
@@ -238,7 +221,7 @@ export async function launchRemoteReview(
       ]
     }
 
-    // Bail early on empty diffs instead of launching a container that
+    
     
     const { stdout: diffStat, code: diffCode } = await execFileNoThrow(
       gitExe(),

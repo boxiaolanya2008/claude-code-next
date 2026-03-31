@@ -6,7 +6,7 @@ export const MAX_SCAN_BYTES = 10 * 1024 * 1024
 const NL = 0x0a
 
 export type EditContext = {
-  /** Slice of the file: contextLines before/after the match, on line boundaries. */
+  
   content: string
   
   lineOffset: number
@@ -14,20 +14,6 @@ export type EditContext = {
   truncated: boolean
 }
 
-/**
- * Finds `needle` in the file at `path` and returns a context-window slice
- * containing the match plus `contextLines` of surrounding context on each side.
- *
- * Scans in 8KB chunks with a straddle overlap so matches crossing a chunk
- * boundary are found. Capped at MAX_SCAN_BYTES. No stat — EOF detected via
- * bytesRead.
- *
- * React callers: wrap in useState lazy-init then use() + Suspense. useMemo
- * re-runs when callers pass fresh array literals.
- *
- * Returns null on ENOENT. Returns { truncated: true, content: '' } if the
- * needle isn't found within MAX_SCAN_BYTES.
- */
 export async function readEditContext(
   path: string,
   needle: string,
@@ -42,9 +28,6 @@ export async function readEditContext(
   }
 }
 
-/**
- * Opens `path` for reading. Returns null on ENOENT. Caller owns close().
- */
 export async function openForScan(path: string): Promise<FileHandle | null> {
   try {
     return await open(path, 'r')
@@ -54,9 +37,6 @@ export async function openForScan(path: string): Promise<FileHandle | null> {
   }
 }
 
-/**
- * Handle-accepting core of readEditContext. Caller owns open/close.
- */
 export async function scanForContext(
   handle: FileHandle,
   needle: string,
@@ -112,14 +92,6 @@ export async function scanForContext(
   return { content: '', lineOffset: 1, truncated: pos >= MAX_SCAN_BYTES }
 }
 
-/**
- * Reads the entire file via `handle` up to MAX_SCAN_BYTES. Returns null if the
- * file exceeds the cap. For the multi-edit path in FileEditToolDiff where
- * sequential replacements need the full string.
- *
- * Single buffer, doubles on fill — ~log2(size/8KB) allocs instead of O(n)
- * chunks + concat. Reads directly into the right offset; no intermediate copies.
- */
 export async function readCapped(handle: FileHandle): Promise<string | null> {
   let buf = Buffer.allocUnsafe(CHUNK_SIZE)
   let total = 0
@@ -144,7 +116,6 @@ export async function readCapped(handle: FileHandle): Promise<string | null> {
   return normalizeCRLF(buf, total)
 }
 
-/** buf.indexOf bounded to [0, end) without allocating a view. */
 function indexOfWithin(buf: Buffer, needle: Buffer, end: number): number {
   const at = buf.indexOf(needle)
   return at === -1 || at + needle.length > end ? -1 : at
@@ -156,18 +127,11 @@ function countNewlines(buf: Buffer, start: number, end: number): number {
   return n
 }
 
-/** Decode buf[0..len) to utf8, normalizing CRLF only if CR is present. */
 function normalizeCRLF(buf: Buffer, len: number): string {
   const s = buf.toString('utf8', 0, len)
   return s.includes('\r') ? s.replaceAll('\r\n', '\n') : s
 }
 
-/**
- * Given an absolute match offset, read ±contextLines around it and return
- * the decoded slice with its starting line number. Reuses `scratch` (the
- * caller's scan buffer) for back/forward/output reads — zero new allocs
- * when the context fits, one alloc otherwise.
- */
 async function sliceContext(
   handle: FileHandle,
   scratch: Buffer,
@@ -176,7 +140,7 @@ async function sliceContext(
   contextLines: number,
   linesBeforeMatch: number,
 ): Promise<EditContext> {
-  // Scan backward from matchStart to find contextLines prior newlines.
+  
   const backChunk = Math.min(matchStart, CHUNK_SIZE)
   const { bytesRead: backRead } = await handle.read(
     scratch,
@@ -193,7 +157,7 @@ async function sliceContext(
     }
     ctxStart--
   }
-  // Compute lineOffset now, before scratch is overwritten by the forward read.
+  
   const walkedBack = matchStart - ctxStart
   const lineOffset =
     linesBeforeMatch -
@@ -218,7 +182,7 @@ async function sliceContext(
     }
   }
 
-  // Read the exact context range. Reuse scratch if it fits.
+  
   const len = ctxEnd - ctxStart
   const out = len <= scratch.length ? scratch : Buffer.allocUnsafe(len)
   const { bytesRead: outRead } = await handle.read(out, 0, len, ctxStart)

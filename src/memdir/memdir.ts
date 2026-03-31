@@ -44,14 +44,6 @@ export type EntrypointTruncation = {
   wasByteTruncated: boolean
 }
 
-/**
- * Truncate MEMORY.md content to the line AND byte caps, appending a warning
- * that names which cap fired. Line-truncates first (natural boundary), then
- * byte-truncates at the last newline before the cap so we don't cut mid-line.
- *
- * Shared by buildMemoryPrompt and claudemd getMemoryFiles (previously
- * duplicated the line-only logic).
- */
 export function truncateEntrypointContent(raw: string): EntrypointTruncation {
   const trimmed = raw.trim()
   const contentLines = trimmed.split('\n')
@@ -100,7 +92,6 @@ export function truncateEntrypointContent(raw: string): EntrypointTruncation {
   }
 }
 
-/* eslint-disable @typescript-eslint/no-require-imports */
 const teamMemPrompts = feature('TEAMMEM')
   ? (require('./teamMemPrompts.js') as typeof import('./teamMemPrompts.js'))
   : null
@@ -115,7 +106,7 @@ export async function ensureMemoryDirExists(memoryDir: string): Promise<void> {
   try {
     await fs.mkdir(memoryDir)
   } catch (e) {
-    // fs.mkdir already handles EEXIST internally. Anything reaching here is
+    
     
     
     
@@ -130,10 +121,6 @@ export async function ensureMemoryDirExists(memoryDir: string): Promise<void> {
   }
 }
 
-/**
- * Log memory directory file/subdir counts asynchronously.
- * Fire-and-forget — doesn't block prompt building.
- */
 function logMemoryDirCounts(
   memoryDir: string,
   baseMetadata: Record<
@@ -162,24 +149,12 @@ function logMemoryDirCounts(
       })
     },
     () => {
-      // Directory unreadable — log without counts
+      
       logEvent('tengu_memdir_loaded', baseMetadata)
     },
   )
 }
 
-/**
- * Build the typed-memory behavioral instructions (without MEMORY.md content).
- * Constrains memories to a closed four-type taxonomy (user / feedback / project /
- * reference) — content that is derivable from the current project state (code
- * patterns, architecture, git history) is explicitly excluded.
- *
- * Individual-only variant: no `## Memory scope` section, no <scope> tags
- * in type blocks, and team/private qualifiers stripped from examples.
- *
- * Used by both buildMemoryPrompt (agent memory, includes content) and
- * loadMemoryPrompt (system prompt, content injected via user context instead).
- */
 export function buildMemoryLines(
   displayName: string,
   memoryDir: string,
@@ -249,10 +224,6 @@ export function buildMemoryLines(
   return lines
 }
 
-/**
- * Build the typed-memory prompt with MEMORY.md content included.
- * Used by agent memory (which has no getClaudeMds() equivalent).
- */
 export function buildMemoryPrompt(params: {
   displayName: string
   memoryDir: string
@@ -262,16 +233,16 @@ export function buildMemoryPrompt(params: {
   const fs = getFsImplementation()
   const entrypoint = memoryDir + ENTRYPOINT_NAME
 
-  // Directory creation is the caller's responsibility (loadMemoryPrompt /
-  // loadAgentMemoryPrompt). Builders only read, they don't mkdir.
+  
+  
 
-  // Read existing memory entrypoint (sync: prompt building is synchronous)
+  
   let entrypointContent = ''
   try {
-    // eslint-disable-next-line custom-rules/no-sync-fs
+    
     entrypointContent = fs.readFileSync(entrypoint, { encoding: 'utf-8' })
   } catch {
-    // No memory file yet
+    
   }
 
   const lines = buildMemoryLines(displayName, memoryDir, extraGuidelines)
@@ -299,23 +270,14 @@ export function buildMemoryPrompt(params: {
   return lines.join('\n')
 }
 
-/**
- * Assistant-mode daily-log prompt. Gated behind feature('KAIROS').
- *
- * Assistant sessions are effectively perpetual, so the agent writes memories
- * append-only to a date-named log file rather than maintaining MEMORY.md as
- * a live index. A separate nightly /dream skill distills logs into topic
- * files + MEMORY.md. MEMORY.md is still loaded into context (via claudemd.ts)
- * as the distilled index — this prompt only changes where NEW memories go.
- */
 function buildAssistantDailyLogPrompt(skipIndex = false): string {
   const memoryDir = getAutoMemPath()
-  // Describe the path as a pattern rather than inlining today's literal path:
-  // this prompt is cached by systemPromptSection('memory', ...) and NOT
-  // invalidated on date change. The model derives the current date from the
-  // date_change attachment (appended at the tail on midnight rollover) rather
-  // than the user-context message — the latter is intentionally left stale to
-  // preserve the prompt cache prefix across midnight.
+  
+  
+  
+  
+  
+  
   const logPathPattern = join(memoryDir, 'logs', 'YYYY', 'MM', 'YYYY-MM-DD.md')
 
   const lines: string[] = [
@@ -353,19 +315,16 @@ function buildAssistantDailyLogPrompt(skipIndex = false): string {
   return lines.join('\n')
 }
 
-/**
- * Build the "Searching past context" section if the feature gate is enabled.
- */
 export function buildSearchingPastContextSection(autoMemDir: string): string[] {
   if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_coral_fern', false)) {
     return []
   }
   const projectDir = getProjectDir(getOriginalCwd())
-  // Ant-native builds alias grep to embedded ugrep and remove the dedicated
-  // Grep tool, so give the model a real shell invocation there.
-  // In REPL mode, both Grep and Bash are hidden from direct use — the model
-  // calls them from inside REPL scripts, so the grep shell form is what it
-  // will write in the script anyway.
+  
+  
+  
+  
+  
   const embedded = hasEmbeddedSearchTools() || isReplModeEnabled()
   const memSearch = embedded
     ? `grep -rn "<search term>" ${autoMemDir} --include="*.md"`
@@ -390,16 +349,6 @@ export function buildSearchingPastContextSection(autoMemDir: string): string[] {
   ]
 }
 
-/**
- * Load the unified memory prompt for inclusion in the system prompt.
- * Dispatches based on which memory systems are enabled:
- *   - auto + team: combined prompt (both directories)
- *   - auto only: memory lines (single directory)
- * Team memory requires auto memory (enforced by isTeamMemoryEnabled), so
- * there is no team-only branch.
- *
- * Returns null when auto memory is disabled.
- */
 export async function loadMemoryPrompt(): Promise<string | null> {
   const autoEnabled = isAutoMemoryEnabled()
 
@@ -408,11 +357,11 @@ export async function loadMemoryPrompt(): Promise<string | null> {
     false,
   )
 
-  // KAIROS daily-log mode takes precedence over TEAMMEM: the append-only
-  // log paradigm does not compose with team sync (which expects a shared
-  // MEMORY.md that both sides read + write). Gating on `autoEnabled` here
-  // means the !autoEnabled case falls through to the tengu_memdir_disabled
-  // telemetry block below, matching the non-KAIROS path.
+  
+  
+  
+  
+  
   if (feature('KAIROS') && autoEnabled && getKairosActive()) {
     logMemoryDirCounts(getAutoMemPath(), {
       memory_type:
@@ -421,7 +370,7 @@ export async function loadMemoryPrompt(): Promise<string | null> {
     return buildAssistantDailyLogPrompt(skipIndex)
   }
 
-  // Cowork injects memory-policy text via env var; thread into all builders.
+  
   const coworkExtraGuidelines =
     process.env.CLAUDE_COWORK_MEMORY_EXTRA_GUIDELINES
   const extraGuidelines =
@@ -433,13 +382,13 @@ export async function loadMemoryPrompt(): Promise<string | null> {
     if (teamMemPaths!.isTeamMemoryEnabled()) {
       const autoDir = getAutoMemPath()
       const teamDir = teamMemPaths!.getTeamMemPath()
-      // Harness guarantees these directories exist so the model can write
-      // without checking. The prompt text reflects this ("already exists").
-      // Only creating teamDir is sufficient: getTeamMemPath() is defined as
-      // join(getAutoMemPath(), 'team'), so recursive mkdir of the team dir
-      // creates the auto dir as a side effect. If the team dir ever moves
-      // out from under the auto dir, add a second ensureMemoryDirExists call
-      // for autoDir here.
+      
+      
+      
+      
+      
+      
+      
       await ensureMemoryDirExists(teamDir)
       logMemoryDirCounts(autoDir, {
         memory_type:
@@ -458,8 +407,8 @@ export async function loadMemoryPrompt(): Promise<string | null> {
 
   if (autoEnabled) {
     const autoDir = getAutoMemPath()
-    // Harness guarantees the directory exists so the model can write without
-    // checking. The prompt text reflects this ("already exists").
+    
+    
     await ensureMemoryDirExists(autoDir)
     logMemoryDirCounts(autoDir, {
       memory_type:
@@ -475,15 +424,15 @@ export async function loadMemoryPrompt(): Promise<string | null> {
 
   logEvent('tengu_memdir_disabled', {
     disabled_by_env_var: isEnvTruthy(
-      process.env.CLAUDE_CODE_DISABLE_AUTO_MEMORY,
+      process.env.CLAUDE_CODE_NEXT_DISABLE_AUTO_MEMORY,
     ),
     disabled_by_setting:
-      !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_AUTO_MEMORY) &&
+      !isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_AUTO_MEMORY) &&
       getInitialSettings().autoMemoryEnabled === false,
   })
-  // Gate on the GB flag directly, not isTeamMemoryEnabled() — that function
-  // checks isAutoMemoryEnabled() first, which is definitionally false in this
-  // branch. We want "was this user in the team-memory cohort at all."
+  
+  
+  
   if (getFeatureValue_CACHED_MAY_BE_STALE('tengu_herring_clock', false)) {
     logEvent('tengu_team_memdir_disabled', {})
   }

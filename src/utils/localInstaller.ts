@@ -17,18 +17,11 @@ export function getLocalClaudePath(): string {
   return join(getLocalInstallDir(), 'claude')
 }
 
-/**
- * Check if we're running from our managed local installation
- */
 export function isRunningFromLocalInstallation(): boolean {
   const execPath = process.argv[1] || ''
   return execPath.includes('/.claude/local/node_modules/')
 }
 
-/**
- * Write `content` to `path` only if the file does not already exist.
- * Uses O_EXCL ('wx') for atomic create-if-missing.
- */
 async function writeIfMissing(
   path: string,
   content: string,
@@ -43,10 +36,6 @@ async function writeIfMissing(
   }
 }
 
-/**
- * Ensure the local package environment is set up
- * Creates the directory, package.json, and wrapper script
- */
 export async function ensureLocalPackageEnvironment(): Promise<boolean> {
   try {
     const localInstallDir = getLocalInstallDir()
@@ -72,7 +61,7 @@ export async function ensureLocalPackageEnvironment(): Promise<boolean> {
       0o755,
     )
     if (created) {
-      // Mode in writeFile is masked by umask; chmod to ensure executable bit.
+      
       await chmod(wrapperPath, 0o755)
     }
 
@@ -83,22 +72,17 @@ export async function ensureLocalPackageEnvironment(): Promise<boolean> {
   }
 }
 
-/**
- * Install or update Claude CLI package in the local directory
- * @param channel - Release channel to use (latest or stable)
- * @param specificVersion - Optional specific version to install (overrides channel)
- */
 export async function installOrUpdateClaudePackage(
   channel: ReleaseChannel,
   specificVersion?: string | null,
 ): Promise<'in_progress' | 'success' | 'install_failed'> {
   try {
-    // First ensure the environment is set up
+    
     if (!(await ensureLocalPackageEnvironment())) {
       return 'install_failed'
     }
 
-    // Use specific version if provided, otherwise use channel tag
+    
     const versionSpec = specificVersion
       ? specificVersion
       : channel === 'stable'
@@ -118,7 +102,7 @@ export async function installOrUpdateClaudePackage(
       return result.code === 190 ? 'in_progress' : 'install_failed'
     }
 
-    // Set installMethod to 'local' to prevent npm permission warnings
+    
     saveGlobalConfig(current => ({
       ...current,
       installMethod: 'local',
@@ -131,10 +115,6 @@ export async function installOrUpdateClaudePackage(
   }
 }
 
-/**
- * Check if local installation exists.
- * Pure existence probe — callers use this to choose update path / UI hints.
- */
 export async function localInstallationExists(): Promise<boolean> {
   try {
     await access(join(getLocalInstallDir(), 'node_modules', '.bin', 'claude'))
@@ -144,9 +124,6 @@ export async function localInstallationExists(): Promise<boolean> {
   }
 }
 
-/**
- * Get shell type to determine appropriate path setup
- */
 export function getShellType(): string {
   const shellPath = process.env.SHELL || ''
   if (shellPath.includes('zsh')) return 'zsh'

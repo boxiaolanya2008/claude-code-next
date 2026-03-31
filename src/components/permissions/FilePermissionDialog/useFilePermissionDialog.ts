@@ -47,9 +47,6 @@ export type UseFilePermissionDialogResult<T> = {
   noInputMode: boolean
 }
 
-/**
- * Hook for handling file permission dialogs with common logic
- */
 export function useFilePermissionDialog<T extends ToolInput>({
   filePath,
   completionType,
@@ -100,7 +97,7 @@ export function useFilePermissionDialog<T extends ToolInput>({
         operationType,
       }
 
-      // Override the input in toolUseConfirm to pass the parsed input
+      
       const originalOnAllow = toolUseConfirm.onAllow
       toolUseConfirm.onAllow = (
         _input: unknown,
@@ -153,7 +150,7 @@ export function useFilePermissionDialog<T extends ToolInput>({
   
   const handleFocusedOptionChange = useCallback(
     (value: string) => {
-      // Reset input mode when navigating away, but only if no text typed
+      
       if (value !== 'yes' && yesInputMode && !acceptFeedback.trim()) {
         setYesInputMode(false)
       }

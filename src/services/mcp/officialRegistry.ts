@@ -12,8 +12,6 @@ type RegistryResponse = {
   servers: RegistryServer[]
 }
 
-// URLs stripped of query string and trailing slash — matches the normalization
-
 let officialUrls: Set<string> | undefined = undefined
 
 function normalizeUrl(url: string): string | undefined {
@@ -26,12 +24,8 @@ function normalizeUrl(url: string): string | undefined {
   }
 }
 
-/**
- * Fire-and-forget fetch of the official MCP registry.
- * Populates officialUrls for isOfficialMcpUrl lookups.
- */
 export async function prefetchOfficialMcpUrls(): Promise<void> {
-  if (process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC) {
+  if (process.env.CLAUDE_CODE_NEXT_DISABLE_NONESSENTIAL_TRAFFIC) {
     return
   }
 
@@ -59,10 +53,6 @@ export async function prefetchOfficialMcpUrls(): Promise<void> {
   }
 }
 
-/**
- * Returns true iff the given (already-normalized via getLoggingSafeMcpBaseUrl)
- * URL is in the official MCP registry. Undefined registry → false (fail-closed).
- */
 export function isOfficialMcpUrl(normalizedUrl: string): boolean {
   return officialUrls?.has(normalizedUrl) ?? false
 }

@@ -10,7 +10,6 @@ function hashString(str: string): string {
   return createHash('sha256').update(str).digest('hex')
 }
 
-// Cache last few API requests for ant users (e.g., for /issue command)
 const MAX_CACHED_REQUESTS = 5
 const cachedApiRequests: Array<{ timestamp: string; request: unknown }> = []
 
@@ -23,7 +22,6 @@ type DumpState = {
   lastInitFingerprint: string
 }
 
-// Track state per session to avoid duplicating data
 const dumpState = new Map<string, DumpState>()
 
 export function getLastApiRequests(): Array<{
@@ -102,9 +100,9 @@ function dumpRequest(
     const messages = (req.messages ?? []) as Array<{ role?: string }>
 
     
-    // and a system_update entry whenever it changes.
     
-    // so skip the 300ms stringify when the shape is unchanged.
+    
+    
     const fingerprint = initFingerprint(req)
     if (!state.initialized || fingerprint !== state.lastInitFingerprint) {
       const { messages: _, ...initData } = req
@@ -127,7 +125,7 @@ function dumpRequest(
       }
     }
 
-    // Write only new user messages (assistant messages captured in response)
+    
     for (const msg of messages.slice(state.messageCountSeen)) {
       if (msg.role === 'user') {
         entries.push(
@@ -139,7 +137,7 @@ function dumpRequest(
 
     appendToFile(filePath, entries)
   } catch {
-    // Ignore parsing errors
+    
   }
 }
 
@@ -167,7 +165,7 @@ export function createDumpPromptsFetch(
       setImmediate(dumpRequest, init.body as string, timestamp, state, filePath)
     }
 
-    // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
+    
     const response = await globalThis.fetch(input, init)
 
     
@@ -181,7 +179,7 @@ export function createDumpPromptsFetch(
 
           let data: unknown
           if (isStreaming && cloned.body) {
-            // Parse SSE stream into chunks
+            
             const reader = cloned.body.getReader()
             const decoder = new TextDecoder()
             let buffer = ''
@@ -201,7 +199,7 @@ export function createDumpPromptsFetch(
                   try {
                     chunks.push(jsonParse(line.slice(6)))
                   } catch {
-                    // Ignore parse errors
+                    
                   }
                 }
               }
@@ -216,7 +214,7 @@ export function createDumpPromptsFetch(
             jsonStringify({ type: 'response', timestamp, data }) + '\n',
           )
         } catch {
-          // Best effort
+          
         }
       })()
     }

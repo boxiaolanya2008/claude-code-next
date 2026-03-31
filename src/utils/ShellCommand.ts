@@ -40,26 +40,19 @@ export type ShellCommand = {
   onTimeout?: (
     callback: (backgroundFn: (taskId: string) => boolean) => void,
   ) => void
-  /** The TaskOutput instance that owns all stdout/stderr data and progress. */
+  
   taskOutput: TaskOutput
 }
 
 const SIGKILL = 137
 const SIGTERM = 143
 
-// so a stuck append loop can fill the disk. Poll file size and kill when exceeded.
 const SIZE_WATCHDOG_INTERVAL_MS = 5_000
 
 function prependStderr(prefix: string, stderr: string): string {
   return stderr ? `${prefix} ${stderr}` : prefix
 }
 
-/**
- * Thin pipe from a child process stream into TaskOutput.
- * Used in pipe mode (hooks) for stdout and stderr.
- * In file mode (bash commands), both fds go to the output file —
- * the child process streams are null and no wrappers are created.
- */
 class StreamWrapper {
   #stream: Readable | null
   #isCleanedUp = false
@@ -100,14 +93,6 @@ class StreamWrapper {
   }
 }
 
-/**
- * Implementation of ShellCommand that wraps a child process.
- *
- * For bash commands: both stdout and stderr go to a file fd via
- * stdio[1] and stdio[2] — no JS involvement. Progress is extracted
- * by polling the file tail.
- * For hooks: pipe mode with StreamWrappers for real-time detection.
- */
 class ShellCommandImpl implements ShellCommand {
   #status: 'running' | 'backgrounded' | 'completed' | 'killed' = 'running'
   #backgroundTaskId: string | undefined
@@ -181,8 +166,8 @@ class ShellCommandImpl implements ShellCommand {
   }
 
   #abortHandler(): void {
-    // On 'interrupt' (user submitted a new message), don't kill — let the
-    // caller background the process so the model can see partial output.
+    
+    
     if (this.#abortSignal.reason === 'interrupt') {
       return
     }
@@ -210,7 +195,7 @@ class ShellCommandImpl implements ShellCommand {
     }
   }
 
-  // Note: exit/error listeners are NOT removed here — they're needed for
+  
   
   #cleanupListeners(): void {
     this.#clearSizeWatchdog()
@@ -237,7 +222,7 @@ class ShellCommandImpl implements ShellCommand {
     this.#sizeWatchdog = setInterval(() => {
       void stat(this.taskOutput.path).then(
         s => {
-          // Bail if the watchdog was cleared while this stat was in flight
+          
           
           if (
             s.size > this.#maxOutputBytes &&
@@ -250,7 +235,7 @@ class ShellCommandImpl implements ShellCommand {
           }
         },
         () => {
-          // ENOENT before first write, or unlinked mid-run — skip this tick
+          
         },
       )
     }, SIZE_WATCHDOG_INTERVAL_MS)
@@ -302,10 +287,10 @@ class ShellCommandImpl implements ShellCommand {
 
     if (this.taskOutput.stdoutToFile && !this.#backgroundTaskId) {
       if (this.taskOutput.outputFileRedundant) {
-        // Small file — full content is in result.stdout, delete the file
+        
         void this.taskOutput.deleteOutputFile()
       } else {
-        // Large file — tell the caller where the full output lives
+        
         result.outputFilePath = this.taskOutput.path
         result.outputFileSize = this.taskOutput.outputFileSize
         result.outputTaskId = this.taskOutput.taskId
@@ -349,12 +334,12 @@ class ShellCommandImpl implements ShellCommand {
       this.#status = 'backgrounded'
       this.#cleanupListeners()
       if (this.taskOutput.stdoutToFile) {
-        // File mode: child writes directly to the fd with no JS involvement.
+        
         
         
         this.#startSizeWatchdog()
       } else {
-        // Pipe mode: spill the in-memory buffer so readers can find it on disk.
+        
         this.taskOutput.spillToDisk()
       }
       return true
@@ -378,9 +363,6 @@ class ShellCommandImpl implements ShellCommand {
   }
 }
 
-/**
- * Wraps a child process to enable flexible handling of shell command execution.
- */
 export function wrapSpawn(
   childProcess: ChildProcess,
   abortSignal: AbortSignal,
@@ -399,9 +381,6 @@ export function wrapSpawn(
   )
 }
 
-/**
- * Static ShellCommand implementation for commands that were aborted before execution.
- */
 class AbortedShellCommand implements ShellCommand {
   readonly status = 'killed' as const
   readonly result: Promise<ExecResult>

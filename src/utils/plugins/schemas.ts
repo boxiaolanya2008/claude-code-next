@@ -4,8 +4,8 @@ import { McpServerConfigSchema } from '../../services/mcp/types.js'
 import { lazySchema } from '../lazySchema.js'
 
 export const ALLOWED_OFFICIAL_MARKETPLACE_NAMES = new Set([
-  'claude-code-marketplace',
-  'claude-code-plugins',
+  'claude-code-next-marketplace',
+  'claude-code-next-plugins',
   'claude-plugins-official',
   'anthropic-marketplace',
   'anthropic-plugins',
@@ -28,42 +28,27 @@ export function isMarketplaceAutoUpdate(
   )
 }
 
-/**
- * Pattern to detect names that impersonate official Anthropic/Claude marketplaces.
- *
- * Matches names containing variations like:
- * - "official" combined with "anthropic" or "claude" (e.g., "official-claude-plugins")
- * - "anthropic" or "claude" combined with "official" (e.g., "claude-official")
- * - Names starting with "anthropic" or "claude" followed by official-sounding terms
- *   like "marketplace", "plugins" (e.g., "anthropic-marketplace-new", "claude-plugins-v2")
- *
- * The pattern is case-insensitive.
- */
 export const BLOCKED_OFFICIAL_NAME_PATTERN =
   /(?:official[^a-z0-9]*(anthropic|claude)|(?:anthropic|claude)[^a-z0-9]*official|^(?:anthropic|claude)[^a-z0-9]*(marketplace|plugins|official))/i
 
 const NON_ASCII_PATTERN = /[^\u0020-\u007E]/
 
 export function isBlockedOfficialName(name: string): boolean {
-  // If it's in the allowed list, it's not blocked
+  
   if (ALLOWED_OFFICIAL_MARKETPLACE_NAMES.has(name.toLowerCase())) {
     return false
   }
 
-  // Block names with non-ASCII characters to prevent homograph attacks
+  
   
   if (NON_ASCII_PATTERN.test(name)) {
     return true
   }
 
-  // Check if it matches the blocked pattern
+  
   return BLOCKED_OFFICIAL_NAME_PATTERN.test(name)
 }
 
-/**
- * The official GitHub organization for Anthropic marketplaces.
- * Reserved names must come from this org.
- */
 export const OFFICIAL_GITHUB_ORG = 'anthropics'
 
 export function validateOfficialNameSource(
@@ -77,9 +62,9 @@ export function validateOfficialNameSource(
     return null 
   }
 
-  // Check for GitHub source type
+  
   if (source.source === 'github') {
-    // Verify the repo is from the official org
+    
     const repo = source.repo || ''
     if (!repo.toLowerCase().startsWith(`${OFFICIAL_GITHUB_ORG}/`)) {
       return `The name '${name}' is reserved for official Anthropic marketplaces. Only repositories from 'github.com/${OFFICIAL_GITHUB_ORG}/' can use this name.`
@@ -87,7 +72,7 @@ export function validateOfficialNameSource(
     return null 
   }
 
-  // Check for git URL source type
+  
   if (source.source === 'git' && source.url) {
     const url = source.url.toLowerCase()
     
@@ -102,24 +87,14 @@ export function validateOfficialNameSource(
     return `The name '${name}' is reserved for official Anthropic marketplaces. Only repositories from 'github.com/${OFFICIAL_GITHUB_ORG}/' can use this name.`
   }
 
-  // Reserved names must come from GitHub (either 'github' or 'git' source)
+  
   return `The name '${name}' is reserved for official Anthropic marketplaces and can only be used with GitHub sources from the '${OFFICIAL_GITHUB_ORG}' organization.`
 }
 
-/**
- * Schema for relative file paths that must start with './'
- */
 const RelativePath = lazySchema(() => z.string().startsWith('./'))
 
-/**
- * Schema for relative paths to JSON files
- */
 const RelativeJSONPath = lazySchema(() => RelativePath().endsWith('.json'))
 
-/**
- * Schema for MCPB (MCP Bundle) file paths
- * Supports both local relative paths and remote URLs
- */
 const McpbPath = lazySchema(() =>
   z.union([
     RelativePath()
@@ -137,32 +112,15 @@ const McpbPath = lazySchema(() =>
   ]),
 )
 
-/**
- * Schema for relative paths to Markdown files
- */
 const RelativeMarkdownPath = lazySchema(() => RelativePath().endsWith('.md'))
 
-/**
- * Schema for relative paths to command sources (markdown files or directories containing SKILL.md)
- */
 const RelativeCommandPath = lazySchema(() =>
   z.union([
     RelativeMarkdownPath(),
-    RelativePath(), // Allow any relative path, including directories
+    RelativePath(), 
   ]),
 )
 
-/**
- * Shared marketplace-name validation. Used by both PluginMarketplaceSchema
- * (validates fetched marketplace.json) and the settings arm of
- * MarketplaceSourceSchema (validates inline names in settings.json).
- *
- * The two must stay in sync: loadAndCacheMarketplace's case 'settings' writes
- * to join(cacheDir, source.name) BEFORE the post-write PluginMarketplaceSchema
- * validation runs. Any name that passes the settings arm but fails
- * PluginMarketplaceSchema leaves orphaned files in the cache (cleanupNeeded=false).
- * A single shared schema makes drift impossible.
- */
 const MarketplaceNameSchema = lazySchema(() =>
   z
     .string()
@@ -556,7 +514,7 @@ export const LspServerConfigSchema = lazySchema(() =>
       .min(1)
       .refine(
         cmd => {
-          // Commands with spaces should use args array instead
+          
           if (cmd.includes(' ') && !cmd.startsWith('/')) {
             return false
           }
@@ -664,7 +622,7 @@ const NpmPackageNameSchema = lazySchema(() =>
       'Package name cannot contain path traversal patterns',
     )
     .refine(name => {
-      // Allow scoped packages (@org/package) and regular packages
+      
       const scopedPackageRegex = /^@[a-z0-9][a-z0-9-._]*\/[a-z0-9][a-z0-9-._]*$/
       const regularPackageRegex = /^[a-z0-9][a-z0-9-._]*$/
       return scopedPackageRegex.test(name) || regularPackageRegex.test(name)
@@ -736,13 +694,13 @@ export const MarketplaceSourceSchema = lazySchema(() =>
     }),
     z.object({
       source: z.literal('git'),
-      // No .endsWith('.git') here — that's a GitHub/GitLab/Bitbucket
-      // convention, not a git requirement. Azure DevOps uses
-      // https://dev.azure.com/{org}/{proj}/_git/{repo} with no suffix, and
-      // appending .git makes ADO look for a repo literally named {repo}.git
-      // (TF401019). AWS CodeCommit also omits the suffix. If the user
-      // explicitly wrote source:'git', they know it's a git repo; a typo'd
-      // URL fails at `git clone` with a clearer error anyway. (gh-31256)
+      
+      
+      
+      
+      
+      
+      
       url: z.string().describe('Full git repository URL'),
       ref: z
         .string()
@@ -863,9 +821,8 @@ export const PluginSourceSchema = lazySchema(() =>
       .describe('Python package as plugin source'),
     z.object({
       source: z.literal('url'),
-      // See note on MarketplaceSourceSchema source:'git' re: .endsWith('.git')
       
-      url: z.string().describe('Full git repository URL (https:// or git@)'),
+      url: z.string().describe('Full git repository URL (https:
       ref: z
         .string()
         .optional()
@@ -912,7 +869,7 @@ export const PluginSourceSchema = lazySchema(() =>
         'Plugin located in a subdirectory of a larger repository (monorepo). ' +
           'Only the specified subdirectory is materialized; the rest of the repo is not downloaded.',
       ),
-    // TODO (future work) gist
+    
     
   ]),
 )
@@ -948,35 +905,12 @@ export function isLocalPluginSource(source: PluginSource): source is string {
   return typeof source === 'string' && source.startsWith('./')
 }
 
-/**
- * Whether a marketplace source points at a user-controlled local filesystem path.
- *
- * For local sources (`file`/`directory`), `installLocation` IS the user's path —
- * it lives outside the plugins cache dir and marketplace operations on it are
- * read-only. For remote sources (`github`/`git`/`url`/`npm`), `installLocation`
- * is a cache-dir entry managed by Claude Code and subject to rm/re-clone.
- *
- * Contrast with isLocalPluginSource, which operates on PluginSource (the
- * per-plugin source inside a marketplace entry) and checks for `./` prefix.
- */
 export function isLocalMarketplaceSource(
   source: MarketplaceSource,
 ): source is Extract<MarketplaceSource, { source: 'file' | 'directory' }> {
   return source.source === 'file' || source.source === 'directory'
 }
 
-/**
- * Schema for individual plugin entries in a marketplace
- *
- * When strict=true (default): Plugin.json is required, marketplace fields supplement it
- * When strict=false: Plugin.json is optional, marketplace provides full manifest
- *
- * Unknown fields are silently stripped (zod default) rather than rejected.
- * Marketplace entries are validated as an array — if one entry rejected
- * unknown keys, the whole marketplace.json would fail to parse and ALL
- * plugins from that marketplace would become unavailable. Stripping keeps
- * the blast radius to zero for custom/future fields.
- */
 export const PluginMarketplaceEntrySchema = lazySchema(() =>
   PluginManifestSchema()
     .partial()
@@ -1010,12 +944,6 @@ export const PluginMarketplaceEntrySchema = lazySchema(() =>
     }),
 )
 
-/**
- * Schema for plugin marketplace configuration
- *
- * Defines the structure for curated collections of plugins that can
- * be discovered and installed from a central repository.
- */
 export const PluginMarketplaceSchema = lazySchema(() =>
   z.object({
     name: MarketplaceNameSchema(),
@@ -1051,17 +979,6 @@ export const PluginMarketplaceSchema = lazySchema(() =>
   }),
 )
 
-/**
- * Schema for plugin ID format
- *
- * Plugin IDs follow the format: "plugin-name@marketplace-name"
- * Both parts allow alphanumeric characters, hyphens, dots, and underscores.
- *
- * Examples:
- * - "code-formatter@anthropic-tools"
- * - "db_assistant@company-internal"
- * - "my.plugin@personal-marketplace"
- */
 export const PluginIdSchema = lazySchema(() =>
   z
     .string()
@@ -1074,22 +991,6 @@ export const PluginIdSchema = lazySchema(() =>
 const DEP_REF_REGEX =
   /^[a-z0-9][-a-z0-9._]*(@[a-z0-9][-a-z0-9._]*)?(@\^[^@]*)?$/i
 
-/**
- * Schema for entries in a plugin's `dependencies` array.
- *
- * Accepts three forms, all normalized to a plain "name" or "name@mkt" string
- * by the transform — downstream code (qualifyDependency, resolveDependencyClosure,
- * verifyAndDemote) never sees versions or objects:
- *
- *   "plugin"                → bare, resolved against declaring plugin's marketplace
- *   "plugin@marketplace"    → qualified
- *   "plugin@mkt@^1.2"       → trailing @^version silently stripped (forwards-compat)
- *   {name, marketplace?, …} → object form, version etc. stripped (forwards-compat)
- *
- * The latter two are permitted-but-ignored so future clients adding version
- * constraints don't cause old clients to fail schema validation and reject
- * the whole plugin. See CC-993 for the eventual version-range design.
- */
 export const DependencyRefSchema = lazySchema(() =>
   z.union([
     z
@@ -1116,26 +1017,11 @@ export const DependencyRefSchema = lazySchema(() =>
   ]),
 )
 
-/**
- * Schema for plugin reference in settings (repo or user level)
- *
- * Can be either:
- * - Simple string: "plugin-name@marketplace-name"
- * - Object with additional configuration
- *
- * The plugin source (npm, git, local) is defined in the marketplace entry itself,
- * not in the plugin reference.
- *
- * Examples:
- * - "code-formatter@anthropic-tools"
- * - "db-assistant@company-internal"
- * - { id: "formatter@tools", version: "^2.0.0", required: true }
- */
 export const SettingsPluginEntrySchema = lazySchema(() =>
   z.union([
-    // Simple format: "plugin@marketplace"
+    
     PluginIdSchema(),
-    // Extended format with configuration
+    
     z.object({
       id: PluginIdSchema().describe(
         'Plugin identifier (e.g., "formatter@tools")',
@@ -1153,22 +1039,6 @@ export const SettingsPluginEntrySchema = lazySchema(() =>
   ]),
 )
 
-/**
- * Schema for installed plugin metadata (V1 format)
- *
- * Tracks the actual installation state of a plugin. All plugins are
- * installed from marketplaces, which contain the actual source details
- * (npm, git, local, etc.). The plugin ID is the key in the plugins record,
- * so it's not duplicated here.
- *
- * Example entry for key "code-formatter@anthropic-tools":
- * {
- *   "version": "1.2.0",
- *   "installedAt": "2024-01-15T10:30:00Z",
- *   "marketplace": "anthropic-tools",
- *   "installPath": "/home/user/.claude/plugins/installed/anthropic-tools/code-formatter"
- * }
- */
 export const InstalledPluginSchema = lazySchema(() =>
   z.object({
     version: z.string().describe('Currently installed version'),
@@ -1187,59 +1057,22 @@ export const InstalledPluginSchema = lazySchema(() =>
   }),
 )
 
-/**
- * Schema for the installed_plugins.json file (V1 format)
- *
- * Contains a version number and maps plugin IDs to their installation metadata.
- * Maintained automatically by Claude Code, not edited by users.
- *
- * The version field tracks schema changes. When the version doesn't match
- * the current schema version, Claude Code will update the file on next startup.
- *
- * Example file:
- * {
- *   "version": 1,
- *   "plugins": {
- *     "code-formatter@anthropic-tools": { ... },
- *     "db-assistant@company-internal": { ... }
- *   }
- * }
- */
 export const InstalledPluginsFileSchemaV1 = lazySchema(() =>
   z.object({
     version: z.literal(1).describe('Schema version 1'),
     plugins: z
       .record(
-        PluginIdSchema(), // Validated plugin ID key (e.g., "formatter@tools")
+        PluginIdSchema(), 
         InstalledPluginSchema(),
       )
       .describe('Map of plugin IDs to their installation metadata'),
   }),
 )
 
-/**
- * Scope types for plugin installation (V2)
- *
- * Plugins can be installed at different scopes:
- * - managed: Enterprise/system-wide (read-only, platform-specific paths)
- * - user: User's global settings (~/.claude/settings.json)
- * - project: Shared project settings ($project/.claude/settings.json)
- * - local: Personal project overrides ($project/.claude/settings.local.json)
- *
- * Note: 'flag' scope plugins (from --settings) are session-only and
- * are NOT persisted to installed_plugins.json.
- */
 export const PluginScopeSchema = lazySchema(() =>
   z.enum(['managed', 'user', 'project', 'local']),
 )
 
-/**
- * Schema for a single plugin installation entry (V2)
- *
- * Each plugin can have multiple installations at different scopes.
- * For example, the same plugin could be installed at user scope with v1.0
- * and at project scope with v1.1.
- */
 export const PluginInstallationEntrySchema = lazySchema(() =>
   z.object({
     scope: PluginScopeSchema().describe('Installation scope'),
@@ -1250,7 +1083,7 @@ export const PluginInstallationEntrySchema = lazySchema(() =>
     installPath: z
       .string()
       .describe('Absolute path to the versioned plugin directory'),
-    // Preserved from V1:
+    
     version: z.string().optional().describe('Currently installed version'),
     installedAt: z
       .string()
@@ -1267,24 +1100,6 @@ export const PluginInstallationEntrySchema = lazySchema(() =>
   }),
 )
 
-/**
- * Schema for the installed_plugins.json file (V2 format)
- *
- * V2 changes from V1:
- * - Each plugin ID maps to an ARRAY of installations (one per scope)
- * - Supports multi-scope installation (same plugin at different scopes/versions)
- *
- * Example file:
- * {
- *   "version": 2,
- *   "plugins": {
- *     "code-formatter@anthropic-tools": [
- *       { "scope": "user", "installPath": "...", "version": "1.0.0" },
- *       { "scope": "project", "projectPath": "/path/to/project", "installPath": "...", "version": "1.1.0" }
- *     ]
- *   }
- * }
- */
 export const InstalledPluginsFileSchemaV2 = lazySchema(() =>
   z.object({
     version: z.literal(2).describe('Schema version 2'),
@@ -1294,27 +1109,10 @@ export const InstalledPluginsFileSchemaV2 = lazySchema(() =>
   }),
 )
 
-/**
- * Combined schema that accepts both V1 and V2 formats
- * Used for reading existing files before migration
- */
 export const InstalledPluginsFileSchema = lazySchema(() =>
   z.union([InstalledPluginsFileSchemaV1(), InstalledPluginsFileSchemaV2()]),
 )
 
-/**
- * Schema for a known marketplace entry
- *
- * Tracks metadata about a registered marketplace in the user's configuration.
- * Each entry contains the source location, cache path, and last update time.
- *
- * Example entry:
- * {
- *   "source": { "source": "github", "repo": "anthropic/claude-plugins" },
- *   "installLocation": "/home/user/.claude/plugins/cached/marketplaces/anthropic-tools",
- *   "lastUpdated": "2024-01-15T10:30:00Z"
- * }
- */
 export const KnownMarketplaceSchema = lazySchema(() =>
   z.object({
     source: MarketplaceSourceSchema().describe(
@@ -1335,41 +1133,13 @@ export const KnownMarketplaceSchema = lazySchema(() =>
   }),
 )
 
-/**
- * Schema for the known_marketplaces.json file
- *
- * Maps marketplace names to their source and cache metadata.
- * Used to track which marketplaces are registered and where to find them.
- *
- * Example file:
- * {
- *   "anthropic-tools": { "source": { ... }, "installLocation": "...", "lastUpdated": "..." },
- *   "company-internal": { "source": { ... }, "installLocation": "...", "lastUpdated": "..." }
- * }
- */
 export const KnownMarketplacesFileSchema = lazySchema(() =>
   z.record(
-    z.string(), // Marketplace name as key
+    z.string(), 
     KnownMarketplaceSchema(),
   ),
 )
 
-// Inferred types from schemas
-/**
- * Metadata for plugin command definitions.
- *
- * Commands can be defined with either:
- * - `source`: Path to a markdown file (e.g., "./README.md")
- * - `content`: Inline markdown content string
- *
- * INVARIANT: Exactly one of `source` or `content` must be present.
- * This invariant is enforced at runtime by CommandMetadataSchema validation.
- *
- * Validation occurs at plugin manifest parsing. Metadata is assumed valid
- * after passing through createPluginFromPath().
- *
- * @see CommandMetadataSchema for runtime validation rules
- */
 export type CommandMetadata = z.infer<ReturnType<typeof CommandMetadataSchema>>
 export type MarketplaceSource = z.infer<
   ReturnType<typeof MarketplaceSourceSchema>
@@ -1387,7 +1157,7 @@ export type PluginMarketplace = z.infer<
 export type PluginMarketplaceEntry = z.infer<
   ReturnType<typeof PluginMarketplaceEntrySchema>
 >
-export type PluginId = z.infer<ReturnType<typeof PluginIdSchema>> // string in "plugin@marketplace" format
+export type PluginId = z.infer<ReturnType<typeof PluginIdSchema>> 
 export type InstalledPlugin = z.infer<ReturnType<typeof InstalledPluginSchema>>
 export type InstalledPluginsFileV1 = z.infer<
   ReturnType<typeof InstalledPluginsFileSchemaV1>
@@ -1404,4 +1174,4 @@ export type KnownMarketplace = z.infer<
 >
 export type KnownMarketplacesFile = z.infer<
   ReturnType<typeof KnownMarketplacesFileSchema>
-> // Record<string, KnownMarketplace>
+> 

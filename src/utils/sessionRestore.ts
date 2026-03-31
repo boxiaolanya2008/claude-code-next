@@ -69,11 +69,6 @@ type ResumeResult = {
   contextCollapseSnapshot?: ContextCollapseSnapshotEntry
 }
 
-/**
- * Scan the transcript for the last TodoWrite tool_use block and return its todos.
- * Used to hydrate AppState.todos on SDK --resume so the model's todo list
- * survives session restarts without file persistence.
- */
 function extractTodosFromTranscript(messages: Message[]): TodoList {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i]
@@ -92,22 +87,18 @@ function extractTodosFromTranscript(messages: Message[]): TodoList {
   return []
 }
 
-/**
- * Restore session state (file history, attribution, todos) from log on resume.
- * Used by both SDK (print.ts) and interactive (REPL.tsx, main.tsx) resume paths.
- */
 export function restoreSessionStateFromLog(
   result: ResumeResult,
   setAppState: (f: (prev: AppState) => AppState) => void,
 ): void {
-  // Restore file history state
+  
   if (result.fileHistorySnapshots && result.fileHistorySnapshots.length > 0) {
     fileHistoryRestoreStateFromLog(result.fileHistorySnapshots, newState => {
       setAppState(prev => ({ ...prev, fileHistory: newState }))
     })
   }
 
-  // Restore attribution state (ant-only feature)
+  
   if (
     feature('COMMIT_ATTRIBUTION') &&
     result.attributionSnapshots &&
@@ -118,14 +109,14 @@ export function restoreSessionStateFromLog(
     })
   }
 
-  // Restore context-collapse commit log + staged snapshot. Must run before
+  
   
   
   
   
   
   if (feature('CONTEXT_COLLAPSE')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
+    
     ;(
       require('../services/contextCollapse/persist.js') as typeof import('../services/contextCollapse/persist.js')
     ).restoreFromEntries(
@@ -135,7 +126,7 @@ export function restoreSessionStateFromLog(
     
   }
 
-  // Restore TodoWrite state from transcript (SDK/non-interactive only).
+  
   
   if (!isTodoV2Enabled() && result.messages && result.messages.length > 0) {
     const todos = extractTodosFromTranscript(result.messages)
@@ -149,11 +140,6 @@ export function restoreSessionStateFromLog(
   }
 }
 
-/**
- * Compute restored attribution state from log snapshots.
- * Used for computing initial state before render (e.g., main.tsx --continue).
- * Returns undefined if attribution feature is disabled or no snapshots exist.
- */
 export function computeRestoredAttributionState(
   result: ResumeResult,
 ): AttributionState | undefined {
@@ -167,11 +153,6 @@ export function computeRestoredAttributionState(
   return undefined
 }
 
-/**
- * Compute standalone agent context (name/color) for session resume.
- * Used for computing initial state before render (per CLAUDE.md guidelines).
- * Returns undefined if no name/color is set on the session.
- */
 export function computeStandaloneAgentContext(
   agentName: string | undefined,
   agentColor: string | undefined,
@@ -187,16 +168,6 @@ export function computeStandaloneAgentContext(
   }
 }
 
-/**
- * Restore agent setting from a resumed session.
- *
- * When resuming a conversation that used a custom agent, this re-applies the
- * agent type and model override (unless the user specified --agent on the CLI).
- * Mutates bootstrap state via setMainThreadAgentType / setMainLoopModelOverride.
- *
- * Returns the restored agent definition and its agentType string, or undefined
- * if no agent was restored.
- */
 export function restoreAgentFromSession(
   agentSetting: string | undefined,
   currentAgentDefinition: AgentDefinition | undefined,
@@ -205,12 +176,12 @@ export function restoreAgentFromSession(
   agentDefinition: AgentDefinition | undefined
   agentType: string | undefined
 } {
-  // If user already specified --agent on CLI, keep that definition
+  
   if (currentAgentDefinition) {
     return { agentDefinition: currentAgentDefinition, agentType: undefined }
   }
 
-  // If session had no agent, clear any stale bootstrap state
+  
   if (!agentSetting) {
     setMainThreadAgentType(undefined)
     return { agentDefinition: undefined, agentType: undefined }
@@ -241,13 +212,6 @@ export function restoreAgentFromSession(
   return { agentDefinition: resumedAgent, agentType: resumedAgent.agentType }
 }
 
-/**
- * Refresh agent definitions after a coordinator/normal mode switch.
- *
- * When resuming a session that was in a different mode (coordinator vs normal),
- * the built-in agents need to be re-derived to match the new mode. CLI-provided
- * agents (from --agents flag) are merged back in.
- */
 export async function refreshAgentDefinitionsForModeSwitch(
   modeWasSwitched: boolean,
   currentCwd: string,
@@ -258,7 +222,7 @@ export async function refreshAgentDefinitionsForModeSwitch(
     return currentAgentDefinitions
   }
 
-  // Re-derive agent definitions after mode switch so built-in agents
+  
   
   getAgentDefinitionsWithOverrides.cache.clear?.()
   const freshAgentDefs = await getAgentDefinitionsWithOverrides(currentCwd)
@@ -270,9 +234,6 @@ export async function refreshAgentDefinitionsForModeSwitch(
   }
 }
 
-/**
- * Result of processing a resumed/continued conversation for rendering.
- */
 export type ProcessedResume = {
   messages: Message[]
   fileHistorySnapshots?: FileHistorySnapshot[]
@@ -283,17 +244,11 @@ export type ProcessedResume = {
   initialState: AppState
 }
 
-/**
- * Subset of the coordinator mode module API needed for session resume.
- */
 type CoordinatorModeApi = {
   matchSessionMode(mode?: string): string | undefined
   isCoordinatorMode(): boolean
 }
 
-/**
- * The loaded conversation data (return type of loadConversationForResume).
- */
 type ResumeLoadResult = {
   messages: Message[]
   fileHistorySnapshots?: FileHistorySnapshot[]
@@ -314,21 +269,6 @@ type ResumeLoadResult = {
   prRepository?: string
 }
 
-/**
- * Restore the worktree working directory on resume. The transcript records
- * the last worktree enter/exit; if the session crashed while inside a
- * worktree (last entry = session object, not null), cd back into it.
- *
- * process.chdir is the TOCTOU-safe existence check — it throws ENOENT if
- * the /exit dialog removed the directory, or if the user deleted it
- * manually between sessions.
- *
- * When --worktree already created a fresh worktree, that takes precedence
- * over the resumed session's state. restoreSessionMetadata just overwrote
- * project.currentSessionWorktree with the stale transcript value, so
- * re-assert the fresh worktree here before adoptResumedSessionFile writes
- * it back to disk.
- */
 export function restoreWorktreeForResume(
   worktreeSession: PersistedWorktreeSession | null | undefined,
 ): void {
@@ -342,16 +282,16 @@ export function restoreWorktreeForResume(
   try {
     process.chdir(worktreeSession.worktreePath)
   } catch {
-    // Directory is gone. Override the stale cache so the next
-    // reAppendSessionMetadata records "exited" instead of re-persisting
-    // a path that no longer exists.
+    
+    
+    
     saveWorktreeState(null)
     return
   }
 
   setCwd(worktreeSession.worktreePath)
   setOriginalCwd(getCwd())
-  // projectRoot is intentionally NOT set here. The transcript doesn't record
+  
   
   
   
@@ -365,18 +305,6 @@ export function restoreWorktreeForResume(
   getPlansDirectory.cache.clear?.()
 }
 
-/**
- * Undo restoreWorktreeForResume before a mid-session /resume switches to
- * another session. Without this, /resume from a worktree session to a
- * non-worktree session leaves the user in the old worktree directory with
- * currentWorktreeSession still pointing at the prior session. /resume to a
- * *different* worktree fails entirely — the getCurrentWorktreeSession()
- * guard above blocks the switch.
- *
- * Not needed by CLI --resume/--continue: those run once at startup where
- * getCurrentWorktreeSession() is only truthy if --worktree was used (fresh
- * worktree that should take precedence, handled by the re-assert above).
- */
 export function exitRestoredWorktree(): void {
   const current = getCurrentWorktreeSession()
   if (!current) return
@@ -391,7 +319,7 @@ export function exitRestoredWorktree(): void {
   try {
     process.chdir(current.originalCwd)
   } catch {
-    // Original dir is gone (rare). Stay put — restoreWorktreeForResume
+    
     
     return
   }
@@ -399,13 +327,6 @@ export function exitRestoredWorktree(): void {
   setOriginalCwd(getCwd())
 }
 
-/**
- * Process a loaded conversation for resume/continue.
- *
- * Handles coordinator mode matching, session ID setup, agent restoration,
- * mode persistence, and initial state computation. Called by both --continue
- * and --resume paths in main.tsx.
- */
 export async function processResumedConversation(
   result: ResumeLoadResult,
   opts: {
@@ -423,7 +344,7 @@ export async function processResumedConversation(
     initialState: AppState
   },
 ): Promise<ProcessedResume> {
-  // Match coordinator/normal mode to the resumed session
+  
   let modeWarning: string | undefined
   if (feature('COORDINATOR_MODE')) {
     modeWarning = context.modeApi?.matchSessionMode(result.mode)
@@ -432,38 +353,38 @@ export async function processResumedConversation(
     }
   }
 
-  // Reuse the resumed session's ID unless --fork-session is specified
+  
   if (!opts.forkSession) {
     const sid = opts.sessionIdOverride ?? result.sessionId
     if (sid) {
-      // When resuming from a different project directory (git worktrees,
-      // cross-project), transcriptPath points to the actual file; its dirname
-      // is the project dir. Otherwise the session lives in the current project.
+      
+      
+      
       switchSession(
         asSessionId(sid),
         opts.transcriptPath ? dirname(opts.transcriptPath) : null,
       )
-      // Rename asciicast recording to match the resumed session ID so
-      // getSessionRecordingPaths() can discover it during /share
+      
+      
       await renameRecordingForSession()
       await resetSessionFilePointer()
       restoreCostStateForSession(sid)
     }
   } else if (result.contentReplacements?.length) {
-    // --fork-session keeps the fresh startup session ID. useLogMessages will
-    // copy source messages into the new JSONL via recordTranscript, but
-    // content-replacement entries are a separate entry type only written by
-    // recordContentReplacement (which query.ts calls for newlyReplaced, never
-    // the pre-loaded records). Without this seed, `claude -r {newSessionId}`
-    // finds source tool_use_ids in messages but no matching replacement records
-    // → they're classified as FROZEN → full content sent (cache miss, permanent
     
-    // the fresh ID, so loadTranscriptFile's keyed lookup will match.
+    
+    
+    
+    
+    
+    
+    
+    
     await recordContentReplacement(result.contentReplacements)
   }
 
-  // Restore session metadata so /status shows the saved name and metadata
-  // is re-appended on session exit. Fork doesn't take ownership of the
+  
+  
   
   
   
@@ -472,7 +393,7 @@ export async function processResumedConversation(
   )
 
   if (!opts.forkSession) {
-    // Cd back into the worktree the session was in when it last exited.
+    
     
     
     
@@ -482,17 +403,17 @@ export async function processResumedConversation(
     
     
     
-    // useLogMessages populates a *new* file via recordTranscript on REPL
+    
     
     adoptResumedSessionFile()
   }
 
-  // Restore context-collapse commit log + staged snapshot. The interactive
+  
   
   
   
   if (feature('CONTEXT_COLLAPSE')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
+    
     ;(
       require('../services/contextCollapse/persist.js') as typeof import('../services/contextCollapse/persist.js')
     ).restoreFromEntries(
@@ -502,7 +423,7 @@ export async function processResumedConversation(
     
   }
 
-  // Restore agent setting from resumed session
+  
   const { agentDefinition: restoredAgent, agentType: resumedAgentType } =
     restoreAgentFromSession(
       result.agentSetting,
@@ -515,7 +436,7 @@ export async function processResumedConversation(
     saveMode(context.modeApi?.isCoordinatorMode() ? 'coordinator' : 'normal')
   }
 
-  // Compute initial state before render (per CLAUDE.md guidelines)
+  
   const restoredAttribution = opts.includeAttribution
     ? computeRestoredAttributionState(result)
     : undefined

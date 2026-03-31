@@ -7,22 +7,22 @@ export function parseEsc(chars: string): Action | null {
 
   const first = chars[0]!
 
-  // Full reset (RIS)
+  
   if (first === 'c') {
     return { type: 'reset' }
   }
 
-  // Cursor save (DECSC)
+  
   if (first === '7') {
     return { type: 'cursor', action: { type: 'save' } }
   }
 
-  // Cursor restore (DECRC)
+  
   if (first === '8') {
     return { type: 'cursor', action: { type: 'restore' } }
   }
 
-  // Index - move cursor down (IND)
+  
   if (first === 'D') {
     return {
       type: 'cursor',
@@ -30,7 +30,7 @@ export function parseEsc(chars: string): Action | null {
     }
   }
 
-  // Reverse index - move cursor up (RI)
+  
   if (first === 'M') {
     return {
       type: 'cursor',
@@ -38,21 +38,21 @@ export function parseEsc(chars: string): Action | null {
     }
   }
 
-  // Next line (NEL)
+  
   if (first === 'E') {
     return { type: 'cursor', action: { type: 'nextLine', count: 1 } }
   }
 
-  // Horizontal tab set (HTS)
+  
   if (first === 'H') {
     return null 
   }
 
-  // Charset selection (ESC ( X, ESC ) X, etc.) - silently ignore
+  
   if ('()'.includes(first) && chars.length >= 2) {
     return null
   }
 
-  // Unknown
+  
   return { type: 'unknown', sequence: `\x1b${chars}` }
 }

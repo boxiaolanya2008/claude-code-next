@@ -1,14 +1,10 @@
 
 
 export function isRunningWithBun(): boolean {
-  // https://bun.com/guides/util/detect-bun
+  
   return process.versions.bun !== undefined
 }
 
-/**
- * Detects if running as a Bun-compiled standalone executable.
- * This checks for embedded files which are present in compiled binaries.
- */
 export function isInBundledMode(): boolean {
   return (
     typeof Bun !== 'undefined' &&

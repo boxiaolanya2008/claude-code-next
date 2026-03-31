@@ -60,7 +60,7 @@ function getFilesForLanguage(
 }
 
 function processContent(md: string, content: SkillContent): string {
-  // Strip HTML comments. Loop to handle nested comments.
+  
   let out = md
   let prev
   do {
@@ -132,7 +132,7 @@ function buildPrompt(
   args: string,
   content: SkillContent,
 ): string {
-  // Take the SKILL.md content up to the "Reading Guide" section
+  
   const cleanPrompt = processContent(content.SKILL_PROMPT, content)
   const readingGuideIdx = cleanPrompt.indexOf('## Reading Guide')
   const basePrompt =
@@ -151,7 +151,7 @@ function buildPrompt(
         buildInlineReference(filePaths, content),
     )
   } else {
-    // No language detected — include all docs and let the model ask
+    
     parts.push(INLINE_READING_GUIDE.replace(/\{lang\}/g, 'unknown'))
     parts.push(
       'No project language was auto-detected. Ask the user which language they are using, then refer to the matching docs below.',
@@ -162,7 +162,7 @@ function buildPrompt(
     )
   }
 
-  // Preserve the "When to Use WebFetch" and "Common Pitfalls" sections
+  
   const webFetchIdx = cleanPrompt.indexOf('## When to Use WebFetch')
   if (webFetchIdx !== -1) {
     parts.push(cleanPrompt.slice(webFetchIdx).trimEnd())

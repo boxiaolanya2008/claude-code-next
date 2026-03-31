@@ -18,7 +18,7 @@ export function selectTipWithLongestTimeSinceShown(
     return availableTips[0]
   }
 
-  // Sort tips by sessions since last shown (descending) and take the first one
+  
   
   const tipsWithSessions = availableTips.map(tip => ({
     tip,
@@ -32,7 +32,7 @@ export function selectTipWithLongestTimeSinceShown(
 export async function getTipToShowOnSpinner(
   context?: TipContext,
 ): Promise<Tip | undefined> {
-  // Check if tips are disabled (default to true if not set)
+  
   if (getSettings_DEPRECATED().spinnerTipsEnabled === false) {
     return undefined
   }
@@ -46,7 +46,7 @@ export async function getTipToShowOnSpinner(
 }
 
 export function recordShownTip(tip: Tip): void {
-  // Record in history
+  
   recordTipShown(tip.id)
 
   

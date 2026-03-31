@@ -9,7 +9,7 @@ import { getTeamFilePath, readTeamFile } from './teamHelpers.js'
 export function computeInitialTeamContext():
   | AppState['teamContext']
   | undefined {
-  // dynamicTeamContext is set in main.tsx from CLI args
+  
   const context = getDynamicTeamContext()
 
   if (!context?.teamName || !context?.agentName) {
@@ -51,19 +51,12 @@ export function computeInitialTeamContext():
   }
 }
 
-/**
- * Initialize teammate context from a resumed session.
- *
- * This is called when resuming a session that has teamName/agentName stored
- * in the transcript. It sets up teamContext in AppState so that heartbeat
- * and other swarm features work correctly.
- */
 export function initializeTeammateContextFromSession(
   setAppState: (updater: (prev: AppState) => AppState) => void,
   teamName: string,
   agentName: string,
 ): void {
-  // Read team file to get lead agent ID
+  
   const teamFile = readTeamFile(teamName)
   if (!teamFile) {
     logError(
@@ -74,7 +67,7 @@ export function initializeTeammateContextFromSession(
     return
   }
 
-  // Find the member in the team file to get their agentId
+  
   const member = teamFile.members.find(m => m.name === agentName)
   if (!member) {
     logForDebugging(

@@ -5,31 +5,12 @@ import { useOptionalKeybindingContext } from './KeybindingContext.js'
 import type { KeybindingContextName } from './types.js'
 
 type Options = {
-  /** Which context this binding belongs to (default: 'Global') */
+  
   context?: KeybindingContextName
   
   isActive?: boolean
 }
 
-/**
- * Ink-native hook for handling a keybinding.
- *
- * The handler stays in the component (React way).
- * The binding (keystroke → action) comes from config.
- *
- * Supports chord sequences (e.g., "ctrl+k ctrl+s"). When a chord is started,
- * the hook will manage the pending state automatically.
- *
- * Uses stopImmediatePropagation() to prevent other handlers from firing
- * once this binding is handled.
- *
- * @example
- * ```tsx
- * useKeybinding('app:toggleTodos', () => {
- *   setShowTodos(prev => !prev)
- * }, { context: 'Global' })
- * ```
- */
 export function useKeybinding(
   action: string,
   handler: () => void | false | Promise<void>,
@@ -46,10 +27,10 @@ export function useKeybinding(
 
   const handleInput = useCallback(
     (input: string, key: Key, event: InputEvent) => {
-      // If no keybinding context available, skip resolution
+      
       if (!keybindingContext) return
 
-      // Build context list: registered active contexts + this context + Global
+      
       
       const contextsToCheck: KeybindingContextName[] = [
         ...keybindingContext.activeContexts,
@@ -63,7 +44,7 @@ export function useKeybinding(
 
       switch (result.type) {
         case 'match':
-          // Chord completed (if any) - clear pending state
+          
           keybindingContext.setPendingChord(null)
           if (result.action === action) {
             if (handler() !== false) {
@@ -72,21 +53,21 @@ export function useKeybinding(
           }
           break
         case 'chord_started':
-          // User started a chord sequence - update pending state
+          
           keybindingContext.setPendingChord(result.pending)
           event.stopImmediatePropagation()
           break
         case 'chord_cancelled':
-          // Chord was cancelled (escape or invalid key)
+          
           keybindingContext.setPendingChord(null)
           break
         case 'unbound':
-          // Explicitly unbound - clear any pending chord
+          
           keybindingContext.setPendingChord(null)
           event.stopImmediatePropagation()
           break
         case 'none':
-          // No match - let other handlers try
+          
           break
       }
     },
@@ -96,25 +77,11 @@ export function useKeybinding(
   useInput(handleInput, { isActive })
 }
 
-/**
- * Handle multiple keybindings in one hook (reduces useInput calls).
- *
- * Supports chord sequences. When a chord is started, the hook will
- * manage the pending state automatically.
- *
- * @example
- * ```tsx
- * useKeybindings({
- *   'chat:submit': () => handleSubmit(),
- *   'chat:cancel': () => handleCancel(),
- * }, { context: 'Chat' })
- * ```
- */
 export function useKeybindings(
-  // Handler returning `false` means "not consumed" — the event propagates
   
-  // e.g. ScrollKeybindingHandler's scroll:line* returns false when the
-  // ScrollBox content fits (scroll is a no-op), letting a child component's
+  
+  
+  
   
   
   
@@ -144,10 +111,10 @@ export function useKeybindings(
 
   const handleInput = useCallback(
     (input: string, key: Key, event: InputEvent) => {
-      // If no keybinding context available, skip resolution
+      
       if (!keybindingContext) return
 
-      // Build context list: registered active contexts + this context + Global
+      
       
       const contextsToCheck: KeybindingContextName[] = [
         ...keybindingContext.activeContexts,
@@ -161,7 +128,7 @@ export function useKeybindings(
 
       switch (result.type) {
         case 'match':
-          // Chord completed (if any) - clear pending state
+          
           keybindingContext.setPendingChord(null)
           if (result.action in handlers) {
             const handler = handlers[result.action]
@@ -171,21 +138,21 @@ export function useKeybindings(
           }
           break
         case 'chord_started':
-          // User started a chord sequence - update pending state
+          
           keybindingContext.setPendingChord(result.pending)
           event.stopImmediatePropagation()
           break
         case 'chord_cancelled':
-          // Chord was cancelled (escape or invalid key)
+          
           keybindingContext.setPendingChord(null)
           break
         case 'unbound':
-          // Explicitly unbound - clear any pending chord
+          
           keybindingContext.setPendingChord(null)
           event.stopImmediatePropagation()
           break
         case 'none':
-          // No match - let other handlers try
+          
           break
       }
     },

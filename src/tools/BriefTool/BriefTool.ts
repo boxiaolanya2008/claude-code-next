@@ -65,11 +65,11 @@ export type Output = z.infer<OutputSchema>
 const KAIROS_BRIEF_REFRESH_MS = 5 * 60 * 1000
 
 export function isBriefEntitled(): boolean {
-  // Positive ternary — see docs/feature-gating.md. Negative early-return
-  // would not eliminate the GB gate string from external builds.
+  
+  
   return feature('KAIROS') || feature('KAIROS_BRIEF')
     ? getKairosActive() ||
-        isEnvTruthy(process.env.CLAUDE_CODE_BRIEF) ||
+        isEnvTruthy(process.env.CLAUDE_CODE_NEXT_BRIEF) ||
         getFeatureValue_CACHED_WITH_REFRESH(
           'tengu_kairos_brief',
           false,
@@ -78,35 +78,11 @@ export function isBriefEntitled(): boolean {
     : false
 }
 
-/**
- * Unified activation gate for the Brief tool. Governs model-facing behavior
- * as a unit: tool availability, system prompt section (getBriefSection),
- * tool-deferral bypass (isDeferredTool), and todo-nag suppression.
- *
- * Activation requires explicit opt-in (userMsgOptIn) set by one of:
- *   - `--brief` CLI flag (maybeActivateBrief in main.tsx)
- *   - `defaultView: 'chat'` in settings (main.tsx init)
- *   - `/brief` slash command (brief.ts)
- *   - `/config` defaultView picker (Config.tsx)
- *   - SendUserMessage in `--tools` / SDK `tools` option (main.tsx)
- *   - CLAUDE_CODE_BRIEF env var (maybeActivateBrief — dev/testing bypass)
- * Assistant mode (kairosActive) bypasses opt-in since its system prompt
- * hard-codes "you MUST use SendUserMessage" (systemPrompt.md:14).
- *
- * The GB gate is re-checked here as a kill-switch AND — flipping
- * tengu_kairos_brief off mid-session disables the tool on the next 5-min
- * refresh even for opted-in sessions. No opt-in → always false regardless
- * of GB (this is the fix for "brief defaults on for enrolled ants").
- *
- * Called from Tool.isEnabled() (lazy, post-init), never at module scope.
- * getKairosActive() and getUserMsgOptIn() are set in main.tsx before any
- * caller reaches here.
- */
 export function isBriefEnabled(): boolean {
-  // Top-level feature() guard is load-bearing for DCE: Bun can constant-fold
-  // the ternary to `false` in external builds and then dead-code the BriefTool
-  // object. Composing isBriefEntitled() alone (which has its own guard) is
-  // semantically equivalent but defeats constant-folding across the boundary.
+  
+  
+  
+  
   return feature('KAIROS') || feature('KAIROS_BRIEF')
     ? (getKairosActive() || getUserMsgOptIn()) && isBriefEntitled()
     : false

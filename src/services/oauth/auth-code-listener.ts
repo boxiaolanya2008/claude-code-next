@@ -20,11 +20,8 @@ export class AuthCodeListener {
     this.callbackPath = callbackPath
   }
 
-  /**
-   * Starts listening on an OS-assigned port and returns the port number.
-   * This avoids race conditions by keeping the server open until it's used.
-   * @param port Optional specific port to use. If not provided, uses OS-assigned port.
-   */
+  
+
   async start(port?: number): Promise<number> {
     return new Promise((resolve, reject) => {
       this.localServer.once('error', err => {
@@ -62,19 +59,15 @@ export class AuthCodeListener {
     })
   }
 
-  /**
-   * Completes the OAuth flow by redirecting the user's browser to a success page.
-   * Different success pages are shown based on the granted scopes.
-   * @param scopes The OAuth scopes that were granted
-   * @param customHandler Optional custom handler to serve response instead of redirecting
-   */
+  
+
   handleSuccessRedirect(
     scopes: string[],
     customHandler?: (res: ServerResponse, scopes: string[]) => void,
   ): void {
     if (!this.pendingResponse) return
 
-    // If custom handler provided, use it instead of default redirect
+    
     if (customHandler) {
       customHandler(this.pendingResponse, scopes)
       this.pendingResponse = null
@@ -82,7 +75,7 @@ export class AuthCodeListener {
       return
     }
 
-    // Default behavior: Choose success page based on granted permissions
+    
     const successUrl = shouldUseClaudeAIAuth(scopes)
       ? getOauthConfig().CLAUDEAI_SUCCESS_URL
       : getOauthConfig().CONSOLE_SUCCESS_URL
@@ -95,14 +88,12 @@ export class AuthCodeListener {
     logEvent('tengu_oauth_automatic_redirect', {})
   }
 
-  /**
-   * Handles error case by sending a redirect to the appropriate success page with an error indicator,
-   * ensuring the browser flow is completed properly.
-   */
+  
+
   handleErrorRedirect(): void {
     if (!this.pendingResponse) return
 
-    // TODO: swap to a different url once we have an error page
+    
     const errorUrl = getOauthConfig().CLAUDEAI_SUCCESS_URL
 
     
@@ -114,7 +105,7 @@ export class AuthCodeListener {
   }
 
   private startLocalListener(onReady: () => Promise<void>): void {
-    // Server is already created and listening, just set up handlers
+    
     this.localServer.on('request', this.handleRedirect.bind(this))
     this.localServer.on('error', this.handleError.bind(this))
 
@@ -159,7 +150,7 @@ export class AuthCodeListener {
       return
     }
 
-    // Store the response for later redirect
+    
     this.pendingResponse = res
 
     this.resolve(authCode)
@@ -188,13 +179,13 @@ export class AuthCodeListener {
   }
 
   close(): void {
-    // If we have a pending response, send a redirect before closing
+    
     if (this.pendingResponse) {
       this.handleErrorRedirect()
     }
 
     if (this.localServer) {
-      // Remove all listeners to prevent memory leaks
+      
       this.localServer.removeAllListeners()
       this.localServer.close()
     }

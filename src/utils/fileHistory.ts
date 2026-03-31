@@ -66,23 +66,17 @@ export function fileHistoryEnabled(): boolean {
   }
   return (
     getGlobalConfig().fileCheckpointingEnabled !== false &&
-    !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING)
+    !isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_FILE_CHECKPOINTING)
   )
 }
 
 function fileHistoryEnabledSdk(): boolean {
   return (
-    isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING) &&
-    !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING)
+    isEnvTruthy(process.env.CLAUDE_CODE_NEXT_ENABLE_SDK_FILE_CHECKPOINTING) &&
+    !isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_FILE_CHECKPOINTING)
   )
 }
 
-/**
- * Tracks a file edit (and add) by creating a backup of its current contents (if necessary).
- *
- * This must be called before the file is actually added or edited, so we can save
- * its contents before the edit.
- */
 export async function fileHistoryTrackEdit(
   updateFileHistoryState: (
     updater: (prev: FileHistoryState) => FileHistoryState,
@@ -112,12 +106,12 @@ export async function fileHistoryTrackEdit(
     return
   }
   if (mostRecent.trackedFileBackups[trackingPath]) {
-    // Already tracked in the most recent snapshot; next makeSnapshot will
+    
     
     return
   }
 
-  // Phase 2: async backup.
+  
   let backup: FileHistoryBackup
   try {
     backup = await createBackup(filePath, 1)
@@ -139,7 +133,7 @@ export async function fileHistoryTrackEdit(
         return state
       }
 
-      // This file has not already been tracked in the most recent snapshot, so we
+      
       
       const updatedTrackedFiles = state.trackedFiles.has(trackingPath)
         ? state.trackedFiles
@@ -172,7 +166,7 @@ export async function fileHistoryTrackEdit(
       void recordFileHistorySnapshot(
         messageId,
         updatedMostRecentSnapshot,
-        true, // isSnapshotUpdate
+        true, 
       ).catch(error => {
         logError(new Error(`FileHistory: Failed to record snapshot: ${error}`))
       })
@@ -192,9 +186,6 @@ export async function fileHistoryTrackEdit(
   })
 }
 
-/**
- * Adds a snapshot in the file history and backs up any modified tracked files.
- */
 export async function fileHistoryMakeSnapshot(
   updateFileHistoryState: (
     updater: (prev: FileHistoryState) => FileHistoryState,
@@ -205,7 +196,7 @@ export async function fileHistoryMakeSnapshot(
     return undefined
   }
 
-  // Phase 1: capture current state with a no-op updater so we know which
+  
   
   
   
@@ -215,7 +206,7 @@ export async function fileHistoryMakeSnapshot(
     captured = state
     return state
   })
-  if (!captured) return // updateFileHistoryState was a no-op stub (e.g. mcp.ts)
+  if (!captured) return 
 
   
   const trackedFileBackups: Record<string, FileHistoryBackup> = {}
@@ -240,7 +231,7 @@ export async function fileHistoryMakeSnapshot(
 
           if (!fileStats) {
             trackedFileBackups[trackingPath] = {
-              backupFileName: null, // Use null to denote missing tracked file
+              backupFileName: null, 
               version: nextVersion,
               backupTime: new Date(),
             }
@@ -253,7 +244,7 @@ export async function fileHistoryMakeSnapshot(
             return
           }
 
-          // File exists - check if it needs to be backed up
+          
           if (
             latestBackup &&
             latestBackup.backupFileName !== null &&
@@ -263,12 +254,12 @@ export async function fileHistoryMakeSnapshot(
               fileStats,
             ))
           ) {
-            // File hasn't been modified since the latest version, reuse it
+            
             trackedFileBackups[trackingPath] = latestBackup
             return
           }
 
-          // File is newer than the latest backup, create a new backup
+          
           trackedFileBackups[trackingPath] = await createBackup(
             filePath,
             nextVersion,
@@ -281,8 +272,8 @@ export async function fileHistoryMakeSnapshot(
     )
   }
 
-  // Phase 3: commit the new snapshot to state. Read state.trackedFiles FRESH
-  // — if fileHistoryTrackEdit added a file during phase 2's async window, it
+  
+  
   
   
   updateFileHistoryState((state: FileHistoryState) => {
@@ -319,7 +310,7 @@ export async function fileHistoryMakeSnapshot(
       void recordFileHistorySnapshot(
         messageId,
         newSnapshot,
-        false, // isSnapshotUpdate
+        false, 
       ).catch(error => {
         logError(new Error(`FileHistory: Failed to record snapshot: ${error}`))
       })
@@ -341,9 +332,6 @@ export async function fileHistoryMakeSnapshot(
   })
 }
 
-/**
- * Rewinds the file system to a previous snapshot.
- */
 export async function fileHistoryRewind(
   updateFileHistoryState: (
     updater: (prev: FileHistoryState) => FileHistoryState,
@@ -354,7 +342,7 @@ export async function fileHistoryRewind(
     return
   }
 
-  // Rewind is a pure filesystem side-effect and does not mutate
+  
   
   let captured: FileHistoryState | undefined
   updateFileHistoryState(state => {
@@ -407,10 +395,6 @@ export function fileHistoryCanRestore(
   return state.snapshots.some(snapshot => snapshot.messageId === messageId)
 }
 
-/**
- * Computes diff stats for a file snapshot by counting the number of files that would be changed
- * if reverting to that snapshot.
- */
 export async function fileHistoryGetDiffStats(
   state: FileHistoryState,
   messageId: UUID,
@@ -438,7 +422,7 @@ export async function fileHistoryGetDiffStats(
           : getBackupFileNameFirstVersion(trackingPath, state)
 
         if (backupFileName === undefined) {
-          // Error resolving the backup, so don't touch the file
+          
           logError(
             new Error('FileHistory: Error finding the backup file to apply'),
           )
@@ -456,8 +440,8 @@ export async function fileHistoryGetDiffStats(
           return { filePath, stats }
         }
         if (backupFileName === null && (await pathExists(filePath))) {
-          // Zero-byte file created after snapshot: counts as changed even
-          // though diffLines reports 0/0.
+          
+          
           return { filePath, stats }
         }
         return null
@@ -483,14 +467,6 @@ export async function fileHistoryGetDiffStats(
   return { filesChanged, insertions, deletions }
 }
 
-/**
- * Lightweight boolean-only check: would rewinding to this message change any
- * file on disk? Uses the same stat/content comparison as the non-dry-run path
- * of applySnapshot (checkOriginFileChanged) instead of computeDiffStatsForFile,
- * so it never calls diffLines. Early-exits on the first changed file. Use when
- * the caller only needs a yes/no answer; fileHistoryGetDiffStats remains for
- * callers that display insertions/deletions.
- */
 export async function fileHistoryHasAnyChanges(
   state: FileHistoryState,
   messageId: UUID,
@@ -518,7 +494,7 @@ export async function fileHistoryHasAnyChanges(
         continue
       }
       if (backupFileName === null) {
-        // Backup says file did not exist; probe via stat (operate-then-catch).
+        
         if (await pathExists(filePath)) return true
         continue
       }
@@ -530,10 +506,6 @@ export async function fileHistoryHasAnyChanges(
   return false
 }
 
-/**
- * Applies the given file snapshot state to the tracked files (writes/deletes
- * on disk), returning the list of changed file paths. Async IO only.
- */
 async function applySnapshot(
   state: FileHistoryState,
   targetSnapshot: FileHistorySnapshot,
@@ -549,7 +521,7 @@ async function applySnapshot(
         : getBackupFileNameFirstVersion(trackingPath, state)
 
       if (backupFileName === undefined) {
-        // Error resolving the backup, so don't touch the file
+        
         logError(
           new Error('FileHistory: Error finding the backup file to apply'),
         )
@@ -560,7 +532,7 @@ async function applySnapshot(
       }
 
       if (backupFileName === null) {
-        // File did not exist at the target version; delete it if present.
+        
         try {
           await unlink(filePath)
           logForDebugging(`FileHistory: [Rewind] Deleted ${filePath}`)
@@ -572,7 +544,7 @@ async function applySnapshot(
         continue
       }
 
-      // File should exist at a specific version. Restore only if it differs.
+      
       if (await checkOriginFileChanged(filePath, backupFileName)) {
         await restoreBackup(filePath, backupFileName)
         logForDebugging(
@@ -590,13 +562,6 @@ async function applySnapshot(
   return filesChanged
 }
 
-/**
- * Checks if the original file has been changed compared to the backup file.
- * Optionally reuses a pre-fetched stat for the original file (when the caller
- * already stat'd it to check existence, we avoid a second syscall).
- *
- * Exported for testing.
- */
 export async function checkOriginFileChanged(
   originalFile: string,
   backupFileName: string,
@@ -627,31 +592,27 @@ export async function checkOriginFileChanged(
       ])
       return originalContent !== backupContent
     } catch {
-      // File deleted between stat and read -> treat as changed.
+      
       return true
     }
   })
 }
 
-/**
- * Shared stat/content comparison logic for sync and async change checks.
- * Returns true if the file has changed relative to the backup.
- */
 function compareStatsAndContent<T extends boolean | Promise<boolean>>(
   originalStats: Stats | null,
   backupStats: Stats | null,
   compareContent: () => T,
 ): T | boolean {
-  // One exists, one missing -> changed
+  
   if ((originalStats === null) !== (backupStats === null)) {
     return true
   }
-  // Both missing -> no change
+  
   if (originalStats === null || backupStats === null) {
     return false
   }
 
-  // Check file stats like permission and file size
+  
   if (
     originalStats.mode !== backupStats.mode ||
     originalStats.size !== backupStats.size
@@ -659,21 +620,18 @@ function compareStatsAndContent<T extends boolean | Promise<boolean>>(
     return true
   }
 
-  // This is an optimization that depends on the correct setting of the modified
+  
   
   
   if (originalStats.mtimeMs < backupStats.mtimeMs) {
     return false
   }
 
-  // Use the more expensive file content comparison. The callback handles its
+  
   
   return compareContent()
 }
 
-/**
- * Computes the number of lines changed in the diff.
- */
 async function computeDiffStatsForFile(
   originalFile: string,
   backupFileName?: string,
@@ -740,11 +698,6 @@ function resolveBackupPath(backupFileName: string, sessionId?: string): string {
   )
 }
 
-/**
- * Creates a backup of the file at filePath. If the file does not exist
- * (ENOENT), records a null backup (file-did-not-exist marker). All IO is
- * async. Lazy mkdir: tries copyFile first, creates the directory on ENOENT.
- */
 async function createBackup(
   filePath: string | null,
   version: number,
@@ -770,7 +723,7 @@ async function createBackup(
     throw e
   }
 
-  // copyFile preserves content and avoids reading the whole file into the JS
+  
   
   
   
@@ -782,7 +735,7 @@ async function createBackup(
     await copyFile(filePath, backupPath)
   }
 
-  // Preserve file permissions on the backup.
+  
   await chmod(backupPath, srcStats.mode)
 
   logEvent('tengu_file_history_backup_file_created', {
@@ -797,10 +750,6 @@ async function createBackup(
   }
 }
 
-/**
- * Restores a file from its backup path with proper directory creation and permissions.
- * Lazy mkdir: tries copyFile first, creates the directory on ENOENT.
- */
 async function restoreBackup(
   filePath: string,
   backupFileName: string,
@@ -823,7 +772,7 @@ async function restoreBackup(
     throw e
   }
 
-  // Lazy mkdir: 99% of calls hit the fast path (destination dir exists).
+  
   try {
     await copyFile(backupPath, filePath)
   } catch (e: unknown) {
@@ -832,18 +781,10 @@ async function restoreBackup(
     await copyFile(backupPath, filePath)
   }
 
-  // Restore the file permissions
+  
   await chmod(filePath, backupStats.mode)
 }
 
-/**
- * Gets the first (earliest) backup version for a file, used when rewinding
- * to a target backup point where the file has not been tracked yet.
- *
- * @returns The backup file name for the first version, or null if the file
- * did not exist in the first version, or undefined if we cannot find a
- * first version at all
- */
 function getBackupFileNameFirstVersion(
   trackingPath: string,
   state: FileHistoryState,
@@ -851,19 +792,16 @@ function getBackupFileNameFirstVersion(
   for (const snapshot of state.snapshots) {
     const backup = snapshot.trackedFileBackups[trackingPath]
     if (backup !== undefined && backup.version === 1) {
-      // This can be either a file name or null, with null meaning the file
+      
       
       return backup.backupFileName
     }
   }
 
-  // The undefined means there was an error resolving the first version.
+  
   return undefined
 }
 
-/**
- * Use the relative path as the key to reduce session storage space for tracking.
- */
 function maybeShortenFilePath(filePath: string): string {
   if (!isAbsolute(filePath)) {
     return filePath
@@ -882,9 +820,6 @@ function maybeExpandFilePath(filePath: string): string {
   return join(getOriginalCwd(), filePath)
 }
 
-/**
- * Restores file history snapshot state for a given log option.
- */
 export function fileHistoryRestoreStateFromLog(
   fileHistorySnapshots: FileHistorySnapshot[],
   onUpdateState: (newState: FileHistoryState) => void,
@@ -892,7 +827,7 @@ export function fileHistoryRestoreStateFromLog(
   if (!fileHistoryEnabled()) {
     return
   }
-  // Make a copy of the snapshots as we migrate from absolute path to
+  
   
   const snapshots: FileHistorySnapshot[] = []
   
@@ -916,9 +851,6 @@ export function fileHistoryRestoreStateFromLog(
   })
 }
 
-/**
- * Copy file history snapshots for a given log option.
- */
 export async function copyFileHistoryForResume(log: LogOption): Promise<void> {
   if (!fileHistoryEnabled()) {
     return
@@ -948,8 +880,8 @@ export async function copyFileHistoryForResume(log: LogOption): Promise<void> {
   }
 
   try {
-    // All backups share the same directory: {configDir}/file-history/{sessionId}/
-    // Create it once upfront instead of once per backup file
+    
+    
     const newBackupDir = join(
       getClaudeConfigHomeDir(),
       'file-history',
@@ -980,7 +912,7 @@ export async function copyFileHistoryForResume(log: LogOption): Promise<void> {
             } catch (e: unknown) {
               const code = getErrnoCode(e)
               if (code === 'EEXIST') {
-                // Already migrated, skip
+                
                 return
               }
               if (code === 'ENOENT') {
@@ -1022,7 +954,7 @@ export async function copyFileHistoryForResume(log: LogOption): Promise<void> {
           void recordFileHistorySnapshot(
             snapshot.messageId,
             snapshot,
-            false, // isSnapshotUpdate
+            false, 
           ).catch(_ => {
             logError(
               new Error(`FileHistory: Failed to record copy backup snapshot`),
@@ -1045,12 +977,6 @@ export async function copyFileHistoryForResume(log: LogOption): Promise<void> {
   }
 }
 
-/**
- * Notifies VSCode about files that have changed between snapshots.
- * Compares the previous snapshot with the new snapshot and sends file_updated
- * notifications for any files whose content has changed.
- * Fire-and-forget (void-dispatched from fileHistoryMakeSnapshot).
- */
 async function notifyVscodeSnapshotFilesUpdated(
   oldState: FileHistoryState,
   newState: FileHistoryState,
@@ -1075,20 +1001,20 @@ async function notifyVscodeSnapshotFilesUpdated(
       continue
     }
 
-    // Get old content from the previous backup
+    
     let oldContent: string | null = null
     if (oldBackup?.backupFileName) {
       const backupPath = resolveBackupPath(oldBackup.backupFileName)
       oldContent = await readFileAsyncOrNull(backupPath)
     }
 
-    // Get new content from the new backup or current file
+    
     let newContent: string | null = null
     if (newBackup?.backupFileName) {
       const backupPath = resolveBackupPath(newBackup.backupFileName)
       newContent = await readFileAsyncOrNull(backupPath)
     }
-    // If newBackup?.backupFileName === null, the file was deleted; newContent stays null.
+    
 
     
     if (oldContent !== newContent) {
@@ -1097,7 +1023,6 @@ async function notifyVscodeSnapshotFilesUpdated(
   }
 }
 
-/** Async read that swallows all errors and returns null (best-effort). */
 async function readFileAsyncOrNull(path: string): Promise<string | null> {
   try {
     return await readFile(path, 'utf-8')
@@ -1109,7 +1034,7 @@ async function readFileAsyncOrNull(path: string): Promise<string | null> {
 const ENABLE_DUMP_STATE = false
 function maybeDumpStateForDebug(state: FileHistoryState): void {
   if (ENABLE_DUMP_STATE) {
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
+    
     console.error(inspect(state, false, 5))
   }
 }

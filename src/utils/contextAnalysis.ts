@@ -109,7 +109,7 @@ function processBlock(
 
   switch (block.type) {
     case 'text':
-      // Check if this is a local command output
+      
       if (
         message.type === 'user' &&
         'text' in block &&
@@ -182,7 +182,7 @@ function processBlock(
     case 'text_editor_code_execution_tool_result':
     case 'tool_search_tool_result':
     case 'compaction':
-      // Don't care about these for now..
+      
       stats['other'] += tokens
       break
   }
@@ -253,14 +253,14 @@ export function tokenStatsToStatsigMetrics(
       (toolResultTotal / stats.total) * 100,
     )
 
-    // Add individual tool request percentages
+    
     stats.toolRequests.forEach((tokens, tool) => {
       metrics[`tool_request_${tool}_percent`] = Math.round(
         (tokens / stats.total) * 100,
       )
     })
 
-    // Add individual tool result percentages
+    
     stats.toolResults.forEach((tokens, tool) => {
       metrics[`tool_result_${tool}_percent`] = Math.round(
         (tokens / stats.total) * 100,

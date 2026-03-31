@@ -4,10 +4,6 @@ export function formatAgentId(agentName: string, teamName: string): string {
   return `${agentName}@${teamName}`
 }
 
-/**
- * Parses an agent ID into its components.
- * Returns null if the ID doesn't contain the @ separator.
- */
 export function parseAgentId(
   agentId: string,
 ): { agentName: string; teamName: string } | null {
@@ -21,9 +17,6 @@ export function parseAgentId(
   }
 }
 
-/**
- * Formats a request ID in the format `{requestType}-{timestamp}@{agentId}`.
- */
 export function generateRequestId(
   requestType: string,
   agentId: string,
@@ -32,10 +25,6 @@ export function generateRequestId(
   return `${requestType}-${timestamp}@${agentId}`
 }
 
-/**
- * Parses a request ID into its components.
- * Returns null if the request ID doesn't match the expected format.
- */
 export function parseRequestId(
   requestId: string,
 ): { requestType: string; timestamp: number; agentId: string } | null {

@@ -86,7 +86,7 @@ export async function* handleStopHooks(
     toolUseContext,
     querySource,
   }
-  // Only save params for main session queries — subagents must not overwrite.
+  
   
   
   
@@ -94,7 +94,7 @@ export async function* handleStopHooks(
     saveCacheSafeParams(createCacheSafeParams(stopHookContext))
   }
 
-  // Template job classification: when running as a dispatched job, classify
+  
   
   
   
@@ -108,8 +108,8 @@ export async function* handleStopHooks(
     querySource.startsWith('repl_main_thread') &&
     !toolUseContext.agentId
   ) {
-    // Full turn history — assistantMessages resets each queryLoop iteration,
-    // so tool calls from earlier iterations (Agent spawn, then summary) need
+    
+    
     
     const turnAssistantMessages = stopHookContext.messages.filter(
       (m): m is AssistantMessage => m.type === 'assistant',
@@ -123,16 +123,16 @@ export async function* handleStopHooks(
       })
     await Promise.race([
       p,
-      // eslint-disable-next-line no-restricted-syntax -- sleep() has no .unref(); timer must not block exit
+      
       new Promise<void>(r => setTimeout(r, 60_000).unref()),
     ])
   }
-  // --bare / SIMPLE: skip background bookkeeping (prompt suggestion,
-  // memory extraction, auto-dream). Scripted -p calls don't want auto-memory
-  // or forked agents contending for resources during shutdown.
+  
+  
+  
   if (!isBareMode()) {
-    // Inline env check for dead code elimination in external builds
-    if (!isEnvDefinedFalsy(process.env.CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION)) {
+    
+    if (!isEnvDefinedFalsy(process.env.CLAUDE_CODE_NEXT_ENABLE_PROMPT_SUGGESTION)) {
       void executePromptSuggestion(stopHookContext)
     }
     if (
@@ -140,9 +140,9 @@ export async function* handleStopHooks(
       !toolUseContext.agentId &&
       isExtractModeActive()
     ) {
-      // Fire-and-forget in both interactive and non-interactive. For -p/SDK,
-      // print.ts drains the in-flight promise after flushing the response
-      // but before gracefulShutdownSync (see drainPendingExtraction).
+      
+      
+      
       void extractMemoriesModule!.executeExtractMemories(
         stopHookContext,
         toolUseContext.appendSystemMessage,
@@ -153,11 +153,11 @@ export async function* handleStopHooks(
     }
   }
 
-  // chicago MCP: auto-unhide + lock release at turn end.
-  // Main thread only — the CU lock is a process-wide module-level variable,
-  // so a subagent's stopHooks releasing it leaves the main thread's cleanup
-  // seeing isLockHeldLocally()===false → no exit notification, and unhides
-  // mid-turn. Subagents don't start CU sessions so this is a pure skip.
+  
+  
+  
+  
+  
   if (feature('CHICAGO_MCP') && !toolUseContext.agentId) {
     try {
       const { cleanupComputerUseAfterTurn } = await import(
@@ -165,7 +165,7 @@ export async function* handleStopHooks(
       )
       await cleanupComputerUseAfterTurn(toolUseContext)
     } catch {
-      // Failures are silent — this is dogfooding cleanup, not critical path
+      
     }
   }
 
@@ -210,7 +210,7 @@ export async function* handleStopHooks(
             })
           }
         }
-        // Track errors and output from attachments
+        
         if (result.message.type === 'attachment') {
           const attachment = result.message.attachment
           if (
@@ -228,7 +228,7 @@ export async function* handleStopHooks(
               hookErrors.push(attachment.content)
               hasOutput = true
             } else if (attachment.type === 'hook_success') {
-              // Check if successful hook produced any stdout/stderr
+              
               if (
                 (attachment.stdout && attachment.stdout.trim()) ||
                 (attachment.stderr && attachment.stderr.trim())
@@ -236,7 +236,7 @@ export async function* handleStopHooks(
                 hasOutput = true
               }
             }
-            // Extract per-hook duration for timing visibility.
+            
             
             if ('durationMs' in attachment && 'command' in attachment) {
               const info = hookInfos.find(
@@ -254,7 +254,7 @@ export async function* handleStopHooks(
       if (result.blockingError) {
         const userMessage = createUserMessage({
           content: getStopHookMessage(result.blockingError),
-          isMeta: true, // Hide from UI (shown in summary message instead)
+          isMeta: true, 
         })
         blockingErrors.push(userMessage)
         yield userMessage
@@ -262,7 +262,7 @@ export async function* handleStopHooks(
         
         hookErrors.push(result.blockingError.blockingError)
       }
-      // Check if hook wants to prevent continuation
+      
       if (result.preventContinuation) {
         preventedContinuation = true
         stopReason = result.stopReason || 'Stop hook prevented continuation'
@@ -276,7 +276,7 @@ export async function* handleStopHooks(
         })
       }
 
-      // Check if we were aborted during hook execution
+      
       if (toolUseContext.abortController.signal.aborted) {
         logEvent('tengu_pre_stop_hooks_cancelled', {
           queryChainId: toolUseContext.queryTracking
@@ -291,7 +291,7 @@ export async function* handleStopHooks(
       }
     }
 
-    // Create summary system message if hooks ran
+    
     if (hookCount > 0) {
       yield createStopHookSummaryMessage(
         hookCount,
@@ -323,12 +323,12 @@ export async function* handleStopHooks(
       return { blockingErrors: [], preventContinuation: true }
     }
 
-    // Collect blocking errors from stop hooks
+    
     if (blockingErrors.length > 0) {
       return { blockingErrors, preventContinuation: false }
     }
 
-    // After Stop hooks pass, run TeammateIdle and TaskCompleted hooks if this is a teammate
+    
     if (isTeammate()) {
       const teammateName = getAgentName() ?? ''
       const teamName = getTeamName() ?? ''
@@ -377,7 +377,7 @@ export async function* handleStopHooks(
             teammateBlockingErrors.push(userMessage)
             yield userMessage
           }
-          // Match Stop hook behavior: allow preventContinuation/stopReason
+          
           if (result.preventContinuation) {
             teammatePreventedContinuation = true
             teammateStopReason =
@@ -396,7 +396,7 @@ export async function* handleStopHooks(
         }
       }
 
-      // Run TeammateIdle hooks
+      
       const teammateIdleGenerator = executeTeammateIdleHooks(
         teammateName,
         teamName,
@@ -419,7 +419,7 @@ export async function* handleStopHooks(
           teammateBlockingErrors.push(userMessage)
           yield userMessage
         }
-        // Match Stop hook behavior: allow preventContinuation/stopReason
+        
         if (result.preventContinuation) {
           teammatePreventedContinuation = true
           teammateStopReason =

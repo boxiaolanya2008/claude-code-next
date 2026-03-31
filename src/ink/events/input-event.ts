@@ -44,12 +44,12 @@ function parseKey(keypress: ParsedKey): [Key, string] {
     tab: keypress.name === 'tab',
     backspace: keypress.name === 'backspace',
     delete: keypress.name === 'delete',
-    // `parseKeypress` parses \u001B\u001B[A (meta + up arrow) as meta = false
+    
     
     
     
     meta: keypress.meta || keypress.name === 'escape' || keypress.option,
-    // Super (Cmd on macOS / Win key) — only arrives via kitty keyboard
+    
     
     
     super: keypress.super,
@@ -62,7 +62,7 @@ function parseKey(keypress: ParsedKey): [Key, string] {
     input = ''
   }
 
-  // When ctrl is set, keypress.name for space is the literal word "space".
+  
   
   
   
@@ -70,16 +70,16 @@ function parseKey(keypress: ParsedKey): [Key, string] {
     input = ' '
   }
 
-  // Suppress unrecognized escape sequences that were parsed as function keys
   
   
   
-  // "[25~") leaks into the input as literal text.
+  
+  
   if (keypress.code && !keypress.name) {
     input = ''
   }
 
-  // Suppress ESC-less SGR mouse fragments. When a heavy React commit blocks
+  
   
   
   
@@ -91,34 +91,34 @@ function parseKey(keypress: ParsedKey): [Key, string] {
     input = ''
   }
 
-  // Strip meta if it's still remaining after `parseKeypress`
-  // TODO(vadimdemedes): remove this in the next major version.
+  
+  
   if (input.startsWith('\u001B')) {
     input = input.slice(1)
   }
 
-  // Track whether we've already processed this as a special sequence
+  
   
   
   let processedAsSpecialSequence = false
 
   
-  // we're left with "[codepoint;modifieru" (e.g., "[98;3u" for Alt+b).
-  // Use the parsed key name instead for input handling. Require a digit
-  // after [ — real CSI u is always [<digits>…u, and a bare startsWith('[')
-  // false-matches X10 mouse at row 85 (Cy = 85+32 = 'u'), leaking the
-  // literal text "mouse" into the prompt via processedAsSpecialSequence.
+  
+  
+  
+  
+  
   if (/^\[\d/.test(input) && input.endsWith('u')) {
     if (!keypress.name) {
-      // Unmapped Kitty functional key (Caps Lock 57358, F13–F35, KP nav,
-      // bare modifiers, etc.) — keycodeToName() returned undefined. Swallow
-      // so the raw "[57358u" doesn't leak into the prompt. See #38781.
+      
+      
+      
       input = ''
     } else {
-      // 'space' → ' '; 'escape' → '' (key.escape carries it;
-      // processedAsSpecialSequence bypasses the nonAlphanumericKeys
       
-      // otherwise use key name.
+      
+      
+      
       input =
         keypress.name === 'space'
           ? ' '
@@ -129,16 +129,16 @@ function parseKey(keypress: ParsedKey): [Key, string] {
     processedAsSpecialSequence = true
   }
 
-  // Handle xterm modifyOtherKeys sequences: after stripping ESC, we're left
-  // with "[27;modifier;keycode~" (e.g., "[27;3;98~" for Alt+b). Same
-  // extraction as CSI u — without this, printable-char keycodes (single-letter
-  // names) skip the nonAlphanumericKeys clear and leak "[27;..." as input.
+  
+  
+  
+  
   if (input.startsWith('[27;') && input.endsWith('~')) {
     if (!keypress.name) {
-      // Unmapped modifyOtherKeys keycode — swallow for consistency with
-      // the CSI u handler above. Practically untriggerable today (xterm
-      // modifyOtherKeys only sends ASCII keycodes, all mapped), but
-      // guards against future terminal behavior.
+      
+      
+      
+      
       input = ''
     } else {
       input =
@@ -151,8 +151,8 @@ function parseKey(keypress: ParsedKey): [Key, string] {
     processedAsSpecialSequence = true
   }
 
-  // Handle application keypad mode sequences: after stripping ESC,
-  // we're left with "O<letter>" (e.g., "Op" for numpad 0, "Oy" for numpad 9).
+  
+  
   
   if (
     input.startsWith('O') &&
@@ -164,7 +164,7 @@ function parseKey(keypress: ParsedKey): [Key, string] {
     processedAsSpecialSequence = true
   }
 
-  // Clear input for non-alphanumeric keys (arrows, function keys, etc.)
+  
   
   
   if (
@@ -175,7 +175,7 @@ function parseKey(keypress: ParsedKey): [Key, string] {
     input = ''
   }
 
-  // Set shift=true for uppercase letters (A-Z)
+  
   
   if (
     input.length === 1 &&

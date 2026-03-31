@@ -164,7 +164,7 @@ export async function processUserInput({
     return result
   }
 
-  // Execute UserPromptSubmit hooks and handle blocking
+  
   queryCheckpoint('query_hooks_start')
   const inputMessage = getContentText(input) || ''
 
@@ -174,12 +174,12 @@ export async function processUserInput({
     context,
     context.requestPrompt,
   )) {
-    // We only care about the result
+    
     if (hookResult.message?.type === 'progress') {
       continue
     }
 
-    // Return only a system-level error message, erasing the original user input
+    
     if (hookResult.blockingError) {
       const blockingMessage = getUserPromptSubmitHookBlockingMessage(
         hookResult.blockingError,
@@ -197,7 +197,7 @@ export async function processUserInput({
       }
     }
 
-    // If preventContinuation is set, stop processing but keep the original
+    
     
     if (hookResult.preventContinuation) {
       const message = hookResult.stopReason
@@ -212,7 +212,7 @@ export async function processUserInput({
       return result
     }
 
-    // Collect additional contexts
+    
     if (
       hookResult.additionalContexts &&
       hookResult.additionalContexts.length > 0
@@ -228,12 +228,12 @@ export async function processUserInput({
       )
     }
 
-    // TODO: Clean this up
+    
     if (hookResult.message) {
       switch (hookResult.message.attachment.type) {
         case 'hook_success':
           if (!hookResult.message.attachment.content) {
-            // Skip if there is no content
+            
             break
           }
           result.messages.push({
@@ -323,7 +323,7 @@ async function processUserInputBase(
     normalizedInput = processedBlocks
     queryCheckpoint('query_image_processing_end')
     
-    // and keep track of the preceding content blocks
+    
     const lastBlock = processedBlocks[processedBlocks.length - 1]
     if (lastBlock?.type === 'text') {
       inputString = lastBlock.text
@@ -337,7 +337,7 @@ async function processUserInputBase(
     throw new Error(`Mode: ${mode} requires a string input.`)
   }
 
-  // Extract and convert image content to content blocks early
+  
   
   const imageContents = pastedContents
     ? Object.values(pastedContents).filter(isValidImagePaste)
@@ -382,7 +382,7 @@ async function processUserInputBase(
     originalDimensions,
     sourcePath,
   } of imageProcessingResults) {
-    // Collect image metadata for isMeta message (prefer resized dimensions)
+    
     if (resized.dimensions) {
       const metadataText = createImageMetadataText(
         resized.dimensions,
@@ -392,7 +392,7 @@ async function processUserInputBase(
         imageMetadataTexts.push(metadataText)
       }
     } else if (originalDimensions) {
-      // Fall back to original dimensions if resize didn't provide them
+      
       const metadataText = createImageMetadataText(
         originalDimensions,
         sourcePath,
@@ -401,17 +401,17 @@ async function processUserInputBase(
         imageMetadataTexts.push(metadataText)
       }
     } else if (sourcePath) {
-      // If we have a source path but no dimensions, still add source info
+      
       imageMetadataTexts.push(`[Image source: ${sourcePath}]`)
     }
     imageContentBlocks.push(resized.block)
   }
   queryCheckpoint('query_pasted_image_processing_end')
 
-  // Bridge-safe slash command override: mobile/web clients set bridgeOrigin
-  // with skipSlashCommands still true (defense-in-depth against exit words and
-  // immediate-command fast paths). Resolve the command here — if it passes
-  // isBridgeSafeCommand, clear the skip so the gate below opens. If it's a
+  
+  
+  
+  
   
   
   let effectiveSkipSlash = skipSlashCommands
@@ -437,22 +437,22 @@ async function processUserInputBase(
         }
       }
     }
-    // Unknown /foo or unparseable — fall through to plain text, same as
+    
     
   }
 
-  // Ultraplan keyword — route through /ultraplan. Detect on the
   
   
   
   
   
-  // headless/print mode filters local-jsx commands out of context.options,
-  // so routing to /ultraplan there yields "Unknown skill" — and there's no
-  // rainbow animation in print mode anyway.
-  // Runs before attachment extraction so this path matches the slash-command
-  // path below (no await between setUserInputOnProcessing and setAppState —
-  // React batches both into one render, no flash).
+  
+  
+  
+  
+  
+  
+  
   if (
     feature('ULTRAPLAN') &&
     mode === 'prompt' &&
@@ -481,7 +481,7 @@ async function processUserInputBase(
     return addImageMetadataMessage(slashResult, imageMetadataTexts)
   }
 
-  // For slash commands, attachments will be extracted within getMessagesForSlashCommand
+  
   const shouldExtractAttachments =
     !skipAttachments &&
     inputString !== null &&
@@ -494,7 +494,7 @@ async function processUserInputBase(
           inputString,
           context,
           ideSelection ?? null,
-          [], // queuedCommands - handled by query.ts for mid-turn attachments
+          [], 
           messages,
           querySource,
         ),
@@ -502,7 +502,7 @@ async function processUserInputBase(
     : []
   queryCheckpoint('query_attachment_loading_end')
 
-  // Bash commands
+  
   if (inputString !== null && mode === 'bash') {
     const { processBashCommand } = await import('./processBashCommand.js')
     return addImageMetadataMessage(
@@ -517,8 +517,8 @@ async function processUserInputBase(
     )
   }
 
-  // Slash commands
-  // Skip for remote bridge messages — input from CCR clients is plain text
+  
+  
   if (
     inputString !== null &&
     !effectiveSkipSlash &&
@@ -539,7 +539,7 @@ async function processUserInputBase(
     return addImageMetadataMessage(slashResult, imageMetadataTexts)
   }
 
-  // Log agent mention queries for analysis
+  
   if (inputString !== null && mode === 'prompt') {
     const trimmedInput = inputString.trim()
 
@@ -554,7 +554,7 @@ async function processUserInputBase(
       const isPrefix =
         trimmedInput.startsWith(agentMentionString) && !isSubagentOnly
 
-      // Log whenever users use @agent-<name> syntax
+      
       logEvent('tengu_subagent_at_mention', {
         is_subagent_only: isSubagentOnly,
         is_prefix: isPrefix,
@@ -562,7 +562,7 @@ async function processUserInputBase(
     }
   }
 
-  // Regular user prompt
+  
   return addImageMetadataMessage(
     processTextPrompt(
       normalizedInput,
@@ -577,7 +577,6 @@ async function processUserInputBase(
   )
 }
 
-// Adds image metadata texts as isMeta message to result
 function addImageMetadataMessage(
   result: ProcessUserInputBaseResult,
   imageMetadataTexts: string[],

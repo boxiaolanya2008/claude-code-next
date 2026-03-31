@@ -30,15 +30,14 @@ const DEFAULT_KEEPALIVE_INTERVAL = 300_000
 const SLEEP_DETECTION_THRESHOLD_MS = DEFAULT_MAX_RECONNECT_DELAY * 2 
 
 const PERMANENT_CLOSE_CODES = new Set([
-  1002, // protocol error — server rejected handshake (e.g. session reaped)
-  4001, // session expired / not found
-  4003, // unauthorized
+  1002, 
+  4001, 
+  4003, 
 ])
 
 export type WebSocketTransportOptions = {
-  /** When false, the transport does not attempt automatic reconnection on
-   *  disconnect. Use this when the caller has its own recovery mechanism
-   *  (e.g. the REPL bridge poll loop). Defaults to true. */
+  
+
   autoReconnect?: boolean
   
 
@@ -55,7 +54,7 @@ type WebSocketTransportState =
 type WebSocketLike = {
   close(): void
   send(data: string): void
-  ping?(): void // Bun & ws both support this
+  ping?(): void 
 }
 
 export class WebSocketTransport implements Transport {
@@ -144,7 +143,7 @@ export class WebSocketTransport implements Transport {
     }
 
     if (typeof Bun !== 'undefined') {
-      // Bun's WebSocket supports headers/proxy options but the DOM typings don't
+      
       
       const ws = new globalThis.WebSocket(this.url.href, {
         headers,
@@ -179,16 +178,16 @@ export class WebSocketTransport implements Transport {
     }
   }
 
-  // --- Bun (native WebSocket) event handlers ---
   
-  // doDisconnect(). Without removal, each reconnect orphans the old WS
+  
+  
   
   
 
   private onBunOpen = () => {
     this.handleOpenEvent()
     
-    // so replay all buffered messages. The server deduplicates by UUID.
+    
     if (this.lastSentId) {
       this.replayBufferedMessages('')
     }
@@ -214,7 +213,7 @@ export class WebSocketTransport implements Transport {
     
   }
 
-  // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
+  
   private onBunClose = (event: CloseEvent) => {
     const isClean = event.code === 1000 || event.code === 1001
     logForDebugging(
@@ -225,16 +224,16 @@ export class WebSocketTransport implements Transport {
     this.handleConnectionError(event.code)
   }
 
-  // --- Node (ws package) event handlers ---
+  
 
   private onNodeOpen = () => {
-    // Capture ws before handleOpenEvent() invokes onConnectCallback — if the
+    
     
     
     const ws = this.ws
     this.handleOpenEvent()
     if (!ws) return
-    // Check for last-id in upgrade response headers (ws package only)
+    
     const nws = ws as unknown as WsWebSocket & {
       upgradeReq?: { headers?: Record<string, string> }
     }
@@ -274,7 +273,7 @@ export class WebSocketTransport implements Transport {
     this.handleConnectionError(code)
   }
 
-  // --- Shared handlers ---
+  
 
   private onPong = () => {
     this.pongReceived = true
@@ -338,12 +337,8 @@ export class WebSocketTransport implements Transport {
     }
   }
 
-  /**
-   * Remove all listeners attached in connect() for the given WebSocket.
-   * Without this, each reconnect orphans the old WS object + its closures
-   * until GC — these accumulate under network instability. Mirrors the
-   * pattern in src/utils/mcpWebSocketTransport.ts.
-   */
+  
+
   private removeWsListeners(ws: WebSocketLike): void {
     if (this.isBunWs) {
       const nws = ws as unknown as globalThis.WebSocket
@@ -365,7 +360,7 @@ export class WebSocketTransport implements Transport {
   }
 
   protected doDisconnect(): void {
-    // Stop pinging and keepalive when disconnecting
+    
     this.stopPingInterval()
     this.stopKeepaliveInterval()
 
@@ -373,7 +368,7 @@ export class WebSocketTransport implements Transport {
     unregisterSessionActivityCallback()
 
     if (this.ws) {
-      // Remove listeners BEFORE close() so the old WS + closures can be
+      
       
       this.removeWsListeners(this.ws)
       this.ws.close()
@@ -388,7 +383,7 @@ export class WebSocketTransport implements Transport {
     )
     logForDiagnosticsNoPII('info', 'cli_websocket_disconnected')
     if (this.isBridge) {
-      // Fire on every close — including intermediate ones during a reconnect
+      
       
       
       
@@ -396,9 +391,9 @@ export class WebSocketTransport implements Transport {
         closeCode,
         msSinceLastActivity:
           this.lastActivityTime > 0 ? Date.now() - this.lastActivityTime : -1,
-        // 'connected' = healthy drop (the Cloudflare case); 'reconnecting' =
-        // connect-rejection mid-storm. State isn't mutated until the branches
-        // below, so this reads the pre-close value.
+        
+        
+        
         wasConnected: this.state === 'connected',
         reconnectAttempts: this.reconnectAttempts,
       })
@@ -407,7 +402,7 @@ export class WebSocketTransport implements Transport {
 
     if (this.state === 'closing' || this.state === 'closed') return
 
-    // Permanent codes: don't retry — server has definitively ended the session.
+    
     
     
     
@@ -441,7 +436,7 @@ export class WebSocketTransport implements Transport {
       return
     }
 
-    // When autoReconnect is disabled, go straight to closed state.
+    
     
     if (!this.autoReconnect) {
       this.state = 'closed'
@@ -449,13 +444,13 @@ export class WebSocketTransport implements Transport {
       return
     }
 
-    // Schedule reconnection with exponential backoff and time budget
+    
     const now = Date.now()
     if (!this.reconnectStartTime) {
       this.reconnectStartTime = now
     }
 
-    // Detect system sleep/wake: if the gap since our last reconnection
+    
     
     
     
@@ -477,13 +472,13 @@ export class WebSocketTransport implements Transport {
 
     const elapsed = now - this.reconnectStartTime
     if (elapsed < DEFAULT_RECONNECT_GIVE_UP_MS) {
-      // Clear any existing reconnection timer to avoid duplicates
+      
       if (this.reconnectTimer) {
         clearTimeout(this.reconnectTimer)
         this.reconnectTimer = null
       }
 
-      // Refresh headers before reconnecting (e.g. to pick up a new session token).
+      
       
       if (!headersRefreshed && this.refreshHeaders) {
         const freshHeaders = this.refreshHeaders()
@@ -541,13 +536,13 @@ export class WebSocketTransport implements Transport {
   }
 
   close(): void {
-    // Clear any pending reconnection timer
+    
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer)
       this.reconnectTimer = null
     }
 
-    // Clear ping and keepalive intervals
+    
     this.stopPingInterval()
     this.stopKeepaliveInterval()
 
@@ -562,16 +557,16 @@ export class WebSocketTransport implements Transport {
     const messages = this.messageBuffer.toArray()
     if (messages.length === 0) return
 
-    // Find where to start replay based on server's last received message
+    
     let startIndex = 0
     if (lastId) {
       const lastConfirmedIndex = messages.findIndex(
         message => 'uuid' in message && message.uuid === lastId,
       )
       if (lastConfirmedIndex >= 0) {
-        // Server confirmed messages up to lastConfirmedIndex — evict them
+        
         startIndex = lastConfirmedIndex + 1
-        // Rebuild the buffer with only unconfirmed messages
+        
         const remaining = messages.slice(startIndex)
         this.messageBuffer.clear()
         this.messageBuffer.addAll(remaining)
@@ -614,10 +609,10 @@ export class WebSocketTransport implements Transport {
         break
       }
     }
-    // Do NOT clear the buffer after replay — messages remain buffered until
-    // the server confirms receipt on the next reconnection. This prevents
-    // message loss if the connection drops after replay but before the server
-    // processes the messages.
+    
+    
+    
+    
   }
 
   isConnectedStatus(): boolean {
@@ -653,7 +648,7 @@ export class WebSocketTransport implements Transport {
     const line = jsonStringify(message) + '\n'
 
     if (this.state !== 'connected') {
-      // Message buffered for replay when connected (if it has a UUID)
+      
       return
     }
 
@@ -682,27 +677,27 @@ export class WebSocketTransport implements Transport {
   }
 
   private startPingInterval(): void {
-    // Clear any existing interval
+    
     this.stopPingInterval()
 
     this.pongReceived = true
     let lastTickTime = Date.now()
 
-    // Send ping periodically to detect dead connections.
-    // If the previous ping got no pong, treat the connection as dead.
+    
+    
     this.pingInterval = setInterval(() => {
       if (this.state === 'connected' && this.ws) {
         const now = Date.now()
         const gap = now - lastTickTime
         lastTickTime = now
 
-        // Process-suspension detector. If the wall-clock gap between ticks
-        // greatly exceeds the 10s interval, the process was suspended
-        // (laptop lid, SIGSTOP, VM pause). setInterval does not queue
-        // missed ticks — it coalesces — so on wake this callback fires
-        // once with a huge gap. The socket is almost certainly dead:
-        // NAT mappings drop in 30s–5min, and the server has been
-        // retransmitting into the void. Don't wait for a ping/pong
+        
+        
+        
+        
+        
+        
+        
         
         
         
@@ -755,7 +750,7 @@ export class WebSocketTransport implements Transport {
     this.stopKeepaliveInterval()
 
     
-    if (isEnvTruthy(process.env.CLAUDE_CODE_REMOTE)) {
+    if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_REMOTE)) {
       return
     }
 

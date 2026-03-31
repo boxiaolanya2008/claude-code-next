@@ -7,13 +7,13 @@ import { isEnvDefinedFalsy } from '../utils/envUtils.js'
 import { getAPIProvider } from '../utils/model/providers.js'
 import { getWorkload } from '../utils/workloadContext.js'
 
-const DEFAULT_PREFIX = `You are Claude Code, Anthropic's official CLI for Claude.`
-const AGENT_SDK_CLAUDE_CODE_PRESET_PREFIX = `You are Claude Code, Anthropic's official CLI for Claude, running within the Claude Agent SDK.`
+const DEFAULT_PREFIX = `You are Claude Code Next, Anthropic's official CLI for Claude.`
+const AGENT_SDK_CLAUDE_CODE_NEXT_PRESET_PREFIX = `You are Claude Code Next, Anthropic's official CLI for Claude, running within the Claude Agent SDK.`
 const AGENT_SDK_PREFIX = `You are a Claude agent, built on Anthropic's Claude Agent SDK.`
 
 const CLI_SYSPROMPT_PREFIX_VALUES = [
   DEFAULT_PREFIX,
-  AGENT_SDK_CLAUDE_CODE_PRESET_PREFIX,
+  AGENT_SDK_CLAUDE_CODE_NEXT_PRESET_PREFIX,
   AGENT_SDK_PREFIX,
 ] as const
 
@@ -34,51 +34,33 @@ export function getCLISyspromptPrefix(options?: {
 
   if (options?.isNonInteractive) {
     if (options.hasAppendSystemPrompt) {
-      return AGENT_SDK_CLAUDE_CODE_PRESET_PREFIX
+      return AGENT_SDK_CLAUDE_CODE_NEXT_PRESET_PREFIX
     }
     return AGENT_SDK_PREFIX
   }
   return DEFAULT_PREFIX
 }
 
-/**
- * Check if attribution header is enabled.
- * Enabled by default, can be disabled via env var or GrowthBook killswitch.
- */
 function isAttributionHeaderEnabled(): boolean {
-  if (isEnvDefinedFalsy(process.env.CLAUDE_CODE_ATTRIBUTION_HEADER)) {
+  if (isEnvDefinedFalsy(process.env.CLAUDE_CODE_NEXT_ATTRIBUTION_HEADER)) {
     return false
   }
   return getFeatureValue_CACHED_MAY_BE_STALE('tengu_attribution_header', true)
 }
 
-/**
- * Get attribution header for API requests.
- * Returns a header string with cc_version (including fingerprint) and cc_entrypoint.
- * Enabled by default, can be disabled via env var or GrowthBook killswitch.
- *
- * When NATIVE_CLIENT_ATTESTATION is enabled, includes a `cch=00000` placeholder.
- * Before the request is sent, Bun's native HTTP stack finds this placeholder
- * in the request body and overwrites the zeros with a computed hash. The
- * server verifies this token to confirm the request came from a real Claude
- * Code client. See bun-anthropic/src/http/Attestation.zig for implementation.
- *
- * We use a placeholder (instead of injecting from Zig) because same-length
- * replacement avoids Content-Length changes and buffer reallocation.
- */
 export function getAttributionHeader(fingerprint: string): string {
   if (!isAttributionHeaderEnabled()) {
     return ''
   }
 
   const version = `${MACRO.VERSION}.${fingerprint}`
-  const entrypoint = process.env.CLAUDE_CODE_ENTRYPOINT ?? 'unknown'
+  const entrypoint = process.env.CLAUDE_CODE_NEXT_ENTRYPOINT ?? 'unknown'
 
   
   const cch = feature('NATIVE_CLIENT_ATTESTATION') ? ' cch=00000;' : ''
   
   
-  // fingerprint (computed from msg chars + version only, line 78 above) and
+  
   
   
   

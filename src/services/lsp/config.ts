@@ -12,7 +12,7 @@ export async function getAllLspServers(): Promise<{
   const allServers: Record<string, ScopedLspServerConfig> = {}
 
   try {
-    // Get all enabled plugins
+    
     const { enabled: plugins } = await loadAllPluginsCacheOnly()
 
     
@@ -25,8 +25,8 @@ export async function getAllLspServers(): Promise<{
           const scopedServers = await getPluginLspServers(plugin, errors)
           return { plugin, scopedServers, errors }
         } catch (e) {
-          // Defensive: if one plugin throws, don't lose results from the
-          // others. The previous serial loop implicitly tolerated this.
+          
+          
           logForDebugging(
             `Failed to load LSP servers for plugin ${plugin.name}: ${e}`,
             { level: 'error' },
@@ -39,7 +39,7 @@ export async function getAllLspServers(): Promise<{
     for (const { plugin, scopedServers, errors } of results) {
       const serverCount = scopedServers ? Object.keys(scopedServers).length : 0
       if (serverCount > 0) {
-        // Merge into all servers (already scoped by getPluginLspServers)
+        
         Object.assign(allServers, scopedServers)
 
         logForDebugging(
@@ -47,7 +47,7 @@ export async function getAllLspServers(): Promise<{
         )
       }
 
-      // Log any errors encountered
+      
       if (errors.length > 0) {
         logForDebugging(
           `${errors.length} error(s) loading LSP servers from plugin: ${plugin.name}`,
@@ -59,8 +59,8 @@ export async function getAllLspServers(): Promise<{
       `Total LSP servers loaded: ${Object.keys(allServers).length}`,
     )
   } catch (error) {
-    // Log error for monitoring production issues.
-    // LSP is optional, so we don't throw - but we need visibility
+    
+    
     
     logError(toError(error))
 

@@ -30,19 +30,13 @@ function execFilePromise(
       args,
       { encoding: 'utf-8', timeout: MDM_SUBPROCESS_TIMEOUT_MS },
       (err, stdout) => {
-        // biome-ignore lint/nursery/noFloatingPromises: resolve() is not a floating promise
+        
         resolve({ stdout: stdout ?? '', code: err ? 1 : 0 })
       },
     )
   })
 }
 
-/**
- * Fire fresh subprocess reads for MDM settings and return raw stdout.
- * On macOS: spawns plutil for each plist path in parallel, picks first winner.
- * On Windows: spawns reg query for HKLM and HKCU in parallel.
- * On Linux: returns empty (no MDM equivalent).
- */
 export function fireRawRead(): Promise<RawReadResult> {
   return (async (): Promise<RawReadResult> => {
     if (process.platform === 'darwin') {
@@ -50,9 +44,9 @@ export function fireRawRead(): Promise<RawReadResult> {
 
       const allResults = await Promise.all(
         plistPaths.map(async ({ path, label }) => {
-          // Fast-path: skip the plutil subprocess if the plist file does not
           
-          // and non-MDM machines never have these files.
+          
+          
           
           
           
@@ -104,18 +98,11 @@ export function fireRawRead(): Promise<RawReadResult> {
   })()
 }
 
-/**
- * Fire raw subprocess reads once for startup. Called at main.tsx module evaluation.
- * Results are consumed via getMdmRawReadPromise().
- */
 export function startMdmRawRead(): void {
   if (rawReadPromise) return
   rawReadPromise = fireRawRead()
 }
 
-/**
- * Get the startup promise. Returns null if startMdmRawRead() wasn't called.
- */
 export function getMdmRawReadPromise(): Promise<RawReadResult> | null {
   return rawReadPromise
 }

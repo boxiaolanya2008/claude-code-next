@@ -46,8 +46,6 @@ type EarlyWarningConfig = {
   thresholds: EarlyWarningThreshold[]
 }
 
-// Early warning configurations in priority order (checked first to last)
-
 const EARLY_WARNING_CONFIGS: EarlyWarningConfig[] = [
   {
     rateLimitType: 'five_hour',
@@ -85,21 +83,12 @@ export function getRateLimitDisplayName(type: RateLimitType): string {
   return RATE_LIMIT_DISPLAY_NAMES[type] || type
 }
 
-/**
- * Calculate what fraction of a time window has elapsed.
- * Used for time-relative early warning fallback.
- * @param resetsAt - Unix epoch timestamp in seconds when the limit resets
- * @param windowSeconds - Duration of the window in seconds
- * @returns fraction (0-1) of the window that has elapsed
- */
 function computeTimeProgress(resetsAt: number, windowSeconds: number): number {
   const nowSeconds = Date.now() / 1000
   const windowStart = resetsAt - windowSeconds
   const elapsed = nowSeconds - windowStart
   return Math.max(0, Math.min(1, elapsed / windowSeconds))
 }
-
-// Reason why overage is disabled/rejected
 
 export type OverageDisabledReason =
   | 'overage_not_provisioned' 
@@ -132,18 +121,12 @@ export type ClaudeAILimits = {
   surpassedThreshold?: number
 }
 
-// Exported for testing only
 export let currentLimits: ClaudeAILimits = {
   status: 'allowed',
   unifiedRateLimitFallbackAvailable: false,
   isUsingOverage: false,
 }
 
-/**
- * Raw per-window utilization from response headers, tracked on every API
- * response (unlike currentLimits.utilization which is only set when a warning
- * threshold fires). Exposed to statusline scripts via getRawUtilization().
- */
 type RawWindowUtilization = {
   utilization: number 
   resets_at: number 
@@ -215,17 +198,17 @@ async function makeTestQuery() {
 }
 
 export async function checkQuotaStatus(): Promise<void> {
-  // Skip network requests if nonessential traffic is disabled
+  
   if (isEssentialTrafficOnly()) {
     return
   }
 
-  // Check if we should process rate limits (real subscriber or mock testing)
+  
   if (!shouldProcessRateLimits(isClaudeAISubscriber())) {
     return
   }
 
-  // In non-interactive mode (-p), the real query follows immediately and
+  
   
   
   if (getIsNonInteractiveSession()) {
@@ -233,7 +216,7 @@ export async function checkQuotaStatus(): Promise<void> {
   }
 
   try {
-    // Make a minimal request to check quota
+    
     const raw = await makeTestQuery()
 
     
@@ -245,15 +228,11 @@ export async function checkQuotaStatus(): Promise<void> {
   }
 }
 
-/**
- * Check if early warning should be triggered based on surpassed-threshold header.
- * Returns ClaudeAILimits if a threshold was surpassed, null otherwise.
- */
 function getHeaderBasedEarlyWarning(
   headers: globalThis.Headers,
   unifiedRateLimitFallbackAvailable: boolean,
 ): ClaudeAILimits | null {
-  // Check each claim type for surpassed threshold header
+  
   for (const [claimAbbrev, rateLimitType] of Object.entries(
     EARLY_WARNING_CLAIM_MAP,
   )) {
@@ -290,11 +269,6 @@ function getHeaderBasedEarlyWarning(
   return null
 }
 
-/**
- * Check if time-relative early warning should be triggered for a rate limit type.
- * Fallback when server doesn't send surpassed-threshold header.
- * Returns ClaudeAILimits if thresholds are exceeded, null otherwise.
- */
 function getTimeRelativeEarlyWarning(
   headers: globalThis.Headers,
   config: EarlyWarningConfig,
@@ -336,16 +310,11 @@ function getTimeRelativeEarlyWarning(
   }
 }
 
-/**
- * Get early warning limits using header-based detection with time-relative fallback.
- * 1. First checks for surpassed-threshold header (new server-side approach)
- * 2. Falls back to time-relative thresholds (client-side calculation)
- */
 function getEarlyWarningFromHeaders(
   headers: globalThis.Headers,
   unifiedRateLimitFallbackAvailable: boolean,
 ): ClaudeAILimits | null {
-  // Try header-based detection first (preferred when API sends the header)
+  
   const headerBasedWarning = getHeaderBasedEarlyWarning(
     headers,
     unifiedRateLimitFallbackAvailable,
@@ -354,7 +323,7 @@ function getEarlyWarningFromHeaders(
     return headerBasedWarning
   }
 
-  // Fallback: Use time-relative thresholds (client-side calculation)
+  
   
   for (const config of EARLY_WARNING_CONFIGS) {
     const timeRelativeWarning = getTimeRelativeEarlyWarning(
@@ -416,7 +385,7 @@ function computeNewLimitsFromHeaders(
     if (earlyWarning) {
       return earlyWarning
     }
-    // No early warning threshold surpassed
+    
     finalStatus = 'allowed'
   }
 
@@ -432,11 +401,8 @@ function computeNewLimitsFromHeaders(
   }
 }
 
-/**
- * Cache the extra usage disabled reason from API headers.
- */
 function cacheExtraUsageDisabledReason(headers: globalThis.Headers): void {
-  // A null reason means extra usage is enabled (no disabled reason header)
+  
   const reason =
     headers.get('anthropic-ratelimit-unified-overage-disabled-reason') ?? null
   const cached = getGlobalConfig().cachedExtraUsageDisabledReason
@@ -451,11 +417,11 @@ function cacheExtraUsageDisabledReason(headers: globalThis.Headers): void {
 export function extractQuotaStatusFromHeaders(
   headers: globalThis.Headers,
 ): void {
-  // Check if we need to process rate limits
+  
   const isSubscriber = isClaudeAISubscriber()
 
   if (!shouldProcessRateLimits(isSubscriber)) {
-    // If we have any rate limit state, clear it
+    
     rawUtilization = {}
     if (currentLimits.status !== 'allowed' || currentLimits.resetsAt) {
       const defaultLimits: ClaudeAILimits = {
@@ -468,7 +434,7 @@ export function extractQuotaStatusFromHeaders(
     return
   }
 
-  // Process headers (applies mocks from /mock-limits command if active)
+  
   const headersToUse = processRateLimitHeaders(headers)
   rawUtilization = extractRawUtilization(headersToUse)
   const newLimits = computeNewLimitsFromHeaders(headersToUse)
@@ -492,7 +458,7 @@ export function extractQuotaStatusFromError(error: APIError): void {
   try {
     let newLimits = { ...currentLimits }
     if (error.headers) {
-      // Process headers (applies mocks from /mock-limits command if active)
+      
       const headersToUse = processRateLimitHeaders(error.headers)
       rawUtilization = extractRawUtilization(headersToUse)
       newLimits = computeNewLimitsFromHeaders(headersToUse)
@@ -500,7 +466,7 @@ export function extractQuotaStatusFromError(error: APIError): void {
       
       cacheExtraUsageDisabledReason(headersToUse)
     }
-    // For errors, always set status to rejected even if headers are not present.
+    
     newLimits.status = 'rejected'
 
     if (!isEqual(currentLimits, newLimits)) {

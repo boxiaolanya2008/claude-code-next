@@ -1,12 +1,10 @@
 
 
-//   protoc-gen-ts_proto  v2.6.1
-
 import { Timestamp } from '../../../google/protobuf/timestamp.js'
 import { PublicApiAuth } from '../../common/v1/auth.js'
 
 export interface GrowthbookExperimentEvent {
-  /** Unique event identifier (for deduplication) */
+  
   event_id?: string | undefined
   
   timestamp?: Date | undefined

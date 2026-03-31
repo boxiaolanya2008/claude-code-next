@@ -25,10 +25,10 @@ export async function execPromptHook(
   messages?: Message[],
   toolUseID?: string,
 ): Promise<HookResult> {
-  // Use provided toolUseID or generate a new one
+  
   const effectiveToolUseID = toolUseID || `hook-${randomUUID()}`
   try {
-    // Replace $ARGUMENTS with the JSON input
+    
     const processedPrompt = addArgumentsToPrompt(hook.prompt, jsonInput)
     logForDebugging(
       `Hooks: Processing prompt hook with prompt: ${processedPrompt}`,
@@ -59,7 +59,7 @@ export async function execPromptHook(
       const response = await queryModelWithoutStreaming({
         messages: messagesToQuery,
         systemPrompt: asSystemPrompt([
-          `You are evaluating a hook in Claude Code.
+          `You are evaluating a hook in Claude Code Next.
 
 Your response must be a JSON object matching one of the following schemas:
 1. If the condition is met, return: {"ok": true}
@@ -147,7 +147,7 @@ Your response must be a JSON object matching one of the following schemas:
         }
       }
 
-      // Failed to meet condition
+      
       if (!parsed.data.ok) {
         logForDebugging(
           `Hooks: Prompt hook condition was not met: ${parsed.data.reason}`,
@@ -164,7 +164,7 @@ Your response must be a JSON object matching one of the following schemas:
         }
       }
 
-      // Condition was met
+      
       logForDebugging(`Hooks: Prompt hook condition was met`)
       return {
         hook,

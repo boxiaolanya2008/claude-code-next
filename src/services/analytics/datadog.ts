@@ -151,7 +151,6 @@ export async function shutdownDatadog(): Promise<void> {
   await flushLogs()
 }
 
-// NOTE: use via src/services/analytics/index.ts > logEvent
 export async function trackDatadogEvent(
   eventName: string,
   properties: { [key: string]: boolean | number | undefined },
@@ -160,12 +159,12 @@ export async function trackDatadogEvent(
     return
   }
 
-  // Don't send events for 3P providers (Bedrock, Vertex, Foundry)
+  
   if (getAPIProvider() !== 'firstParty') {
     return
   }
 
-  // Fast path: use cached result if available to avoid await overhead
+  
   let initialized = datadogInitialized
   if (initialized === null) {
     initialized = await initializeDatadog()
@@ -179,7 +178,7 @@ export async function trackDatadogEvent(
       model: properties.model,
       betas: properties.betas,
     })
-    // Destructure to avoid duplicate envContext (once nested, once flattened)
+    
     const { envContext, ...restMetadata } = metadata
     const allData: Record<string, unknown> = {
       ...restMetadata,
@@ -188,7 +187,7 @@ export async function trackDatadogEvent(
       userBucket: getUserBucket(),
     }
 
-    // Normalize MCP tool names to "mcp" for cardinality reduction
+    
     if (
       typeof allData.toolName === 'string' &&
       allData.toolName.startsWith('mcp__')
@@ -196,14 +195,14 @@ export async function trackDatadogEvent(
       allData.toolName = 'mcp'
     }
 
-    // Normalize model names for cardinality reduction (external users only)
+    
     if (process.env.USER_TYPE !== 'ant' && typeof allData.model === 'string') {
       const shortName = getCanonicalName(allData.model.replace(/\[1m]$/i, ''))
       allData.model = shortName in MODEL_COSTS ? shortName : 'other'
     }
 
-    // Truncate dev version to base + date (remove timestamp and sha for cardinality reduction)
-    // e.g. "2.0.53-dev.20251124.t173302.sha526cc6a" -> "2.0.53-dev.20251124"
+    
+    
     if (typeof allData.version === 'string') {
       allData.version = allData.version.replace(
         /^(\d+\.\d+\.\d+-dev\.\d{8})\.t\d+\.sha[a-f0-9]+$/,
@@ -211,22 +210,22 @@ export async function trackDatadogEvent(
       )
     }
 
-    // Transform status to http_status and http_status_range to avoid Datadog reserved field
+    
     if (allData.status !== undefined && allData.status !== null) {
       const statusCode = String(allData.status)
       allData.http_status = statusCode
 
-      // Determine status range (1xx, 2xx, 3xx, 4xx, 5xx)
+      
       const firstDigit = statusCode.charAt(0)
       if (firstDigit >= '1' && firstDigit <= '5') {
         allData.http_status_range = `${firstDigit}xx`
       }
 
-      // Remove original status field to avoid conflict with Datadog's reserved field
+      
       delete allData.status
     }
 
-    // Build ddtags with high-cardinality fields for filtering.
+    
     
     
     
@@ -244,12 +243,12 @@ export async function trackDatadogEvent(
       ddsource: 'nodejs',
       ddtags: tags.join(','),
       message: eventName,
-      service: 'claude-code',
-      hostname: 'claude-code',
+      service: 'claude-code-next',
+      hostname: 'claude-code-next',
       env: process.env.USER_TYPE,
     }
 
-    // Add all fields as searchable attributes (not duplicated in tags)
+    
     for (const [key, value] of Object.entries(allData)) {
       if (value !== undefined && value !== null) {
         log[camelToSnakeCase(key)] = value
@@ -282,9 +281,9 @@ const getUserBucket = memoize((): number => {
 })
 
 function getFlushIntervalMs(): number {
-  // Allow tests to override to not block on the default flush interval.
+  
   return (
-    parseInt(process.env.CLAUDE_CODE_DATADOG_FLUSH_INTERVAL_MS || '', 10) ||
+    parseInt(process.env.CLAUDE_CODE_NEXT_DATADOG_FLUSH_INTERVAL_MS || '', 10) ||
     DEFAULT_FLUSH_INTERVAL_MS
   )
 }

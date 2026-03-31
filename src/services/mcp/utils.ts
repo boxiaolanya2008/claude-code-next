@@ -34,14 +34,6 @@ export function filterToolsByServer(tools: Tool[], serverName: string): Tool[] {
   return tools.filter(tool => tool.name?.startsWith(prefix))
 }
 
-/**
- * True when a command belongs to the given MCP server.
- *
- * MCP **prompts** are named `mcp__<server>__<prompt>` (wire-format constraint);
- * MCP **skills** are named `<server>:<skill>` (matching plugin/nested-dir skill
- * naming). Both live in `mcp.commands`, so cleanup and filtering must match
- * either shape.
- */
 export function commandBelongsToServer(
   command: Command,
   serverName: string,
@@ -54,12 +46,6 @@ export function commandBelongsToServer(
   )
 }
 
-/**
- * Filters commands by MCP server name
- * @param commands Array of commands to filter
- * @param serverName Name of the MCP server
- * @returns Commands belonging to the specified server
- */
 export function filterCommandsByServer(
   commands: Command[],
   serverName: string,
@@ -67,14 +53,6 @@ export function filterCommandsByServer(
   return commands.filter(c => commandBelongsToServer(c, serverName))
 }
 
-/**
- * Filters MCP **prompts** (not skills) by server. Used by the `/mcp` menu
- * capabilities display — skills are a separate feature shown in `/skills`,
- * so they mustn't inflate the "prompts" capability badge.
- *
- * The distinguisher is `loadedFrom === 'mcp'`: MCP skills set it, MCP
- * prompts don't (they use `isMcp: true` instead).
- */
 export function filterMcpPromptsByServer(
   commands: Command[],
   serverName: string,
@@ -86,12 +64,6 @@ export function filterMcpPromptsByServer(
   )
 }
 
-/**
- * Filters resources by MCP server name
- * @param resources Array of resources to filter
- * @param serverName Name of the MCP server
- * @returns Resources belonging to the specified server
- */
 export function filterResourcesByServer(
   resources: ServerResource[],
   serverName: string,
@@ -99,12 +71,6 @@ export function filterResourcesByServer(
   return resources.filter(resource => resource.server === serverName)
 }
 
-/**
- * Removes tools belonging to a specific MCP server
- * @param tools Array of tools
- * @param serverName Name of the MCP server to exclude
- * @returns Tools not belonging to the specified server
- */
 export function excludeToolsByServer(
   tools: Tool[],
   serverName: string,
@@ -113,12 +79,6 @@ export function excludeToolsByServer(
   return tools.filter(tool => !tool.name?.startsWith(prefix))
 }
 
-/**
- * Removes commands belonging to a specific MCP server
- * @param commands Array of commands
- * @param serverName Name of the MCP server to exclude
- * @returns Commands not belonging to the specified server
- */
 export function excludeCommandsByServer(
   commands: Command[],
   serverName: string,
@@ -126,12 +86,6 @@ export function excludeCommandsByServer(
   return commands.filter(c => !commandBelongsToServer(c, serverName))
 }
 
-/**
- * Removes resources belonging to a specific MCP server
- * @param resources Map of server resources
- * @param serverName Name of the MCP server to exclude
- * @returns Resources map without the specified server
- */
 export function excludeResourcesByServer(
   resources: Record<string, ServerResource[]>,
   serverName: string,
@@ -141,12 +95,6 @@ export function excludeResourcesByServer(
   return result
 }
 
-/**
- * Stable hash of an MCP server config for change detection on /reload-plugins.
- * Excludes `scope` (provenance, not content — moving a server from .mcp.json
- * to settings.json shouldn't reconnect it). Keys sorted so `{a:1,b:2}` and
- * `{b:2,a:1}` hash the same.
- */
 export function hashMcpConfig(config: ScopedMcpServerConfig): string {
   const { scope: _scope, ...rest } = config
   const stable = jsonStringify(rest, (_k, v: unknown) => {
@@ -161,20 +109,6 @@ export function hashMcpConfig(config: ScopedMcpServerConfig): string {
   return createHash('sha256').update(stable).digest('hex').slice(0, 16)
 }
 
-/**
- * Remove stale MCP clients and their tools/commands/resources. A client is
- * stale if:
- *   - scope 'dynamic' and name no longer in configs (plugin disabled), or
- *   - config hash changed (args/url/env edited in .mcp.json) — any scope
- *
- * The removal case is scoped to 'dynamic' so /reload-plugins can't
- * accidentally disconnect a user-configured server that's just temporarily
- * absent from the in-memory config (e.g. during a partial reload). The
- * config-changed case applies to all scopes — if the config actually changed
- * on disk, reconnecting is what you want.
- *
- * Returns the stale clients so the caller can disconnect them (clearServerCache).
- */
 export function excludeStalePluginClients(
   mcp: {
     clients: MCPServerConnection[]
@@ -216,12 +150,6 @@ export function excludeStalePluginClients(
   }
 }
 
-/**
- * Checks if a tool name belongs to a specific MCP server
- * @param toolName The tool name to check
- * @param serverName The server name to match against
- * @returns True if the tool belongs to the specified server
- */
 export function isToolFromMcpServer(
   toolName: string,
   serverName: string,
@@ -230,29 +158,14 @@ export function isToolFromMcpServer(
   return info?.serverName === serverName
 }
 
-/**
- * Checks if a tool belongs to any MCP server
- * @param tool The tool to check
- * @returns True if the tool is from an MCP server
- */
 export function isMcpTool(tool: Tool): boolean {
   return tool.name?.startsWith('mcp__') || tool.isMcp === true
 }
 
-/**
- * Checks if a command belongs to any MCP server
- * @param command The command to check
- * @returns True if the command is from an MCP server
- */
 export function isMcpCommand(command: Command): boolean {
   return command.name?.startsWith('mcp__') || command.isMcp === true
 }
 
-/**
- * Describe the file path for a given MCP config scope.
- * @param scope The config scope ('user', 'project', 'local', or 'dynamic')
- * @returns A description of where the config is stored
- */
 export function describeMcpConfigFilePath(scope: ConfigScope): string {
   switch (scope) {
     case 'user':
@@ -347,8 +260,8 @@ export function getProjectMcpServerStatus(
   const settings = getSettings_DEPRECATED()
   const normalizedName = normalizeNameForMCP(serverName)
 
-  // TODO: This fails an e2e test if the ?. is not present. This is likely a bug in the e2e test.
-  // Will fix this in a follow-up PR.
+  
+  
   if (
     settings?.disabledMcpjsonServers?.some(
       name => normalizeNameForMCP(name) === normalizedName,
@@ -366,16 +279,16 @@ export function getProjectMcpServerStatus(
     return 'approved'
   }
 
-  // In bypass permissions mode (--dangerously-skip-permissions), there's no way
-  // to show an approval popup. Auto-approve if projectSettings is enabled since
-  // the user has explicitly chosen to bypass all permission checks.
-  // SECURITY: We intentionally only check skipDangerousModePermissionPrompt via
-  // hasSkipDangerousModePermissionPrompt(), which reads from userSettings/localSettings/
-  // flagSettings/policySettings but NOT projectSettings (repo-level .claude/settings.json).
-  // This is intentional: a repo should not be able to accept the bypass dialog on behalf of
-  // users. We also do NOT check getSessionBypassPermissionsMode() here because
-  // sessionBypassPermissionsMode can be set from project settings before the dialog is shown,
-  // which would allow RCE attacks via malicious project settings.
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   if (
     hasSkipDangerousModePermissionPrompt() &&
     isSettingSourceEnabled('projectSettings')
@@ -383,11 +296,11 @@ export function getProjectMcpServerStatus(
     return 'approved'
   }
 
-  // In non-interactive mode (SDK, claude -p, piped input), there's no way to
-  // show an approval popup. Auto-approve if projectSettings is enabled since:
-  // 1. The user/developer explicitly chose to run in this mode
-  // 2. For SDK, projectSettings is off by default - they must explicitly enable it
-  // 3. For -p mode, the help text warns to only use in trusted directories
+  
+  
+  
+  
+  
   if (
     getIsNonInteractiveSession() &&
     isSettingSourceEnabled('projectSettings')
@@ -398,11 +311,6 @@ export function getProjectMcpServerStatus(
   return 'pending'
 }
 
-/**
- * Get the scope/settings source for an MCP server from a tool name
- * @param toolName MCP tool name (format: mcp__serverName__toolName)
- * @returns ConfigScope or null if not an MCP tool or server not found
- */
 export function getMcpServerScopeFromToolName(
   toolName: string,
 ): ConfigScope | null {
@@ -410,17 +318,17 @@ export function getMcpServerScopeFromToolName(
     return null
   }
 
-  // Extract server name from tool name (format: mcp__serverName__toolName)
+  
   const mcpInfo = mcpInfoFromString(toolName)
   if (!mcpInfo) {
     return null
   }
 
-  // Look up server config
+  
   const serverConfig = getMcpConfigByName(mcpInfo.serverName)
 
-  // Fallback: claude.ai servers have normalized names starting with "claude_ai_"
-  // but aren't in getMcpConfigByName (they're fetched async separately)
+  
+  
   if (!serverConfig && mcpInfo.serverName.startsWith('claude_ai_')) {
     return 'claudeai'
   }
@@ -428,7 +336,6 @@ export function getMcpServerScopeFromToolName(
   return serverConfig?.scope ?? null
 }
 
-// Type guards for MCP server config types
 function isStdioConfig(
   config: McpServerConfig,
 ): config is McpStdioServerConfig {
@@ -449,17 +356,10 @@ function isWebSocketConfig(
   return config.type === 'ws'
 }
 
-/**
- * Extracts MCP server definitions from agent frontmatter and groups them by server name.
- * This is used to show agent-specific MCP servers in the /mcp command.
- *
- * @param agents Array of agent definitions
- * @returns Array of AgentMcpServerInfo, grouped by server name with list of source agents
- */
 export function extractAgentMcpServers(
   agents: AgentDefinition[],
 ): AgentMcpServerInfo[] {
-  // Map: server name -> { config, sourceAgents }
+  
   const serverMap = new Map<
     string,
     {
@@ -472,10 +372,10 @@ export function extractAgentMcpServers(
     if (!agent.mcpServers?.length) continue
 
     for (const spec of agent.mcpServers) {
-      // Skip string references - these refer to servers already in global config
+      
       if (typeof spec === 'string') continue
 
-      // Inline definition as { [name]: config }
+      
       const entries = Object.entries(spec)
       if (entries.length !== 1) continue
 
@@ -483,12 +383,12 @@ export function extractAgentMcpServers(
       const existing = serverMap.get(serverName)
 
       if (existing) {
-        // Add this agent as another source
+        
         if (!existing.sourceAgents.includes(agent.agentType)) {
           existing.sourceAgents.push(agent.agentType)
         }
       } else {
-        // New server
+        
         serverMap.set(serverName, {
           config: { ...serverConfig, name: serverName } as McpServerConfig & {
             name: string
@@ -499,12 +399,12 @@ export function extractAgentMcpServers(
     }
   }
 
-  // Convert map to array of AgentMcpServerInfo
-  // Only include transport types supported by AgentMcpServerInfo
+  
+  
   const result: AgentMcpServerInfo[] = []
   for (const [name, { config, sourceAgents }] of serverMap) {
-    // Use type guards to properly narrow the discriminated union type
-    // Only include transport types that are supported by AgentMcpServerInfo
+    
+    
     if (isStdioConfig(config)) {
       result.push({
         name,
@@ -538,19 +438,13 @@ export function extractAgentMcpServers(
         needsAuth: false,
       })
     }
-    // Skip unsupported transport types (sdk, claudeai-proxy, sse-ide, ws-ide)
-    // These are internal types not meant for agent MCP server display
+    
+    
   }
 
   return result.sort((a, b) => a.name.localeCompare(b.name))
 }
 
-/**
- * Extracts the MCP server base URL (without query string) for analytics logging.
- * Query strings are stripped because they can contain access tokens.
- * Trailing slashes are also removed for normalization.
- * Returns undefined for stdio/sdk servers or if URL parsing fails.
- */
 export function getLoggingSafeMcpBaseUrl(
   config: McpServerConfig,
 ): string | undefined {

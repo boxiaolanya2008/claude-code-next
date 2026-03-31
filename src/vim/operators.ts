@@ -29,9 +29,6 @@ export type OperatorContext = {
   recordChange: (change: RecordedChange) => void
 }
 
-/**
- * Execute an operator with a simple motion.
- */
 export function executeOperatorMotion(
   op: Operator,
   motion: string,
@@ -46,9 +43,6 @@ export function executeOperatorMotion(
   ctx.recordChange({ type: 'operator', op, motion, count })
 }
 
-/**
- * Execute an operator with a find motion.
- */
 export function executeOperatorFind(
   op: Operator,
   findType: FindType,
@@ -67,9 +61,6 @@ export function executeOperatorFind(
   ctx.recordChange({ type: 'operatorFind', op, find: findType, char, count })
 }
 
-/**
- * Execute an operator with a text object.
- */
 export function executeOperatorTextObj(
   op: Operator,
   scope: TextObjScope,
@@ -89,9 +80,6 @@ export function executeOperatorTextObj(
   ctx.recordChange({ type: 'operatorTextObj', op, objType, scope, count })
 }
 
-/**
- * Execute a line operation (dd, cc, yy).
- */
 export function executeLineOp(
   op: Operator,
   count: number,
@@ -141,12 +129,12 @@ export function executeLineOp(
     )
     ctx.setOffset(Math.min(deleteStart, maxOff))
   } else if (op === 'change') {
-    // For single line, just clear it
+    
     if (lines.length === 1) {
       ctx.setText('')
       ctx.enterInsert(0)
     } else {
-      // Delete all affected lines, replace with single empty line, enter insert
+      
       const beforeLines = lines.slice(0, currentLine)
       const afterLines = lines.slice(currentLine + linesToAffect)
       const newText = [...beforeLines, '', ...afterLines].join('\n')
@@ -158,15 +146,12 @@ export function executeLineOp(
   ctx.recordChange({ type: 'operator', op, motion: op[0]!, count })
 }
 
-/**
- * Execute delete character (x command).
- */
 export function executeX(count: number, ctx: OperatorContext): void {
   const from = ctx.cursor.offset
 
   if (from >= ctx.text.length) return
 
-  // Advance by graphemes, not code units
+  
   let endCursor = ctx.cursor
   for (let i = 0; i < count && !endCursor.isAtEnd(); i++) {
     endCursor = endCursor.right()
@@ -186,9 +171,6 @@ export function executeX(count: number, ctx: OperatorContext): void {
   ctx.recordChange({ type: 'x', count })
 }
 
-/**
- * Execute replace character (r command).
- */
 export function executeReplace(
   char: string,
   count: number,
@@ -209,9 +191,6 @@ export function executeReplace(
   ctx.recordChange({ type: 'replace', char, count })
 }
 
-/**
- * Execute toggle case (~ command).
- */
 export function executeToggleCase(count: number, ctx: OperatorContext): void {
   const startOffset = ctx.cursor.offset
 
@@ -245,9 +224,6 @@ export function executeToggleCase(count: number, ctx: OperatorContext): void {
   ctx.recordChange({ type: 'toggleCase', count })
 }
 
-/**
- * Execute join lines (J command).
- */
 export function executeJoin(count: number, ctx: OperatorContext): void {
   const text = ctx.text
   const lines = text.split('\n')
@@ -281,9 +257,6 @@ export function executeJoin(count: number, ctx: OperatorContext): void {
   ctx.recordChange({ type: 'join', count })
 }
 
-/**
- * Execute paste (p/P command).
- */
 export function executePaste(
   after: boolean,
   count: number,
@@ -335,9 +308,6 @@ export function executePaste(
   }
 }
 
-/**
- * Execute indent (>> command).
- */
 export function executeIndent(
   dir: '>' | '<',
   count: number,
@@ -360,7 +330,7 @@ export function executeIndent(
     } else if (line.startsWith('\t')) {
       lines[lineIdx] = line.slice(1)
     } else {
-      // Remove as much leading whitespace as possible up to indent length
+      
       let removed = 0
       let idx = 0
       while (
@@ -384,9 +354,6 @@ export function executeIndent(
   ctx.recordChange({ type: 'indent', dir, count })
 }
 
-/**
- * Execute open line (o/O command).
- */
 export function executeOpenLine(
   direction: 'above' | 'below',
   ctx: OperatorContext,
@@ -408,12 +375,6 @@ export function executeOpenLine(
   ctx.recordChange({ type: 'openLine', direction })
 }
 
-// ============================================================================
-// Internal Helpers
-
-/**
- * Calculate the offset of a line's start position.
- */
 function getLineStartOffset(lines: string[], lineIndex: number): number {
   return lines.slice(0, lineIndex).join('\n').length + (lineIndex > 0 ? 1 : 0)
 }
@@ -431,7 +392,7 @@ function getOperatorRange(
 
   
   if (op === 'change' && (motion === 'w' || motion === 'W')) {
-    // For cw with count, move forward (count-1) words, then find end of that word
+    
     let wordCursor = cursor
     for (let i = 0; i < count - 1; i++) {
       wordCursor =
@@ -441,12 +402,12 @@ function getOperatorRange(
       motion === 'w' ? wordCursor.endOfVimWord() : wordCursor.endOfWORD()
     to = cursor.measuredText.nextOffset(wordEnd.offset)
   } else if (isLinewiseMotion(motion)) {
-    // Linewise motions extend to include entire lines
+    
     linewise = true
     const text = cursor.text
     const nextNewline = text.indexOf('\n', to)
     if (nextNewline === -1) {
-      // Deleting to end of file - include the preceding newline if exists
+      
       to = text.length
       if (from > 0 && text[from - 1] === '\n') {
         from -= 1
@@ -458,7 +419,7 @@ function getOperatorRange(
     to = cursor.measuredText.nextOffset(to)
   }
 
-  // Word motions can land inside an [Image #N] chip; extend the range to
+  
   
   from = cursor.snapOutOfImageRef(from, 'start')
   to = cursor.snapOutOfImageRef(to, 'end')
@@ -466,11 +427,6 @@ function getOperatorRange(
   return { from, to, linewise }
 }
 
-/**
- * Get the range for a find-based operator.
- * Note: _findType is unused because Cursor.findCharacter already adjusts
- * the offset for t/T motions. All find types are treated as inclusive here.
- */
 function getOperatorRangeForFind(
   cursor: Cursor,
   target: Cursor,
@@ -518,7 +474,7 @@ export function executeOperatorG(
   count: number,
   ctx: OperatorContext,
 ): void {
-  // count=1 means no count given, target = end of file
+  
   
   const target =
     count === 1 ? ctx.cursor.startOfLastLine() : ctx.cursor.goToLine(count)
@@ -535,7 +491,7 @@ export function executeOperatorGg(
   count: number,
   ctx: OperatorContext,
 ): void {
-  // count=1 means no count given, target = first line
+  
   
   const target =
     count === 1 ? ctx.cursor.startOfFirstLine() : ctx.cursor.goToLine(count)

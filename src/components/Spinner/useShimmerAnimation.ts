@@ -12,7 +12,7 @@ export function useShimmerAnimation(
   
   
   
-  // useTerminalViewport stays at its initial isVisible:true and the
+  
   
   const [ref, time] = useAnimationFrame(isStalled ? null : glimmerSpeed)
   const messageWidth = useMemo(() => stringWidth(message), [message])

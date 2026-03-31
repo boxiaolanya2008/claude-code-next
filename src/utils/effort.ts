@@ -21,23 +21,23 @@ export type EffortValue = EffortLevel | number
 
 export function modelSupportsEffort(model: string): boolean {
   const m = model.toLowerCase()
-  if (isEnvTruthy(process.env.CLAUDE_CODE_ALWAYS_ENABLE_EFFORT)) {
+  if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_ALWAYS_ENABLE_EFFORT)) {
     return true
   }
   const supported3P = get3PModelCapabilityOverride(model, 'effort')
   if (supported3P !== undefined) {
     return supported3P
   }
-  // Supported by a subset of Claude 4 models
+  
   if (m.includes('opus-4-6') || m.includes('sonnet-4-6')) {
     return true
   }
-  // Exclude any other known legacy models (haiku, older opus/sonnet variants)
+  
   if (m.includes('haiku') || m.includes('sonnet') || m.includes('opus')) {
     return false
   }
 
-  // IMPORTANT: Do not change the default effort support without notifying
+  
   
   
 
@@ -46,8 +46,6 @@ export function modelSupportsEffort(model: string): boolean {
   
   return getAPIProvider() === 'firstParty'
 }
-
-// @[MODEL LAUNCH]: Add the new model to the allowlist if it supports 'max' effort.
 
 export function modelSupportsMaxEffort(model: string): boolean {
   const supported3P = get3PModelCapabilityOverride(model, 'max_effort')
@@ -85,12 +83,6 @@ export function parseEffortValue(value: unknown): EffortValue | undefined {
   return undefined
 }
 
-/**
- * Numeric values are model-default only and not persisted.
- * 'max' is session-scoped for external users (ants can persist it).
- * Write sites call this before saving to settings so the Zod schema
- * (which only accepts string levels) never rejects a write.
- */
 export function toPersistableEffort(
   value: EffortValue | undefined,
 ): EffortLevel | undefined {
@@ -104,24 +96,11 @@ export function toPersistableEffort(
 }
 
 export function getInitialEffortSetting(): EffortLevel | undefined {
-  // toPersistableEffort filters 'max' for non-ants on read, so a manually
+  
   
   return toPersistableEffort(getInitialSettings().effortLevel)
 }
 
-/**
- * Decide what effort level (if any) to persist when the user selects a model
- * in ModelPicker. Keeps an explicit prior /effort choice sticky even when it
- * matches the picked model's default, while letting purely-default and
- * session-ephemeral effort (CLI --effort, EffortCallout default) fall through
- * to undefined so it follows future model-default changes.
- *
- * priorPersisted must come from userSettings on disk
- * (getSettingsForSource('userSettings')?.effortLevel), NOT merged settings
- * (project/policy layers would leak into the user's global settings.json)
- * and NOT AppState.effortValue (includes session-scoped sources that
- * deliberately do not write to settings.json).
- */
 export function resolvePickerEffortPersistence(
   picked: EffortLevel | undefined,
   modelDefault: EffortLevel,
@@ -133,21 +112,13 @@ export function resolvePickerEffortPersistence(
 }
 
 export function getEffortEnvOverride(): EffortValue | null | undefined {
-  const envOverride = process.env.CLAUDE_CODE_EFFORT_LEVEL
+  const envOverride = process.env.CLAUDE_CODE_NEXT_EFFORT_LEVEL
   return envOverride?.toLowerCase() === 'unset' ||
     envOverride?.toLowerCase() === 'auto'
     ? null
     : parseEffortValue(envOverride)
 }
 
-/**
- * Resolve the effort value that will actually be sent to the API for a given
- * model, following the full precedence chain:
- *   env CLAUDE_CODE_EFFORT_LEVEL → appState.effortValue → model default
- *
- * Returns undefined when no effort parameter should be sent (env set to
- * 'unset', or no default exists for the model).
- */
 export function resolveAppliedEffort(
   model: string,
   appStateEffortValue: EffortValue | undefined,
@@ -165,11 +136,6 @@ export function resolveAppliedEffort(
   return resolved
 }
 
-/**
- * Resolve the effort level to show the user. Wraps resolveAppliedEffort
- * with the 'high' fallback (what the API uses when no effort param is sent).
- * Single source of truth for the status bar and /effort output (CC-1088).
- */
 export function getDisplayedEffortLevel(
   model: string,
   appStateEffort: EffortValue | undefined,
@@ -178,12 +144,6 @@ export function getDisplayedEffortLevel(
   return convertEffortValueToLevel(resolved)
 }
 
-/**
- * Build the ` with {level} effort` suffix shown in Logo/Spinner.
- * Returns empty string if the user hasn't explicitly set an effort value.
- * Delegates to resolveAppliedEffort() so the displayed level matches what
- * the API actually receives (including max→high clamp for non-Opus models).
- */
 export function getEffortSuffix(
   model: string,
   effortValue: EffortValue | undefined,
@@ -200,8 +160,8 @@ export function isValidNumericEffort(value: number): boolean {
 
 export function convertEffortValueToLevel(value: EffortValue): EffortLevel {
   if (typeof value === 'string') {
-    // Runtime guard: value may come from remote config (GrowthBook) where
-    // TypeScript types can't help us. Coerce unknown strings to 'high'
+    
+    
     
     return isEffortLevel(value) ? value : 'high'
   }
@@ -214,12 +174,6 @@ export function convertEffortValueToLevel(value: EffortValue): EffortLevel {
   return 'high'
 }
 
-/**
- * Get user-facing description for effort levels
- *
- * @param level The effort level to describe
- * @returns Human-readable description
- */
 export function getEffortLevelDescription(level: EffortLevel): string {
   switch (level) {
     case 'low':
@@ -233,12 +187,6 @@ export function getEffortLevelDescription(level: EffortLevel): string {
   }
 }
 
-/**
- * Get user-facing description for effort values (both string and numeric)
- *
- * @param value The effort value to describe
- * @returns Human-readable description
- */
 export function getEffortValueDescription(value: EffortValue): string {
   if (process.env.USER_TYPE === 'ant' && typeof value === 'number') {
     return `[ANT-ONLY] Numeric effort value of ${value}`
@@ -274,7 +222,6 @@ export function getOpusDefaultEffortConfig(): OpusDefaultEffortConfig {
   }
 }
 
-// @[MODEL LAUNCH]: Update the default effort levels for new models
 export function getDefaultEffortForModel(
   model: string,
 ): EffortValue | undefined {
@@ -295,11 +242,11 @@ export function getDefaultEffortForModel(
         return antModel.defaultEffortValue
       }
     }
-    // Always default ants to undefined/high
+    
     return undefined
   }
 
-  // IMPORTANT: Do not change the default effort level without notifying
+  
   
   
 
@@ -317,12 +264,12 @@ export function getDefaultEffortForModel(
     }
   }
 
-  // When ultrathink feature is on, default effort to medium (ultrathink bumps to high)
+  
   if (isUltrathinkEnabled() && modelSupportsEffort(model)) {
     return 'medium'
   }
 
-  // Fallback to undefined, which means we don't set an effort level. This
-  // should resolve to high effort level in the API.
+  
+  
   return undefined
 }

@@ -34,7 +34,7 @@ export function useSkillImprovementSurvey(setMessages: SetMessages): {
     lastSuggestionRef.current = suggestion
   }
 
-  // Open when a new suggestion arrives
+  
   if (suggestion && !isOpen) {
     setIsOpen(true)
     if (!loggedAppearanceRef.current) {
@@ -42,7 +42,7 @@ export function useSkillImprovementSurvey(setMessages: SetMessages): {
       logEvent('tengu_skill_improvement_survey', {
         event_type:
           'appeared' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        // _PROTO_skill_name routes to the privileged skill_name BQ column.
+        
         
         _PROTO_skill_name: (suggestion.skillName ??
           'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
@@ -63,7 +63,7 @@ export function useSkillImprovementSurvey(setMessages: SetMessages): {
         response: (applied
           ? 'applied'
           : 'dismissed') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        // _PROTO_skill_name routes to the privileged skill_name BQ column.
+        
         
         _PROTO_skill_name:
           current.skillName as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
@@ -83,7 +83,7 @@ export function useSkillImprovementSurvey(setMessages: SetMessages): {
         )
       }
 
-      // Close and clear
+      
       setIsOpen(false)
       loggedAppearanceRef.current = false
       setAppState(prev => {

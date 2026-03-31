@@ -45,8 +45,6 @@ const GUTTER_MAP: Record<LayoutGutter, Gutter> = {
   row: Gutter.Row,
 }
 
-// --
-
 export class YogaLayoutNode implements LayoutNode {
   readonly yoga: YogaNode
 
@@ -54,7 +52,7 @@ export class YogaLayoutNode implements LayoutNode {
     this.yoga = yoga
   }
 
-  // Tree
+  
 
   insertChild(child: LayoutNode, index: number): void {
     this.yoga.insertChild((child as YogaLayoutNode).yoga, index)
@@ -73,7 +71,7 @@ export class YogaLayoutNode implements LayoutNode {
     return p ? new YogaLayoutNode(p) : null
   }
 
-  // Layout
+  
 
   calculateLayout(width?: number, _height?: number): void {
     this.yoga.calculateLayout(width, undefined, Direction.LTR)
@@ -99,7 +97,7 @@ export class YogaLayoutNode implements LayoutNode {
     this.yoga.markDirty()
   }
 
-  // Computed layout
+  
 
   getComputedLeft(): number {
     return this.yoga.getComputedLeft()
@@ -125,7 +123,7 @@ export class YogaLayoutNode implements LayoutNode {
     return this.yoga.getComputedPadding(EDGE_MAP[edge]!)
   }
 
-  // Style setters
+  
 
   setWidth(value: number): void {
     this.yoga.setWidth(value)
@@ -282,7 +280,7 @@ export class YogaLayoutNode implements LayoutNode {
     this.yoga.setGap(GUTTER_MAP[gutter]!, value)
   }
 
-  // Lifecycle
+  
 
   free(): void {
     this.yoga.free()
@@ -291,8 +289,6 @@ export class YogaLayoutNode implements LayoutNode {
     this.yoga.freeRecursive()
   }
 }
-
-// --
 
 export function createYogaLayoutNode(): LayoutNode {
   return new YogaLayoutNode(Yoga.Node.create())

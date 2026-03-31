@@ -51,13 +51,13 @@ export class LogUpdate {
 
   renderPreviousOutput_DEPRECATED(prevFrame: Frame): Diff {
     if (!this.options.isTTY) {
-      // Non-TTY output is no longer supported (string output was removed)
+      
       return [NEWLINE]
     }
     return this.getRenderOpsForDone(prevFrame)
   }
 
-  // Called when process resumes from suspension (SIGCONT) to prevent clobbering terminal content
+  
   reset(): void {
     this.state.previousOutput = ''
   }
@@ -72,7 +72,7 @@ export class LogUpdate {
       for (let x = 0; x < screen.width; x++) {
         const cell = cellAt(screen, x, y)
         if (cell && cell.width !== CellWidth.SpacerTail) {
-          // Handle hyperlink transitions
+          
           if (cell.hyperlink !== currentHyperlink) {
             if (currentHyperlink !== undefined) {
               line += LINK_END
@@ -91,12 +91,12 @@ export class LogUpdate {
           line += cell.char
         }
       }
-      // Close any open hyperlink before resetting styles
+      
       if (currentHyperlink !== undefined) {
         line += LINK_END
         currentHyperlink = undefined
       }
-      // Reset styles at end of line so trimEnd doesn't leave dangling codes
+      
       const resetCodes = diffAnsiCodes(currentStyles, [])
       if (resetCodes.length > 0) {
         line += ansiCodesToString(resetCodes)
@@ -133,12 +133,12 @@ export class LogUpdate {
     const startTime = performance.now()
     const stylePool = this.options.stylePool
 
-    // Since we assume the cursor is at the bottom on the screen, we only need
-    // to clear when the viewport gets shorter (i.e. the cursor position drifts)
-    // or when it gets thinner (and text wraps). We _could_ figure out how to
-    // not reset here but that would involve predicting the current layout
-    // _after_ the viewport change which means calcuating text wrapping.
-    // Resizing is a rare enough event that it's not practically a big issue.
+    
+    
+    
+    
+    
+    
     if (
       next.viewport.height < prev.viewport.height ||
       (prev.viewport.width !== 0 && next.viewport.width !== prev.viewport.width)
@@ -146,19 +146,19 @@ export class LogUpdate {
       return fullResetSequence_CAUSES_FLICKER(next, 'resize', stylePool)
     }
 
-    // DECSTBM scroll optimization: when a ScrollBox's scrollTop changed,
-    // shift content with a hardware scroll (CSI top;bot r + CSI n S/T)
-    // instead of rewriting the whole scroll region. The shiftRows on
-    // prev.screen simulates the shift so the diff loop below naturally
-    // finds only the rows that scrolled IN as diffs. prev.screen is
-    // about to become backFrame (reused next render) so mutation is safe.
-    // CURSOR_HOME after RESET_SCROLL_REGION is defensive — DECSTBM reset
-    // homes cursor per spec but terminal implementations vary.
-    //
-    // decstbmSafe: caller passes false when the DECSTBM→diff sequence
-    // can't be made atomic (no DEC 2026 / BSU/ESU). Without atomicity the
     
-    // edge rows not yet painted — a visible vertical jump on every frame
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     
@@ -184,11 +184,11 @@ export class LogUpdate {
       }
     }
 
-    // We have to use purely relative operations to manipulate the cursor since
     
     
     
-    // the cursor restore at the end of the previous frame caused terminal scroll.
+    
+    
     
     
     
@@ -224,7 +224,7 @@ export class LogUpdate {
       cursorAtBottom &&
       !isGrowing
     ) {
-      // viewportY = rows in scrollback from content overflow
+      
       
       const viewportY = prev.screen.height - prev.viewport.height
       const scrollbackRows = viewportY + 1
@@ -261,7 +261,7 @@ export class LogUpdate {
 
       
       
-      // scrollback, so we need a full reset.
+      
       if (linesToClear > prev.viewport.height) {
         return fullResetSequence_CAUSES_FLICKER(
           next,
@@ -270,7 +270,7 @@ export class LogUpdate {
         )
       }
 
-      // clear(N) moves cursor UP by N-1 lines and to column 0
+      
       
       
       screen.txn(prev => [
@@ -282,7 +282,7 @@ export class LogUpdate {
       ])
     }
 
-    // viewportY = number of rows in scrollback (not visible on terminal).
+    
     
     
     
@@ -306,15 +306,15 @@ export class LogUpdate {
     let needsFullReset = false
     let resetTriggerY = -1
     diffEach(prev.screen, next.screen, (x, y, removed, added) => {
-      // Skip new rows - we'll render them directly after
+      
       if (growing && y >= prev.screen.height) {
         return
       }
 
-      // Skip spacers during rendering because the terminal will automatically
-      // advance 2 columns when we write the wide character itself.
-      // SpacerTail: Second cell of a wide character
-      // SpacerHead: Marks line-end position where wide char wraps to next line
+      
+      
+      
+      
       if (
         added &&
         (added.width === CellWidth.SpacerTail ||
@@ -332,7 +332,7 @@ export class LogUpdate {
         return
       }
 
-      // Skip empty cells that don't need to overwrite existing content.
+      
       
       
       
@@ -340,7 +340,7 @@ export class LogUpdate {
         return
       }
 
-      // If the cell outside the viewport range has changed, we need to reset
+      
       
       if (y < viewportY) {
         needsFullReset = true
@@ -362,7 +362,7 @@ export class LogUpdate {
           currentStyleId = added.styleId
         }
       } else if (removed) {
-        // Cell was removed - clear it with a space
+        
         
         
         const styleIdToReset = currentStyleId
@@ -387,7 +387,7 @@ export class LogUpdate {
       })
     }
 
-    // Reset styles before rendering new rows (they'll set their own styles)
+    
     currentStyleId = transitionStyle(
       screen.diff,
       stylePool,
@@ -400,7 +400,7 @@ export class LogUpdate {
       undefined,
     )
 
-    // Handle growth: render new rows directly (they naturally scroll the terminal)
+    
     if (growing) {
       renderFrameSlice(
         screen,
@@ -411,8 +411,8 @@ export class LogUpdate {
       )
     }
 
-    // Restore cursor. Skipped in alt-screen: the cursor is hidden, its
-    // position only matters as the starting point for the NEXT frame's
+    
+    
     
     
     
@@ -421,14 +421,14 @@ export class LogUpdate {
     
     
     if (altScreen) {
-      // no-op; next frame's CSI H anchors cursor
+      
     } else if (next.cursor.y >= next.screen.height) {
-      // Move to column 0 of current line, then emit newlines to reach target row
+      
       screen.txn(prev => {
         const rowsToCreate = next.cursor.y - prev.y
         if (rowsToCreate > 0) {
-          // Use CR to resolve pending wrap (if any) without advancing
-          // to the next line, then LF to create each new row.
+          
+          
           const patches: Diff = new Array<Diff[number]>(1 + rowsToCreate)
           patches[0] = CARRIAGE_RETURN
           for (let i = 0; i < rowsToCreate; i++) {
@@ -436,10 +436,10 @@ export class LogUpdate {
           }
           return [patches, { dx: -prev.x, dy: rowsToCreate }]
         }
-        // At or past target row - need to move cursor to correct position
+        
         const dy = next.cursor.y - prev.y
         if (dy !== 0 || prev.x !== next.cursor.x) {
-          // Use CR to clear pending wrap (if any), then cursor move
+          
           const patches: Diff = [CARRIAGE_RETURN]
           patches.push({ type: 'cursorMove', x: next.cursor.x, y: dy })
           return [patches, { dx: next.cursor.x - prev.x, dy }]
@@ -506,7 +506,7 @@ function fullResetSequence_CAUSES_FLICKER(
   stylePool: StylePool,
   debug?: { triggerY: number; prevLine: string; nextLine: string },
 ): Diff {
-  // After clearTerminal, cursor is at (0, 0)
+  
   const screen = new VirtualScreen({ x: 0, y: 0 }, frame.viewport.width)
   renderFrame(screen, frame, stylePool)
   return [{ type: 'clearTerminal', reason, debug }, ...screen.diff]
@@ -520,10 +520,6 @@ function renderFrame(
   renderFrameSlice(screen, frame, 0, frame.screen.height, stylePool)
 }
 
-/**
- * Render a slice of rows from the frame's screen.
- * Each row is rendered followed by a newline. Cursor ends at (0, endY).
- */
 function renderFrameSlice(
   screen: VirtualScreen,
   frame: Frame,
@@ -541,12 +537,12 @@ function renderFrameSlice(
 
   let index = startY * screenWidth
   for (let y = startY; y < endY; y += 1) {
-    // Advance cursor to this row using LF (not CSI CUD / cursor-down).
     
-    // but LF scrolls the viewport to create new lines. Without this,
-    // when the cursor is at the viewport bottom, moveCursorTo's
-    // cursor-down silently fails, creating a permanent off-by-one
-    // between the virtual cursor and the real terminal cursor.
+    
+    
+    
+    
+    
     if (screen.cursor.y < y) {
       const rowsToAdvance = y - screen.cursor.y
       screen.txn(prev => {
@@ -558,14 +554,14 @@ function renderFrameSlice(
         return [patches, { dx: -prev.x, dy: rowsToAdvance }]
       })
     }
-    // Reset at start of each line — no cell rendered yet
+    
     lastRenderedStyleId = -1
 
     for (let x = 0; x < screenWidth; x += 1, index += 1) {
-      // Skip spacers, unstyled empty cells, and fg-only styled spaces that
-      // match the last rendered style (since cursor-forward produces identical
-      // visual result). visibleCellAtIndex handles the optimization internally
-      // to avoid allocating Cell objects for skipped cells.
+      
+      
+      
+      
       const cell = visibleCellAtIndex(
         cells,
         charPool,
@@ -579,7 +575,7 @@ function renderFrameSlice(
 
       moveCursorTo(screen, x, y)
 
-      // Handle hyperlink
+      
       const targetHyperlink = cell.hyperlink
       currentHyperlink = transitionHyperlink(
         screen.diff,
@@ -587,14 +583,14 @@ function renderFrameSlice(
         targetHyperlink,
       )
 
-      // Style transition — cached string, zero allocations after warmup
+      
       const styleStr = stylePool.transition(currentStyleId, cell.styleId)
       if (writeCellWithStyleStr(screen, cell, styleStr)) {
         currentStyleId = cell.styleId
         lastRenderedStyleId = cell.styleId
       }
     }
-    // Reset styles/hyperlinks before newline so background color doesn't
+    
     
     
     
@@ -615,7 +611,7 @@ function renderFrameSlice(
     screen.txn(prev => [[CARRIAGE_RETURN, NEWLINE], { dx: -prev.x, dy: 1 }])
   }
 
-  // Reset any open style/hyperlink at end of slice
+  
   transitionStyle(screen.diff, stylePool, currentStyleId, stylePool.none)
   transitionHyperlink(screen.diff, currentHyperlink, undefined)
 
@@ -624,17 +620,6 @@ function renderFrameSlice(
 
 type Delta = { dx: number; dy: number }
 
-/**
- * Write a cell with a pre-serialized style transition string (from
- * StylePool.transition). Inlines the txn logic to avoid closure/tuple/delta
- * allocations on every cell.
- *
- * Returns true if the cell was written, false if skipped (wide char at
- * viewport edge). Callers MUST gate currentStyleId updates on this — when
- * skipped, styleStr is never pushed and the terminal's style state is
- * unchanged. Updating the virtual tracker anyway desyncs it from the
- * terminal, and the next transition is computed from phantom state.
- */
 function writeCellWithStyleStr(
   screen: VirtualScreen,
   cell: Cell,
@@ -644,7 +629,7 @@ function writeCellWithStyleStr(
   const px = screen.cursor.x
   const vw = screen.viewportWidth
 
-  // Don't write wide chars that would cross the viewport edge.
+  
   
   
   if (cellWidth === 2 && px < vw) {
@@ -680,7 +665,7 @@ function writeCellWithStyleStr(
     diff.push({ type: 'cursorTo', col: px + cellWidth + 1 })
   }
 
-  // Update cursor — mutate in place to avoid Point allocation
+  
   if (px >= vw) {
     screen.cursor.x = cellWidth
     screen.cursor.y++
@@ -706,7 +691,7 @@ function moveCursorTo(screen: VirtualScreen, targetX: number, targetY: number) {
       ]
     }
 
-    // When moving to a different line, use carriage return (\r) to reset to
+    
     
     if (dy !== 0) {
       return [
@@ -715,21 +700,11 @@ function moveCursorTo(screen: VirtualScreen, targetX: number, targetY: number) {
       ]
     }
 
-    // Standard same-line cursor move
+    
     return [[{ type: 'cursorMove', x: dx, y: dy }], { dx, dy }]
   })
 }
 
-/**
- * Identify emoji where the terminal's wcwidth may disagree with Unicode.
- * On terminals with correct tables, the CHA we emit is a harmless no-op.
- *
- * Two categories:
- * 1. Newer emoji (Unicode 12.0+) missing from terminal wcwidth tables.
- * 2. Text-by-default emoji + VS16 (U+FE0F): the base codepoint is width 1
- *    in wcwidth, but VS16 triggers emoji presentation making it width 2.
- *    Examples: ⚔️ (U+2694), ☠️ (U+2620), ❤️ (U+2764).
- */
 function needsWidthCompensation(char: string): boolean {
   const cp = char.codePointAt(0)
   if (cp === undefined) return false
@@ -738,7 +713,7 @@ function needsWidthCompensation(char: string): boolean {
   if ((cp >= 0x1fa70 && cp <= 0x1faff) || (cp >= 0x1fb00 && cp <= 0x1fbff)) {
     return true
   }
-  // Text-by-default emoji with VS16: scan for U+FE0F in multi-codepoint
+  
   
   
   if (char.length >= 2) {
@@ -750,7 +725,7 @@ function needsWidthCompensation(char: string): boolean {
 }
 
 class VirtualScreen {
-  // Public for direct mutation by writeCellWithStyleStr (avoids txn overhead).
+  
   
   cursor: Point
   diff: Diff = []

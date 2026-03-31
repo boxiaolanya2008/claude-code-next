@@ -20,16 +20,11 @@ export function safeFilenameId(id: string): string {
   return id.replace(/[^a-zA-Z0-9_-]/g, '_')
 }
 
-/**
- * A control_request emitted by the child CLI when it needs permission to
- * execute a **specific** tool invocation (not a general capability check).
- * The bridge forwards this to the server so the user can approve/deny.
- */
 export type PermissionRequest = {
   type: 'control_request'
   request_id: string
   request: {
-    /** Per-invocation permission check — "may I run this tool with these inputs?" */
+    
     subtype: 'can_use_tool'
     tool_name: string
     input: Record<string, unknown>
@@ -56,7 +51,6 @@ type SessionSpawnerDeps = {
   ) => void
 }
 
-/** Map tool names to human-readable verbs for the status display. */
 const TOOL_VERBS: Record<string, string> = {
   Read: 'Reading',
   Write: 'Writing',
@@ -189,15 +183,10 @@ function extractActivities(
   return activities
 }
 
-/**
- * Extract plain text from a replayed SDKUserMessage NDJSON line. Returns the
- * trimmed text if this looks like a real human-authored message, otherwise
- * undefined so the caller keeps waiting for the first real message.
- */
 function extractUserMessageText(
   msg: Record<string, unknown>,
 ): string | undefined {
-  // Skip tool-result user messages (wrapped subagent results) and synthetic
+  
   
   if (msg.parent_tool_use_id != null || msg.isSynthetic || msg.isReplay)
     return undefined
@@ -223,7 +212,6 @@ function extractUserMessageText(
   return text ? text : undefined
 }
 
-/** Build a short preview of tool input for debug logging. */
 function inputPreview(input: Record<string, unknown>): string {
   const parts: string[] = []
   for (const [key, val] of Object.entries(input)) {
@@ -238,8 +226,8 @@ function inputPreview(input: Record<string, unknown>): string {
 export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
   return {
     spawn(opts: SessionSpawnOpts, dir: string): SessionHandle {
-      // Debug file resolution:
-      // 1. If deps.debugFile is provided, use it with session ID suffix for uniqueness
+      
+      
       
       
       const safeId = safeFilenameId(opts.sessionId)
@@ -255,7 +243,7 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
         debugFile = join(tmpdir(), 'claude', `bridge-session-${safeId}.log`)
       }
 
-      // Transcript file: write raw NDJSON lines for post-hoc analysis.
+      
       
       let transcriptStream: WriteStream | null = null
       let transcriptPath: string | undefined
@@ -295,14 +283,14 @@ export function createSessionSpawner(deps: SessionSpawnerDeps): SessionSpawner {
 
       const env: NodeJS.ProcessEnv = {
         ...deps.env,
-        // Strip the bridge's OAuth token so the child CC process uses
-        // the session access token for inference instead.
-        CLAUDE_CODE_OAUTH_TOKEN: undefined,
-        CLAUDE_CODE_ENVIRONMENT_KIND: 'bridge',
-        ...(deps.sandbox && { CLAUDE_CODE_FORCE_SANDBOX: '1' }),
-        CLAUDE_CODE_SESSION_ACCESS_TOKEN: opts.accessToken,
-        // v1: HybridTransport (WS reads + POST writes) to Session-Ingress.
-        // Harmless in v2 mode — transportUtils checks CLAUDE_CODE_USE_CCR_V2 first.
-        CLAUDE_CODE_POST_FOR_SESSION_INGRESS_V2: '1',
-        // v2: SSETransport + CCRClient to CCR's /v1/code/sessions
+        
+        
+        CLAUDE_CODE_NEXT_OAUTH_TOKEN: undefined,
+        CLAUDE_CODE_NEXT_ENVIRONMENT_KIND: 'bridge',
+        ...(deps.sandbox && { CLAUDE_CODE_NEXT_FORCE_SANDBOX: '1' }),
+        CLAUDE_CODE_NEXT_SESSION_ACCESS_TOKEN: opts.accessToken,
+        
+        
+        CLAUDE_CODE_NEXT_POST_FOR_SESSION_INGRESS_V2: '1',
+        
 

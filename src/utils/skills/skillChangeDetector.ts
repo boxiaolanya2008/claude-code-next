@@ -56,7 +56,7 @@ export async function initialize(): Promise<void> {
   if (!dynamicSkillsCallbackRegistered) {
     dynamicSkillsCallbackRegistered = true
     onDynamicSkillsLoaded(() => {
-      // Clear memoization caches so new skills are picked up
+      
       
       
       
@@ -76,14 +76,14 @@ export async function initialize(): Promise<void> {
   watcher = chokidar.watch(paths, {
     persistent: true,
     ignoreInitial: true,
-    depth: 2, // Skills use skill-name/SKILL.md format
+    depth: 2, 
     awaitWriteFinish: {
       stabilityThreshold:
         testOverrides?.stabilityThreshold ?? FILE_STABILITY_THRESHOLD_MS,
       pollInterval:
         testOverrides?.pollInterval ?? FILE_STABILITY_POLL_INTERVAL_MS,
     },
-    // Ignore special file types (sockets, FIFOs, devices) - they cannot be watched
+    
     
     ignored: (path, stats) => {
       if (stats && !stats.isFile() && !stats.isDirectory()) return true
@@ -106,9 +106,6 @@ export async function initialize(): Promise<void> {
   })
 }
 
-/**
- * Clean up file watcher
- */
 export function dispose(): Promise<void> {
   disposed = true
   if (unregisterCleanup) {
@@ -129,9 +126,6 @@ export function dispose(): Promise<void> {
   return closePromise
 }
 
-/**
- * Subscribe to skill changes
- */
 export const subscribe = skillsChanged.subscribe
 
 async function getWatchablePaths(): Promise<string[]> {
@@ -145,55 +139,55 @@ async function getWatchablePaths(): Promise<string[]> {
       await fs.stat(userSkillsPath)
       paths.push(userSkillsPath)
     } catch {
-      // Path doesn't exist, skip it
+      
     }
   }
 
-  // User commands directory (~/.claude/commands)
+  
   const userCommandsPath = getSkillsPath('userSettings', 'commands')
   if (userCommandsPath) {
     try {
       await fs.stat(userCommandsPath)
       paths.push(userCommandsPath)
     } catch {
-      // Path doesn't exist, skip it
+      
     }
   }
 
-  // Project skills directory (.claude/skills)
+  
   const projectSkillsPath = getSkillsPath('projectSettings', 'skills')
   if (projectSkillsPath) {
     try {
-      // For project settings, resolve to absolute path
+      
       const absolutePath = platformPath.resolve(projectSkillsPath)
       await fs.stat(absolutePath)
       paths.push(absolutePath)
     } catch {
-      // Path doesn't exist, skip it
+      
     }
   }
 
-  // Project commands directory (.claude/commands)
+  
   const projectCommandsPath = getSkillsPath('projectSettings', 'commands')
   if (projectCommandsPath) {
     try {
-      // For project settings, resolve to absolute path
+      
       const absolutePath = platformPath.resolve(projectCommandsPath)
       await fs.stat(absolutePath)
       paths.push(absolutePath)
     } catch {
-      // Path doesn't exist, skip it
+      
     }
   }
 
-  // Additional directories (--add-dir) skills
+  
   for (const dir of getAdditionalDirectoriesForClaudeMd()) {
     const additionalSkillsPath = platformPath.join(dir, '.claude', 'skills')
     try {
       await fs.stat(additionalSkillsPath)
       paths.push(additionalSkillsPath)
     } catch {
-      // Path doesn't exist, skip it
+      
     }
   }
 
@@ -210,14 +204,6 @@ function handleChange(path: string): void {
   scheduleReload(path)
 }
 
-/**
- * Debounce rapid skill changes into a single reload. When many skill files
- * change at once (e.g. auto-update installs a new binary and a new session
- * touches skill directories), each file fires its own chokidar event. Without
- * debouncing, each event triggers clearSkillCaches() + clearCommandsCache() +
- * listener notification — 30 events means 30 full reload cycles, which can
- * deadlock the Bun event loop via rapid FSWatcher watch/unwatch churn.
- */
 function scheduleReload(changedPath: string): void {
   pendingChangedPaths.add(changedPath)
   if (reloadTimer) clearTimeout(reloadTimer)
@@ -225,11 +211,11 @@ function scheduleReload(changedPath: string): void {
     reloadTimer = null
     const paths = [...pendingChangedPaths]
     pendingChangedPaths.clear()
-    // Fire ConfigChange hook once for the batch — the hook query is always
-    // 'skills' so firing per-path (which can be hundreds during a git
-    // operation) just spams the hook matcher with identical queries. Pass the
-    // first path as a representative; hooks can inspect all paths via the
-    // skills directory if they need the full set.
+    
+    
+    
+    
+    
     const results = await executeConfigChangeHooks('skills', paths[0]!)
     if (hasBlockingResult(results)) {
       logForDebugging(
@@ -244,16 +230,13 @@ function scheduleReload(changedPath: string): void {
   }, testOverrides?.reloadDebounce ?? RELOAD_DEBOUNCE_MS)
 }
 
-/**
- * Reset internal state for testing purposes only.
- */
 export async function resetForTesting(overrides?: {
   stabilityThreshold?: number
   pollInterval?: number
   reloadDebounce?: number
   chokidarInterval?: number
 }): Promise<void> {
-  // Clean up existing watcher if present to avoid resource leaks
+  
   if (watcher) {
     await watcher.close()
     watcher = null

@@ -33,9 +33,6 @@ export type File = {
   content: string
 }
 
-/**
- * Check if a path exists asynchronously.
- */
 export async function pathExists(path: string): Promise<boolean> {
   try {
     await stat(path)
@@ -57,23 +54,11 @@ export function readFileSafe(filepath: string): string | null {
   }
 }
 
-/**
- * Get the normalized modification time of a file in milliseconds.
- * Uses Math.floor to ensure consistent timestamp comparisons across file operations,
- * reducing false positives from sub-millisecond precision changes (e.g., from IDE
- * file watchers that touch files without changing content).
- */
 export function getFileModificationTime(filePath: string): number {
   const fs = getFsImplementation()
   return Math.floor(fs.statSync(filePath).mtimeMs)
 }
 
-/**
- * Async variant of getFileModificationTime. Same floor semantics.
- * Use this in async paths (getChangedFiles runs every turn on every readFileState
- * entry — sync statSync there triggers the slow-operation indicator on network/
- * slow disks).
- */
 export async function getFileModificationTimeAsync(
   filePath: string,
 ): Promise<number> {
@@ -89,7 +74,7 @@ export function writeTextContent(
 ): void {
   let toWrite = content
   if (endings === 'CRLF') {
-    // Normalize any existing CRLF to LF first so a new_string that already
+    
     
     toWrite = content.replaceAll('\r\n', '\n').split('\n').join('\r\n')
   }
@@ -135,7 +120,7 @@ export function detectLineEndings(
 }
 
 export function convertLeadingTabsToSpaces(content: string): string {
-  // The /gm regex scans every line even on no-match; skip it entirely
+  
   
   if (!content.includes('\t')) return content
   return content.replace(/^\t+/gm, _ => '  '.repeat(_.length))
@@ -153,27 +138,21 @@ export function getAbsoluteAndRelativePaths(path: string | undefined): {
 }
 
 export function getDisplayPath(filePath: string): string {
-  // Use relative path if file is in the current working directory
+  
   const { relativePath } = getAbsoluteAndRelativePaths(filePath)
   if (relativePath && !relativePath.startsWith('..')) {
     return relativePath
   }
 
-  // Use tilde notation for files in home directory
+  
   const homeDir = homedir()
   if (filePath.startsWith(homeDir + sep)) {
     return '~' + filePath.slice(homeDir.length)
   }
 
-  // Otherwise return the absolute path
+  
   return filePath
 }
-
-/**
- * Find files with the same name but different extensions in the same directory
- * @param filePath The path to the file that doesn't exist
- * @returns The found file with a different extension, or undefined if none found
- */
 
 export function findSimilarFile(filePath: string): string | undefined {
   const fs = getFsImplementation()
@@ -198,7 +177,7 @@ export function findSimilarFile(filePath: string): string | undefined {
     }
     return undefined
   } catch (error) {
-    // Missing dir (ENOENT) is expected; for other errors log and return undefined
+    
     if (!isENOENT(error)) {
       logError(error)
     }
@@ -206,10 +185,6 @@ export function findSimilarFile(filePath: string): string | undefined {
   }
 }
 
-/**
- * Marker included in file-not-found error messages that contain a cwd note.
- * UI renderers check for this to show a short "File not found" message.
- */
 export const FILE_NOT_FOUND_CWD_NOTE = 'Note: your current working directory is'
 
 export async function suggestPathUnderCwd(
@@ -225,10 +200,10 @@ export async function suggestPathUnderCwd(
     const resolvedDir = await realpath(dirname(requestedPath))
     resolvedPath = join(resolvedDir, basename(requestedPath))
   } catch {
-    // Parent directory doesn't exist, use the original path
+    
   }
 
-  // Only check if the requested path is under cwd's parent but not under cwd itself.
+  
   
   
   const cwdParentPrefix = cwdParent === sep ? sep : cwdParent + sep
@@ -240,7 +215,7 @@ export async function suggestPathUnderCwd(
     return undefined
   }
 
-  // Get the relative path from the parent directory
+  
   const relFromParent = relative(cwdParent, resolvedPath)
 
   
@@ -253,17 +228,8 @@ export async function suggestPathUnderCwd(
   }
 }
 
-/**
- * Whether to use the compact line-number prefix format (`N\t` instead of
- * `     N→`). The padded-arrow format costs 9 bytes/line overhead; at
- * 1.35B Read calls × 132 lines avg this is 2.18% of fleet uncached input
- * (bq-queries/read_line_prefix_overhead_verify.sql).
- *
- * Ant soak validated no Edit error regression (6.29% vs 6.86% baseline).
- * Killswitch pattern: GB can disable if issues surface externally.
- */
 export function isCompactLinePrefixEnabled(): boolean {
-  // 3P default: killswitch off = compact format enabled. Client-side only —
+  
   
   return !getFeatureValue_CACHED_MAY_BE_STALE(
     'tengu_compact_line_prefix_killswitch',
@@ -271,12 +237,9 @@ export function isCompactLinePrefixEnabled(): boolean {
   )
 }
 
-/**
- * Adds cat -n style line numbers to the content.
- */
 export function addLineNumbers({
   content,
-  // 1-indexed
+  
   startLine,
 }: {
   content: string
@@ -305,47 +268,26 @@ export function addLineNumbers({
     .join('\n')
 }
 
-/**
- * Inverse of addLineNumbers — strips the `N→` or `N\t` prefix from a single
- * line. Co-located so format changes here and in addLineNumbers stay in sync.
- */
 export function stripLineNumberPrefix(line: string): string {
   const match = line.match(/^\s*\d+[\u2192\t](.*)$/)
   return match?.[1] ?? line
 }
 
-/**
- * Checks if a directory is empty.
- * @param dirPath The path to the directory to check
- * @returns true if the directory is empty or does not exist, false otherwise
- */
 export function isDirEmpty(dirPath: string): boolean {
   try {
     return getFsImplementation().isDirEmptySync(dirPath)
   } catch (e) {
-    // ENOENT: directory doesn't exist, consider it empty
-    // Other errors (EPERM on macOS protected folders, etc.): assume not empty
+    
+    
     return isENOENT(e)
   }
 }
 
-/**
- * Reads a file with caching to avoid redundant I/O operations.
- * This is the preferred method for FileEditTool operations.
- */
 export function readFileSyncCached(filePath: string): string {
   const { content } = fileReadCache.readFile(filePath)
   return content
 }
 
-/**
- * Writes to a file and flushes the file to disk
- * @param filePath The path to the file to write to
- * @param content The content to write to the file
- * @param options Options for writing the file, including encoding and mode
- * @deprecated Use `fs.promises.writeFile` with flush option instead for non-blocking writes.
- * Sync file writes block the event loop and cause performance issues.
- */
 export function writeFileSyncAndFlush_DEPRECATED(
   filePath: string,
   content: string,
@@ -353,23 +295,23 @@ export function writeFileSyncAndFlush_DEPRECATED(
 ): void {
   const fs = getFsImplementation()
 
-  // Check if the target file is a symlink to preserve it for all users
-  // Note: We don't use safeResolvePath here because we need to manually handle
+  
+  
   
   let targetPath = filePath
   try {
-    // Try to read the symlink - if successful, it's a symlink
+    
     const linkTarget = fs.readlinkSync(filePath)
-    // Resolve to absolute path
+    
     targetPath = isAbsolute(linkTarget)
       ? linkTarget
       : resolve(dirname(filePath), linkTarget)
     logForDebugging(`Writing through symlink: ${filePath} -> ${targetPath}`)
   } catch {
-    // ENOENT (doesn't exist) or EINVAL (not a symlink) — keep targetPath = filePath
+    
   }
 
-  // Try atomic write first
+  
   const tempPath = `${targetPath}.tmp.${process.pid}.${Date.now()}`
 
   
@@ -382,7 +324,7 @@ export function writeFileSyncAndFlush_DEPRECATED(
   } catch (e) {
     if (!isENOENT(e)) throw e
     if (options.mode !== undefined) {
-      // Use provided mode for new files
+      
       targetMode = options.mode
       logForDebugging(
         `Setting permissions for new file: ${targetMode.toString(8)}`,
@@ -402,7 +344,7 @@ export function writeFileSyncAndFlush_DEPRECATED(
       encoding: options.encoding,
       flush: true,
     }
-    // Only set mode in writeFileSync for new files to ensure atomic permission setting
+    
     if (!targetExists && options.mode !== undefined) {
       writeOptions.mode = options.mode
     }
@@ -418,7 +360,7 @@ export function writeFileSyncAndFlush_DEPRECATED(
       logForDebugging(`Applied original permissions to temp file`)
     }
 
-    // Atomic rename (on POSIX systems, this is atomic)
+    
     
     logForDebugging(`Renaming ${tempPath} to ${targetPath}`)
     fs.renameSync(tempPath, targetPath)
@@ -437,7 +379,7 @@ export function writeFileSyncAndFlush_DEPRECATED(
       logForDebugging(`Failed to clean up temp file: ${cleanupError}`)
     }
 
-    // Fallback to non-atomic write
+    
     logForDebugging(`Falling back to non-atomic write for ${targetPath}`)
     try {
       const fallbackOptions: {
@@ -448,7 +390,7 @@ export function writeFileSyncAndFlush_DEPRECATED(
         encoding: options.encoding,
         flush: true,
       }
-      // Only set mode for new files
+      
       if (!targetExists && options.mode !== undefined) {
         fallbackOptions.mode = options.mode
       }
@@ -473,7 +415,7 @@ export function getDesktopPath(): string {
   }
 
   if (platform === 'windows') {
-    // For WSL, try to access Windows desktop
+    
     const windowsHome = process.env.USERPROFILE
       ? process.env.USERPROFILE.replace(/\\/g, '/')
       : null
@@ -487,7 +429,7 @@ export function getDesktopPath(): string {
       }
     }
 
-    // Fallback: try to find desktop in typical Windows user location
+    
     try {
       const usersDir = '/mnt/c/Users'
       const userDirs = getFsImplementation().readdirSync(usersDir)
@@ -513,24 +455,16 @@ export function getDesktopPath(): string {
     }
   }
 
-  // Linux/unknown platform fallback
+  
   const desktopPath = join(homeDir, 'Desktop')
   if (getFsImplementation().existsSync(desktopPath)) {
     return desktopPath
   }
 
-  // If Desktop folder doesn't exist, fallback to home directory
+  
   return homeDir
 }
 
-/**
- * Validates that a file size is within the specified limit.
- * Returns true if the file is within the limit, false otherwise.
- *
- * @param filePath The path to the file to validate
- * @param maxSizeBytes The maximum allowed file size in bytes
- * @returns true if file size is within limit, false otherwise
- */
 export function isFileWithinReadSizeLimit(
   filePath: string,
   maxSizeBytes: number = MAX_OUTPUT_SIZE,
@@ -539,33 +473,25 @@ export function isFileWithinReadSizeLimit(
     const stats = getFsImplementation().statSync(filePath)
     return stats.size <= maxSizeBytes
   } catch {
-    // If we can't stat the file, return false to indicate validation failure
+    
     return false
   }
 }
 
-/**
- * Normalize a file path for comparison, handling platform differences.
- * On Windows, normalizes path separators and converts to lowercase for
- * case-insensitive comparison.
- */
 export function normalizePathForComparison(filePath: string): string {
-  // Use path.normalize() to clean up redundant separators and resolve . and ..
+  
   let normalized = normalize(filePath)
 
   
-  // - Convert forward slashes to backslashes (path.normalize only does this on actual Windows)
+  
   
   if (getPlatform() === 'windows') {
-    normalized = normalized.replace(/\//g, '\\').toLowerCase()
+    normalized = normalized.replace(/\
   }
 
   return normalized
 }
 
-/**
- * Compare two file paths for equality, handling Windows case-insensitivity.
- */
 export function pathsEqual(path1: string, path2: string): boolean {
   return normalizePathForComparison(path1) === normalizePathForComparison(path2)
 }

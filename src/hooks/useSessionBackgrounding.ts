@@ -13,7 +13,7 @@ type UseSessionBackgroundingProps = {
 }
 
 type UseSessionBackgroundingResult = {
-  /** Call when user wants to background (Ctrl+B) */
+  
   handleBackgroundSession: () => void
 }
 
@@ -33,7 +33,7 @@ export function useSessionBackgrounding({
 
   const handleBackgroundSession = useCallback(() => {
     if (foregroundedTaskId) {
-      // Re-background the foregrounded task
+      
       setAppState(prev => {
         const taskId = prev.foregroundedTaskId
         if (!taskId) return prev
@@ -69,7 +69,7 @@ export function useSessionBackgrounding({
   
   useEffect(() => {
     if (!foregroundedTaskId) {
-      // Reset when no foregrounded task
+      
       lastSyncedMessagesLengthRef.current = 0
       return
     }
@@ -81,7 +81,7 @@ export function useSessionBackgrounding({
       return
     }
 
-    // Sync messages from background task to main view
+    
     
     const taskMessages = foregroundedTask.messages ?? []
     if (taskMessages.length !== lastSyncedMessagesLengthRef.current) {
@@ -90,10 +90,10 @@ export function useSessionBackgrounding({
     }
 
     if (foregroundedTask.status === 'running') {
-      // Check if the task was aborted (user pressed Escape)
+      
       const taskAbortController = foregroundedTask.abortController
       if (taskAbortController?.signal.aborted) {
-        // Task was aborted - clear foregrounded state immediately
+        
         setAppState(prev => {
           if (!prev.foregroundedTaskId) return prev
           const task = prev.tasks[prev.foregroundedTaskId]
@@ -119,7 +119,7 @@ export function useSessionBackgrounding({
         setAbortController(taskAbortController)
       }
     } else {
-      // Task completed - restore to background and clear foregrounded view
+      
       setAppState(prev => {
         const taskId = prev.foregroundedTaskId
         if (!taskId) return prev

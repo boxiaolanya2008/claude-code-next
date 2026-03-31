@@ -37,7 +37,7 @@ export async function startMCPServer(
   debug: boolean,
   verbose: boolean,
 ): Promise<void> {
-  // Use size-limited LRU cache for readFileState to prevent unbounded memory growth
+  
   
   const READ_FILE_STATE_CACHE_SIZE = 100
   const readFileStateCache = createFileStateCacheWithSizeLimit(
@@ -59,7 +59,7 @@ export async function startMCPServer(
   server.setRequestHandler(
     ListToolsRequestSchema,
     async (): Promise<ListToolsResult> => {
-      // TODO: Also re-expose any MCP tools
+      
       const toolPermissionContext = getEmptyToolPermissionContext()
       const tools = getTools(toolPermissionContext)
       return {
@@ -107,7 +107,7 @@ export async function startMCPServer(
         throw new Error(`Tool ${name} not found`)
       }
 
-      // Assume MCP servers do not read messages separately from the tool
+      
       
       const toolUseContext: ToolUseContext = {
         abortController: createAbortController(),
@@ -133,7 +133,7 @@ export async function startMCPServer(
         updateAttributionState: () => {},
       }
 
-      // TODO: validate input types with zod
+      
       try {
         if (!tool.isEnabled()) {
           throw new Error(`Tool ${name} is not enabled`)

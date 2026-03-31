@@ -52,7 +52,7 @@ export class DirectConnectSessionManager {
     if (this.config.authToken) {
       headers['authorization'] = `Bearer ${this.config.authToken}`
     }
-    // Bun's WebSocket supports headers option but the DOM typings don't
+    
     this.ws = new WebSocket(this.config.wsUrl, {
       headers,
     } as unknown as string[])
@@ -86,7 +86,7 @@ export class DirectConnectSessionManager {
               parsed.request_id,
             )
           } else {
-            // Send an error response for unrecognized subtypes so the
+            
             
             logForDebugging(
               `[DirectConnect] Unsupported control request subtype: ${parsed.request.subtype}`,
@@ -99,7 +99,7 @@ export class DirectConnectSessionManager {
           continue
         }
 
-        // Forward SDK messages (assistant, result, system, etc.)
+        
         if (
           parsed.type !== 'control_response' &&
           parsed.type !== 'keep_alive' &&
@@ -127,7 +127,7 @@ export class DirectConnectSessionManager {
       return false
     }
 
-    // Must match SDKUserMessage format expected by `--input-format stream-json`
+    
     const message = jsonStringify({
       type: 'user',
       message: {
@@ -149,7 +149,7 @@ export class DirectConnectSessionManager {
       return
     }
 
-    // Must match SDKControlResponse format expected by StructuredIO
+    
     const response = jsonStringify({
       type: 'control_response',
       response: {
@@ -166,15 +166,14 @@ export class DirectConnectSessionManager {
     this.ws.send(response)
   }
 
-  /**
-   * Send an interrupt signal to cancel the current request
-   */
+  
+
   sendInterrupt(): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       return
     }
 
-    // Must match SDKControlRequest format expected by StructuredIO
+    
     const request = jsonStringify({
       type: 'control_request',
       request_id: crypto.randomUUID(),

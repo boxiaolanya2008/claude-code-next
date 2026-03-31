@@ -35,8 +35,8 @@ function getPromptContent(
   const username = process.env.USER || ''
 
   let prefix = ''
-  let reviewerArg = ' and `--reviewer anthropics/claude-code`'
-  let addReviewerArg = ' (and add `--add-reviewer anthropics/claude-code`)'
+  let reviewerArg = ' and `--reviewer anthropics/claude-code-next`'
+  let addReviewerArg = ' (and add `--add-reviewer anthropics/claude-code-next`)'
   let changelogSection = `
 
 ## Changelog
@@ -111,13 +111,13 @@ const command = {
   description: 'Commit, push, and open a PR',
   allowedTools: ALLOWED_TOOLS,
   get contentLength() {
-    // Use 'main' as estimate for content length calculation
+    
     return getPromptContent('main').length
   },
   progressMessage: 'creating commit and PR',
   source: 'builtin',
   async getPromptForCommand(args, context) {
-    // Get default branch and enhanced PR attribution
+    
     const [defaultBranch, prAttribution] = await Promise.all([
       getDefaultBranch(),
       getEnhancedPRAttribution(context.getAppState),

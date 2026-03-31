@@ -68,17 +68,13 @@ function formatPathLink(filePath: string): string {
   return `\x1b]8;;${fileUrl}\x07${filePath}\x1b]8;;\x07`
 }
 
-/**
- * Generate and cache the completion script, then add a source line to the
- * shell's rc file. Returns a user-facing status message.
- */
 export async function setupShellCompletion(theme: ThemeName): Promise<string> {
   const shell = detectShell()
   if (!shell) {
     return ''
   }
 
-  // Ensure the cache directory exists
+  
   try {
     await mkdir(dirname(shell.cacheFile), { recursive: true })
   } catch (e: unknown) {
@@ -86,7 +82,7 @@ export async function setupShellCompletion(theme: ThemeName): Promise<string> {
     return `${EOL}${color('warning', theme)(`Could not write ${shell.name} completion cache`)}${EOL}${chalk.dim(`Run manually: claude completion ${shell.shellFlag} > ${shell.cacheFile}`)}${EOL}`
   }
 
-  // Generate the completion script by writing directly to the cache file.
+  
   
   
   const claudeBin = process.argv[1] || 'claude'
@@ -100,7 +96,7 @@ export async function setupShellCompletion(theme: ThemeName): Promise<string> {
     return `${EOL}${color('warning', theme)(`Could not generate ${shell.name} shell completions`)}${EOL}${chalk.dim(`Run manually: claude completion ${shell.shellFlag} > ${shell.cacheFile}`)}${EOL}`
   }
 
-  // Check if rc file already sources completions
+  
   let existing = ''
   try {
     existing = await readFile(shell.rcFile, { encoding: 'utf-8' })
@@ -117,13 +113,13 @@ export async function setupShellCompletion(theme: ThemeName): Promise<string> {
     }
   }
 
-  // Append source line to rc file
+  
   try {
     const configDir = dirname(shell.rcFile)
     await mkdir(configDir, { recursive: true })
 
     const separator = existing && !existing.endsWith('\n') ? '\n' : ''
-    const content = `${existing}${separator}\n# Claude Code shell completions\n${shell.completionLine}\n`
+    const content = `${existing}${separator}\n# Claude Code Next shell completions\n${shell.completionLine}\n`
     await writeFile(shell.rcFile, content, { encoding: 'utf-8' })
 
     return `${EOL}${color('success', theme)(`Installed ${shell.name} shell completions`)}${EOL}${chalk.dim(`Added to ${formatPathLink(shell.rcFile)}`)}${EOL}${chalk.dim(`Run: source ${shell.rcFile}`)}${EOL}`
@@ -133,10 +129,6 @@ export async function setupShellCompletion(theme: ThemeName): Promise<string> {
   }
 }
 
-/**
- * Regenerate cached shell completion scripts in ~/.claude/.
- * Called after `claude update` so completions stay in sync with the new binary.
- */
 export async function regenerateCompletionCache(): Promise<void> {
   const shell = detectShell()
   if (!shell) {

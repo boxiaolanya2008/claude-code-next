@@ -50,13 +50,13 @@ export class AwsAuthStatusManager {
 
   endAuthentication(success: boolean): void {
     if (success) {
-      // Clear the status completely on success
+      
       this.status = {
         isAuthenticating: false,
         output: [],
       }
     } else {
-      // Keep the output visible on failure
+      
       this.status.isAuthenticating = false
     }
     this.changed.emit(this.getStatus())

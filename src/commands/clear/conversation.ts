@@ -61,7 +61,7 @@ export async function clearConversation({
   setAppState?: (f: (prev: AppState) => AppState) => void
   setConversationId?: (id: UUID) => void
 }): Promise<void> {
-  // Execute SessionEnd hooks before clearing (bounded by
+  
   
   const sessionEndTimeoutMs = getSessionEndHookTimeoutMs()
   await executeSessionEndHooks('clear', {
@@ -82,7 +82,7 @@ export async function clearConversation({
     })
   }
 
-  // Compute preserved tasks up front so their per-agent state survives the
+  
   
   
   
@@ -108,18 +108,18 @@ export async function clearConversation({
 
   
   if (feature('PROACTIVE') || feature('KAIROS')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
+    
     const { setContextBlocked } = require('../../proactive/index.js')
     
     setContextBlocked(false)
   }
 
-  // Force logo re-render by updating conversationId
+  
   if (setConversationId) {
     setConversationId(randomUUID())
   }
 
-  // Clear all session-related caches. Per-agent state for preserved background
+  
   
   
   clearSessionCaches(preservedAgentIds)
@@ -132,15 +132,15 @@ export async function clearConversation({
   
   if (setAppState) {
     setAppState(prev => {
-      // Partition tasks using the same predicate computed above:
-      // kill+remove foreground tasks, preserve everything else.
+      
+      
       const nextTasks: AppState['tasks'] = {}
       for (const [taskId, task] of Object.entries(prev.tasks)) {
         if (!shouldKillTask(task)) {
           nextTasks[taskId] = task
           continue
         }
-        // Foreground task: kill it and drop from state
+        
         try {
           if (task.status === 'running') {
             if (isLocalShellTask(task)) {
@@ -167,15 +167,15 @@ export async function clearConversation({
         ...prev,
         tasks: nextTasks,
         attribution: createEmptyAttributionState(),
-        // Clear standalone agent context (name/color set by /rename, /color)
-        // so the new session doesn't display the old session's identity badge
+        
+        
         standaloneAgentContext: undefined,
         fileHistory: {
           snapshots: [],
           trackedFiles: new Set(),
           snapshotSequence: 0,
         },
-        // Reset MCP state to default to trigger re-initialization.
+        
         
         
         mcp: {
@@ -189,7 +189,7 @@ export async function clearConversation({
     })
   }
 
-  // Clear plan slug cache so a new plan file is used after /clear
+  
   clearAllPlanSlugs()
 
   
@@ -200,8 +200,8 @@ export async function clearConversation({
   
   regenerateSessionId({ setCurrentAsParent: true })
   
-  if (process.env.USER_TYPE === 'ant' && process.env.CLAUDE_CODE_SESSION_ID) {
-    process.env.CLAUDE_CODE_SESSION_ID = getSessionId()
+  if (process.env.USER_TYPE === 'ant' && process.env.CLAUDE_CODE_NEXT_SESSION_ID) {
+    process.env.CLAUDE_CODE_NEXT_SESSION_ID = getSessionId()
   }
   await resetSessionFilePointer()
 
@@ -221,12 +221,12 @@ export async function clearConversation({
     )
   }
 
-  // Re-persist mode and worktree state after the clear so future --resume
+  
   
   
   
   if (feature('COORDINATOR_MODE')) {
-    /* eslint-disable @typescript-eslint/no-require-imports */
+    
     const { saveMode } = require('../../utils/sessionStorage.js')
     const {
       isCoordinatorMode,
@@ -239,7 +239,7 @@ export async function clearConversation({
     saveWorktreeState(worktreeSession)
   }
 
-  // Execute SessionStart hooks after clearing
+  
   const hookMessages = await processSessionStartHooks('clear')
 
   

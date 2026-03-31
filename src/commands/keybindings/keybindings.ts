@@ -36,7 +36,7 @@ export async function call(): Promise<{ type: 'text'; value: string }> {
     }
   }
 
-  // Open in editor
+  
   const result = await editFileInEditor(keybindingsPath)
   if (result.error) {
     return {

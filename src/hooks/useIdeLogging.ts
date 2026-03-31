@@ -17,15 +17,15 @@ const LogEventSchema = lazySchema(() =>
 
 export function useIdeLogging(mcpClients: MCPServerConnection[]): void {
   useEffect(() => {
-    // Skip if there are no clients
+    
     if (!mcpClients.length) {
       return
     }
 
-    // Find the IDE client from the MCP clients list
+    
     const ideClient = getConnectedIdeClient(mcpClients)
     if (ideClient) {
-      // Register the log event handler
+      
       ideClient.client.setNotificationHandler(
         LogEventSchema(),
         notification => {

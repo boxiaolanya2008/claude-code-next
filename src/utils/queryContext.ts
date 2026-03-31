@@ -50,18 +50,6 @@ export async function fetchSystemPromptParts({
   return { defaultSystemPrompt, userContext, systemContext }
 }
 
-/**
- * Build CacheSafeParams from raw inputs when getLastCacheSafeParams() is null.
- *
- * Used by the SDK side_question handler (print.ts) on resume before a turn
- * completes — there's no stopHooks snapshot yet. Mirrors the system prompt
- * assembly in QueryEngine.ts:ask() so the rebuilt prefix matches what the
- * main loop will send, preserving the cache hit in the common case.
- *
- * May still miss the cache if the main loop applies extras this path doesn't
- * know about (coordinator mode, memory-mechanics prompt). That's acceptable —
- * the alternative is returning null and failing the side question entirely.
- */
 export async function buildSideQuestionFallbackParams({
   tools,
   commands,

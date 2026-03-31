@@ -60,7 +60,7 @@ function resolveWatchPaths(
     }
   }
 
-  // Combine static matcher paths with dynamic paths from hook output
+  
   return [...new Set([...staticPaths, ...dynamicWatchPaths])]
 }
 
@@ -136,7 +136,7 @@ export async function onCwdChangedForHooks(
 ): Promise<void> {
   if (oldCwd === newCwd) return
 
-  // Re-evaluate from the current snapshot so mid-session hook changes are picked up
+  
   const config = getHooksConfigFromSnapshot()
   const currentHasEnvHooks =
     (config?.CwdChanged?.length ?? 0) > 0 ||
@@ -168,7 +168,7 @@ export async function onCwdChangedForHooks(
     }
   }
 
-  // Re-resolve matcher paths against the new cwd
+  
   if (initialized) {
     restartWatching()
   }

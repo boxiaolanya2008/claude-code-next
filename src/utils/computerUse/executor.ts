@@ -65,14 +65,6 @@ function isBareEscape(parts: readonly string[]): boolean {
   return lower === 'escape' || lower === 'esc'
 }
 
-/**
- * Instant move, then 50ms — an input→HID→AppKit→NSEvent round-trip before the
- * caller reads `NSEvent.mouseLocation` or dispatches a click. Used for click,
- * scroll, and drag-from; `animatedMove` is reserved for drag-to only. The
- * intermediate animation frames were triggering hover states and, on the
- * decomposed mouseDown/moveMouse path, emitting stray `.leftMouseDragged`
- * events (toolCalls.ts handleScroll's mouse_full workaround).
- */
 const MOVE_SETTLE_MS = 50
 
 async function moveAndSettle(
@@ -84,34 +76,17 @@ async function moveAndSettle(
   await sleep(MOVE_SETTLE_MS)
 }
 
-/**
- * Release `pressed` in reverse (last pressed = first released). Errors are
- * swallowed so a release failure never masks the real error.
- *
- * Drains via pop() rather than snapshotting length: if a drainRunLoop-
- * orphaned press lambda resolves an in-flight input.key() AFTER finally
- * calls us, that late push is still released on the next iteration. The
- * orphaned flag stops the lambda at its NEXT check, not the current await.
- */
 async function releasePressed(input: Input, pressed: string[]): Promise<void> {
   let k: string | undefined
   while ((k = pressed.pop()) !== undefined) {
     try {
       await input.key(k, 'release')
     } catch {
-      // Swallow — best-effort release.
+      
     }
   }
 }
 
-/**
- * Bracket `fn()` with modifier press/release. `pressed` tracks which presses
- * actually landed, so a mid-press throw only releases what was pressed — no
- * stuck modifiers. The finally covers both press-phase and fn() throws.
- *
- * Caller must already be inside drainRunLoop() — key() dispatches to the
- * main queue and needs the pump to resolve.
- */
 async function withModifiers<T>(
   input: Input,
   mods: string[],
@@ -129,19 +104,6 @@ async function withModifiers<T>(
   }
 }
 
-/**
- * Port of Cowork's `typeViaClipboard`. Sequence:
- *   1. Save the user's clipboard.
- *   2. Write our text.
- *   3. READ-BACK VERIFY — clipboard writes can silently fail. If the
- *      read-back doesn't match, never press Cmd+V (would paste junk).
- *   4. Cmd+V via keys().
- *   5. Sleep 100ms — battle-tested threshold for the paste-effect vs
- *      clipboard-restore race. Restoring too soon means the target app
- *      pastes the RESTORED content.
- *   6. Restore — in a `finally`, so a throw between 2-5 never leaves the
- *      user's clipboard clobbered. Restore failures are swallowed.
- */
 async function typeViaClipboard(input: Input, text: string): Promise<void> {
   let saved: string | undefined
   try {
@@ -170,15 +132,6 @@ async function typeViaClipboard(input: Input, text: string): Promise<void> {
   }
 }
 
-/**
- * Port of Cowork's `animateMouseMovement` + `animatedMove`. Ease-out-cubic at
- * 60fps; distance-proportional duration at 2000 px/sec, capped at 0.5s. When
- * the sub-gate is off (or distance < ~2 frames), falls through to
- * `moveAndSettle`. Called only from `drag` for the press→to motion — target
- * apps may watch for `.leftMouseDragged` specifically (not just "button down +
- * position changed") and the slow motion gives them time to process
- * intermediate positions (scrollbars, window resizes).
- */
 async function animatedMove(
   input: Input,
   targetX: number,
@@ -214,12 +167,10 @@ async function animatedMove(
       await sleep(frameIntervalMs)
     }
   }
-  // Last frame has no trailing sleep — same HID round-trip before the
+  
   
   await sleep(MOVE_SETTLE_MS)
 }
-
-// ── Factory ───────────────────────────────────────────────────────────────
 
 export function createCliExecutor(opts: {
   getMouseAnimationEnabled: () => boolean
@@ -231,7 +182,7 @@ export function createCliExecutor(opts: {
     )
   }
 
-  // Swift loaded once at factory time — every executor method needs it.
+  
   
   
   
@@ -262,7 +213,7 @@ export function createCliExecutor(opts: {
       hostBundleId: CLI_HOST_BUNDLE_ID,
     },
 
-    // ── Pre-action sequence (hide + defocus) ────────────────────────────
+    
 
     async prepareForAction(
       allowlistBundleIds: string[],
@@ -271,9 +222,9 @@ export function createCliExecutor(opts: {
       if (!getHideBeforeActionEnabled()) {
         return []
       }
-      // prepareDisplay isn't @MainActor (plain Task{}), but its .hide() calls
-      // trigger window-manager events that queue on CFRunLoop. Without the
-      // pump, those pile up during Swift's ~1s of usleeps and flush all at
+      
+      
+      
       
       
       
@@ -314,7 +265,7 @@ export function createCliExecutor(opts: {
       )
     },
 
-    // ── Display ──────────────────────────────────────────────────────────
+    
 
     async getDisplaySize(displayId?: number): Promise<DisplayGeometry> {
       return cu.display.getSize(displayId)
@@ -356,11 +307,8 @@ export function createCliExecutor(opts: {
       )
     },
 
-    /**
-     * Pre-size to `targetImageSize` output so the API transcoder's early-return
-     * fires — no server-side resize, `scaleCoord` stays coherent. See
-     * packages/desktop/computer-use-mcp/COORDINATES.md.
-     */
+    
+
     async screenshot(opts: {
       allowedBundleIds: string[]
       displayId?: number
@@ -408,7 +356,7 @@ export function createCliExecutor(opts: {
       )
     },
 
-    // ── Keyboard ─────────────────────────────────────────────────────────
+    
 
     
 
@@ -450,8 +398,8 @@ export function createCliExecutor(opts: {
         await drainRunLoop(async () => {
           for (const k of keyNames) {
             if (orphaned) return
-            // Bare Escape: notify the CGEventTap so it doesn't fire the
-            // abort callback for a model-synthesized press. Same as key().
+            
+            
             if (isBareEscape([k])) {
               notifyExpectedEscape()
             }
@@ -469,12 +417,12 @@ export function createCliExecutor(opts: {
     async type(text: string, opts: { viaClipboard: boolean }): Promise<void> {
       const input = requireComputerUseInput()
       if (opts.viaClipboard) {
-        // keys(['command','v']) inside needs the pump.
+        
         await drainRunLoop(() => typeViaClipboard(input, text))
         return
       }
-      // `toolCalls.ts` handles the grapheme loop + 8ms sleeps and calls this
-      // once per grapheme. typeText doesn't dispatch to the main queue.
+      
+      
       await input.typeText(text)
     },
 
@@ -482,19 +430,14 @@ export function createCliExecutor(opts: {
 
     writeClipboard: writeClipboardViaPbcopy,
 
-    // ── Mouse ────────────────────────────────────────────────────────────
+    
 
     async moveMouse(x: number, y: number): Promise<void> {
       await moveAndSettle(requireComputerUseInput(), x, y)
     },
 
-    /**
-     * Move, then click. Modifiers are press/release bracketed via withModifiers
-     * — same pattern as Cowork. AppKit computes NSEvent.clickCount from timing
-     * + position proximity, so double/triple click work without setting the
-     * CGEvent clickState field. key() inside withModifiers needs the pump;
-     * the modifier-less path doesn't.
-     */
+    
+
     async click(
       x: number,
       y: number,
@@ -527,15 +470,8 @@ export function createCliExecutor(opts: {
       return requireComputerUseInput().mouseLocation()
     },
 
-    /**
-     * `from === undefined` → drag from current cursor (training's
-     * left_click_drag with start_coordinate omitted). Inner `finally`: the
-     * button is ALWAYS released even if the move throws — otherwise the
-     * user's left button is stuck-pressed until they physically click.
-     * 50ms sleep after press: enigo's move_mouse reads NSEvent.pressedMouseButtons
-     * to decide .leftMouseDragged vs .mouseMoved; the synthetic leftMouseDown
-     * needs a HID-tap round-trip to show up there.
-     */
+    
+
     async drag(
       from: { x: number; y: number } | undefined,
       to: { x: number; y: number },
@@ -553,10 +489,8 @@ export function createCliExecutor(opts: {
       }
     },
 
-    /**
-     * Move first, then scroll each axis. Vertical-first — it's the common
-     * axis; a horizontal failure shouldn't lose the vertical.
-     */
+    
+
     async scroll(x: number, y: number, dx: number, dy: number): Promise<void> {
       const input = requireComputerUseInput()
       await moveAndSettle(input, x, y)
@@ -568,7 +502,7 @@ export function createCliExecutor(opts: {
       }
     },
 
-    // ── App management ───────────────────────────────────────────────────
+    
 
     async getFrontmostApp(): Promise<FrontmostApp | null> {
       const info = requireComputerUseInput().getFrontmostAppInfo()
@@ -584,9 +518,9 @@ export function createCliExecutor(opts: {
     },
 
     async listInstalledApps(): Promise<InstalledApp[]> {
-      // `ComputerUseInstalledApp` is `{bundleId, displayName, path}`.
       
-      // the approval dialog fetches lazily via getAppIcon() below.
+      
+      
       return drainRunLoop(() => cu.apps.listInstalled())
     },
 
@@ -604,11 +538,6 @@ export function createCliExecutor(opts: {
   }
 }
 
-/**
- * Module-level export (not on the executor object) — called at turn-end from
- * `stopHooks.ts` / `query.ts`, outside the executor lifecycle. Fire-and-forget
- * at the call site; the caller `.catch()`es.
- */
 export async function unhideComputerUseApps(
   bundleIds: readonly string[],
 ): Promise<void> {

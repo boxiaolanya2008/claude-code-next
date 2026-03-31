@@ -34,18 +34,6 @@ function getConfigUrl(config: ScopedMcpServerConfig): string | undefined {
   return undefined
 }
 
-/**
- * Creates a pseudo-tool for an MCP server that is installed but not
- * authenticated. Surfaced in place of the server's real tools so the model
- * knows the server exists and can start the OAuth flow on the user's behalf.
- *
- * When called, starts performMCPOAuthFlow with skipBrowserOpen and returns
- * the authorization URL. The OAuth callback completes in the background;
- * once it fires, reconnectMcpServerImpl runs and the server's real tools
- * are swapped into appState.mcp.tools via the existing prefix-based
- * replacement (useManageMCPConnections.updateServer wipes anything matching
- * mcp__<server>__*, so this pseudo-tool is removed automatically).
- */
 export function createMcpAuthTool(
   serverName: string,
   config: ScopedMcpServerConfig,
@@ -83,9 +71,9 @@ export function createMcpAuthTool(
       return { behavior: 'allow', updatedInput: input }
     },
     async call(_input, context) {
-      // claude.ai connectors use a separate auth flow (handleClaudeAIAuth in
-      // MCPRemoteServerMenu) that we don't invoke programmatically here —
-      // just point the user at /mcp.
+      
+      
+      
       if (config.type === 'claudeai-proxy') {
         return {
           data: {
@@ -95,8 +83,8 @@ export function createMcpAuthTool(
         }
       }
 
-      // performMCPOAuthFlow only accepts sse/http. needs-auth state is only
-      // set on HTTP 401 (UnauthorizedError) so other transports shouldn't
+      
+      
       
       if (config.type !== 'sse' && config.type !== 'http') {
         return {
@@ -112,7 +100,7 @@ export function createMcpAuthTool(
         | McpHTTPServerConfig
       ) & { scope: ScopedMcpServerConfig['scope'] }
 
-      // Mirror cli/print.ts mcp_authenticate: start the flow, capture the
+      
       
       
       let resolveAuthUrl: ((url: string) => void) | undefined
@@ -172,7 +160,7 @@ export function createMcpAuthTool(
         })
 
       try {
-        // Race: get the URL, or the flow completes without needing one
+        
         
         const authUrl = await Promise.race([
           authUrlPromise,

@@ -23,7 +23,7 @@ export async function call(
   context: ToolUseContext & LocalJSXCommandContext,
   args: string,
 ): Promise<null> {
-  // Prevent teammates from renaming - their names are set by team leader
+  
   if (isTeammate()) {
     onDone(
       'Cannot rename: This session is a swarm teammate. Teammate names are set by the team leader.',
@@ -72,7 +72,7 @@ export async function call(
     )
   }
 
-  // Also persist as the session's agent name for prompt-bar display
+  
   await saveAgentName(sessionId, newName, fullPath)
   context.setAppState(prev => ({
     ...prev,

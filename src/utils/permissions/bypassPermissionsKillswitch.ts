@@ -20,7 +20,7 @@ export async function checkAndDisableBypassPermissionsIfNeeded(
   toolPermissionContext: ToolPermissionContext,
   setAppState: (f: (prev: AppState) => AppState) => void,
 ): Promise<void> {
-  // Check if bypassPermissions should be disabled based on Statsig gate
+  
   
   if (bypassPermissionsCheckRan) {
     return
@@ -46,10 +46,6 @@ export async function checkAndDisableBypassPermissionsIfNeeded(
   })
 }
 
-/**
- * Reset the run-once flag for checkAndDisableBypassPermissionsIfNeeded.
- * Call this after /login so the gate check re-runs with the new org.
- */
 export function resetBypassPermissionsCheck(): void {
   bypassPermissionsCheckRan = false
 }
@@ -87,7 +83,7 @@ export async function checkAndDisableAutoModeIfNeeded(
       fastMode,
     )
     setAppState(prev => {
-      // Apply the transform to CURRENT context, not the stale snapshot we
+      
       
       
       
@@ -116,10 +112,6 @@ export async function checkAndDisableAutoModeIfNeeded(
   }
 }
 
-/**
- * Reset the run-once flag for checkAndDisableAutoModeIfNeeded.
- * Call this after /login so the gate check re-runs with the new org.
- */
 export function resetAutoModeGateCheck(): void {
   autoModeCheckRan = false
 }
@@ -134,8 +126,8 @@ export function useKickOffCheckAndDisableAutoModeIfNeeded(): void {
 
   
   
-  // Cmd+P picker, /config, and bridge onSetModel paths; fastMode covers
-  // /fast on|off for the tengu_auto_mode_config.disableFastMode circuit
+  
+  
   
   
   useEffect(() => {

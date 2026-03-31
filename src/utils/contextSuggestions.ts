@@ -16,7 +16,6 @@ export type ContextSuggestion = {
   savingsTokens?: number
 }
 
-// Thresholds for triggering suggestions
 const LARGE_TOOL_RESULT_PERCENT = 15 
 const LARGE_TOOL_RESULT_TOKENS = 10_000
 const READ_BLOAT_PERCENT = 5 
@@ -45,8 +44,6 @@ export function generateContextSuggestions(
 
   return suggestions
 }
-
-// --
 
 function checkNearCapacity(
   data: ContextData,

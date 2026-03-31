@@ -29,7 +29,7 @@ export function createMovedToPluginCommand({
     name,
     description,
     progressMessage,
-    contentLength: 0, // Dynamic content
+    contentLength: 0, 
     userFacingName() {
       return name
     },
@@ -45,11 +45,11 @@ export function createMovedToPluginCommand({
             text: `This command has been moved to a plugin. Tell the user:
 
 1. To install the plugin, run:
-   claude plugin install ${pluginName}@claude-code-marketplace
+   claude plugin install ${pluginName}@claude-code-next-marketplace
 
 2. After installation, use /${pluginName}:${pluginCommand} to run this command
 
-3. For more information, see: https://github.com/anthropics/claude-code-marketplace/blob/main/${pluginName}/README.md
+3. For more information, see: https://github.com/anthropics/claude-code-next-marketplace/blob/main/${pluginName}/README.md
 
 Do not attempt to run the command. Simply inform the user about the plugin installation.`,
           },

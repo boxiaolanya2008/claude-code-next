@@ -31,12 +31,6 @@ export type GenerateToolUseSummaryParams = {
   lastAssistantText?: string
 }
 
-/**
- * Generates a human-readable summary of completed tools.
- *
- * @param params - Parameters including tools executed and their results
- * @returns A brief summary string, or null if generation fails
- */
 export async function generateToolUseSummary({
   tools,
   signal,
@@ -48,7 +42,7 @@ export async function generateToolUseSummary({
   }
 
   try {
-    // Build a concise representation of what tools did
+    
     const toolSummaries = tools
       .map(tool => {
         const inputStr = truncateJson(tool.input, 300)
@@ -83,7 +77,7 @@ export async function generateToolUseSummary({
 
     return summary || null
   } catch (error) {
-    // Log but don't fail - summaries are non-critical
+    
     const err = toError(error)
     err.cause = { errorId: E_TOOL_USE_SUMMARY_GENERATION_FAILED }
     logError(err)
@@ -91,9 +85,6 @@ export async function generateToolUseSummary({
   }
 }
 
-/**
- * Truncates a JSON value to a maximum length for the prompt.
- */
 function truncateJson(value: unknown, maxLength: number): string {
   try {
     const str = jsonStringify(value)

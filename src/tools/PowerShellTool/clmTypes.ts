@@ -5,7 +5,7 @@ export const CLM_ALLOWED_TYPES: ReadonlySet<string> = new Set(
     
     
     
-    //   [adsi]'LDAP://evil.com/...' → connects to LDAP server
+    
     
     
     
@@ -23,7 +23,7 @@ export const CLM_ALLOWED_TYPES: ReadonlySet<string> = new Set(
     'cimclass',
     'cimconverter',
     'ciminstance',
-    // 'cimsession' REMOVED — see wmi/adsi comment below
+    
     'cimtype',
     'cmdletbinding',
     'cultureinfo',
@@ -94,7 +94,7 @@ export const CLM_ALLOWED_TYPES: ReadonlySet<string> = new Set(
     'version',
     'void',
     'wildcardpattern',
-    // SECURITY: 'wmi', 'wmiclass', 'wmisearcher', 'cimsession' REMOVED.
+    
     
     
     
@@ -104,7 +104,7 @@ export const CLM_ALLOWED_TYPES: ReadonlySet<string> = new Set(
     'x500distinguishedname',
     'x509certificate',
     'xml',
-    // Full names for accelerators that resolve to System.* (AST may emit either)
+    
     'system.array',
     'system.boolean',
     'system.byte',
@@ -138,7 +138,7 @@ export const CLM_ALLOWED_TYPES: ReadonlySet<string> = new Set(
     'system.security.cryptography.x509certificates.x509certificate',
     'system.security.cryptography.x509certificates.x500distinguishedname',
     'system.xml.xmldocument',
-    // System.Management.Automation.* — FQ equivalents of PS-specific accelerators
+    
     'system.management.automation.pscredential',
     'system.management.automation.pscustomobject',
     'system.management.automation.pslistmodifier',
@@ -149,31 +149,31 @@ export const CLM_ALLOWED_TYPES: ReadonlySet<string> = new Set(
     'system.management.automation.switchparameter',
     'system.management.automation.wildcardpattern',
     'system.management.automation.language.nullstring',
-    // Microsoft.Management.Infrastructure.* — FQ equivalents of CIM accelerators
+    
     
     
     'microsoft.management.infrastructure.cimclass',
     'microsoft.management.infrastructure.cimconverter',
     'microsoft.management.infrastructure.ciminstance',
     'microsoft.management.infrastructure.cimtype',
-    // FQ equivalents of remaining short-name accelerators
+    
     
     
     
     
     'system.collections.specialized.ordereddictionary',
     'system.security.accesscontrol.objectsecurity',
-    // Arrays of allowed types are allowed (e.g. [string[]])
+    
     
     'object',
     'system.object',
-    // ModuleSpecification — full qualified name
+    
     'microsoft.powershell.commands.modulespecification',
   ].map(t => t.toLowerCase()),
 )
 
 export function normalizeTypeName(name: string): string {
-  // Strip array suffix: "String[]" → "string" (arrays of allowed types are allowed)
+  
   
   
   return name
@@ -183,10 +183,6 @@ export function normalizeTypeName(name: string): string {
     .trim()
 }
 
-/**
- * True if typeName (from AST) is in Microsoft's CLM allowlist.
- * Types NOT in this set trigger ask — they access system APIs CLM blocks.
- */
 export function isClmAllowedType(typeName: string): boolean {
   return CLM_ALLOWED_TYPES.has(normalizeTypeName(typeName))
 }

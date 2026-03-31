@@ -23,10 +23,6 @@ export type GitHubActionsMetadata = {
   repositoryOwnerId?: string
 }
 
-/**
- * Core user data used as base for all analytics providers.
- * This is also the format used by GrowthBook.
- */
 export type CoreUserData = {
   deviceId: string
   sessionId: string
@@ -42,10 +38,6 @@ export type CoreUserData = {
   githubActionsMetadata?: GitHubActionsMetadata
 }
 
-/**
- * Initialize user data asynchronously. Should be called early in startup.
- * This pre-fetches the email so getUser() can remain synchronous.
- */
 export async function initUser(): Promise<void> {
   if (cachedEmail === null && !emailFetchPromise) {
     emailFetchPromise = getEmailAsync()
@@ -56,10 +48,6 @@ export async function initUser(): Promise<void> {
   }
 }
 
-/**
- * Reset all user data caches. Call on auth changes (login/logout/account switch)
- * so the next getCoreUserData() call picks up fresh credentials and email.
- */
 export function resetUserCache(): void {
   cachedEmail = null
   emailFetchPromise = null
@@ -67,10 +55,6 @@ export function resetUserCache(): void {
   getGitEmail.cache.clear?.()
 }
 
-/**
- * Get core user data.
- * This is the base representation that gets transformed for different analytics providers.
- */
 export const getCoreUserData = memoize(
   (includeAnalyticsMetadata?: boolean): CoreUserData => {
     const deviceId = getOrCreateUserID()
@@ -92,7 +76,7 @@ export const getCoreUserData = memoize(
       }
     }
 
-    // Only include OAuth account data when actively using OAuth authentication
+    
     const oauthAccount = getOauthAccountInfo()
     const organizationUuid = oauthAccount?.organizationUuid
     const accountUuid = oauthAccount?.accountUuid
@@ -128,18 +112,18 @@ export function getUserForGrowthBook(): CoreUserData {
 }
 
 function getEmail(): string | undefined {
-  // Return cached email if available (from async initialization)
+  
   if (cachedEmail !== null) {
     return cachedEmail
   }
 
-  // Only include OAuth email when actively using OAuth authentication
+  
   const oauthAccount = getOauthAccountInfo()
   if (oauthAccount?.emailAddress) {
     return oauthAccount.emailAddress
   }
 
-  // Ant-only fallbacks below (no execSync)
+  
   if (process.env.USER_TYPE !== 'ant') {
     return undefined
   }
@@ -148,18 +132,18 @@ function getEmail(): string | undefined {
     return `${process.env.COO_CREATOR}@anthropic.com`
   }
 
-  // If initUser() wasn't called, we return undefined instead of blocking
+  
   return undefined
 }
 
 async function getEmailAsync(): Promise<string | undefined> {
-  // Only include OAuth email when actively using OAuth authentication
+  
   const oauthAccount = getOauthAccountInfo()
   if (oauthAccount?.emailAddress) {
     return oauthAccount.emailAddress
   }
 
-  // Ant-only fallbacks below
+  
   if (process.env.USER_TYPE !== 'ant') {
     return undefined
   }
@@ -171,10 +155,6 @@ async function getEmailAsync(): Promise<string | undefined> {
   return getGitEmail()
 }
 
-/**
- * Get the user's git email from `git config user.email`.
- * Memoized so the subprocess only spawns once per process.
- */
 export const getGitEmail = memoize(async (): Promise<string | undefined> => {
   const result = await execa('git config --get user.email', {
     shell: true,

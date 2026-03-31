@@ -21,7 +21,7 @@ export function partiallySanitizeUnicode(prompt: string): string {
 
     
     
-    // so we also implement a fallback that strips out some specifically known dangerous ranges.
+    
     current = current
       .replace(/[\u200B-\u200F]/g, '') 
       .replace(/[\u202A-\u202E]/g, '') 
@@ -32,7 +32,7 @@ export function partiallySanitizeUnicode(prompt: string): string {
     iterations++
   }
 
-  // If we hit max iterations, crash loudly. This should only ever happen if there is a bug or if someone purposefully created a deeply nested unicode string.
+  
   if (iterations >= MAX_ITERATIONS) {
     throw new Error(
       `Unicode sanitization reached maximum iterations (${MAX_ITERATIONS}) for input: ${prompt.slice(0, 100)}`,
@@ -64,6 +64,6 @@ export function recursivelySanitizeUnicode(value: unknown): unknown {
     return sanitized
   }
 
-  // Return other primitive values (numbers, booleans, null, undefined) unchanged
+  
   return value
 }

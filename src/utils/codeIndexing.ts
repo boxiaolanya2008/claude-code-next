@@ -1,7 +1,7 @@
 
 
 export type CodeIndexingTool =
-  // Code search engines
+  
   | 'sourcegraph'
   | 'hound'
   | 'seagoat'
@@ -32,10 +32,10 @@ export type CodeIndexingTool =
   | 'openctx'
 
 const CLI_COMMAND_MAPPING: Record<string, CodeIndexingTool> = {
-  // Sourcegraph ecosystem
+  
   src: 'sourcegraph',
   cody: 'cody',
-  // AI coding assistants
+  
   aider: 'aider',
   tabby: 'tabby',
   tabnine: 'tabnine',
@@ -43,20 +43,16 @@ const CLI_COMMAND_MAPPING: Record<string, CodeIndexingTool> = {
   pieces: 'pieces',
   qodo: 'qodo',
   aide: 'aide',
-  // Code search tools
+  
   hound: 'hound',
   seagoat: 'seagoat',
   bloop: 'bloop',
   gitloop: 'gitloop',
-  // Cloud provider AI assistants
+  
   q: 'amazon-q',
   gemini: 'gemini',
 }
 
-/**
- * Mapping of MCP server name patterns to code indexing tools.
- * Patterns are matched case-insensitively against the server name.
- */
 const MCP_SERVER_PATTERNS: Array<{
   pattern: RegExp
   tool: CodeIndexingTool
@@ -65,7 +61,7 @@ const MCP_SERVER_PATTERNS: Array<{
   { pattern: /^sourcegraph$/i, tool: 'sourcegraph' },
   { pattern: /^cody$/i, tool: 'cody' },
   { pattern: /^openctx$/i, tool: 'openctx' },
-  // AI coding assistants
+  
   { pattern: /^aider$/i, tool: 'aider' },
   { pattern: /^continue$/i, tool: 'continue' },
   { pattern: /^github[-_]?copilot$/i, tool: 'github-copilot' },
@@ -84,12 +80,12 @@ const MCP_SERVER_PATTERNS: Array<{
   { pattern: /^amazon[-_]?q$/i, tool: 'amazon-q' },
   { pattern: /^gemini[-_]?code[-_]?assist$/i, tool: 'gemini' },
   { pattern: /^gemini$/i, tool: 'gemini' },
-  // Code search tools
+  
   { pattern: /^hound$/i, tool: 'hound' },
   { pattern: /^seagoat$/i, tool: 'seagoat' },
   { pattern: /^bloop$/i, tool: 'bloop' },
   { pattern: /^gitloop$/i, tool: 'gitloop' },
-  // MCP code indexing servers
+  
   { pattern: /^claude[-_]?context$/i, tool: 'claude-context' },
   { pattern: /^code[-_]?index[-_]?mcp$/i, tool: 'code-index-mcp' },
   { pattern: /^code[-_]?index$/i, tool: 'code-index-mcp' },
@@ -102,7 +98,7 @@ const MCP_SERVER_PATTERNS: Array<{
 export function detectCodeIndexingFromCommand(
   command: string,
 ): CodeIndexingTool | undefined {
-  // Extract the first word (command name)
+  
   const trimmed = command.trim()
   const firstWord = trimmed.split(/\s+/)[0]?.toLowerCase()
 
@@ -110,7 +106,7 @@ export function detectCodeIndexingFromCommand(
     return undefined
   }
 
-  // Check for npx/bunx prefixed commands
+  
   if (firstWord === 'npx' || firstWord === 'bunx') {
     const secondWord = trimmed.split(/\s+/)[1]?.toLowerCase()
     if (secondWord && secondWord in CLI_COMMAND_MAPPING) {
@@ -121,21 +117,10 @@ export function detectCodeIndexingFromCommand(
   return CLI_COMMAND_MAPPING[firstWord]
 }
 
-/**
- * Detects if an MCP tool is from a code indexing server.
- *
- * @param toolName - The MCP tool name (format: mcp__serverName__toolName)
- * @returns The code indexing tool identifier, or undefined if not a code indexing tool
- *
- * @example
- * detectCodeIndexingFromMcpTool('mcp__sourcegraph__search') // returns 'sourcegraph'
- * detectCodeIndexingFromMcpTool('mcp__cody__chat') 
- * detectCodeIndexingFromMcpTool('mcp__filesystem__read') 
- */
 export function detectCodeIndexingFromMcpTool(
   toolName: string,
 ): CodeIndexingTool | undefined {
-  // MCP tool names follow the format: mcp__serverName__toolName
+  
   if (!toolName.startsWith('mcp__')) {
     return undefined
   }
@@ -159,16 +144,6 @@ export function detectCodeIndexingFromMcpTool(
   return undefined
 }
 
-/**
- * Detects if an MCP server name corresponds to a code indexing tool.
- *
- * @param serverName - The MCP server name
- * @returns The code indexing tool identifier, or undefined if not a code indexing server
- *
- * @example
- * detectCodeIndexingFromMcpServerName('sourcegraph') // returns 'sourcegraph'
- * detectCodeIndexingFromMcpServerName('filesystem') 
- */
 export function detectCodeIndexingFromMcpServerName(
   serverName: string,
 ): CodeIndexingTool | undefined {

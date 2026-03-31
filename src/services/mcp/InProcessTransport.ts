@@ -9,7 +9,7 @@ class InProcessTransport implements Transport {
   onerror?: (error: Error) => void
   onmessage?: (message: JSONRPCMessage) => void
 
-  /** @internal */
+  
   _setPeer(peer: InProcessTransport): void {
     this.peer = peer
   }
@@ -20,7 +20,7 @@ class InProcessTransport implements Transport {
     if (this.closed) {
       throw new Error('Transport is closed')
     }
-    // Deliver to the other side asynchronously to avoid stack depth issues
+    
     
     queueMicrotask(() => {
       this.peer?.onmessage?.(message)
@@ -41,12 +41,6 @@ class InProcessTransport implements Transport {
   }
 }
 
-/**
- * Creates a pair of linked transports for in-process MCP communication.
- * Messages sent on one transport are delivered to the other's `onmessage`.
- *
- * @returns [clientTransport, serverTransport]
- */
 export function createLinkedTransportPair(): [Transport, Transport] {
   const a = new InProcessTransport()
   const b = new InProcessTransport()

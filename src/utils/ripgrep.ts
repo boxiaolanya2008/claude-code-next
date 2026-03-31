@@ -37,14 +37,14 @@ const getRipgrepConfig = memoize((): RipgrepConfig => {
   if (userWantsSystemRipgrep) {
     const { cmd: systemPath } = findExecutable('rg', [])
     if (systemPath !== 'rg') {
-      // SECURITY: Use command name 'rg' instead of systemPath to prevent PATH hijacking
+      
       
       
       return { mode: 'system', command: 'rg', args: [] }
     }
   }
 
-  // In bundled (native) mode, ripgrep is statically compiled into bun-internal
+  
   
   if (isInBundledMode()) {
     return {
@@ -86,10 +86,6 @@ function isEagainError(stderr: string): boolean {
   )
 }
 
-/**
- * Custom error class for ripgrep timeouts.
- * This allows callers to distinguish between "no matches" and "timed out".
- */
 export class RipgrepTimeoutError extends Error {
   constructor(
     message: string,
@@ -111,7 +107,7 @@ function ripGrepRaw(
   ) => void,
   singleThread = false,
 ): ChildProcess {
-  // NB: When running interactively, ripgrep does not require a path as its last
+  
   
   
 
@@ -124,7 +120,7 @@ function ripGrepRaw(
   
   const defaultTimeout = getPlatform() === 'wsl' ? 60_000 : 20_000
   const parsedSeconds =
-    parseInt(process.env.CLAUDE_CODE_GLOB_TIMEOUT_SECONDS || '', 10) || 0
+    parseInt(process.env.CLAUDE_CODE_NEXT_GLOB_TIMEOUT_SECONDS || '', 10) || 0
   const timeout = parsedSeconds > 0 ? parsedSeconds * 1000 : defaultTimeout
 
   
@@ -132,7 +128,7 @@ function ripGrepRaw(
     const child = spawn(rgPath, fullArgs, {
       argv0,
       signal: abortSignal,
-      // Prevent visible console window on Windows (no-op on other platforms)
+      
       windowsHide: true,
     })
 
@@ -164,7 +160,7 @@ function ripGrepRaw(
     
     
     
-    // escalate to SIGKILL which cannot be caught or ignored.
+    
     
     let killTimeoutId: ReturnType<typeof setTimeout> | undefined
     const timeoutId = setTimeout(() => {
@@ -185,7 +181,7 @@ function ripGrepRaw(
       clearTimeout(timeoutId)
       clearTimeout(killTimeoutId)
       if (code === 0 || code === 1) {
-        // 0 = matches found, 1 = no matches (both are success)
+        
         callback(null, stdout, stderr)
       } else {
         const error: ExecFileException = new Error(
@@ -209,7 +205,7 @@ function ripGrepRaw(
     return child
   }
 
-  // For non-embedded ripgrep, use execFile
+  
   
   
   
@@ -226,18 +222,6 @@ function ripGrepRaw(
   )
 }
 
-/**
- * Stream-count lines from `rg --files` without buffering stdout.
- *
- * On large repos (e.g. 247k files, 16MB of paths), calling `ripGrep()` just
- * to read `.length` materializes the full stdout string plus a 247k-element
- * array. This counts newline bytes per chunk instead; peak memory is one
- * stream chunk (~64KB).
- *
- * Intentionally minimal: the only caller is telemetry (countFilesRoundedRg),
- * which swallows all errors. No EAGAIN retry, no stderr capture, no internal
- * timeout (callers pass AbortSignal.timeout; spawn's signal option kills rg).
- */
 async function ripGrepFileCount(
   args: string[],
   target: string,
@@ -275,18 +259,6 @@ async function ripGrepFileCount(
   })
 }
 
-/**
- * Stream lines from ripgrep as they arrive, calling `onLines` per stdout chunk.
- *
- * Unlike `ripGrep()` which buffers the entire stdout, this flushes complete
- * lines as soon as each chunk arrives — first results paint while rg is still
- * walking the tree (the fzf `change:reload` pattern). Partial trailing lines
- * are carried across chunk boundaries.
- *
- * Callers that want to stop early (e.g. after N matches) should abort the
- * signal — spawn's signal option kills rg. No EAGAIN retry, no internal
- * timeout, stderr is ignored; interactive callers own recovery.
- */
 export async function ripGrepStream(
   args: string[],
   target: string,
@@ -317,8 +289,8 @@ export async function ripGrepStream(
     let settled = false
     child.on('close', code => {
       if (settled) return
-      // Abort races close — don't flush a torn tail from a killed process.
-      // Promise still settles: spawn's signal option fires 'error' with
+      
+      
       
       if (abortSignal.aborted) return
       settled = true
@@ -356,7 +328,7 @@ export async function ripGrep(
       stderr: string,
       isRetry: boolean,
     ): void => {
-      // Success case
+      
       if (!error) {
         resolve(
           stdout
@@ -368,13 +340,13 @@ export async function ripGrep(
         return
       }
 
-      // Exit code 1 is normal "no matches"
+      
       if (error.code === 1) {
         resolve([])
         return
       }
 
-      // Critical errors that indicate ripgrep is broken, not "no matches"
+      
       
       const CRITICAL_ERROR_CODES = ['ENOENT', 'EACCES', 'EPERM']
       if (CRITICAL_ERROR_CODES.includes(error.code as string)) {
@@ -382,10 +354,10 @@ export async function ripGrep(
         return
       }
 
-      // If we hit EAGAIN and haven't retried yet, retry with single-threaded mode
-      // Note: We only use -j 1 for this specific retry, not for future calls.
-      // Persisting single-threaded mode globally caused timeouts on large repos
-      // where EAGAIN was just a transient startup error.
+      
+      
+      
+      
       if (!isRetry && isEagainError(stderr)) {
         logForDebugging(
           `rg EAGAIN error detected, retrying with single-threaded mode (-j 1)`,
@@ -398,12 +370,12 @@ export async function ripGrep(
           (retryError, retryStdout, retryStderr) => {
             handleResult(retryError, retryStdout, retryStderr, true)
           },
-          true, // Force single-threaded mode for this retry only
+          true, 
         )
         return
       }
 
-      // For all other errors, try to return partial results if available
+      
       const hasOutput = stdout && stdout.trim().length > 0
       const isTimeout =
         error.signal === 'SIGTERM' ||
@@ -419,7 +391,7 @@ export async function ripGrep(
           .split('\n')
           .map(line => line.replace(/\r$/, ''))
           .filter(Boolean)
-        // Drop last line for timeouts and buffer overflow - it may be incomplete
+        
         if (lines.length > 0 && (isTimeout || isBufferOverflow)) {
           lines = lines.slice(0, -1)
         }
@@ -429,15 +401,15 @@ export async function ripGrep(
         `rg error (signal=${error.signal}, code=${error.code}, stderr: ${stderr}), ${lines.length} results`,
       )
 
-      // code 2 = ripgrep usage error (already handled); ABORT_ERR = caller
-      // explicitly aborted (not an error, just a cancellation — interactive
-      // callers may abort on every keystroke-after-debounce).
+      
+      
+      
       if (error.code !== 2 && error.code !== 'ABORT_ERR') {
         logError(error)
       }
 
-      // If we timed out with no results, throw an error so Claude knows the search
-      // didn't complete rather than thinking there were no matches
+      
+      
       if (isTimeout && lines.length === 0) {
         reject(
           new RipgrepTimeoutError(
@@ -457,34 +429,23 @@ export async function ripGrep(
   })
 }
 
-/**
- * Count files in a directory recursively using ripgrep and round to the nearest power of 10 for privacy
- *
- * This is much more efficient than using native Node.js methods for counting files
- * in large directories since it uses ripgrep's highly optimized file traversal.
- *
- * @param path Directory path to count files in
- * @param abortSignal AbortSignal to cancel the operation
- * @param ignorePatterns Optional additional patterns to ignore (beyond .gitignore)
- * @returns Approximate file count rounded to the nearest power of 10
- */
 export const countFilesRoundedRg = memoize(
   async (
     dirPath: string,
     abortSignal: AbortSignal,
     ignorePatterns: string[] = [],
   ): Promise<number | undefined> => {
-    // Skip file counting if we're in the home directory to avoid triggering
-    // macOS TCC permission dialogs for Desktop, Downloads, Documents, etc.
+    
+    
     if (path.resolve(dirPath) === path.resolve(homedir())) {
       return undefined
     }
 
     try {
-      // Build ripgrep arguments:
-      // --files: List files that would be searched (rather than searching them)
-      // --count: Only print a count of matching lines for each file
-      // --no-ignore-parent: Don't respect ignore files in parent directories
+      
+      
+      
+      
       
       const args = ['--files', '--hidden']
 
@@ -505,13 +466,13 @@ export const countFilesRoundedRg = memoize(
       
       return Math.round(count / power) * power
     } catch (error) {
-      // AbortSignal.timeout firing is expected on large/slow repos, not an error.
+      
       if ((error as Error)?.name !== 'AbortError') logError(error)
     }
   },
-  // lodash memoize's default resolver only uses the first argument.
-  // ignorePatterns affect the result, so include them in the cache key.
-  // abortSignal is intentionally excluded — it doesn't affect the count.
+  
+  
+  
   (dirPath, _abortSignal, ignorePatterns = []) =>
     `${dirPath}|${ignorePatterns.join(',')}`,
 )
@@ -535,11 +496,8 @@ export function getRipgrepStatus(): {
   }
 }
 
-/**
- * Test ripgrep availability on first use and cache the result
- */
 const testRipgrepOnFirstUse = memoize(async (): Promise<void> => {
-  // Already tested
+  
   if (ripgrepStatus !== null) {
     return
   }
@@ -549,9 +507,9 @@ const testRipgrepOnFirstUse = memoize(async (): Promise<void> => {
   try {
     let test: { code: number; stdout: string }
 
-    // For embedded ripgrep, use Bun.spawn with argv0
+    
     if (config.argv0) {
-      // Only Bun embeds ripgrep.
+      
       
       const proc = Bun.spawn([config.command, '--version'], {
         argv0: config.argv0,

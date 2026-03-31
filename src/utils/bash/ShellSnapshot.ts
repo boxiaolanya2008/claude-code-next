@@ -37,10 +37,10 @@ function createArgv0ShellFunction(
     '  if [[ -n $ZSH_VERSION ]]; then',
     `    ARGV0=${argv0} ${quotedPath} ${argSuffix}`,
     '  elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]] || [[ "$OSTYPE" == "win32" ]]; then',
-    // On Windows (git bash), exec -a does not work, so use ARGV0 env var instead
+    
     
     `    ARGV0=${argv0} ${quotedPath} ${argSuffix}`,
-    '  elif [[ $BASHPID != $$ ]]; then',
+    '  elif [[ $BASHPID != $ ]]; then',
     `    exec -a ${argv0} ${quotedPath} ${argSuffix}`,
     '  else',
     `    (exec -a ${argv0} ${quotedPath} ${argSuffix})`,
@@ -49,10 +49,6 @@ function createArgv0ShellFunction(
   ].join('\n')
 }
 
-/**
- * Creates ripgrep shell integration (alias or function)
- * @returns Object with type and the shell snippet to use
- */
 export function createRipgrepShellIntegration(): {
   type: 'alias' | 'function'
   snippet: string
@@ -71,7 +67,7 @@ export function createRipgrepShellIntegration(): {
     }
   }
 
-  // For regular ripgrep, use a simple alias target
+  
   const quotedPath = quote([rgCommand.rgPath])
   const quotedArgs = rgCommand.rgArgs.map(arg => quote([arg]))
   const aliasTarget =
@@ -82,10 +78,6 @@ export function createRipgrepShellIntegration(): {
   return { type: 'alias', snippet: aliasTarget }
 }
 
-/**
- * VCS directories to exclude from grep searches. Matches the list in
- * GrepTool (see GrepTool.ts: VCS_DIRECTORIES_TO_EXCLUDE).
- */
 const VCS_DIRECTORIES_TO_EXCLUDE = [
   '.git',
   '.svn',
@@ -135,10 +127,6 @@ function getConfigFile(shellPath: string): string {
   return configPath
 }
 
-/**
- * Generates user-specific snapshot content (functions, options, aliases)
- * This content is derived from the user's shell configuration file
- */
 function getUserSnapshotContent(configFile: string): string {
   const isZsh = configFile.endsWith('.zshrc')
 
@@ -176,7 +164,7 @@ function getUserSnapshotContent(configFile: string): string {
     `
   }
 
-  // Shell options
+  
   if (isZsh) {
     content += `
       echo "# Shell Options" >> "$SNAPSHOT_FILE"
@@ -191,7 +179,7 @@ function getUserSnapshotContent(configFile: string): string {
     `
   }
 
-  // User aliases
+  
   content += `
       echo "# Aliases" >> "$SNAPSHOT_FILE"
       # Filter out winpty aliases on Windows to avoid "stdin is not a tty" errors
@@ -207,15 +195,11 @@ function getUserSnapshotContent(configFile: string): string {
   return content
 }
 
-/**
- * Generates Claude Code specific snapshot content
- * This content is always included regardless of user configuration
- */
 async function getClaudeCodeSnapshotContent(): Promise<string> {
-  // Get the appropriate PATH based on platform
+  
   let pathValue = process.env.PATH
   if (getPlatform() === 'windows') {
-    // On Windows with git-bash, read the Cygwin PATH
+    
     const cygwinResult = await execa('echo $PATH', {
       shell: true,
       reject: false,
@@ -223,16 +207,16 @@ async function getClaudeCodeSnapshotContent(): Promise<string> {
     if (cygwinResult.exitCode === 0 && cygwinResult.stdout) {
       pathValue = cygwinResult.stdout.trim()
     }
-    // Fall back to process.env.PATH if we can't get Cygwin PATH
+    
   }
 
   const rgIntegration = createRipgrepShellIntegration()
 
   let content = ''
 
-  // Check if rg is available, if not create an alias/function to bundled ripgrep
-  // We use a subshell to unalias rg before checking, so that user aliases like
-  // `alias rg='rg --smart-case'` don't shadow the real binary check. The subshell
+  
+  
+  
   
   content += `
       # Check for rg availability
@@ -241,14 +225,14 @@ async function getClaudeCodeSnapshotContent(): Promise<string> {
   `
 
   if (rgIntegration.type === 'function') {
-    // For embedded ripgrep, write the function definition using heredoc
+    
     content += `
       cat >> "$SNAPSHOT_FILE" << 'RIPGREP_FUNC_END'
   ${rgIntegration.snippet}
 RIPGREP_FUNC_END
     `
   } else {
-    // For regular ripgrep, write a simple alias
+    
     const escapedSnippet = rgIntegration.snippet.replace(/'/g, "'\\''")
     content += `
       echo '  alias rg='"'${escapedSnippet}'" >> "$SNAPSHOT_FILE"
@@ -274,7 +258,7 @@ FIND_GREP_FUNC_END
     `
   }
 
-  // Add PATH to the file
+  
   content += `
 
       # Add PATH to the file
@@ -284,9 +268,6 @@ FIND_GREP_FUNC_END
   return content
 }
 
-/**
- * Creates the appropriate shell script for capturing environment
- */
 async function getSnapshotScript(
   shellPath: string,
   snapshotFilePath: string,
@@ -299,7 +280,7 @@ async function getSnapshotScript(
   const userContent = configFileExists
     ? getUserSnapshotContent(configFile)
     : !isZsh
-      ? // we need to manually force alias expansion in bash - normally `getUserSnapshotContent` takes care of this
+      ? 
         'echo "shopt -s expand_aliases" >> "$SNAPSHOT_FILE"'
       : ''
   const claudeCodeContent = await getClaudeCodeSnapshotContent()
@@ -374,11 +355,10 @@ export const createAndSaveSnapshot = async (
 
       if (!configFileExists) {
         logForDebugging(
-          `Shell config file not found: ${configFile}, creating snapshot with Claude Code defaults only`,
+          `Shell config file not found: ${configFile}, creating snapshot with Claude Code Next defaults only`,
         )
       }
 
-      // Create unique snapshot path with timestamp and random ID
       const timestamp = Date.now()
       const randomId = Math.random().toString(36).substring(2, 8)
       const snapshotsDir = join(getClaudeConfigHomeDir(), 'shell-snapshots')
@@ -403,7 +383,7 @@ export const createAndSaveSnapshot = async (
         ['-c', '-l', snapshotScript],
         {
           env: {
-            ...((process.env.CLAUDE_CODE_DONT_INHERIT_ENV
+            ...((process.env.CLAUDE_CODE_NEXT_DONT_INHERIT_ENV
               ? {}
               : subprocessEnv()) as typeof process.env),
             SHELL: binShell,
@@ -467,7 +447,6 @@ export const createAndSaveSnapshot = async (
             try {
               snapshotSize = (await stat(shellSnapshotPath)).size
             } catch {
-              // Snapshot file not found
             }
 
             if (snapshotSize !== undefined) {

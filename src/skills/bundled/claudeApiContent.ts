@@ -27,10 +27,6 @@ import typescriptClaudeApiReadme from './claude-api/typescript/claude-api/README
 import typescriptClaudeApiStreaming from './claude-api/typescript/claude-api/streaming.md'
 import typescriptClaudeApiToolUse from './claude-api/typescript/claude-api/tool-use.md'
 
-// placeholders in the .md files at runtime before the skill prompt is sent.
-
-//   - claude-api/SKILL.md (Current Models pricing table)
-
 export const SKILL_MODEL_VARS = {
   OPUS_ID: 'claude-opus-4-6',
   OPUS_NAME: 'Claude Opus 4.6',
@@ -38,7 +34,7 @@ export const SKILL_MODEL_VARS = {
   SONNET_NAME: 'Claude Sonnet 4.6',
   HAIKU_ID: 'claude-haiku-4-5',
   HAIKU_NAME: 'Claude Haiku 4.5',
-  // Previous Sonnet ID — used in "do not append date suffixes" example in SKILL.md.
+  
   PREV_SONNET_ID: 'claude-sonnet-4-5',
 } satisfies Record<string, string>
 

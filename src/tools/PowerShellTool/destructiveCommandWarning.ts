@@ -13,7 +13,7 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
   
   
   
-  // `Remove-Item (Join-Path $r "tmp") -Recurse -Force` must still warn.
+  
   {
     pattern:
       /(?:^|[|;&\n({])\s*(Remove-Item|rm|del|rd|rmdir|ri)\b[^|;&\n}]*-Recurse\b[^|;&\n}]*-Force\b/i,
@@ -35,13 +35,13 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
     warning: 'Note: may force-remove files',
   },
 
-  // Clear-Content on broad paths
+  
   {
     pattern: /\bClear-Content\b[^|;&\n]*\*/i,
     warning: 'Note: may clear content of multiple files',
   },
 
-  // Format-Volume and Clear-Disk
+  
   {
     pattern: /\bFormat-Volume\b/i,
     warning: 'Note: may format a disk volume',
@@ -51,7 +51,7 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
     warning: 'Note: may clear a disk',
   },
 
-  // Git destructive operations (same as BashTool)
+  
   {
     pattern: /\bgit\s+reset\s+--hard\b/i,
     warning: 'Note: may discard uncommitted changes',
@@ -70,13 +70,13 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
     warning: 'Note: may permanently remove stashed changes',
   },
 
-  // Database operations
+  
   {
     pattern: /\b(DROP|TRUNCATE)\s+(TABLE|DATABASE|SCHEMA)\b/i,
     warning: 'Note: may drop or truncate database objects',
   },
 
-  // System operations
+  
   {
     pattern: /\bStop-Computer\b/i,
     warning: 'Note: will shut down the computer',

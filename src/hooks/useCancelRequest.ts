@@ -51,10 +51,6 @@ type CancelRequestHandlerProps = {
   streamMode?: SpinnerMode
 }
 
-/**
- * Component that handles cancel requests via keybinding.
- * Renders null but registers the 'chat:cancel' keybinding handler.
- */
 export function CancelRequestHandler(props: CancelRequestHandlerProps): null {
   const {
     setToolUseConfirmQueue,
@@ -87,8 +83,8 @@ export function CancelRequestHandler(props: CancelRequestHandlerProps): null {
         streamMode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     }
 
-    // Priority 1: If there's an active task running, cancel it first
-    // This takes precedence over queue management so users can always interrupt Claude
+    
+    
     if (abortSignal !== undefined && !abortSignal.aborted) {
       logEvent('tengu_cancel', cancelProps)
       setToolUseConfirmQueue(() => [])
@@ -96,7 +92,7 @@ export function CancelRequestHandler(props: CancelRequestHandlerProps): null {
       return
     }
 
-    // Priority 2: Pop queue when Claude is idle (no running task to cancel)
+    
     if (hasCommandsInQueue()) {
       if (popCommandFromQueue) {
         popCommandFromQueue()
@@ -104,7 +100,7 @@ export function CancelRequestHandler(props: CancelRequestHandlerProps): null {
       }
     }
 
-    // Fallback: nothing to cancel or pop (shouldn't reach here if isActive is correct)
+    
     logEvent('tengu_cancel', cancelProps)
     setToolUseConfirmQueue(() => [])
     onCancel()
@@ -162,7 +158,7 @@ export function CancelRequestHandler(props: CancelRequestHandlerProps): null {
   })
 
   
-  // emit SDK events, enqueue a single aggregate model-facing notification.
+  
   
   const killAllAgentsAndNotify = useCallback((): boolean => {
     const tasks = store.getState().tasks
@@ -234,7 +230,7 @@ export function CancelRequestHandler(props: CancelRequestHandlerProps): null {
     const now = Date.now()
     const elapsed = now - lastKillAgentsPressRef.current
     if (elapsed <= KILL_AGENTS_CONFIRM_WINDOW_MS) {
-      // Second press within window -- kill all background agents
+      
       lastKillAgentsPressRef.current = 0
       removeNotification('kill-agents-confirm')
       logEvent('tengu_cancel', {
@@ -245,7 +241,7 @@ export function CancelRequestHandler(props: CancelRequestHandlerProps): null {
       killAllAgentsAndNotify()
       return
     }
-    // First press -- show confirmation hint in status bar
+    
     lastKillAgentsPressRef.current = now
     const shortcut = getShortcutDisplay(
       'chat:killAgents',

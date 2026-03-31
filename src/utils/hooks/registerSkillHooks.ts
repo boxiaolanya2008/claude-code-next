@@ -19,7 +19,7 @@ export function registerSkillHooks(
 
     for (const matcher of matchers) {
       for (const hook of matcher.hooks) {
-        // For once: true hooks, use onHookSuccess callback to remove after execution
+        
         const onHookSuccess = hook.once
           ? () => {
               logForDebugging(

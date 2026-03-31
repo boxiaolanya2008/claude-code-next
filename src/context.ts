@@ -34,7 +34,7 @@ export function setSystemPromptInjection(value: string | null): void {
 
 export const getGitStatus = memoize(async (): Promise<string | null> => {
   if (process.env.NODE_ENV === 'test') {
-    // Avoid cycles in tests
+    
     return null
   }
 
@@ -118,7 +118,7 @@ export const getSystemContext = memoize(
 
     
     const gitStatus =
-      isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) ||
+      isEnvTruthy(process.env.CLAUDE_CODE_NEXT_REMOTE) ||
       !shouldIncludeGitInstructions()
         ? null
         : await getGitStatus()
@@ -156,7 +156,7 @@ export const getUserContext = memoize(
     
     
     const shouldDisableClaudeMd =
-      isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_CLAUDE_MDS) ||
+      isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_CLAUDE_MDS) ||
       (isBareMode() && getAdditionalDirectoriesForClaudeMd().length === 0)
     
     

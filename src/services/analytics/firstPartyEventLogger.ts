@@ -39,13 +39,6 @@ export function getEventSamplingConfig(): EventSamplingConfig {
   )
 }
 
-/**
- * Determine if an event should be sampled based on its sample rate.
- * Returns the sample rate if sampled, null if not sampled.
- *
- * @param eventName - Name of the event to check
- * @returns The sample_rate if event should be logged, null if it should be dropped
- */
 export function shouldSampleEvent(eventName: string): number | null {
   const config = getEventSamplingConfig()
   const eventConfig = config[eventName]
@@ -62,17 +55,17 @@ export function shouldSampleEvent(eventName: string): number | null {
     return null
   }
 
-  // Sample rate of 1 means log everything (no need to add metadata)
+  
   if (sampleRate >= 1) {
     return null
   }
 
-  // Sample rate of 0 means drop everything
+  
   if (sampleRate <= 0) {
     return 0
   }
 
-  // Randomly decide whether to sample this event
+  
   return Math.random() < sampleRate ? sampleRate : 0
 }
 
@@ -93,7 +86,6 @@ function getBatchConfig(): BatchConfig {
   )
 }
 
-// Module-local state for event logging (not exposed globally)
 let firstPartyEventLogger: ReturnType<typeof logs.getLogger> | null = null
 let firstPartyEventLoggerProvider: LoggerProvider | null = null
 
@@ -109,43 +101,22 @@ export async function shutdown1PEventLogging(): Promise<void> {
       logForDebugging('1P event logging: final shutdown complete')
     }
   } catch {
-    // Ignore shutdown errors
+    
   }
 }
 
-/**
- * Check if 1P event logging is enabled.
- * Respects the same opt-outs as other analytics sinks:
- * - Test environment
- * - Third-party cloud providers (Bedrock/Vertex)
- * - Global telemetry opt-outs
- * - Non-essential traffic disabled
- *
- * Note: Unlike BigQuery metrics, event logging does NOT check organization-level
- * metrics opt-out via API. It follows the same pattern as Statsig event logging.
- */
 export function is1PEventLoggingEnabled(): boolean {
-  // Respect standard analytics opt-outs
+  
   return !isAnalyticsDisabled()
 }
 
-/**
- * Log a 1st-party event for internal analytics (async version).
- * Events are batched and exported to /api/event_logging/batch
- *
- * This enriches the event with core metadata (model, session, env context, etc.)
- * at log time, similar to logEventToStatsig.
- *
- * @param eventName - Name of the event (e.g., 'tengu_api_query')
- * @param metadata - Additional metadata for the event (intentionally no strings, to avoid accidentally logging code/filepaths)
- */
 async function logEventTo1PAsync(
   firstPartyEventLogger: Logger,
   eventName: string,
   metadata: Record<string, number | boolean | undefined> = {},
 ): Promise<void> {
   try {
-    // Enrich with core metadata at log time (similar to Statsig pattern)
+    
     const coreMetadata = await getEventMetadata({
       model: metadata.model,
       betas: metadata.betas,
@@ -157,7 +128,7 @@ async function logEventTo1PAsync(
     const attributes = {
       event_name: eventName,
       event_id: randomUUID(),
-      // Pass objects directly - no JSON serialization needed
+      
       core_metadata: coreMetadata,
       user_metadata: getCoreUserData(true),
       event_metadata: metadata,
@@ -169,14 +140,14 @@ async function logEventTo1PAsync(
       attributes.user_id = userId
     }
 
-    // Debug logging when debug mode is enabled
+    
     if (process.env.USER_TYPE === 'ant') {
       logForDebugging(
         `[ANT-ONLY] 1P event: ${eventName} ${jsonStringify(metadata, null, 0)}`,
       )
     }
 
-    // Emit log record
+    
     firstPartyEventLogger.emit({
       body: eventName,
       attributes,
@@ -188,17 +159,10 @@ async function logEventTo1PAsync(
     if (process.env.USER_TYPE === 'ant') {
       logError(e as Error)
     }
-    // swallow
+    
   }
 }
 
-/**
- * Log a 1st-party event for internal analytics.
- * Events are batched and exported to /api/event_logging/batch
- *
- * @param eventName - Name of the event (e.g., 'tengu_api_query')
- * @param metadata - Additional metadata for the event (intentionally no strings, to avoid accidentally logging code/filepaths)
- */
 export function logEventTo1P(
   eventName: string,
   metadata: Record<string, number | boolean | undefined> = {},
@@ -211,13 +175,10 @@ export function logEventTo1P(
     return
   }
 
-  // Fire and forget - don't block on metadata enrichment
+  
   void logEventTo1PAsync(firstPartyEventLogger, eventName, metadata)
 }
 
-/**
- * GrowthBook experiment event data for logging
- */
 export type GrowthBookExperimentData = {
   experimentId: string
   variationId: number
@@ -225,19 +186,10 @@ export type GrowthBookExperimentData = {
   experimentMetadata?: Record<string, unknown>
 }
 
-// api.anthropic.com only serves the "production" GrowthBook environment
-// (see starling/starling/cli/cli.py DEFAULT_ENVIRONMENTS). Staging and
-// development environments are not exported to the prod API.
 function getEnvironmentForGrowthBook(): string {
   return 'production'
 }
 
-/**
- * Log a GrowthBook experiment assignment event to 1P.
- * Events are batched and exported to /api/event_logging/batch
- *
- * @param data - GrowthBook experiment assignment data
- */
 export function logGrowthBookExperimentTo1P(
   data: GrowthBookExperimentData,
 ): void {
@@ -252,7 +204,7 @@ export function logGrowthBookExperimentTo1P(
   const userId = getOrCreateUserID()
   const { accountUuid, organizationUuid } = getCoreUserData(true)
 
-  // Build attributes for GrowthbookExperimentEvent
+  
   const attributes = {
     event_type: 'GrowthbookExperimentEvent',
     event_id: randomUUID(),
@@ -287,14 +239,6 @@ const DEFAULT_LOGS_EXPORT_INTERVAL_MS = 10000
 const DEFAULT_MAX_EXPORT_BATCH_SIZE = 200
 const DEFAULT_MAX_QUEUE_SIZE = 8192
 
-/**
- * Initialize 1P event logging infrastructure.
- * This creates a separate LoggerProvider for internal event logging,
- * independent of customer OTLP telemetry.
- *
- * This uses its own minimal resource configuration with just the attributes
- * we need for internal analytics (service name, version, platform info).
- */
 export function initialize1PEventLogging(): void {
   profileCheckpoint('1p_event_logging_start')
   const enabled = is1PEventLoggingEnabled()
@@ -306,8 +250,8 @@ export function initialize1PEventLogging(): void {
     return
   }
 
-  // Fetch batch processor configuration from GrowthBook dynamic config
-  // Uses cached value if available, refreshes in background
+  
+  
   const batchConfig = getBatchConfig()
   lastBatchConfig = batchConfig
   profileCheckpoint('1p_event_after_growthbook_config')
@@ -324,14 +268,14 @@ export function initialize1PEventLogging(): void {
 
   const maxQueueSize = batchConfig.maxQueueSize || DEFAULT_MAX_QUEUE_SIZE
 
-  // Build our own resource for 1P event logging with minimal attributes
+  
   const platform = getPlatform()
   const attributes: Record<string, string> = {
-    [ATTR_SERVICE_NAME]: 'claude-code',
+    [ATTR_SERVICE_NAME]: 'claude-code-next',
     [ATTR_SERVICE_VERSION]: MACRO.VERSION,
   }
 
-  // Add WSL-specific attributes if running on WSL
+  
   if (platform === 'wsl') {
     const wslVersion = getWslVersion()
     if (wslVersion) {
@@ -341,9 +285,9 @@ export function initialize1PEventLogging(): void {
 
   const resource = resourceFromAttributes(attributes)
 
-  // Create a new LoggerProvider with the EventLoggingExporter
-  // NOTE: This is kept separate from customer telemetry logs to ensure
-  // internal events don't leak to customer endpoints and vice versa.
+  
+  
+  
   
   const eventLoggingExporter = new FirstPartyEventLoggingExporter({
     maxBatchSize: maxExportBatchSize,
@@ -369,27 +313,11 @@ export function initialize1PEventLogging(): void {
   
   
   firstPartyEventLogger = firstPartyEventLoggerProvider.getLogger(
-    'com.anthropic.claude_code.events',
+    'com.anthropic.claude_code_next.events',
     MACRO.VERSION,
   )
 }
 
-/**
- * Rebuild the 1P event logging pipeline if the batch config changed.
- * Register this with onGrowthBookRefresh so long-running sessions pick up
- * changes to batch size, delay, endpoint, etc.
- *
- * Event-loss safety:
- * 1. Null the logger first — concurrent logEventTo1P() calls hit the
- *    !firstPartyEventLogger guard and bail during the swap window. This drops
- *    a handful of events but prevents emitting to a draining provider.
- * 2. forceFlush() drains the old BatchLogRecordProcessor buffer to the
- *    exporter. Export failures go to disk at getCurrentBatchFilePath() which
- *    is keyed by module-level BATCH_UUID + sessionId — unchanged across
- *    reinit — so the NEW exporter's disk-backed retry picks them up.
- * 3. Swap to new provider/logger; old provider shutdown runs in background
- *    (buffer already drained, just cleanup).
- */
 export async function reinitialize1PEventLoggingIfConfigChanged(): Promise<void> {
   if (!is1PEventLoggingEnabled() || !firstPartyEventLoggerProvider) {
     return
@@ -414,14 +342,14 @@ export async function reinitialize1PEventLoggingIfConfigChanged(): Promise<void>
   try {
     await oldProvider.forceFlush()
   } catch {
-    // Export failures are already on disk; new exporter will retry them.
+    
   }
 
   firstPartyEventLoggerProvider = null
   try {
     initialize1PEventLogging()
   } catch (e) {
-    // Restore so the next GrowthBook refresh can retry. oldProvider was
+    
     
     
     

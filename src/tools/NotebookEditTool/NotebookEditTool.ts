@@ -73,7 +73,7 @@ export const outputSchema = lazySchema(() =>
       .string()
       .optional()
       .describe('Error message if the operation failed'),
-    // Fields for attribution tracking
+    
     notebook_path: z.string().describe('The path to the notebook file'),
     original_file: z
       .string()
@@ -215,7 +215,7 @@ export const NotebookEditTool = buildTool({
       }
     }
 
-    // Require Read-before-Edit (matches FileEditTool/FileWriteTool). Without
+    
     
     
     const readTimestamp = toolUseContext.readFileState.get(fullPath)
@@ -266,11 +266,11 @@ export const NotebookEditTool = buildTool({
         }
       }
     } else {
-      // First try to find the cell by its actual ID
+      
       const cellIndex = notebook.cells.findIndex(cell => cell.id === cell_id)
 
       if (cellIndex === -1) {
-        // If not found, try to parse as a numeric index (cell-N format)
+        
         const parsedCellIndex = parseCellId(cell_id)
         if (parsedCellIndex !== undefined) {
           if (!notebook.cells[parsedCellIndex]) {
@@ -317,8 +317,8 @@ export const NotebookEditTool = buildTool({
     }
 
     try {
-      // readFileSyncWithMetadata gives content + encoding + line endings in
-      // one safeResolvePath + readFileSync pass, replacing the previous
+      
+      
       
       
       const { content, encoding, lineEndings } =
@@ -351,7 +351,7 @@ export const NotebookEditTool = buildTool({
       if (!cell_id) {
         cellIndex = 0 
       } else {
-        // First try to find the cell by its actual ID
+        
         cellIndex = notebook.cells.findIndex(cell => cell.id === cell_id)
 
         
@@ -367,7 +367,7 @@ export const NotebookEditTool = buildTool({
         }
       }
 
-      // Convert replace to insert if trying to replace one past the end
+      
       let edit_mode = originalEditMode
       if (edit_mode === 'replace' && cellIndex === notebook.cells.length) {
         edit_mode = 'insert'
@@ -390,7 +390,7 @@ export const NotebookEditTool = buildTool({
       }
 
       if (edit_mode === 'delete') {
-        // Delete the specified cell
+        
         notebook.cells.splice(cellIndex, 1)
       } else if (edit_mode === 'insert') {
         let new_cell: NotebookCell
@@ -411,14 +411,14 @@ export const NotebookEditTool = buildTool({
             outputs: [],
           }
         }
-        // Insert the new cell
+        
         notebook.cells.splice(cellIndex, 0, new_cell)
       } else {
-        // Find the specified cell
-        const targetCell = notebook.cells[cellIndex]! // validateInput ensures cell_number is in bounds
+        
+        const targetCell = notebook.cells[cellIndex]! 
         targetCell.source = new_source
         if (targetCell.cell_type === 'code') {
-          // Reset execution count and clear outputs since cell was modified
+          
           targetCell.execution_count = null
           targetCell.outputs = []
         }
@@ -426,7 +426,7 @@ export const NotebookEditTool = buildTool({
           targetCell.cell_type = cell_type
         }
       }
-      // Write back to file
+      
       const IPYNB_INDENT = 1
       const updatedContent = jsonStringify(notebook, null, IPYNB_INDENT)
       writeTextContent(fullPath, updatedContent, encoding, lineEndings)

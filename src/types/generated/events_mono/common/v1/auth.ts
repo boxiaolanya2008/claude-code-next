@@ -1,7 +1,5 @@
 
 
-//   protoc-gen-ts_proto  v2.6.1
-
 export interface PublicApiAuth {
   account_id?: number | undefined
   organization_uuid?: string | undefined

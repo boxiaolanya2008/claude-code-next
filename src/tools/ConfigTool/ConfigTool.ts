@@ -66,7 +66,7 @@ export type Output = z.infer<OutputSchema>
 
 export const ConfigTool = buildTool({
   name: CONFIG_TOOL_NAME,
-  searchHint: 'get or set Claude Code settings (theme, model)',
+  searchHint: 'get or set Claude Code Next settings (theme, model)',
   maxResultSizeChars: 100_000,
   async description() {
     return DESCRIPTION
@@ -96,7 +96,7 @@ export const ConfigTool = buildTool({
       : `${input.setting} = ${input.value}`
   },
   async checkPermissions(input: Input) {
-    // Auto-allow reading configs
+    
     if (input.value === undefined) {
       return { behavior: 'allow' as const, updatedInput: input }
     }
@@ -109,7 +109,7 @@ export const ConfigTool = buildTool({
   renderToolResultMessage,
   renderToolUseRejectedMessage,
   async call({ setting, value }: Input, context): Promise<{ data: Output }> {
-    // 1. Check if setting is supported
+    
     
     
     
@@ -143,7 +143,7 @@ export const ConfigTool = buildTool({
       }
     }
 
-    // 3. SET operation
+    
 
     
     
@@ -200,7 +200,7 @@ export const ConfigTool = buildTool({
       }
     }
 
-    // Check options
+    
     const options = getOptionsForSetting(setting)
     if (options && !options.includes(String(finalValue))) {
       return {
@@ -213,7 +213,7 @@ export const ConfigTool = buildTool({
       }
     }
 
-    // Async validation (e.g., model API check)
+    
     if (config.validateOnWrite) {
       const result = await config.validateOnWrite(finalValue)
       if (!result.valid) {
@@ -228,7 +228,7 @@ export const ConfigTool = buildTool({
       }
     }
 
-    // Pre-flight checks for voice mode
+    
     if (
       feature('VOICE_MODE') &&
       setting === 'voiceEnabled' &&
@@ -342,7 +342,7 @@ export const ConfigTool = buildTool({
         }
       }
 
-      // 5a. Voice needs notifyChange so applySettingsChange resyncs
+      
       
       
       if (feature('VOICE_MODE') && setting === 'voiceEnabled') {
@@ -352,7 +352,7 @@ export const ConfigTool = buildTool({
         settingsChangeDetector.notifyChange('userSettings')
       }
 
-      // 5b. Sync to AppState if needed for immediate UI effect
+      
       if (config.appStateKey) {
         const appKey = config.appStateKey
         context.setAppState(prev => {
@@ -361,9 +361,9 @@ export const ConfigTool = buildTool({
         })
       }
 
-      // Sync remoteControlAtStartup to AppState so the bridge reacts
       
-      // so the generic appStateKey mechanism can't handle this).
+      
+      
       if (setting === 'remoteControlAtStartup') {
         const resolved = getRemoteControlAtStartup()
         context.setAppState(prev => {

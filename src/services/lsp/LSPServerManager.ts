@@ -11,7 +11,7 @@ import {
 import type { ScopedLspServerConfig } from './types.js'
 
 export type LSPServerManager = {
-  /** Initialize the manager by loading all configured LSP servers */
+  
   initialize(): Promise<void>
   
   shutdown(): Promise<void>
@@ -39,32 +39,15 @@ export type LSPServerManager = {
   isFileOpen(filePath: string): boolean
 }
 
-/**
- * Creates an LSP server manager instance.
- *
- * Manages multiple LSP server instances and routes requests based on file extensions.
- * Uses factory function pattern with closures for state encapsulation (avoiding classes).
- *
- * @returns LSP server manager instance
- *
- * @example
- * const manager = createLSPServerManager()
- * await manager.initialize()
- * const result = await manager.sendRequest('/path/to/file.ts', 'textDocument/definition', params)
- * await manager.shutdown()
- */
 export function createLSPServerManager(): LSPServerManager {
-  // Private state managed via closures
+  
   const servers: Map<string, LSPServerInstance> = new Map()
   const extensionMap: Map<string, string[]> = new Map()
-  // Track which files have been opened on which servers (URI -> server name)
+  
   const openedFiles: Map<string, string> = new Map()
 
-  /**
-   * Initialize the manager by loading all configured LSP servers.
-   *
-   * @throws {Error} If configuration loading fails
-   */
+  
+
   async function initialize(): Promise<void> {
     let serverConfigs: Record<string, ScopedLspServerConfig>
 
@@ -82,10 +65,10 @@ export function createLSPServerManager(): LSPServerManager {
       throw error
     }
 
-    // Build extension → server mapping
+    
     for (const [serverName, config] of Object.entries(serverConfigs)) {
       try {
-        // Validate config before using it
+        
         if (!config.command) {
           throw new Error(
             `Server ${serverName} missing required 'command' field`,
@@ -100,7 +83,7 @@ export function createLSPServerManager(): LSPServerManager {
           )
         }
 
-        // Map file extensions to this server (derive from extensionToLanguage)
+        
         const fileExtensions = Object.keys(config.extensionToLanguage)
         for (const ext of fileExtensions) {
           const normalized = ext.toLowerCase()
@@ -113,12 +96,12 @@ export function createLSPServerManager(): LSPServerManager {
           }
         }
 
-        // Create server instance
+        
         const instance = createLSPServerInstance(serverName, config)
         servers.set(serverName, instance)
 
-        // Register handler for workspace/configuration requests from the server
-        // Some servers (like TypeScript) send these even when we say we don't support them
+        
+        
         instance.onRequest(
           'workspace/configuration',
           (params: { items: Array<{ section?: string }> }) => {
@@ -144,13 +127,8 @@ export function createLSPServerManager(): LSPServerManager {
     logForDebugging(`LSP manager initialized with ${servers.size} servers`)
   }
 
-  /**
-   * Shutdown all running servers and clear state.
-   * Only servers in 'running' state are explicitly stopped;
-   * servers in other states are cleared without shutdown.
-   *
-   * @throws {Error} If one or more servers fail to stop
-   */
+  
+
   async function shutdown(): Promise<void> {
     const toStop = Array.from(servers.entries()).filter(
       ([, s]) => s.state === 'running' || s.state === 'error',
@@ -181,11 +159,8 @@ export function createLSPServerManager(): LSPServerManager {
     }
   }
 
-  /**
-   * Get the LSP server instance for a given file path.
-   * If multiple servers handle the same extension, returns the first registered server.
-   * Returns undefined if no server handles this file type.
-   */
+  
+
   function getServerForFile(filePath: string): LSPServerInstance | undefined {
     const ext = path.extname(filePath).toLowerCase()
     const serverNames = extensionMap.get(ext)
@@ -194,7 +169,7 @@ export function createLSPServerManager(): LSPServerManager {
       return undefined
     }
 
-    // Use first server (can add priority later)
+    
     const serverName = serverNames[0]
     if (!serverName) {
       return undefined
@@ -203,12 +178,8 @@ export function createLSPServerManager(): LSPServerManager {
     return servers.get(serverName)
   }
 
-  /**
-   * Ensure the appropriate LSP server is started for the given file.
-   * Returns undefined if no server handles this file type.
-   *
-   * @throws {Error} If server fails to start
-   */
+  
+
   async function ensureServerStarted(
     filePath: string,
   ): Promise<LSPServerInstance | undefined> {
@@ -232,12 +203,8 @@ export function createLSPServerManager(): LSPServerManager {
     return server
   }
 
-  /**
-   * Send a request to the appropriate LSP server for the given file.
-   * Returns undefined if no server handles this file type.
-   *
-   * @throws {Error} If server fails to start or request fails
-   */
+  
+
   async function sendRequest<T>(
     filePath: string,
     method: string,
@@ -259,7 +226,7 @@ export function createLSPServerManager(): LSPServerManager {
     }
   }
 
-  // Return public interface
+  
   function getAllServers(): Map<string, LSPServerInstance> {
     return servers
   }
@@ -278,7 +245,7 @@ export function createLSPServerManager(): LSPServerManager {
       return
     }
 
-    // Get language ID from server's extensionToLanguage mapping
+    
     const ext = path.extname(filePath).toLowerCase()
     const languageId = server.config.extensionToLanguage[ext] || 'plaintext'
 
@@ -291,7 +258,7 @@ export function createLSPServerManager(): LSPServerManager {
           text: content,
         },
       })
-      // Track that this file is now open on this server
+      
       openedFiles.set(fileUri, server.name)
       logForDebugging(
         `LSP: Sent didOpen for ${filePath} (languageId: ${languageId})`,
@@ -301,7 +268,7 @@ export function createLSPServerManager(): LSPServerManager {
         `Failed to sync file open ${filePath}: ${errorMessage(error)}`,
       )
       logError(err)
-      // Re-throw to propagate error to caller
+      
       throw err
     }
   }
@@ -314,7 +281,7 @@ export function createLSPServerManager(): LSPServerManager {
 
     const fileUri = pathToFileURL(path.resolve(filePath)).href
 
-    // If file hasn't been opened on this server yet, open it first
+    
     
     if (openedFiles.get(fileUri) !== server.name) {
       return openFile(filePath, content)
@@ -339,10 +306,8 @@ export function createLSPServerManager(): LSPServerManager {
     }
   }
 
-  /**
-   * Save a file in LSP servers (sends didSave notification)
-   * Called after file is written to disk to trigger diagnostics
-   */
+  
+
   async function saveFile(filePath: string): Promise<void> {
     const server = getServerForFile(filePath)
     if (!server || server.state !== 'running') return
@@ -364,13 +329,8 @@ export function createLSPServerManager(): LSPServerManager {
     }
   }
 
-  /**
-   * Close a file in LSP servers (sends didClose notification)
-   *
-   * NOTE: Currently available but not yet integrated with compact flow.
-   * TODO: Integrate with compact - call closeFile() when compact removes files from context
-   * This will notify LSP servers that files are no longer in active use.
-   */
+  
+
   async function closeFile(filePath: string): Promise<void> {
     const server = getServerForFile(filePath)
     if (!server || server.state !== 'running') return

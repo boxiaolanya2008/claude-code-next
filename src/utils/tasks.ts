@@ -26,27 +26,19 @@ export function setLeaderTeamName(teamName: string): void {
   notifyTasksUpdated()
 }
 
-/**
- * Clears the leader's team name.
- * Called when a team is deleted.
- */
 export function clearLeaderTeamName(): void {
   if (leaderTeamName === undefined) return
   leaderTeamName = undefined
   notifyTasksUpdated()
 }
 
-/**
- * Register a listener to be called when tasks are updated in this process.
- * Returns an unsubscribe function.
- */
 export const onTasksUpdated = tasksUpdated.subscribe
 
 export function notifyTasksUpdated(): void {
   try {
     tasksUpdated.emit()
   } catch {
-    // Ignore listener errors — task mutations must not fail due to notification issues
+    
   }
 }
 
@@ -62,12 +54,12 @@ export const TaskSchema = lazySchema(() =>
     id: z.string(),
     subject: z.string(),
     description: z.string(),
-    activeForm: z.string().optional(), // present continuous form for spinner (e.g., "Running tests")
-    owner: z.string().optional(), // agent ID
+    activeForm: z.string().optional(), 
+    owner: z.string().optional(), 
     status: TaskStatusSchema(),
-    blocks: z.array(z.string()), // task IDs this task blocks
-    blockedBy: z.array(z.string()), // task IDs that block this task
-    metadata: z.record(z.string(), z.unknown()).optional(), // arbitrary metadata
+    blocks: z.array(z.string()), 
+    blockedBy: z.array(z.string()), 
+    metadata: z.record(z.string(), z.unknown()).optional(), 
   }),
 )
 export type Task = z.infer<ReturnType<typeof TaskSchema>>
@@ -106,26 +98,20 @@ async function writeHighWaterMark(
 }
 
 export function isTodoV2Enabled(): boolean {
-  // Force-enable tasks in non-interactive mode (e.g. SDK users who want Task tools over TodoWrite)
-  if (isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_TASKS)) {
+  
+  if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_ENABLE_TASKS)) {
     return true
   }
   return !getIsNonInteractiveSession()
 }
 
-/**
- * Resets the task list for a new swarm - clears any existing tasks.
- * Writes a high water mark file to prevent ID reuse after reset.
- * Should be called when a new swarm is created to ensure task numbering starts at 1.
- * Uses file locking to prevent race conditions when multiple Claudes run in parallel.
- */
 export async function resetTaskList(taskListId: string): Promise<void> {
   const dir = getTasksDir(taskListId)
   const lockPath = await ensureTaskListLockFile(taskListId)
 
   let release: (() => Promise<void>) | undefined
   try {
-    // Acquire exclusive lock on the task list
+    
     release = await lockfile.lock(lockPath, LOCK_OPTIONS)
 
     
@@ -137,7 +123,7 @@ export async function resetTaskList(taskListId: string): Promise<void> {
       }
     }
 
-    // Delete all task files
+    
     let files: string[]
     try {
       files = await readdir(dir)
@@ -150,7 +136,7 @@ export async function resetTaskList(taskListId: string): Promise<void> {
         try {
           await unlink(filePath)
         } catch {
-          // Ignore errors, file may already be deleted
+          
         }
       }
     }
@@ -162,21 +148,12 @@ export async function resetTaskList(taskListId: string): Promise<void> {
   }
 }
 
-/**
- * Gets the task list ID based on the current context.
- * Priority:
- * 1. CLAUDE_CODE_TASK_LIST_ID - explicit task list ID
- * 2. In-process teammate: leader's team name (so teammates share the leader's task list)
- * 3. CLAUDE_CODE_TEAM_NAME - set when running as a process-based teammate
- * 4. Leader team name - set when the leader creates a team via TeamCreate
- * 5. Session ID - fallback for standalone sessions
- */
 export function getTaskListId(): string {
-  if (process.env.CLAUDE_CODE_TASK_LIST_ID) {
-    return process.env.CLAUDE_CODE_TASK_LIST_ID
+  if (process.env.CLAUDE_CODE_NEXT_TASK_LIST_ID) {
+    return process.env.CLAUDE_CODE_NEXT_TASK_LIST_ID
   }
-  // In-process teammates use the leader's team name so they share the same
-  // task list that tmux/iTerm2 teammates also resolve to.
+  
+  
   const teammateCtx = getTeammateContext()
   if (teammateCtx) {
     return teammateCtx.teamName
@@ -184,11 +161,6 @@ export function getTaskListId(): string {
   return getTeamName() || leaderTeamName || getSessionId()
 }
 
-/**
- * Sanitizes a string for safe use in file paths.
- * Removes path traversal characters and other potentially dangerous characters.
- * Only allows alphanumeric characters, hyphens, and underscores.
- */
 export function sanitizePathComponent(input: string): string {
   return input.replace(/[^a-zA-Z0-9_-]/g, '-')
 }
@@ -210,14 +182,11 @@ export async function ensureTasksDir(taskListId: string): Promise<void> {
   try {
     await mkdir(dir, { recursive: true })
   } catch {
-    // Directory already exists or creation failed; callers will surface
-    // errors from subsequent operations.
+    
+    
   }
 }
 
-/**
- * Finds the highest task ID from existing task files (not including high water mark).
- */
 async function findHighestTaskIdFromFiles(taskListId: string): Promise<number> {
   const dir = getTasksDir(taskListId)
   let files: string[]
@@ -239,10 +208,6 @@ async function findHighestTaskIdFromFiles(taskListId: string): Promise<number> {
   return highest
 }
 
-/**
- * Finds the highest task ID ever assigned, considering both existing files
- * and the high water mark (for deleted/reset tasks).
- */
 async function findHighestTaskId(taskListId: string): Promise<number> {
   const [fromFiles, fromMark] = await Promise.all([
     findHighestTaskIdFromFiles(taskListId),
@@ -251,11 +216,6 @@ async function findHighestTaskId(taskListId: string): Promise<number> {
   return Math.max(fromFiles, fromMark)
 }
 
-/**
- * Creates a new task with a unique ID.
- * Uses file locking to prevent race conditions when multiple processes
- * create tasks concurrently.
- */
 export async function createTask(
   taskListId: string,
   taskData: Omit<Task, 'id'>,
@@ -264,10 +224,10 @@ export async function createTask(
 
   let release: (() => Promise<void>) | undefined
   try {
-    // Acquire exclusive lock on the task list
+    
     release = await lockfile.lock(lockPath, LOCK_OPTIONS)
 
-    // Read highest ID from disk while holding the lock
+    
     const highestId = await findHighestTaskId(taskListId)
     const id = String(highestId + 1)
     const task: Task = { id, ...taskData }
@@ -291,11 +251,11 @@ export async function getTask(
     const content = await readFile(path, 'utf-8')
     const data = jsonParse(content) as { status?: string }
 
-    // TEMPORARY: Migrate old status names for existing sessions (ant-only)
+    
     if (process.env.USER_TYPE === 'ant') {
       if (data.status === 'open') data.status = 'pending'
       else if (data.status === 'resolved') data.status = 'completed'
-      // Migrate development task statuses to in_progress
+      
       else if (
         data.status &&
         ['planning', 'implementing', 'reviewing', 'verifying'].includes(
@@ -324,8 +284,6 @@ export async function getTask(
   }
 }
 
-// Internal: no lock. Callers already holding a lock on taskPath must use this
-// to avoid deadlock (claimTask, deleteTask cascade, etc.).
 async function updateTaskUnsafe(
   taskListId: string,
   taskId: string,
@@ -349,8 +307,8 @@ export async function updateTask(
 ): Promise<Task | null> {
   const path = getTaskPath(taskListId, taskId)
 
-  // Check existence before locking — proper-lockfile throws if the
-  // target file doesn't exist, and we want a clean null result.
+  
+  
   const taskBeforeLock = await getTask(taskListId, taskId)
   if (!taskBeforeLock) {
     return null
@@ -372,7 +330,7 @@ export async function deleteTask(
   const path = getTaskPath(taskListId, taskId)
 
   try {
-    // Update high water mark before deleting to prevent ID reuse
+    
     const numericId = parseInt(taskId, 10)
     if (!isNaN(numericId)) {
       const currentMark = await readHighWaterMark(taskListId)
@@ -381,7 +339,7 @@ export async function deleteTask(
       }
     }
 
-    // Delete the task file
+    
     try {
       await unlink(path)
     } catch (e) {
@@ -392,7 +350,7 @@ export async function deleteTask(
       throw e
     }
 
-    // Remove references to this task from other tasks
+    
     const allTasks = await listTasks(taskListId)
     for (const task of allTasks) {
       const newBlocks = task.blocks.filter(id => id !== taskId)
@@ -443,14 +401,14 @@ export async function blockTask(
     return false
   }
 
-  // Update source task: A blocks B
+  
   if (!fromTask.blocks.includes(toTaskId)) {
     await updateTask(taskListId, fromTaskId, {
       blocks: [...fromTask.blocks, toTaskId],
     })
   }
 
-  // Update target task: B is blockedBy A
+  
   if (!toTask.blockedBy.includes(fromTaskId)) {
     await updateTask(taskListId, toTaskId, {
       blockedBy: [...toTask.blockedBy, fromTaskId],
@@ -473,46 +431,30 @@ export type ClaimTaskResult = {
   blockedByTasks?: string[] 
 }
 
-/**
- * Gets the lock file path for a task list (used for list-level locking)
- */
 function getTaskListLockPath(taskListId: string): string {
   return join(getTasksDir(taskListId), '.lock')
 }
 
-/**
- * Ensures the lock file exists for a task list
- */
 async function ensureTaskListLockFile(taskListId: string): Promise<string> {
   await ensureTasksDir(taskListId)
   const lockPath = getTaskListLockPath(taskListId)
   
   
-  // and the first one to create wins silently.
+  
   try {
     await writeFile(lockPath, '', { flag: 'wx' })
   } catch {
-    // EEXIST or other — file already exists, which is fine.
+    
   }
   return lockPath
 }
 
 export type ClaimTaskOptions = {
-  /**
-   * If true, checks whether the agent is already busy (owns other open tasks)
-   * before allowing the claim. This check is performed atomically with the claim
-   * using a task-list-level lock to prevent TOCTOU race conditions.
-   */
+  
+
   checkAgentBusy?: boolean
 }
 
-/**
- * Attempts to claim a task for an agent with file locking to prevent race conditions.
- * Returns success if the task was claimed, or a reason if it wasn't.
- *
- * When checkAgentBusy is true, uses a task-list-level lock to atomically check
- * if the agent owns any other open tasks before claiming.
- */
 export async function claimTask(
   taskListId: string,
   taskId: string,
@@ -528,16 +470,16 @@ export async function claimTask(
     return { success: false, reason: 'task_not_found' }
   }
 
-  // If we need to check agent busy status, use task-list-level lock
+  
   
   if (options.checkAgentBusy) {
     return claimTaskWithBusyCheck(taskListId, taskId, claimantAgentId)
   }
 
-  // Otherwise, use task-level lock (original behavior)
+  
   let release: (() => Promise<void>) | undefined
   try {
-    // Acquire exclusive lock on the task file
+    
     release = await lockfile.lock(taskPath, LOCK_OPTIONS)
 
     
@@ -546,17 +488,17 @@ export async function claimTask(
       return { success: false, reason: 'task_not_found' }
     }
 
-    // Check if already claimed by another agent
+    
     if (task.owner && task.owner !== claimantAgentId) {
       return { success: false, reason: 'already_claimed', task }
     }
 
-    // Check if already resolved
+    
     if (task.status === 'completed') {
       return { success: false, reason: 'already_resolved', task }
     }
 
-    // Check for unresolved blockers (open or in_progress tasks block)
+    
     const allTasks = await listTasks(taskListId)
     const unresolvedTaskIds = new Set(
       allTasks.filter(t => t.status !== 'completed').map(t => t.id),
@@ -568,7 +510,7 @@ export async function claimTask(
       return { success: false, reason: 'blocked', task, blockedByTasks }
     }
 
-    // Claim the task (already holding taskPath lock — use unsafe variant)
+    
     const updated = await updateTaskUnsafe(taskListId, taskId, {
       owner: claimantAgentId,
     })
@@ -586,10 +528,6 @@ export async function claimTask(
   }
 }
 
-/**
- * Claims a task with an atomic check for agent busy status.
- * Uses a task-list-level lock to ensure the busy check and claim are atomic.
- */
 async function claimTaskWithBusyCheck(
   taskListId: string,
   taskId: string,
@@ -599,7 +537,7 @@ async function claimTaskWithBusyCheck(
 
   let release: (() => Promise<void>) | undefined
   try {
-    // Acquire exclusive lock on the task list
+    
     release = await lockfile.lock(lockPath, LOCK_OPTIONS)
 
     
@@ -611,17 +549,17 @@ async function claimTaskWithBusyCheck(
       return { success: false, reason: 'task_not_found' }
     }
 
-    // Check if already claimed by another agent
+    
     if (task.owner && task.owner !== claimantAgentId) {
       return { success: false, reason: 'already_claimed', task }
     }
 
-    // Check if already resolved
+    
     if (task.status === 'completed') {
       return { success: false, reason: 'already_resolved', task }
     }
 
-    // Check for unresolved blockers (open or in_progress tasks block)
+    
     const unresolvedTaskIds = new Set(
       allTasks.filter(t => t.status !== 'completed').map(t => t.id),
     )
@@ -632,7 +570,7 @@ async function claimTaskWithBusyCheck(
       return { success: false, reason: 'blocked', task, blockedByTasks }
     }
 
-    // Check if agent is busy with other unresolved tasks
+    
     const agentOpenTasks = allTasks.filter(
       t =>
         t.status !== 'completed' &&
@@ -648,7 +586,7 @@ async function claimTaskWithBusyCheck(
       }
     }
 
-    // Claim the task
+    
     const updated = await updateTask(taskListId, taskId, {
       owner: claimantAgentId,
     })
@@ -666,18 +604,12 @@ async function claimTaskWithBusyCheck(
   }
 }
 
-/**
- * Team member info (subset of TeamFile member structure)
- */
 export type TeamMember = {
   agentId: string
   name: string
   agentType?: string
 }
 
-/**
- * Agent status based on task ownership
- */
 export type AgentStatus = {
   agentId: string
   name: string
@@ -686,16 +618,10 @@ export type AgentStatus = {
   currentTasks: string[] 
 }
 
-/**
- * Sanitizes a name for use in file paths
- */
 function sanitizeName(name: string): string {
   return name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()
 }
 
-/**
- * Reads team members from the team file
- */
 async function readTeamMembers(
   teamName: string,
 ): Promise<{ leadAgentId: string; members: TeamMember[] } | null> {
@@ -727,14 +653,6 @@ async function readTeamMembers(
   }
 }
 
-/**
- * Gets the status of all agents in a team based on task ownership.
- * An agent is considered "idle" if they don't own any open tasks.
- * An agent is considered "busy" if they own at least one open task.
- *
- * @param teamName - The name of the team (also used as taskListId)
- * @returns Array of agent statuses, or null if team not found
- */
 export async function getAgentStatuses(
   teamName: string,
 ): Promise<AgentStatus[] | null> {
@@ -756,9 +674,9 @@ export async function getAgentStatuses(
     }
   }
 
-  // Build status for each agent (leader is already in members)
+  
   return teamData.members.map(member => {
-    // Check both name (new) and agentId (legacy) for backwards compatibility
+    
     const tasksByName = unresolvedTasksByOwner.get(member.name) || []
     const tasksById = unresolvedTasksByOwner.get(member.agentId) || []
     const currentTasks = uniq([...tasksByName, ...tasksById])
@@ -772,24 +690,11 @@ export async function getAgentStatuses(
   })
 }
 
-/**
- * Result of unassigning tasks from a teammate
- */
 export type UnassignTasksResult = {
   unassignedTasks: Array<{ id: string; subject: string }>
   notificationMessage: string
 }
 
-/**
- * Unassigns all open tasks from a teammate and builds a notification message.
- * Used when a teammate is killed or gracefully shuts down.
- *
- * @param teamName - The team/task list name
- * @param teammateId - The teammate's agent ID
- * @param teammateName - The teammate's display name
- * @param reason - How the teammate exited ('terminated' | 'shutdown')
- * @returns The unassigned tasks and a formatted notification message
- */
 export async function unassignTeammateTasks(
   teamName: string,
   teammateId: string,
@@ -814,7 +719,7 @@ export async function unassignTeammateTasks(
     )
   }
 
-  // Build notification message
+  
   const actionVerb =
     reason === 'terminated' ? 'was terminated' : 'has shut down'
   let notificationMessage = `${teammateName} ${actionVerb}.`

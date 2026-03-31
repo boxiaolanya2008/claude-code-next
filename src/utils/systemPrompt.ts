@@ -20,19 +20,6 @@ function isProactiveActive_SAFE_TO_CALL_ANYWHERE(): boolean {
   return proactiveModule?.isProactiveActive() ?? false
 }
 
-/**
- * Builds the effective system prompt array based on priority:
- * 0. Override system prompt (if set, e.g., via loop mode - REPLACES all other prompts)
- * 1. Coordinator system prompt (if coordinator mode is active)
- * 2. Agent system prompt (if mainThreadAgentDefinition is set)
- *    - In proactive mode: agent prompt is APPENDED to default (agent adds domain
- *      instructions on top of the autonomous agent prompt, like teammates do)
- *    - Otherwise: agent prompt REPLACES default
- * 3. Custom system prompt (if specified via --system-prompt)
- * 4. Default system prompt (the standard Claude Code prompt)
- *
- * Plus appendSystemPrompt is always added at the end if specified (except when override is set).
- */
 export function buildEffectiveSystemPrompt({
   mainThreadAgentDefinition,
   toolUseContext,
@@ -51,17 +38,17 @@ export function buildEffectiveSystemPrompt({
   if (overrideSystemPrompt) {
     return asSystemPrompt([overrideSystemPrompt])
   }
-  // Coordinator mode: use coordinator prompt instead of default
+  
   
   
   if (
     feature('COORDINATOR_MODE') &&
-    isEnvTruthy(process.env.CLAUDE_CODE_COORDINATOR_MODE) &&
+    isEnvTruthy(process.env.CLAUDE_CODE_NEXT_COORDINATOR_MODE) &&
     !mainThreadAgentDefinition
   ) {
-    // Lazy require to avoid circular dependency at module load time
+    
     const { getCoordinatorSystemPrompt } =
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      
       require('../coordinator/coordinatorMode.js') as typeof import('../coordinator/coordinatorMode.js')
     return asSystemPrompt([
       getCoordinatorSystemPrompt(),
@@ -91,7 +78,7 @@ export function buildEffectiveSystemPrompt({
     })
   }
 
-  // In proactive mode, agent instructions are appended to the default prompt
+  
   
   
   

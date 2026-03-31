@@ -41,23 +41,19 @@ export const BEL = '\x07'
 export const SEP = ';'
 
 export const ESC_TYPE = {
-  CSI: 0x5b, // [ - Control Sequence Introducer
-  OSC: 0x5d, // ] - Operating System Command
-  DCS: 0x50, // P - Device Control String
-  APC: 0x5f, // _ - Application Program Command
-  PM: 0x5e, // ^ - Privacy Message
-  SOS: 0x58, // X - Start of String
-  ST: 0x5c, // \ - String Terminator
+  CSI: 0x5b, 
+  OSC: 0x5d, 
+  DCS: 0x50, 
+  APC: 0x5f, 
+  PM: 0x5e, 
+  SOS: 0x58, 
+  ST: 0x5c, 
 } as const
 
 export function isC0(byte: number): boolean {
   return byte < 0x20 || byte === 0x7f
 }
 
-/**
- * Check if a byte is an ESC sequence final byte (0-9, :, ;, <, =, >, ?, @ through ~)
- * ESC sequences have a wider final byte range than CSI
- */
 export function isEscFinal(byte: number): boolean {
   return byte >= 0x30 && byte <= 0x7e
 }

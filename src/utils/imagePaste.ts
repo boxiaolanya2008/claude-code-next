@@ -28,7 +28,7 @@ function getClipboardCommands() {
   
   
   const baseTmpDir =
-    process.env.CLAUDE_CODE_TMPDIR ||
+    process.env.CLAUDE_CODE_NEXT_TMPDIR ||
     (platform === 'win32' ? process.env.TEMP || 'C:\\Temp' : '/tmp')
   const screenshotFilename = 'claude_cli_latest_screenshot.png'
   const tempPaths: Record<SupportedPlatform, string> = {
@@ -84,9 +84,6 @@ export type ImageWithDimensions = {
   dimensions?: ImageDimensions
 }
 
-/**
- * Check if clipboard contains an image without retrieving it.
- */
 export async function hasImageInClipboard(): Promise<boolean> {
   if (process.platform !== 'darwin') {
     return false
@@ -95,7 +92,7 @@ export async function hasImageInClipboard(): Promise<boolean> {
     feature('NATIVE_CLIPBOARD_IMAGE') &&
     getFeatureValue_CACHED_MAY_BE_STALE('tengu_collage_kaleidoscope', true)
   ) {
-    // Native NSPasteboard check (~0.03ms warm). Fall through to osascript
+    
     
     
     try {
@@ -116,11 +113,11 @@ export async function hasImageInClipboard(): Promise<boolean> {
 }
 
 export async function getImageFromClipboard(): Promise<ImageWithDimensions | null> {
-  // Fast path: native NSPasteboard reader (macOS only). Reads PNG bytes
   
   
   
-  // the catch block falls through to osascript. A `null` return from the
+  
+  
   
   if (
     feature('NATIVE_CLIPBOARD_IMAGE') &&
@@ -137,7 +134,7 @@ export async function getImageFromClipboard(): Promise<ImageWithDimensions | nul
       if (!native) {
         return null
       }
-      // The native path caps dimensions but not file size. A complex
+      
       
       
       
@@ -152,7 +149,7 @@ export async function getImageFromClipboard(): Promise<ImageWithDimensions | nul
         return {
           base64: resized.buffer.toString('base64'),
           mediaType: `image/${resized.mediaType}`,
-          // resized.dimensions sees the already-downsampled buffer; native knows the true originals.
+          
           dimensions: {
             originalWidth: native.originalWidth,
             originalHeight: native.originalHeight,
@@ -179,7 +176,7 @@ export async function getImageFromClipboard(): Promise<ImageWithDimensions | nul
 
   const { commands, screenshotPath } = getClipboardCommands()
   try {
-    // Check if clipboard has image
+    
     const checkResult = await execa(commands.checkImage, {
       shell: true,
       reject: false,
@@ -188,7 +185,7 @@ export async function getImageFromClipboard(): Promise<ImageWithDimensions | nul
       return null
     }
 
-    // Save the image
+    
     const saveResult = await execa(commands.saveImage, {
       shell: true,
       reject: false,
@@ -197,7 +194,7 @@ export async function getImageFromClipboard(): Promise<ImageWithDimensions | nul
       return null
     }
 
-    // Read the image and convert to base64
+    
     let imageBuffer = getFsImplementation().readFileBytesSync(screenshotPath)
 
     
@@ -211,7 +208,7 @@ export async function getImageFromClipboard(): Promise<ImageWithDimensions | nul
       imageBuffer = await sharp(imageBuffer).png().toBuffer()
     }
 
-    // Resize if needed to stay under 5MB API limit
+    
     const resized = await maybeResizeAndDownsampleImageBuffer(
       imageBuffer,
       imageBuffer.length,
@@ -239,7 +236,7 @@ export async function getImagePathFromClipboard(): Promise<string | null> {
   const { commands } = getClipboardCommands()
 
   try {
-    // Try to get text from clipboard
+    
     const result = await execa(commands.getPath, {
       shell: true,
       reject: false,
@@ -254,13 +251,6 @@ export async function getImagePathFromClipboard(): Promise<string | null> {
   }
 }
 
-/**
- * Regex pattern to match supported image file extensions. Kept in sync with
- * MIME_BY_EXT in BriefTool/upload.ts — attachments.ts uses this to set isImage
- * on the wire, and remote viewers fetch /preview iff isImage is true. An ext
- * here but not in MIME_BY_EXT (e.g. bmp) uploads as octet-stream and has no
- * /preview variant → broken thumbnail.
- */
 export const IMAGE_EXTENSION_REGEX = /\.(png|jpe?g|gif|webp)$/i
 
 function removeOuterQuotes(text: string): string {
@@ -273,12 +263,6 @@ function removeOuterQuotes(text: string): string {
   return text
 }
 
-/**
- * Remove shell escape backslashes from a path (for macOS/Linux/WSL)
- * On Windows systems, this function returns the path unchanged
- * @param path Path that might contain shell-escaped characters
- * @returns Path with escape backslashes removed (on macOS/Linux/WSL only)
- */
 function stripBackslashEscapes(path: string): string {
   const platform = process.platform as SupportedPlatform
 
@@ -287,7 +271,7 @@ function stripBackslashEscapes(path: string): string {
     return path
   }
 
-  // On macOS/Linux/WSL, handle shell-escaped paths
+  
   
   
 
@@ -305,22 +289,12 @@ function stripBackslashEscapes(path: string): string {
   return withoutEscapes.replace(new RegExp(placeholder, 'g'), '\\')
 }
 
-/**
- * Check if a given text represents an image file path
- * @param text Text to check
- * @returns Boolean indicating if text is an image path
- */
 export function isImageFilePath(text: string): boolean {
   const cleaned = removeOuterQuotes(text.trim())
   const unescaped = stripBackslashEscapes(cleaned)
   return IMAGE_EXTENSION_REGEX.test(unescaped)
 }
 
-/**
- * Clean and normalize a text string that might be an image file path
- * @param text Text to process
- * @returns Cleaned text with quotes removed, whitespace trimmed, and shell escapes removed, or null if not an image path
- */
 export function asImageFilePath(text: string): string | null {
   const cleaned = removeOuterQuotes(text.trim())
   const unescaped = stripBackslashEscapes(cleaned)
@@ -332,15 +306,10 @@ export function asImageFilePath(text: string): string | null {
   return null
 }
 
-/**
- * Try to find and read an image file, falling back to clipboard search
- * @param text Pasted text that might be an image filename or path
- * @returns Object containing the image path and base64 data, or null if not found
- */
 export async function tryReadImageFromPath(
   text: string,
 ): Promise<(ImageWithDimensions & { path: string }) | null> {
-  // Strip terminal added spaces or quotes to dragged in paths
+  
   const cleanedPath = asImageFilePath(text)
 
   if (!cleanedPath) {
@@ -354,7 +323,7 @@ export async function tryReadImageFromPath(
     if (isAbsolute(imagePath)) {
       imageBuffer = getFsImplementation().readFileBytesSync(imagePath)
     } else {
-      // VSCode Terminal just grabs the text content which is the filename
+      
       
       
       const clipboardPath = await getImagePathFromClipboard()
@@ -374,7 +343,7 @@ export async function tryReadImageFromPath(
     return null
   }
 
-  // BMP is not supported by the API — convert to PNG via Sharp.
+  
   if (
     imageBuffer.length >= 2 &&
     imageBuffer[0] === 0x42 &&
@@ -384,7 +353,7 @@ export async function tryReadImageFromPath(
     imageBuffer = await sharp(imageBuffer).png().toBuffer()
   }
 
-  // Resize if needed to stay under 5MB API limit
+  
   
   const ext = extname(imagePath).slice(1).toLowerCase() || 'png'
   const resized = await maybeResizeAndDownsampleImageBuffer(

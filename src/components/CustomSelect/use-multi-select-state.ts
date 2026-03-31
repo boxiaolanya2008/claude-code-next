@@ -12,11 +12,8 @@ import type { OptionWithDescription } from './select.js'
 import { useSelectNavigation } from './use-select-navigation.js'
 
 export type UseMultiSelectStateProps<T> = {
-  /**
-   * When disabled, user input is ignored.
-   *
-   * @default false
-   */
+  
+
   isDisabled?: boolean
 
   
@@ -35,19 +32,16 @@ export type UseMultiSelectStateProps<T> = {
 
   onChange?: (values: T[]) => void
 
-  /**
-   * Callback for canceling the select.
-   */
+  
+
   onCancel: () => void
 
-  /**
-   * Callback for focusing an option.
-   */
+  
+
   onFocus?: (value: T) => void
 
-  /**
-   * Value to focus
-   */
+  
+
   focusValue?: T
 
   
@@ -58,21 +52,16 @@ export type UseMultiSelectStateProps<T> = {
 
   onSubmit?: (values: T[]) => void
 
-  /**
-   * Callback when user presses down from the last item (submit button).
-   * If provided, navigation will not wrap to the first item.
-   */
+  
+
   onDownFromLastItem?: () => void
 
-  /**
-   * Callback when user presses up from the first item.
-   * If provided, navigation will not wrap to the last item.
-   */
+  
+
   onUpFromFirstItem?: () => void
 
-  /**
-   * Focus the last option initially instead of the first.
-   */
+  
+
   initialFocusLast?: boolean
 
   
@@ -81,9 +70,8 @@ export type UseMultiSelectStateProps<T> = {
 }
 
 export type MultiSelectState<T> = {
-  /**
-   * Value of the currently focused option.
-   */
+  
+
   focusedValue: T | undefined
 
   
@@ -122,9 +110,8 @@ export type MultiSelectState<T> = {
 
   updateInputValue: (value: T, inputValue: string) => void
 
-  /**
-   * Callback for canceling the select.
-   */
+  
+
   onCancel: () => void
 }
 
@@ -157,7 +144,7 @@ export function useMultiSelectState<T>({
     setLastOptions(options)
   }
 
-  // State for input type options
+  
   const [inputValues, setInputValues] = useState<Map<T, string>>(() => {
     const initialMap = new Map<T, string>()
     options.forEach(option => {
@@ -206,7 +193,7 @@ export function useMultiSelectState<T>({
         option.onChange(inputValue)
       }
 
-      // Update selected values to include/exclude based on input
+      
       updateSelectedValues(prev => {
         if (inputValue) {
           if (!prev.includes(value)) {
@@ -259,7 +246,7 @@ export function useMultiSelectState<T>({
         return
       }
 
-      // Handle Shift+Tab to move backward
+      
       if (key.tab && key.shift) {
         if (submitButtonText && onSubmit && isSubmitFocused) {
           setIsSubmitFocused(false)
@@ -270,7 +257,7 @@ export function useMultiSelectState<T>({
         return
       }
 
-      // Handle arrow down / Ctrl+N / j
+      
       if (
         key.downArrow ||
         (key.ctrl && input === 'n') ||
@@ -290,7 +277,7 @@ export function useMultiSelectState<T>({
           onDownFromLastItem &&
           navigation.focusedValue === lastOptionValue
         ) {
-          // No submit button — exit from the last option
+          
           onDownFromLastItem()
         } else if (!isSubmitFocused) {
           navigation.focusNextOption()
@@ -298,7 +285,7 @@ export function useMultiSelectState<T>({
         return
       }
 
-      // Handle arrow up / Ctrl+P / k
+      
       if (
         key.upArrow ||
         (key.ctrl && input === 'p') ||
@@ -318,7 +305,7 @@ export function useMultiSelectState<T>({
         return
       }
 
-      // Handle page navigation
+      
       if (key.pageDown) {
         navigation.focusNextPage()
         return
@@ -329,27 +316,27 @@ export function useMultiSelectState<T>({
         return
       }
 
-      // Handle Enter or Space for selection/submit
+      
       if (key.return || normalizeFullWidthSpace(input) === ' ') {
-        // Ctrl+Enter from input field submits
+        
         if (key.ctrl && key.return && isInInput && onSubmit) {
           onSubmit(selectedValues)
           return
         }
 
-        // Enter on submit button submits
+        
         if (isSubmitFocused && onSubmit) {
           onSubmit(selectedValues)
           return
         }
 
-        // No submit button: Enter submits directly, Space still toggles
+        
         if (key.return && !submitButtonText && onSubmit) {
           onSubmit(selectedValues)
           return
         }
 
-        // Enter or Space toggles selection (including for input fields)
+        
         if (navigation.focusedValue !== undefined) {
           const newValues = selectedValues.includes(navigation.focusedValue)
             ? selectedValues.filter(v => v !== navigation.focusedValue)
@@ -359,7 +346,7 @@ export function useMultiSelectState<T>({
         return
       }
 
-      // Handle numeric keys (1-9) for direct selection
+      
       if (!hideIndexes && /^[0-9]+$/.test(normalizedInput)) {
         const index = parseInt(normalizedInput) - 1
         if (index >= 0 && index < options.length) {
@@ -372,7 +359,7 @@ export function useMultiSelectState<T>({
         return
       }
 
-      // Handle Escape
+      
       if (key.escape) {
         onCancel()
         event.stopImmediatePropagation()

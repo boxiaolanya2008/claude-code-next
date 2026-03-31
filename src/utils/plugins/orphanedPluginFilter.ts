@@ -22,7 +22,7 @@ export async function getGlobExclusionsForPluginCache(
   }
 
   try {
-    // Find all .orphaned_at files within the plugin cache directory.
+    
     
     
     
@@ -43,7 +43,7 @@ export async function getGlobExclusionsForPluginCache(
     )
 
     cachedExclusions = markers.map(markerPath => {
-      // ripgrep may return absolute or relative — normalize to relative.
+      
       const versionDir = dirname(markerPath)
       const rel = isAbsolute(versionDir)
         ? relative(cachePath, versionDir)
@@ -54,7 +54,7 @@ export async function getGlobExclusionsForPluginCache(
     })
     return cachedExclusions
   } catch {
-    // Best-effort — don't break core search tools if ripgrep fails here
+    
     cachedExclusions = []
     return cachedExclusions
   }
@@ -64,11 +64,6 @@ export function clearPluginCacheExclusions(): void {
   cachedExclusions = null
 }
 
-/**
- * One path is a prefix of the other. Special-cases root (normalize('/') + sep
- * = '
- * drive letters and CLAUDE_CODE_PLUGIN_CACHE_DIR may disagree with resolved.
- */
 function pathsOverlap(a: string, b: string): boolean {
   const na = normalizeForCompare(a)
   const nb = normalizeForCompare(b)

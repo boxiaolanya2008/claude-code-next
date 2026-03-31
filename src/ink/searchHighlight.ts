@@ -24,7 +24,7 @@ export function applySearchHighlight(
     
     
     
-    //   - SpacerTail: 2nd cell of a wide char, no char of its own
+    
     
     
     
@@ -65,7 +65,7 @@ export function applySearchHighlight(
         const cell = cellAtIndex(screen, rowOff + col)
         setCellStyleId(screen, col, row, stylePool.withInverse(cell.styleId))
       }
-      // Non-overlapping advance (less/vim/grep/Ctrl+F). pos+1 would find
+      
       
       pos = text.indexOf(lq, pos + qlen)
     }

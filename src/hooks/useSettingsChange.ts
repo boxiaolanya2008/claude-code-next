@@ -9,7 +9,7 @@ export function useSettingsChange(
 ): void {
   const handleChange = useCallback(
     (source: SettingSource) => {
-      // Cache is already reset by the notifier (changeDetector.fanOut) —
+      
       
       
       const newSettings = getSettings_DEPRECATED()

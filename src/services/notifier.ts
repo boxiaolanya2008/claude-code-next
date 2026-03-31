@@ -35,7 +35,7 @@ export async function sendNotification(
   })
 }
 
-const DEFAULT_TITLE = 'Claude Code'
+const DEFAULT_TITLE = 'Claude Code Next'
 
 async function sendToChannel(
   channel: string,
@@ -133,7 +133,7 @@ async function isAppleTerminalBellDisabled(): Promise<boolean> {
       return false
     }
 
-    // Lazy-load plist (~280KB with xmlbuilder+@xmldom) — only hit on
+    
     
     const plist = await import('plist')
     const parsed: Record<string, unknown> = plist.parse(defaultsOutput.stdout)

@@ -71,7 +71,7 @@ export type AllowedPrompt = z.infer<ReturnType<typeof allowedPromptSchema>>
 const inputSchema = lazySchema(() =>
   z
     .strictObject({
-      // Prompt-based permissions requested by the plan
+      
       allowedPrompts: z
         .array(allowedPromptSchema())
         .optional()
@@ -154,7 +154,7 @@ export const ExitPlanModeV2Tool: Tool<InputSchema, Output> = buildTool({
   },
   shouldDefer: true,
   isEnabled() {
-    // When --channels is active the user is likely on Telegram/Discord, not
+    
     
     
     if (
@@ -172,24 +172,24 @@ export const ExitPlanModeV2Tool: Tool<InputSchema, Output> = buildTool({
     return false 
   },
   requiresUserInteraction() {
-    // For ALL teammates, no local user interaction needed:
-    // - If isPlanModeRequired(): team lead approves via mailbox
+    
+    
     
     if (isTeammate()) {
       return false
     }
-    // For non-teammates, require user confirmation to exit plan mode
+    
     return true
   },
   async validateInput(_input, { getAppState, options }) {
-    // Teammate AppState may show leader's mode (runAgent.ts skips override in
-    // acceptEdits/bypassPermissions/auto); isPlanModeRequired() is the real source
+    
+    
     if (isTeammate()) {
       return { result: true }
     }
-    // The deferred-tool list announces this tool regardless of mode, so the
-    // model can call it after plan approval (fresh delta on compact/clear).
-    // Reject before checkPermissions to avoid showing the approval dialog.
+    
+    
+    
     const mode = getAppState().toolPermissionContext.mode
     if (mode !== 'plan') {
       logEvent('tengu_exit_plan_mode_called_outside_plan', {
@@ -208,10 +208,10 @@ export const ExitPlanModeV2Tool: Tool<InputSchema, Output> = buildTool({
     return { result: true }
   },
   async checkPermissions(input, context) {
-    // For ALL teammates, bypass the permission UI to avoid sending permission_request
-    // The call() method handles the appropriate behavior:
-    // - If isPlanModeRequired(): sends plan_approval_request to leader
-    // - Otherwise: exits plan mode locally (voluntary plan mode)
+    
+    
+    
+    
     if (isTeammate()) {
       return {
         behavior: 'allow' as const,
@@ -219,7 +219,7 @@ export const ExitPlanModeV2Tool: Tool<InputSchema, Output> = buildTool({
       }
     }
 
-    // For non-teammates, require user confirmation to exit plan mode
+    
     return {
       behavior: 'ask' as const,
       message: 'Exit plan mode?',
@@ -233,25 +233,25 @@ export const ExitPlanModeV2Tool: Tool<InputSchema, Output> = buildTool({
     const isAgent = !!context.agentId
 
     const filePath = getPlanFilePath(context.agentId)
-    // CCR web UI may send an edited plan via permissionResult.updatedInput.
-    // queryHelpers.ts full-replaces finalInput, so when CCR sends {} (no edit)
-    // input.plan is undefined -> disk fallback. The internal inputSchema omits
-    // `plan` (normally injected by normalizeToolInput), hence the narrowing.
+    
+    
+    
+    
     const inputPlan =
       'plan' in input && typeof input.plan === 'string' ? input.plan : undefined
     const plan = inputPlan ?? getPlan(context.agentId)
 
-    // Sync disk so VerifyPlanExecution / Read see the edit. Re-snapshot
-    // after: the only other persistFileSnapshotIfRemote call (api.ts) runs
-    // in normalizeToolInput, pre-permission — it captured the old plan.
+    
+    
+    
     if (inputPlan !== undefined && filePath) {
       await writeFile(filePath, inputPlan, 'utf-8').catch(e => logError(e))
       void persistFileSnapshotIfRemote()
     }
 
-    // Check if this is a teammate that requires leader approval
+    
     if (isTeammate() && isPlanModeRequired()) {
-      // Plan is required for plan_mode_required teammates
+      
       if (!plan) {
         throw new Error(
           `No plan file found at ${filePath}. Please write your plan to this file before calling ExitPlanMode.`,
@@ -283,7 +283,7 @@ export const ExitPlanModeV2Tool: Tool<InputSchema, Output> = buildTool({
         teamName,
       )
 
-      // Update task state to show awaiting approval (for in-process teammates)
+      
       const appState = context.getAppState()
       const agentTaskId = findInProcessTeammateTaskId(agentName, appState)
       if (agentTaskId) {
@@ -301,11 +301,11 @@ export const ExitPlanModeV2Tool: Tool<InputSchema, Output> = buildTool({
       }
     }
 
-    // Note: Background verification hook is registered in REPL.tsx AFTER context clear
-    // via registerPlanVerificationHook(). Registering here would be cleared during context clear.
+    
+    
 
-    // Ensure mode is changed when exiting plan mode.
-    // This handles cases where permission flow didn't set the mode
+    
+    
     
     const appState = context.getAppState()
     
@@ -366,9 +366,9 @@ export const ExitPlanModeV2Tool: Tool<InputSchema, Output> = buildTool({
           setNeedsAutoModeExitAttachment(true)
         }
       }
-      // If restoring to a non-auto mode and permissions were stripped (either
       
-      // restore them. If restoring to auto, keep them stripped.
+      
+      
       const restoringToAuto = restoreMode === 'auto'
       let baseContext = prev.toolPermissionContext
       if (restoringToAuto) {
@@ -417,7 +417,7 @@ export const ExitPlanModeV2Tool: Tool<InputSchema, Output> = buildTool({
     },
     toolUseID,
   ) {
-    // Handle teammate awaiting leader approval
+    
     if (awaitingLeaderApproval) {
       return {
         type: 'tool_result',
@@ -447,7 +447,7 @@ Request ID: ${requestId}`,
       }
     }
 
-    // Handle empty plan
+    
     if (!plan || plan.trim() === '') {
       return {
         type: 'tool_result',

@@ -64,7 +64,7 @@ function buildHookSchemas() {
       .positive()
       .optional()
       .describe('Timeout in seconds for this specific prompt evaluation'),
-    // @[MODEL LAUNCH]: Update the example model ID in the .describe() strings below (prompt + agent hooks).
+    
     model: z
       .string()
       .optional()
@@ -114,14 +114,14 @@ function buildHookSchemas() {
 
   const AgentHookSchema = z.object({
     type: z.literal('agent').describe('Agentic verifier hook type'),
-    // DO NOT add .transform() here. This schema is used by parseSettingsFile,
-    // and updateSettingsForSource round-trips the parsed result through
     
-    // deleting the user's prompt from settings.json (gh-24920, CC-79). The
-    // transform (from #10594) wrapped the string in `(_msgs) => prompt`
-    // for a programmatic-construction use case in ExitPlanModeV2Tool that
-    // has since been refactored into VerifyPlanExecutionTool, which no
-    // longer constructs AgentHook objects at all.
+    
+    
+    
+    
+    
+    
+    
     prompt: z
       .string()
       .describe(
@@ -157,9 +157,6 @@ function buildHookSchemas() {
   }
 }
 
-/**
- * Schema for hook command (excludes function hooks - they can't be persisted)
- */
 export const HookCommandSchema = lazySchema(() => {
   const {
     BashCommandHookSchema,
@@ -180,7 +177,7 @@ export const HookMatcherSchema = lazySchema(() =>
     matcher: z
       .string()
       .optional()
-      .describe('String pattern to match (e.g. tool names like "Write")'), // String (e.g. Write) to match values related to the hook event, e.g. tool names
+      .describe('String pattern to match (e.g. tool names like "Write")'), 
     hooks: z
       .array(HookCommandSchema())
       .describe('List of hooks to execute when the matcher matches'),

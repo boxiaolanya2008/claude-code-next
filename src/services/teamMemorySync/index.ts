@@ -53,7 +53,7 @@ const MAX_RETRIES = 3
 const MAX_CONFLICT_RETRIES = 2
 
 export type SyncState = {
-  /** Last known server checksum (ETag) for conditional requests. */
+  
   lastKnownChecksum: string | null
   
 
@@ -71,24 +71,13 @@ export function createSyncState(): SyncState {
   }
 }
 
-/**
- * Compute `sha256:<hex>` over the UTF-8 bytes of the given content.
- * Format matches the server's entryChecksums values (anthropic/anthropic#283027)
- * so local-vs-server comparison works by direct string equality.
- */
 export function hashContent(content: string): string {
   return 'sha256:' + createHash('sha256').update(content, 'utf8').digest('hex')
 }
 
-/**
- * Type guard narrowing an unknown error to a Node.js errno-style exception.
- * Uses `in` narrowing so no `as` cast is needed at call sites.
- */
 function isErrnoException(e: unknown): e is NodeJS.ErrnoException {
   return e instanceof Error && 'code' in e && typeof e.code === 'string'
 }
-
-// ─── Auth & endpoint ─────────────────────────────────────────
 
 function isUsingOAuth(): boolean {
   if (getAPIProvider() !== 'firstParty' || !isFirstPartyAnthropicBaseUrl()) {
@@ -105,7 +94,7 @@ function isUsingOAuth(): boolean {
 function getTeamMemorySyncEndpoint(repoSlug: string): string {
   const baseUrl =
     process.env.TEAM_MEMORY_SYNC_URL || getOauthConfig().BASE_API_URL
-  return `${baseUrl}/api/claude_code/team_memory?repo=${encodeURIComponent(repoSlug)}`
+  return `${baseUrl}/api/claude_code_next/team_memory?repo=${encodeURIComponent(repoSlug)}`
 }
 
 function getAuthHeaders(): {
@@ -124,8 +113,6 @@ function getAuthHeaders(): {
   }
   return { error: 'No OAuth token available for team memory sync' }
 }
-
-// ─── Fetch (pull) ────────────────────────────────────────────
 
 async function fetchTeamMemoryOnce(
   state: SyncState,
@@ -186,7 +173,7 @@ async function fetchTeamMemoryOnce(
       }
     }
 
-    // Extract checksum from response data or ETag header
+    
     const responseChecksum =
       parsed.data.checksum ||
       response.headers['etag']?.replace(/^"|"$/g, '') ||
@@ -247,13 +234,6 @@ async function fetchTeamMemoryOnce(
   }
 }
 
-/**
- * Fetch only per-key checksums + metadata (no entry bodies).
- * Used for cheap serverChecksums refresh during 412 conflict resolution — avoids
- * downloading ~300KB of content just to learn which keys changed.
- * Requires anthropic/anthropic#283027 deployed; on failure the caller fails the
- * push and the watcher retries on the next edit.
- */
 async function fetchTeamMemoryHashes(
   state: SyncState,
   repoSlug: string,
@@ -282,7 +262,7 @@ async function fetchTeamMemoryHashes(
     const entryChecksums = response.data?.entryChecksums
 
     
-    // treat as a probe failure — caller fails the push; watcher retries.
+    
     if (!entryChecksums || typeof entryChecksums !== 'object') {
       return {
         success: false,
@@ -350,8 +330,6 @@ async function fetchTeamMemory(
 
   return lastResult!
 }
-
-// ─── Upload (push) ───────────────────────────────────────────
 
 export function batchDeltaByBytes(
   delta: Record<string, string>,
@@ -482,8 +460,6 @@ async function uploadTeamMemory(
   }
 }
 
-// ─── Local file operations ───────────────────────────────────
-
 async function readLocalTeamMemory(maxEntries: number | null): Promise<{
   entries: Record<string, string>
   skippedSecrets: SkippedSecretFile[]
@@ -518,7 +494,7 @@ async function readLocalTeamMemory(maxEntries: number | null): Promise<{
               
               const secretMatches = scanForSecrets(content)
               if (secretMatches.length > 0) {
-                // Report only the first match per file — one secret is
+                
                 
                 
                 const firstMatch = secretMatches[0]!
@@ -536,7 +512,7 @@ async function readLocalTeamMemory(maxEntries: number | null): Promise<{
 
               entries[relPath] = content
             } catch {
-              // Skip unreadable files
+              
             }
           }
         }),
@@ -565,7 +541,7 @@ async function readLocalTeamMemory(maxEntries: number | null): Promise<{
   
   
   
-  // and the "delta" balloons to near-full snapshot.  With deterministic
+  
   
   
   
@@ -592,20 +568,6 @@ async function readLocalTeamMemory(maxEntries: number | null): Promise<{
   return { entries, skippedSecrets }
 }
 
-/**
- * Write remote team memory entries to the local directory.
- * Validates every path against the team memory directory boundary.
- * Skips entries whose on-disk content already matches, so unchanged
- * files keep their mtime and don't spuriously invalidate the
- * getMemoryFiles cache or trigger watcher events.
- *
- * Parallel: each entry is processed independently (validate + read-compare
- * + mkdir + write). Concurrent mkdir on a shared parent is safe with
- * recursive: true (EEXIST is swallowed). The initial pull is the long
- * pole in startTeamMemoryWatcher — p99 was ~22s serial at 50 entries.
- *
- * Returns the number of files actually written.
- */
 async function writeRemoteEntriesToLocal(
   entries: Record<string, string>,
 ): Promise<number> {
@@ -631,8 +593,8 @@ async function writeRemoteEntriesToLocal(
         return false
       }
 
-      // Skip if on-disk content already matches. Handles the common case
-      // where pull returns unchanged entries (skipEtagCache path, first
+      
+      
       
       try {
         const existing = await readFile(validatedPath, 'utf8')
@@ -650,7 +612,7 @@ async function writeRemoteEntriesToLocal(
             { level: 'debug' },
           )
         }
-        // Fall through to write for ENOENT/ENOTDIR (file doesn't exist yet)
+        
       }
 
       try {
@@ -674,26 +636,17 @@ async function writeRemoteEntriesToLocal(
   return count(results, Boolean)
 }
 
-// ─── Public API ──────────────────────────────────────────────
-
-/**
- * Check if team memory sync is available (requires first-party OAuth).
- */
 export function isTeamMemorySyncAvailable(): boolean {
   return isUsingOAuth()
 }
 
-/**
- * Pull team memory from the server and write to local directory.
- * Returns true if any files were updated.
- */
 export async function pullTeamMemory(
   state: SyncState,
   options?: { skipEtagCache?: boolean },
 ): Promise<{
   success: boolean
   filesWritten: number
-  /** Number of entries the server returned, regardless of whether they were written to disk. */
+  
   entryCount: number
   notModified?: boolean
   error?: string
@@ -742,8 +695,8 @@ export async function pullTeamMemory(
     return { success: true, filesWritten: 0, entryCount: 0, notModified: true }
   }
   if (result.isEmpty || !result.data) {
-    // Server has no data — clear stale serverChecksums so the next push
-    // doesn't skip entries it thinks the server already has.
+    
+    
     state.serverChecksums.clear()
     logPull(startTime, { success: true })
     return { success: true, filesWritten: 0, entryCount: 0 }
@@ -786,26 +739,6 @@ export async function pullTeamMemory(
   }
 }
 
-/**
- * Push local team memory files to the server with optimistic locking.
- *
- * Uses delta upload: only keys whose local content hash differs from
- * serverChecksums are included in the PUT. On 412 conflict, probes
- * GET ?view=hashes to refresh serverChecksums, recomputes the delta
- * (naturally excluding keys where a teammate's push matches ours),
- * and retries. No merge, no disk writes — server-only new keys from
- * a teammate's concurrent push propagate on the next pull.
- *
- * Local-wins-on-conflict is the opposite of syncTeamMemory's pull-first
- * semantics. This is intentional: pushTeamMemory is triggered by a local edit,
- * and that edit must not be silently discarded just because a teammate pushed
- * in the meantime. Content-level merge (same key, both changed) is not
- * attempted — the local version simply overwrites the server version for that
- * key, and the server's edit to that key is lost. This is the lesser evil:
- * the local user is actively editing and can re-incorporate the teammate's
- * changes, whereas silently discarding the local edit loses work the user
- * just did with no recourse.
- */
 export async function pushTeamMemory(
   state: SyncState,
 ): Promise<TeamMemorySyncPushResult> {
@@ -833,7 +766,7 @@ export async function pushTeamMemory(
     }
   }
 
-  // Read local entries once at the start. Conflict resolution does NOT re-read
+  
   
   
   
@@ -842,7 +775,7 @@ export async function pushTeamMemory(
   const entries = localRead.entries
   const skippedSecrets = localRead.skippedSecrets
   if (skippedSecrets.length > 0) {
-    // Log a user-visible warning listing which files were skipped and why.
+    
     
     
     const summary = skippedSecrets
@@ -854,7 +787,7 @@ export async function pushTeamMemory(
     )
     logEvent('tengu_team_mem_secret_skipped', {
       file_count: skippedSecrets.length,
-      // Only log gitleaks rule IDs (not values, not paths — paths could
+      
       
       rule_ids: skippedSecrets
         .map(s => s.ruleId)
@@ -864,7 +797,7 @@ export async function pushTeamMemory(
     })
   }
 
-  // Hash each local entry once. The loop recomputes the delta each iteration
+  
   
   const localHashes = new Map<string, string>()
   for (const [key, content] of Object.entries(entries)) {
@@ -878,7 +811,7 @@ export async function pushTeamMemory(
     conflictAttempt <= MAX_CONFLICT_RETRIES;
     conflictAttempt++
   ) {
-    // Delta: only upload keys whose content hash differs from what we believe
+    
     
     
     
@@ -892,7 +825,7 @@ export async function pushTeamMemory(
     const deltaCount = Object.keys(delta).length
 
     if (deltaCount === 0) {
-      // Nothing to upload. This is the expected fast path after a fresh pull
+      
       
       
       logPush(startTime, {
@@ -907,15 +840,15 @@ export async function pushTeamMemory(
       }
     }
 
-    // Split the delta into PUT-sized batches to stay under the gateway's
-    // body-size limit.  Typical deltas (1-3 edited files) land in one batch;
-    // cold pushes with many files are where this earns its keep.  Each batch
-    // is a complete PUT that upserts its keys independently — if batch N
-    // fails, batches 1..N-1 are already committed server-side.  Updating
-    // serverChecksums after each success means the outer conflict-loop retry
-    // naturally resumes from the uncommitted tail (those keys still differ).
-    // state.lastKnownChecksum is updated inside uploadTeamMemory on each
-    // 200, so the ETag chain threads through the batches automatically.
+    
+    
+    
+    
+    
+    
+    
+    
+    
     const batches = batchDeltaByBytes(delta)
     let filesUploaded = 0
     let result: TeamMemorySyncUploadResult | undefined
@@ -934,13 +867,13 @@ export async function pushTeamMemory(
       }
       filesUploaded += Object.keys(batch).length
     }
-    // batches is non-empty (deltaCount > 0 guaranteed by the check above),
-    // so the loop executed at least once.
+    
+    
     result = result!
 
     if (result.success) {
-      // Server-side delta propagation to disk (server-only new keys from a
-      // teammate's concurrent push) happens on the next pull — we only
+      
+      
       
       logForDebugging(
         batches.length > 1
@@ -964,7 +897,7 @@ export async function pushTeamMemory(
     }
 
     if (!result.conflict) {
-      // If the server returned a structured 413 with its effective
+      
       
       
       
@@ -977,7 +910,7 @@ export async function pushTeamMemory(
           { level: 'warn' },
         )
       }
-      // filesUploaded may be nonzero if earlier batches committed before this
+      
       
       
       
@@ -988,7 +921,7 @@ export async function pushTeamMemory(
         putBatches: batches.length > 1 ? batches.length : undefined,
         errorType: result.errorType,
         status: result.httpStatus,
-        // Datadog: filter @error_code:team_memory_too_many_entries to track
+        
         
         errorCode: result.serverErrorCode,
         serverMaxEntries: result.serverMaxEntries,
@@ -1003,7 +936,7 @@ export async function pushTeamMemory(
       }
     }
 
-    // 412 conflict — refresh serverChecksums and retry with a tighter delta.
+    
     sawConflict = true
     if (conflictAttempt >= MAX_CONFLICT_RETRIES) {
       logForDebugging(
@@ -1036,7 +969,7 @@ export async function pushTeamMemory(
     
     const probe = await fetchTeamMemoryHashes(state, repoSlug)
     if (!probe.success || !probe.entryChecksums) {
-      // Requires anthropic/anthropic#283027. A transient probe failure here is
+      
       
       logPush(startTime, {
         success: false,
@@ -1065,18 +998,13 @@ export async function pushTeamMemory(
   }
 }
 
-/**
- * Bidirectional sync: pull from server, merge with local, push back.
- * Server entries take precedence on conflict (last-write-wins by the server).
- * Push uses conflict resolution (retries on 412) via pushTeamMemory.
- */
 export async function syncTeamMemory(state: SyncState): Promise<{
   success: boolean
   filesPulled: number
   filesPushed: number
   error?: string
 }> {
-  // 1. Pull remote → local (skip ETag cache for full sync)
+  
   const pullResult = await pullTeamMemory(state, { skipEtagCache: true })
   if (!pullResult.success) {
     return {
@@ -1087,7 +1015,7 @@ export async function syncTeamMemory(state: SyncState): Promise<{
     }
   }
 
-  // 2. Push local → remote (with conflict resolution)
+  
   const pushResult = await pushTeamMemory(state)
   if (!pushResult.success) {
     return {
@@ -1109,8 +1037,6 @@ export async function syncTeamMemory(state: SyncState): Promise<{
     filesPushed: pushResult.filesUploaded,
   }
 }
-
-// ─── Telemetry helpers ───────────────────────────────────────
 
 function logPull(
   startTime: number,

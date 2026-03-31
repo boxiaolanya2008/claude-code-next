@@ -23,17 +23,11 @@ function toPosix(p: string): string {
   return p.split(win32.sep).join(posix.sep)
 }
 
-// Convert a path to a stable string-comparable form: forward-slash separated,
-// and on Windows, lowercased (Windows filesystems are case-insensitive).
 function toComparable(p: string): string {
   const posixForm = toPosix(p)
   return IS_WINDOWS ? posixForm.toLowerCase() : posixForm
 }
 
-/**
- * Detects if a file path is a session-related file under ~/.claude.
- * Returns the type of session file or null if not a session file.
- */
 export function detectSessionFileType(
   filePath: string,
 ): 'session_memory' | 'session_transcript' | null {
@@ -55,10 +49,6 @@ export function detectSessionFileType(
   return null
 }
 
-/**
- * Checks if a glob/pattern string indicates session file access intent.
- * Used for Grep/Glob tools where we check patterns, not actual file paths.
- */
 export function detectSessionPatternType(
   pattern: string,
 ): 'session_memory' | 'session_transcript' | null {
@@ -78,9 +68,6 @@ export function detectSessionPatternType(
   return null
 }
 
-/**
- * Check if a file path is within the memdir directory.
- */
 export function isAutoMemFile(filePath: string): boolean {
   if (isAutoMemoryEnabled()) {
     return isAutoMemPath(filePath)
@@ -100,9 +87,6 @@ export function memoryScopeForPath(filePath: string): MemoryScope | null {
   return null
 }
 
-/**
- * Check if a file path is within an agent memory directory.
- */
 function isAgentMemFile(filePath: string): boolean {
   if (isAutoMemoryEnabled()) {
     return isAgentMemoryPath(filePath)
@@ -110,92 +94,6 @@ function isAgentMemFile(filePath: string): boolean {
   return false
 }
 
-/**
- * Check if a file is a Claude-managed memory file (NOT user-managed instruction files).
- * Includes: auto-memory (memdir), agent memory, session memory/transcripts.
- * Excludes: CLAUDE.md, CLAUDE.local.md, .claude/rules
-
-export function isAutoManagedMemoryFile(filePath: string): boolean {
-  if (isAutoMemFile(filePath)) {
-    return true
-  }
-  if (feature('TEAMMEM') && teamMemPaths!.isTeamMemFile(filePath)) {
-    return true
-  }
-  if (detectSessionFileType(filePath) !== null) {
-    return true
-  }
-  if (isAgentMemFile(filePath)) {
-    return true
-  }
-  return false
-}
-
-// Check if a directory path is a memory-related directory.
-
-export function isMemoryDirectory(dirPath: string): boolean {
-  // SECURITY: Normalize to prevent path traversal bypasses via .. segments.
-  
-  
-  
-  
-  const normalizedPath = normalize(dirPath)
-  const normalizedCmp = toComparable(normalizedPath)
-  
-  if (
-    isAutoMemoryEnabled() &&
-    (normalizedCmp.includes('/agent-memory/') ||
-      normalizedCmp.includes('/agent-memory-local/'))
-  ) {
-    return true
-  }
-  // Team memory directories live under <autoMemPath>/team/
-  if (
-    feature('TEAMMEM') &&
-    teamMemPaths!.isTeamMemoryEnabled() &&
-    teamMemPaths!.isTeamMemPath(normalizedPath)
-  ) {
-    return true
-  }
-  // Check the auto-memory path override (CLAUDE_COWORK_MEMORY_PATH_OVERRIDE)
-  if (isAutoMemoryEnabled()) {
-    const autoMemPath = getAutoMemPath()
-    const autoMemDirCmp = toComparable(autoMemPath.replace(/[/\\]+$/, ''))
-    const autoMemPathCmp = toComparable(autoMemPath)
-    if (
-      normalizedCmp === autoMemDirCmp ||
-      normalizedCmp.startsWith(autoMemPathCmp)
-    ) {
-      return true
-    }
-  }
-
-  const configDirCmp = toComparable(getClaudeConfigHomeDir())
-  const memoryBaseCmp = toComparable(getMemoryBaseDir())
-  const underConfig = normalizedCmp.startsWith(configDirCmp)
-  const underMemoryBase = normalizedCmp.startsWith(memoryBaseCmp)
-
-  if (!underConfig && !underMemoryBase) {
-    return false
-  }
-  if (normalizedCmp.includes('/session-memory/')) {
-    return true
-  }
-  if (underConfig && normalizedCmp.includes('/projects/')) {
-    return true
-  }
-  if (isAutoMemoryEnabled() && normalizedCmp.includes('/memory/')) {
-    return true
-  }
-  return false
-}
-
-/**
- * Check if a shell command string (Bash or PowerShell) targets memory files
- * by extracting absolute path tokens and checking them against memory
- * detection functions. Used for Bash/PowerShell grep/search commands in the
- * collapse logic.
- */
 export function isShellCommandTargetingMemory(command: string): boolean {
   const configDir = getClaudeConfigHomeDir()
   const memoryBase = getMemoryBaseDir()
@@ -215,7 +113,7 @@ export function isShellCommandTargetingMemory(command: string): boolean {
   const matchesAnyDir = dirs.some(d => {
     if (commandCmp.includes(toComparable(d))) return true
     if (IS_WINDOWS) {
-      // BashTool on Windows (Git Bash) emits /c/Users/... — check MinGW form too
+      
       return commandCmp.includes(windowsPathToPosixPath(d).toLowerCase())
     }
     return false
@@ -224,8 +122,8 @@ export function isShellCommandTargetingMemory(command: string): boolean {
     return false
   }
 
-  // Extract absolute path-like tokens. Matches Unix absolute paths (/foo/bar),
-  // Windows drive-letter paths (C:\foo, C:/foo), and MinGW paths (/c/foo —
+  
+  
   
   
   
@@ -236,11 +134,11 @@ export function isShellCommandTargetingMemory(command: string): boolean {
   }
 
   for (const match of matches) {
-    // Strip trailing shell metacharacters that could be adjacent to a path
+    
     const cleanPath = match.replace(/[,;|&>]+$/, '')
     
     
-    // isAutoMemPath, isAgentMemoryPath) then receive native paths and only
+    
     
     
     const nativePath = IS_WINDOWS
@@ -253,8 +151,6 @@ export function isShellCommandTargetingMemory(command: string): boolean {
 
   return false
 }
-
-// Check if a glob/pattern targets auto-managed memory files only.
 
 export function isAutoManagedMemoryPattern(pattern: string): boolean {
   if (detectSessionPatternType(pattern) !== null) {

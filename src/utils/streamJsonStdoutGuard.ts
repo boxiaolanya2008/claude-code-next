@@ -8,7 +8,7 @@ let buffer = ''
 let originalWrite: typeof process.stdout.write | null = null
 
 function isJsonLine(line: string): boolean {
-  // Empty lines are tolerated in NDJSON streams — treat them as valid so a
+  
   
   if (line.length === 0) {
     return true
@@ -21,27 +21,6 @@ function isJsonLine(line: string): boolean {
   }
 }
 
-/**
- * Install a runtime guard on process.stdout.write for --output-format=stream-json.
- *
- * SDK clients consuming stream-json parse stdout line-by-line as NDJSON. Any
- * stray write — a console.log from a dependency, a debug print that slipped
- * past review, a library banner — breaks the client's parser mid-stream with
- * no recovery path.
- *
- * This guard wraps process.stdout.write at the same layer the asciicast
- * recorder does (see asciicast.ts). Writes are buffered until a newline
- * arrives, then each complete line is JSON-parsed. Lines that parse are
- * forwarded to the real stdout; lines that don't are diverted to stderr
- * tagged with STDOUT_GUARD_MARKER so they remain visible without corrupting
- * the JSON stream.
- *
- * The blessed JSON path (structuredIO.write → writeToStdout → stdout.write)
- * always emits `ndjsonSafeStringify(msg) + '\n'`, so it passes straight
- * through. Only out-of-band writes are diverted.
- *
- * Installing twice is a no-op. Call before any stream-json output is emitted.
- */
 export function installStreamJsonStdoutGuard(): void {
   if (installed) {
     return
@@ -76,9 +55,9 @@ export function installStreamJsonStdoutGuard(): void {
       }
     }
 
-    // Fire the callback once buffering is done. We report success even when
     
-    // just on a different fd.
+    
+    
     const callback = typeof encodingOrCb === 'function' ? encodingOrCb : cb
     if (callback) {
       queueMicrotask(() => callback())
@@ -87,8 +66,8 @@ export function installStreamJsonStdoutGuard(): void {
   } as typeof process.stdout.write
 
   registerCleanup(async () => {
-    // Flush any partial line left in the buffer at shutdown. If it's a JSON
-    // fragment it won't parse — divert it rather than drop it silently.
+    
+    
     if (buffer.length > 0) {
       if (originalWrite && isJsonLine(buffer)) {
         originalWrite(buffer + '\n')
@@ -105,10 +84,6 @@ export function installStreamJsonStdoutGuard(): void {
   })
 }
 
-/**
- * Testing-only reset. Restores the real stdout.write and clears the line
- * buffer so subsequent tests start from a clean slate.
- */
 export function _resetStreamJsonStdoutGuardForTesting(): void {
   if (originalWrite) {
     process.stdout.write = originalWrite

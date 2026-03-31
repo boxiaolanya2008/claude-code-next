@@ -9,18 +9,10 @@ export type ParsedSessionUrl = {
   isJsonlFile: boolean
 }
 
-/**
- * Parses a session resume identifier which can be either:
- * - A URL containing session ID (e.g., https://api.example.com/v1/session_ingress/session/550e8400-e29b-41d4-a716-446655440000)
- * - A plain session ID (UUID)
- *
- * @param resumeIdentifier - The URL or session ID to parse
- * @returns Parsed session information or null if invalid
- */
 export function parseSessionIdentifier(
   resumeIdentifier: string,
 ): ParsedSessionUrl | null {
-  // Check for JSONL file path before URL parsing, since Windows absolute
+  
   
   if (resumeIdentifier.toLowerCase().endsWith('.jsonl')) {
     return {
@@ -32,7 +24,7 @@ export function parseSessionIdentifier(
     }
   }
 
-  // Check if it's a plain UUID
+  
   if (validateUuid(resumeIdentifier)) {
     return {
       sessionId: resumeIdentifier as UUID,
@@ -43,7 +35,7 @@ export function parseSessionIdentifier(
     }
   }
 
-  // Check if it's a URL
+  
   try {
     const url = new URL(resumeIdentifier)
 
@@ -57,7 +49,7 @@ export function parseSessionIdentifier(
       isJsonlFile: false,
     }
   } catch {
-    // Not a valid URL
+    
   }
 
   return null

@@ -19,10 +19,6 @@ function isEscaped(str: string, index: number): boolean {
   return backslashCount % 2 !== 0
 }
 
-/**
- * Counts unescaped occurrences of a character in a string.
- * A character is considered escaped if preceded by an odd number of backslashes.
- */
 function countUnescapedChar(str: string, char: string): number {
   let count = 0
   for (let i = 0; i < str.length; i++) {
@@ -33,14 +29,10 @@ function countUnescapedChar(str: string, char: string): number {
   return count
 }
 
-/**
- * Checks if a string contains unescaped empty parentheses "()".
- * Returns true only if both the "(" and ")" are unescaped and adjacent.
- */
 function hasUnescapedEmptyParens(str: string): boolean {
   for (let i = 0; i < str.length - 1; i++) {
     if (str[i] === '(' && str[i + 1] === ')') {
-      // Check if the opening paren is unescaped
+      
       if (!isEscaped(str, i)) {
         return true
       }
@@ -49,21 +41,18 @@ function hasUnescapedEmptyParens(str: string): boolean {
   return false
 }
 
-/**
- * Validates permission rule format and content
- */
 export function validatePermissionRule(rule: string): {
   valid: boolean
   error?: string
   suggestion?: string
   examples?: string[]
 } {
-  // Empty rule check
+  
   if (!rule || rule.trim() === '') {
     return { valid: false, error: 'Permission rule cannot be empty' }
   }
 
-  // Check parentheses matching first (only count unescaped parens)
+  
   const openCount = countUnescapedChar(rule, '(')
   const closeCount = countUnescapedChar(rule, ')')
   if (openCount !== closeCount) {
@@ -75,7 +64,7 @@ export function validatePermissionRule(rule: string): {
     }
   }
 
-  // Check for empty parentheses (escape-aware)
+  
   if (hasUnescapedEmptyParens(rule)) {
     const toolName = rule.substring(0, rule.indexOf('('))
     if (!toolName) {
@@ -93,15 +82,15 @@ export function validatePermissionRule(rule: string): {
     }
   }
 
-  // Parse the rule
+  
   const parsed = permissionRuleValueFromString(rule)
 
   
   const mcpInfo = mcpInfoFromString(parsed.toolName)
   if (mcpInfo) {
-    // MCP rules support server-level, tool-level, and wildcard permissions
     
-    // - mcp__server (server-level, all tools)
+    
+    
     
     
 
@@ -123,15 +112,15 @@ export function validatePermissionRule(rule: string): {
       }
     }
 
-    return { valid: true } // Valid MCP rule
+    return { valid: true } 
   }
 
-  // Tool name validation (for non-MCP tools)
+  
   if (!parsed.toolName || parsed.toolName.length === 0) {
     return { valid: false, error: 'Tool name cannot be empty' }
   }
 
-  // Check tool name starts with uppercase (standard tools)
+  
   if (parsed.toolName[0] !== parsed.toolName[0]?.toUpperCase()) {
     return {
       valid: false,
@@ -140,7 +129,7 @@ export function validatePermissionRule(rule: string): {
     }
   }
 
-  // Check for custom validation rules first
+  
   const customValidation = getCustomValidation(parsed.toolName)
   if (customValidation && parsed.ruleContent !== undefined) {
     const customResult = customValidation(parsed.ruleContent)
@@ -149,7 +138,7 @@ export function validatePermissionRule(rule: string): {
     }
   }
 
-  // Bash-specific validation
+  
   if (isBashPrefixTool(parsed.toolName) && parsed.ruleContent !== undefined) {
     const content = parsed.ruleContent
 
@@ -167,7 +156,7 @@ export function validatePermissionRule(rule: string): {
       }
     }
 
-    // Check for :* without a prefix
+    
     if (content === ':*') {
       return {
         valid: false,
@@ -177,27 +166,27 @@ export function validatePermissionRule(rule: string): {
       }
     }
 
-    // Note: We don't validate quote balancing because bash quoting rules are complex.
-    // A command like `grep '"'` has valid unbalanced double quotes.
-    // Users who create patterns with unintended quote mismatches will discover
-    // the issue when matching doesn't work as expected.
+    
+    
+    
+    
 
-    // Wildcards are now allowed at any position for flexible pattern matching
-    // Examples of valid wildcard patterns:
-    // - "npm *" matches "npm install", "npm run test", etc.
-    // - "* install" matches "npm install", "yarn install", etc.
-    // - "git * main" matches "git checkout main", "git push main", etc.
-    // - "npm * --save" matches "npm install foo --save", etc.
-    //
-    // Legacy :* syntax continues to work for backwards compatibility:
-    // - "npm:*" matches "npm" or "npm <anything>" (prefix matching with word boundary)
+    
+    
+    
+    
+    
+    
+    
+    
+    
   }
 
-  // File tool validation
+  
   if (isFilePatternTool(parsed.toolName) && parsed.ruleContent !== undefined) {
     const content = parsed.ruleContent
 
-    // Check for :* in file patterns (common mistake from Bash patterns)
+    
     if (content.includes(':*')) {
       return {
         valid: false,
@@ -211,14 +200,14 @@ export function validatePermissionRule(rule: string): {
       }
     }
 
-    // Warn about wildcards not at boundaries
+    
     if (
       content.includes('*') &&
       !content.match(/^\*|\*$|\*\*|\/\*|\*\.|\*\)/) &&
       !content.includes('**')
     ) {
-      // This is a loose check - wildcards in the middle might be valid in some cases
-      // but often indicate confusion
+      
+      
       return {
         valid: false,
         error: 'Wildcard placement might be incorrect',
@@ -235,9 +224,6 @@ export function validatePermissionRule(rule: string): {
   return { valid: true }
 }
 
-/**
- * Custom Zod schema for permission rule arrays
- */
 export const PermissionRuleSchema = lazySchema(() =>
   z.string().superRefine((val, ctx) => {
     const result = validatePermissionRule(val)

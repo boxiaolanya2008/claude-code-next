@@ -8,7 +8,7 @@ import { settingsChangeDetector } from '../../utils/settings/changeDetector.js'
 import { plural } from '../../utils/stringUtils.js'
 
 export const call: LocalCommandCall = async (_args, context) => {
-  // CCR: re-pull user settings before the cache sweep so enabledPlugins /
+  
   
   
   
@@ -23,7 +23,7 @@ export const call: LocalCommandCall = async (_args, context) => {
   
   if (
     feature('DOWNLOAD_USER_SETTINGS') &&
-    (isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) || getIsRemoteMode())
+    (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_REMOTE) || getIsRemoteMode())
   ) {
     const applied = await redownloadUserSettings()
     
@@ -41,9 +41,9 @@ export const call: LocalCommandCall = async (_args, context) => {
     n(r.command_count, 'skill'),
     n(r.agent_count, 'agent'),
     n(r.hook_count, 'hook'),
-    // "plugin MCP/LSP" disambiguates from user-config/built-in servers,
-    // which /reload-plugins doesn't touch. Commands/hooks are plugin-only;
-    // agent_count is total agents (incl. built-ins). (gh-31321)
+    
+    
+    
     n(r.mcp_count, 'plugin MCP server'),
     n(r.lsp_count, 'plugin LSP server'),
   ]

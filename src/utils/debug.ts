@@ -25,14 +25,8 @@ const LEVEL_ORDER: Record<DebugLogLevel, number> = {
   error: 4,
 }
 
-/**
- * Minimum log level to include in debug output. Defaults to 'debug', which
- * filters out 'verbose' messages. Set CLAUDE_CODE_DEBUG_LOG_LEVEL=verbose to
- * include high-volume diagnostics (e.g. full statusLine command, shell, cwd,
- * stdout/stderr) that would otherwise drown out useful debug output.
- */
 export const getMinDebugLogLevel = memoize((): DebugLogLevel => {
-  const raw = process.env.CLAUDE_CODE_DEBUG_LOG_LEVEL?.toLowerCase().trim()
+  const raw = process.env.CLAUDE_CODE_NEXT_DEBUG_LOG_LEVEL?.toLowerCase().trim()
   if (raw && Object.hasOwn(LEVEL_ORDER, raw)) {
     return raw as DebugLogLevel
   }
@@ -49,9 +43,9 @@ export const isDebugMode = memoize((): boolean => {
     process.argv.includes('--debug') ||
     process.argv.includes('-d') ||
     isDebugToStdErr() ||
-    // Also check for --debug=pattern syntax
+    
     process.argv.some(arg => arg.startsWith('--debug=')) ||
-    // --debug-file implicitly enables debug mode
+    
     getDebugFilePath() !== null
   )
 })
@@ -63,16 +57,14 @@ export function enableDebugLogging(): boolean {
   return wasActive
 }
 
-// Extract and parse debug filter from command line arguments
-
 export const getDebugFilter = memoize((): DebugFilter | null => {
-  // Look for --debug=pattern in argv
+  
   const debugArg = process.argv.find(arg => arg.startsWith('--debug='))
   if (!debugArg) {
     return null
   }
 
-  // Extract the pattern after the equals sign
+  
   const filterPattern = debugArg.substring('--debug='.length)
   return parseDebugFilter(filterPattern)
 })
@@ -101,7 +93,7 @@ function shouldLogDebugMessage(message: string): boolean {
     return false
   }
 
-  // Non-ants only write debug logs when debug mode is active (via --debug at
+  
   
   if (process.env.USER_TYPE !== 'ant' && !isDebugMode()) {
     return false
@@ -155,21 +147,21 @@ function getDebugWriter(): BufferedWriter {
         const needMkdir = ensuredDir !== dir
         ensuredDir = dir
         if (isDebugMode()) {
-          // immediateMode: must stay sync. Async writes are lost on direct
+          
           
           
           if (needMkdir) {
             try {
               getFsImplementation().mkdirSync(dir)
             } catch {
-              // Directory already exists
+              
             }
           }
           getFsImplementation().appendFileSync(path, content)
           void updateLatestDebugLogSymlink()
           return
         }
-        // Buffered path (ants without --debug): flushes ~1/sec so chain
+        
         
         
         pendingWrite = pendingWrite
@@ -206,7 +198,7 @@ export function logForDebugging(
     return
   }
 
-  // Multiline messages break the jsonl output format, so make any multiline messages JSON.
+  
   if (hasFormattedOutput && message.includes('\n')) {
     message = jsonStringify(message)
   }
@@ -223,15 +215,11 @@ export function logForDebugging(
 export function getDebugLogPath(): string {
   return (
     getDebugFilePath() ??
-    process.env.CLAUDE_CODE_DEBUG_LOGS_DIR ??
+    process.env.CLAUDE_CODE_NEXT_DEBUG_LOGS_DIR ??
     join(getClaudeConfigHomeDir(), 'debug', `${getSessionId()}.txt`)
   )
 }
 
-/**
- * Updates the latest debug log symlink to point to the current debug log file.
- * Creates or updates a symlink at ~/.claude/debug/latest
- */
 const updateLatestDebugLogSymlink = memoize(async (): Promise<void> => {
   try {
     const debugLogPath = getDebugLogPath()
@@ -241,7 +229,7 @@ const updateLatestDebugLogSymlink = memoize(async (): Promise<void> => {
     await unlink(latestSymlinkPath).catch(() => {})
     await symlink(debugLogPath, latestSymlinkPath)
   } catch {
-    // Silently fail if symlink creation fails
+    
   }
 })
 

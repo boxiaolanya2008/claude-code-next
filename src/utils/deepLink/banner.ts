@@ -12,7 +12,7 @@ const STALE_FETCH_WARN_MS = 7 * 24 * 60 * 60 * 1000
 const LONG_PREFILL_THRESHOLD = 1000
 
 export type DeepLinkBannerInfo = {
-  /** Resolved working directory the session launched in. */
+  
   cwd: string
   
   prefillLength?: number
@@ -22,17 +22,6 @@ export type DeepLinkBannerInfo = {
   lastFetch?: Date
 }
 
-/**
- * Build the multi-line warning banner for a deep-link-originated session.
- *
- * Always shows the working directory so the user can see which CLAUDE.md
- * will load. When the link pre-filled a prompt, adds a second line prompting
- * the user to review it — the prompt itself is visible in the input box.
- *
- * When the cwd was resolved from a ?repo= slug, also shows the slug and the
- * clone's last-fetch age so the user knows which local clone was selected
- * and whether its CLAUDE.md may be stale relative to upstream.
- */
 export function buildDeepLinkBanner(info: DeepLinkBannerInfo): string {
   const lines = [
     `This session was opened by an external deep link in ${tildify(info.cwd)}`,
@@ -56,17 +45,6 @@ export function buildDeepLinkBanner(info: DeepLinkBannerInfo): string {
   return lines.join('\n')
 }
 
-/**
- * Read the mtime of .git/FETCH_HEAD, which git updates on every fetch or
- * pull. Returns undefined if the directory is not a git repo or has never
- * been fetched.
- *
- * FETCH_HEAD is per-worktree — fetching from the main worktree does not
- * touch a sibling worktree's FETCH_HEAD. When cwd is a worktree, we check
- * both and return whichever is newer so a recently-fetched main repo
- * doesn't read as "never fetched" just because the deep link landed in
- * a worktree.
- */
 export async function readLastFetchTime(
   cwd: string,
 ): Promise<Date | undefined> {
@@ -92,11 +70,6 @@ async function mtimeOrUndefined(p: string): Promise<Date | undefined> {
   }
 }
 
-/**
- * Shorten home-dir-prefixed paths to ~ notation for the banner.
- * Not using getDisplayPath() because cwd is the current working directory,
- * so the relative-path branch would collapse it to the empty string.
- */
 function tildify(p: string): string {
   const home = homedir()
   if (p === home) return '~'

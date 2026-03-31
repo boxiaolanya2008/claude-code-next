@@ -80,9 +80,6 @@ You ONLY update the actual content that comes AFTER these two preserved lines. T
 REMEMBER: Use the Edit tool in parallel and stop. Do not continue after the edits. Only include insights from the actual user conversation, never from these note-taking instructions. Do not delete or change section headers or italic _section descriptions_.`
 }
 
-/**
- * Load custom session memory template from file if it exists
- */
 export async function loadSessionMemoryTemplate(): Promise<string> {
   const templatePath = join(
     getClaudeConfigHomeDir(),
@@ -103,11 +100,6 @@ export async function loadSessionMemoryTemplate(): Promise<string> {
   }
 }
 
-/**
- * Load custom session memory prompt from file if it exists
- * Custom prompts can be placed at ~/.claude/session-memory/prompt.md
- * Use {{variableName}} syntax for variable substitution (e.g., {{currentNotes}}, {{notesPath}})
- */
 export async function loadSessionMemoryPrompt(): Promise<string> {
   const promptPath = join(
     getClaudeConfigHomeDir(),
@@ -128,9 +120,6 @@ export async function loadSessionMemoryPrompt(): Promise<string> {
   }
 }
 
-/**
- * Parse the session memory file and analyze section sizes
- */
 function analyzeSectionSizes(content: string): Record<string, number> {
   const sections: Record<string, number> = {}
   const lines = content.split('\n')
@@ -158,9 +147,6 @@ function analyzeSectionSizes(content: string): Record<string, number> {
   return sections
 }
 
-/**
- * Generate reminders for sections that are too long
- */
 function generateSectionReminders(
   sectionSizes: Record<string, number>,
   totalTokens: number,
@@ -195,14 +181,11 @@ function generateSectionReminders(
   return parts.join('')
 }
 
-/**
- * Substitute variables in the prompt template using {{variable}} syntax
- */
 function substituteVariables(
   template: string,
   variables: Record<string, string>,
 ): string {
-  // Single-pass replacement avoids two bugs: (1) $ backreference corruption
+  
   
   
   return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) =>
@@ -212,11 +195,6 @@ function substituteVariables(
   )
 }
 
-/**
- * Check if the session memory content is essentially empty (matches the template).
- * This is used to detect if no actual content has been extracted yet,
- * which means we should fall back to legacy compact behavior.
- */
 export async function isSessionMemoryEmpty(content: string): Promise<boolean> {
   const template = await loadSessionMemoryTemplate()
   
@@ -246,13 +224,6 @@ export async function buildSessionMemoryUpdatePrompt(
   return basePrompt + sectionReminders
 }
 
-/**
- * Truncate session memory sections that exceed the per-section token limit.
- * Used when inserting session memory into compact messages to prevent
- * oversized session memory from consuming the entire post-compact token budget.
- *
- * Returns the truncated content and whether any truncation occurred.
- */
 export function truncateSessionMemoryForCompact(content: string): {
   truncatedContent: string
   wasTruncated: boolean
@@ -280,7 +251,7 @@ export function truncateSessionMemoryForCompact(content: string): {
     }
   }
 
-  // Flush the last section
+  
   const result = flushSessionSection(
     currentSectionHeader,
     currentSectionLines,
@@ -309,7 +280,7 @@ function flushSessionSection(
     return { lines: [sectionHeader, ...sectionLines], wasTruncated: false }
   }
 
-  // Truncate at a line boundary near the limit
+  
   let charCount = 0
   const keptLines: string[] = [sectionHeader]
   for (const line of sectionLines) {

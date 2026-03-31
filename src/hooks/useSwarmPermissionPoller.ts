@@ -38,9 +38,6 @@ function parsePermissionUpdates(raw: unknown): PermissionUpdate[] {
   return valid
 }
 
-/**
- * Callback signature for handling permission responses
- */
 export type PermissionResponseCallback = {
   requestId: string
   toolUseId: string
@@ -52,10 +49,6 @@ export type PermissionResponseCallback = {
   onReject: (feedback?: string) => void
 }
 
-/**
- * Registry for pending permission request callbacks
- * This allows the poller to find and invoke the right callbacks when responses arrive
- */
 type PendingCallbackRegistry = Map<string, PermissionResponseCallback>
 
 const pendingCallbacks: PendingCallbackRegistry = new Map()
@@ -69,9 +62,6 @@ export function registerPermissionCallback(
   )
 }
 
-/**
- * Unregister a callback (e.g., when the request is resolved locally or times out)
- */
 export function unregisterPermissionCallback(requestId: string): void {
   pendingCallbacks.delete(requestId)
   logForDebugging(
@@ -79,29 +69,15 @@ export function unregisterPermissionCallback(requestId: string): void {
   )
 }
 
-/**
- * Check if a request has a registered callback
- */
 export function hasPermissionCallback(requestId: string): boolean {
   return pendingCallbacks.has(requestId)
 }
 
-/**
- * Clear all pending callbacks (both permission and sandbox).
- * Called from clearSessionCaches() on /clear to reset stale state,
- * and also used in tests for isolation.
- */
 export function clearAllPendingCallbacks(): void {
   pendingCallbacks.clear()
   pendingSandboxCallbacks.clear()
 }
 
-/**
- * Process a permission response from a mailbox message.
- * This is called by the inbox poller when it detects a permission_response message.
- *
- * @returns true if the response was processed, false if no callback was registered
- */
 export function processMailboxPermissionResponse(params: {
   requestId: string
   decision: 'approved' | 'rejected'
@@ -136,19 +112,12 @@ export function processMailboxPermissionResponse(params: {
   return true
 }
 
-// ============================================================================
-// Sandbox Permission Callback Registry
-
-/**
- * Callback signature for handling sandbox permission responses
- */
 export type SandboxPermissionResponseCallback = {
   requestId: string
   host: string
   resolve: (allow: boolean) => void
 }
 
-// Module-level registry for sandbox permission callbacks
 const pendingSandboxCallbacks: Map<string, SandboxPermissionResponseCallback> =
   new Map()
 
@@ -161,19 +130,10 @@ export function registerSandboxPermissionCallback(
   )
 }
 
-/**
- * Check if a sandbox request has a registered callback
- */
 export function hasSandboxPermissionCallback(requestId: string): boolean {
   return pendingSandboxCallbacks.has(requestId)
 }
 
-/**
- * Process a sandbox permission response from a mailbox message.
- * Called by the inbox poller when it detects a sandbox_permission_response message.
- *
- * @returns true if the response was processed, false if no callback was registered
- */
 export function processSandboxPermissionResponse(params: {
   requestId: string
   host: string
@@ -201,9 +161,6 @@ export function processSandboxPermissionResponse(params: {
   return true
 }
 
-/**
- * Process a permission response by invoking the registered callback
- */
 function processResponse(response: PermissionResponse): boolean {
   const callback = pendingCallbacks.get(response.requestId)
 
@@ -232,30 +189,21 @@ function processResponse(response: PermissionResponse): boolean {
   return true
 }
 
-/**
- * Hook that polls for permission responses when running as a swarm worker.
- *
- * This hook:
- * 1. Only activates when isSwarmWorker() returns true
- * 2. Polls every 500ms for responses
- * 3. When a response is found, invokes the registered callback
- * 4. Cleans up the response file after processing
- */
 export function useSwarmPermissionPoller(): void {
   const isProcessingRef = useRef(false)
 
   const poll = useCallback(async () => {
-    // Don't poll if not a swarm worker
+    
     if (!isSwarmWorker()) {
       return
     }
 
-    // Prevent concurrent polling
+    
     if (isProcessingRef.current) {
       return
     }
 
-    // Don't poll if no callbacks are registered
+    
     if (pendingCallbacks.size === 0) {
       return
     }
@@ -270,16 +218,16 @@ export function useSwarmPermissionPoller(): void {
         return
       }
 
-      // Check each pending request for a response
+      
       for (const [requestId, _callback] of pendingCallbacks) {
         const response = await pollForResponse(requestId, agentName, teamName)
 
         if (response) {
-          // Process the response
+          
           const processed = processResponse(response)
 
           if (processed) {
-            // Clean up the response from the worker's inbox
+            
             await removeWorkerResponse(requestId, agentName, teamName)
           }
         }
@@ -293,7 +241,7 @@ export function useSwarmPermissionPoller(): void {
     }
   }, [])
 
-  // Only poll if we're a swarm worker
+  
   const shouldPoll = isSwarmWorker()
   useInterval(() => void poll(), shouldPoll ? POLL_INTERVAL_MS : null)
 

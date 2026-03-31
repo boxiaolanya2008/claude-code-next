@@ -28,8 +28,8 @@ export function getSymbolAtPosition(
     if (line < 0 || line >= lines.length) {
       return null
     }
-    // If we filled the full buffer the file continues past our window,
-    // so the last split element may be truncated mid-line.
+    
+    
     if (bytesRead === MAX_READ_BYTES && line === lines.length - 1) {
       return null
     }
@@ -39,12 +39,12 @@ export function getSymbolAtPosition(
       return null
     }
 
-    // Extract the word/symbol at the character position
-    
-    // - Standard identifiers: alphanumeric + underscore + dollar
     
     
-    // - Operators and special symbols: +, -, *, etc.
+    
+    
+    
+    
     
     const symbolPattern = /[\w$'!]+|[+\-*/%&|^~<>=]+/g
     let match: RegExpExecArray | null
@@ -63,7 +63,7 @@ export function getSymbolAtPosition(
 
     return null
   } catch (error) {
-    // Log unexpected errors for debugging (permission issues, encoding problems, etc.)
+    
     
     if (error instanceof Error) {
       logForDebugging(
@@ -71,7 +71,7 @@ export function getSymbolAtPosition(
         { level: 'warn' },
       )
     }
-    // Still return null for graceful fallback to position display
+    
     return null
   }
 }

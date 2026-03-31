@@ -198,7 +198,7 @@ async function handleBroadcast(
 
   if (!teamName) {
     throw new Error(
-      'Not in a team context. Create a team with Teammate spawnTeam first, or set CLAUDE_CODE_TEAM_NAME.',
+      'Not in a team context. Create a team with Teammate spawnTeam first, or set CLAUDE_CODE_NEXT_TEAM_NAME.',
     )
   }
 
@@ -211,7 +211,7 @@ async function handleBroadcast(
     getAgentName() || (isTeammate() ? 'teammate' : TEAM_LEAD_NAME)
   if (!senderName) {
     throw new Error(
-      'Cannot broadcast: sender name is required. Set CLAUDE_CODE_AGENT_NAME.',
+      'Cannot broadcast: sender name is required. Set CLAUDE_CODE_NEXT_AGENT_NAME.',
     )
   }
 
@@ -587,7 +587,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
         return {
           behavior: 'ask' as const,
           message: `Send a message to Remote Control session ${input.to}? It arrives as a user prompt on the receiving Claude (possibly another machine) via Anthropic's servers.`,
-          // safetyCheck (not mode) — permissions.ts guards this before both
+          
           
           
           decisionReason: {
@@ -629,9 +629,9 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
         }
       }
       if (feature('UDS_INBOX') && parseAddress(input.to).scheme === 'bridge') {
-        // Structured-message rejection first — it's the permanent constraint.
-        // Showing "not connected" first would make the user reconnect only to
-        // hit this error on retry.
+        
+        
+        
         if (typeof input.message !== 'string') {
           return {
             result: false,
@@ -640,10 +640,10 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
             errorCode: 9,
           }
         }
-        // postInterClaudeMessage derives from= via getReplBridgeHandle() —
-        // check handle directly for the init-timing window. Also check
-        // isReplBridgeActive() to reject outbound-only (CCR mirror) mode
-        // where the bridge is write-only and peer messaging is unsupported.
+        
+        
+        
+        
         if (!getReplBridgeHandle() || !isReplBridgeActive()) {
           return {
             result: false,
@@ -659,7 +659,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
         parseAddress(input.to).scheme === 'uds' &&
         typeof input.message === 'string'
       ) {
-        // UDS cross-session send: summary isn't rendered (UI.tsx returns null
+        
         
         
         return { result: true }
@@ -742,7 +742,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
       if (feature('UDS_INBOX') && typeof input.message === 'string') {
         const addr = parseAddress(input.to)
         if (addr.scheme === 'bridge') {
-          // Re-check handle — checkPermissions blocks on user approval (can be
+          
           
           
           
@@ -754,7 +754,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
               },
             }
           }
-          /* eslint-disable @typescript-eslint/no-require-imports */
+          
           const { postInterClaudeMessage } =
             require('../../bridge/peerSessions.js') as typeof import('../../bridge/peerSessions.js')
           
@@ -773,7 +773,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
           }
         }
         if (addr.scheme === 'uds') {
-          /* eslint-disable @typescript-eslint/no-require-imports */
+          
           const { sendToUdsSocket } =
             require('../../utils/udsClient.js') as typeof import('../../utils/udsClient.js')
           
@@ -797,7 +797,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
         }
       }
 
-      // Route to in-process subagent by name or raw agentId before falling
+      
       
       if (typeof input.message === 'string' && input.to !== '*') {
         const appState = context.getAppState()
@@ -819,7 +819,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
                 },
               }
             }
-            // task exists but stopped — auto-resume
+            
             try {
               const result = await resumeAgentBackground({
                 agentId,
@@ -843,7 +843,7 @@ export const SendMessageTool: Tool<InputSchema, SendMessageToolOutput> =
               }
             }
           } else {
-            // task evicted from state — try resume from disk transcript.
+            
             
             
             

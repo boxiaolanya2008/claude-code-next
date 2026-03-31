@@ -66,7 +66,7 @@ function webFetchToolInputToPermissionRuleContent(input: {
 export const WebFetchTool = buildTool({
   name: WEB_FETCH_TOOL_NAME,
   searchHint: 'fetch and extract content from a URL',
-  // 100K chars - tool result persistence threshold
+  
   maxResultSizeChars: 100_000,
   shouldDefer: true,
   async description(input) {
@@ -117,10 +117,10 @@ export const WebFetchTool = buildTool({
         }
       }
     } catch {
-      // If URL parsing fails, continue with normal permission checks
+      
     }
 
-    // Check for a rule specific to the tool input (matching hostname)
+    
     const ruleContent = webFetchToolInputToPermissionRuleContent(input)
 
     const denyRule = getRuleByContentsForTool(
@@ -179,7 +179,7 @@ export const WebFetchTool = buildTool({
     }
   },
   async prompt(_options) {
-    // Always include the auth warning regardless of whether ToolSearch is
+    
     
     
     
@@ -277,7 +277,7 @@ To complete your request, I need to fetch content from the redirected URL. Pleas
       )
     }
 
-    // Binary content (PDFs, etc.) was additionally saved to disk with a
+    
     
     
     if (persistedPath) {

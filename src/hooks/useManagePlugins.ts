@@ -38,7 +38,7 @@ export function useManagePlugins({
   
   const initialPluginLoad = useCallback(async () => {
     try {
-      // Load all plugins - capture errors array
+      
       const { enabled, disabled, errors } = await loadAllPlugins()
 
       
@@ -55,7 +55,7 @@ export function useManagePlugins({
         })
       }
 
-      // Load commands, agents, and hooks with individual error handling
+      
       
       let commands: Command[] = []
       let agents: AgentDefinition[] = []
@@ -96,7 +96,7 @@ export function useManagePlugins({
         })
       }
 
-      // Load MCP server configs per plugin to get an accurate count.
+      
       
       
       
@@ -134,7 +134,7 @@ export function useManagePlugins({
 
       
       setAppState(prevState => {
-        // Keep existing LSP/non-plugin-loading errors (source 'lsp-manager' or 'plugin:*')
+        
         const existingLspErrors = prevState.plugins.errors.filter(
           e => e.source === 'lsp-manager' || e.source.startsWith('plugin:'),
         )
@@ -195,7 +195,7 @@ export function useManagePlugins({
         hook_count,
         mcp_count,
         lsp_count,
-        // Ant-only: which plugins are enabled, to correlate with RSS/FPS.
+        
         
         
         ant_enabled_names:
@@ -209,13 +209,13 @@ export function useManagePlugins({
             : undefined,
       }
     } catch (error) {
-      // Only plugin loading errors should reach here - log for monitoring
+      
       const errorObj = toError(error)
       logError(errorObj)
       logForDebugging(`Error loading plugins: ${error}`)
       
       setAppState(prevState => {
-        // Keep existing LSP/non-plugin-loading errors
+        
         const existingLspErrors = prevState.plugins.errors.filter(
           e => e.source === 'lsp-manager' || e.source.startsWith('plugin:'),
         )
@@ -260,7 +260,7 @@ export function useManagePlugins({
       const { ant_enabled_names, ...baseMetrics } = metrics
       const allMetrics = {
         ...baseMetrics,
-        has_custom_plugin_cache_dir: !!process.env.CLAUDE_CODE_PLUGIN_CACHE_DIR,
+        has_custom_plugin_cache_dir: !!process.env.CLAUDE_CODE_NEXT_PLUGIN_CACHE_DIR,
       }
       logEvent('tengu_plugins_loaded', {
         ...allMetrics,
@@ -273,7 +273,7 @@ export function useManagePlugins({
   }, [initialPluginLoad, enabled])
 
   
-  // external settings edit). Show a notification; user runs /reload-plugins
+  
   
   
   

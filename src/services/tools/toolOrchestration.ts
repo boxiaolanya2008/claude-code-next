@@ -7,7 +7,7 @@ import { type MessageUpdateLazy, runToolUse } from './toolExecution.js'
 
 function getMaxToolUseConcurrency(): number {
   return (
-    parseInt(process.env.CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY || '', 10) || 10
+    parseInt(process.env.CLAUDE_CODE_NEXT_MAX_TOOL_USE_CONCURRENCY || '', 10) || 10
   )
 }
 
@@ -32,7 +32,7 @@ export async function* runTools(
         string,
         ((context: ToolUseContext) => ToolUseContext)[]
       > = {}
-      // Run read-only batch concurrently
+      
       for await (const update of runToolsConcurrently(
         blocks,
         assistantMessages,
@@ -62,7 +62,7 @@ export async function* runTools(
       }
       yield { newContext: currentContext }
     } else {
-      // Run non-read-only batch serially
+      
       for await (const update of runToolsSerially(
         blocks,
         assistantMessages,
@@ -83,11 +83,6 @@ export async function* runTools(
 
 type Batch = { isConcurrencySafe: boolean; blocks: ToolUseBlock[] }
 
-/**
- * Partition tool calls into batches where each batch is either:
- * 1. A single non-read-only tool, or
- * 2. Multiple consecutive read-only tools
- */
 function partitionToolCalls(
   toolUseMessages: ToolUseBlock[],
   toolUseContext: ToolUseContext,
@@ -100,8 +95,8 @@ function partitionToolCalls(
           try {
             return Boolean(tool?.isConcurrencySafe(parsedInput.data))
           } catch {
-            // If isConcurrencySafe throws (e.g., due to shell-quote parse failure),
-            // treat as not concurrency-safe to be conservative
+            
+            
             return false
           }
         })()

@@ -33,24 +33,11 @@ export type GroveConfig = {
   notice_reminder_frequency: number | null
 }
 
-/**
- * Result type that distinguishes between API failure and success.
- * - success: true means API call succeeded (data may still contain null fields)
- * - success: false means API call failed after retry
- */
 export type ApiResult<T> = { success: true; data: T } | { success: false }
 
-/**
- * Get the current Grove settings for the user account.
- * Returns ApiResult to distinguish between API failure and success.
- * Uses existing OAuth 401 retry, then returns failure if that doesn't help.
- *
- * Memoized for the session to avoid redundant per-render requests.
- * Cache is invalidated in updateGroveSettings() so post-toggle reads are fresh.
- */
 export const getGroveSettings = memoize(
   async (): Promise<ApiResult<AccountSettings>> => {
-    // Grove is a notification feature; during an outage, skipping it is correct.
+    
     if (isEssentialTrafficOnly()) {
       return { success: false }
     }
@@ -110,9 +97,6 @@ export async function markGroveNoticeViewed(): Promise<void> {
   }
 }
 
-/**
- * Update Grove settings for the user account
- */
 export async function updateGroveSettings(
   groveEnabled: boolean,
 ): Promise<void> {
@@ -143,13 +127,6 @@ export async function updateGroveSettings(
   }
 }
 
-/**
- * Check if user is qualified for Grove (non-blocking, cache-first).
- *
- * This function never blocks on network - it returns cached data immediately
- * and fetches in the background if needed. On cold start (no cache), it returns
- * false and the Grove dialog won't show until the next session.
- */
 export async function isQualifiedForGrove(): Promise<boolean> {
   if (!isConsumerSubscriber()) {
     return false
@@ -174,7 +151,7 @@ export async function isQualifiedForGrove(): Promise<boolean> {
     return false
   }
 
-  // Cache exists but is stale - return cached value and refresh in background
+  
   if (now - cachedEntry.timestamp > GROVE_CACHE_EXPIRATION_MS) {
     logForDebugging(
       'Grove: Cache stale, returning cached data and refreshing in background',
@@ -183,14 +160,11 @@ export async function isQualifiedForGrove(): Promise<boolean> {
     return cachedEntry.grove_enabled
   }
 
-  // Cache is fresh - return it immediately
+  
   logForDebugging('Grove: Using fresh cached config')
   return cachedEntry.grove_enabled
 }
 
-/**
- * Fetch Grove config from API and store in cache
- */
 async function fetchAndStoreGroveConfig(accountId: string): Promise<void> {
   try {
     const result = await getGroveNoticeConfig()
@@ -220,14 +194,9 @@ async function fetchAndStoreGroveConfig(accountId: string): Promise<void> {
   }
 }
 
-/**
- * Get Grove Statsig configuration from the API.
- * Returns ApiResult to distinguish between API failure and success.
- * Uses existing OAuth 401 retry, then returns failure if that doesn't help.
- */
 export const getGroveNoticeConfig = memoize(
   async (): Promise<ApiResult<GroveConfig>> => {
-    // Grove is a notification feature; during an outage, skipping it is correct.
+    
     if (isEssentialTrafficOnly()) {
       return { success: false }
     }
@@ -238,13 +207,13 @@ export const getGroveNoticeConfig = memoize(
           throw new Error(`Failed to get auth headers: ${authHeaders.error}`)
         }
         return axios.get<GroveConfig>(
-          `${getOauthConfig().BASE_API_URL}/api/claude_code_grove`,
+          `${getOauthConfig().BASE_API_URL}/api/claude_code_next_grove`,
           {
             headers: {
               ...authHeaders.headers,
               'User-Agent': getUserAgent(),
             },
-            timeout: 3000, // Short timeout - if slow, skip Grove dialog
+            timeout: 3000, 
           },
         )
       })
@@ -278,7 +247,7 @@ export function calculateShouldShowGrove(
   configResult: ApiResult<GroveConfig>,
   showIfAlreadyViewed: boolean,
 ): boolean {
-  // Hide dialog on API failure (after retry)
+  
   if (!settingsResult.success || !configResult.success) {
     return false
   }
@@ -296,7 +265,7 @@ export function calculateShouldShowGrove(
   if (!config.notice_is_grace_period) {
     return true
   }
-  // Check if we need to remind the user to accept the terms and choose
+  
   
   const reminderFrequency = config.notice_reminder_frequency
   if (reminderFrequency !== null && settings.grove_notice_viewed_at) {
@@ -306,7 +275,7 @@ export function calculateShouldShowGrove(
     )
     return daysSinceViewed >= reminderFrequency
   } else {
-    // Show if never viewed before
+    
     const viewedAt = settings.grove_notice_viewed_at
     return viewedAt === null || viewedAt === undefined
   }
@@ -326,20 +295,20 @@ export async function checkGroveForNonInteractive(): Promise<void> {
   )
 
   if (shouldShowGrove) {
-    // shouldShowGrove is only true if both API calls succeeded
+    
     const config = configResult.success ? configResult.data : null
     logEvent('tengu_grove_print_viewed', {
       dismissable:
         config?.notice_is_grace_period as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
     if (config === null || config.notice_is_grace_period) {
-      // Grace period is still active - show informational message and continue
+      
       writeToStderr(
         '\nAn update to our Consumer Terms and Privacy Policy will take effect on October 8, 2025. Run `claude` to review the updated terms.\n\n',
       )
       await markGroveNoticeViewed()
     } else {
-      // Grace period has ended - show error message and exit
+      
       writeToStderr(
         '\n[ACTION REQUIRED] An update to our Consumer Terms and Privacy Policy has taken effect on October 8, 2025. You must run `claude` to review the updated terms.\n\n',
       )

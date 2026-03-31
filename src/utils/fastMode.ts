@@ -36,7 +36,7 @@ import {
 import { createSignal } from './signal.js'
 
 export function isFastModeEnabled(): boolean {
-  return !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_FAST_MODE)
+  return !isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_FAST_MODE)
 }
 
 export function isFastModeAvailable(): boolean {
@@ -60,7 +60,7 @@ function getDisabledReasonMessage(
     case 'preference':
       return 'Fast mode has been disabled by your organization'
     case 'extra_usage_disabled':
-      // Only OAuth users can have extra_usage_disabled; console users don't have this concept
+      
       return 'Fast mode requires extra usage billing · /extra-usage to enable'
     case 'network_error':
       return 'Fast mode unavailable due to network connectivity issues'
@@ -78,23 +78,23 @@ export function getFastModeUnavailableReason(): string | null {
     'tengu_penguins_off',
     null,
   )
-  // Statsig reason has priority over other reasons.
+  
   if (statigReason !== null) {
     logForDebugging(`Fast mode unavailable: ${statigReason}`)
     return statigReason
   }
 
-  // Previously, fast mode required the native binary (bun build). This is no
-  // longer necessary, but we keep this option behind a flag just in case.
+  
+  
   if (
     !isInBundledMode() &&
     getFeatureValue_CACHED_MAY_BE_STALE('tengu_marble_sandcastle', false)
   ) {
-    return 'Fast mode requires the native binary · Install from: https://claude.com/product/claude-code'
+    return 'Fast mode requires the native binary · Install from: https://claude.com/product/claude-code-next'
   }
 
-  // Not available in the SDK unless explicitly opted in via --settings.
-  // Assistant daemon mode is exempt — it's first-party orchestration, and
+  
+  
   
   if (
     getIsNonInteractiveSession() &&
@@ -109,7 +109,7 @@ export function getFastModeUnavailableReason(): string | null {
     }
   }
 
-  // Only available for 1P (not Bedrock/Vertex/Foundry)
+  
   if (getAPIProvider() !== 'firstParty') {
     const reason = 'Fast mode is not available on Bedrock, Vertex, or Foundry'
     logForDebugging(`Fast mode unavailable: ${reason}`)
@@ -121,11 +121,11 @@ export function getFastModeUnavailableReason(): string | null {
       orgStatus.reason === 'network_error' ||
       orgStatus.reason === 'unknown'
     ) {
-      // The org check can fail behind corporate proxies that block the
       
       
       
-      if (isEnvTruthy(process.env.CLAUDE_CODE_SKIP_FAST_MODE_NETWORK_ERRORS)) {
+      
+      if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_SKIP_FAST_MODE_NETWORK_ERRORS)) {
         return null
       }
     }
@@ -139,7 +139,6 @@ export function getFastModeUnavailableReason(): string | null {
   return null
 }
 
-// @[MODEL LAUNCH]: Update supported Fast Mode models.
 export const FAST_MODE_MODEL_DISPLAY = 'Opus 4.6'
 
 export function getFastModeModel(): string {
@@ -174,8 +173,6 @@ export function isFastModeSupportedByModel(
   const parsedModel = parseUserSpecifiedModel(model)
   return parsedModel.toLowerCase().includes('opus-4-6')
 }
-
-// --- Fast mode runtime state ---
 
 export type FastModeRuntimeState =
   | { status: 'active' }
@@ -232,11 +229,6 @@ export function clearFastModeCooldown(): void {
   runtimeState = { status: 'active' }
 }
 
-/**
- * Called when the API rejects a fast mode request (e.g., 400 "Fast mode is
- * not enabled for your organization"). Permanently disables fast mode using
- * the same flow as when the prefetch discovers the org has it disabled.
- */
 export function handleFastModeRejectedByAPI(): void {
   if (orgStatus.status === 'disabled') {
     return
@@ -249,8 +241,6 @@ export function handleFastModeRejectedByAPI(): void {
   }))
   orgFastModeChange.emit(false)
 }
-
-// --- Overage rejection listeners ---
 
 const overageRejection = createSignal<[message: string]>()
 export const onFastModeOverageRejection = overageRejection.subscribe
@@ -282,11 +272,6 @@ function isOutOfCreditsReason(reason: string | null): boolean {
   return reason === 'org_level_disabled_until' || reason === 'out_of_credits'
 }
 
-/**
- * Called when a 429 indicates fast mode was rejected because extra usage
- * is not available. Permanently disables fast mode (unless the user has
- * ran out of credits) and notifies with a reason-specific message.
- */
 export function handleFastModeOverageRejection(reason: string | null): void {
   const message = getOverageDisabledMessage(reason)
   logForDebugging(
@@ -329,8 +314,6 @@ export function getFastModeState(
   return 'off'
 }
 
-// Disabled reason returned by the API. The API is the canonical source for why
-
 export type FastModeDisabledReason =
   | 'free'
   | 'preference'
@@ -345,7 +328,6 @@ type FastModeOrgStatus =
 
 let orgStatus: FastModeOrgStatus = { status: 'pending' }
 
-// Listeners notified when org-level fast mode status changes
 const orgFastModeChange = createSignal<[orgEnabled: boolean]>()
 export const onOrgFastModeChanged = orgFastModeChange.subscribe
 
@@ -357,7 +339,7 @@ type FastModeResponse = {
 async function fetchFastModeStatus(
   auth: { accessToken: string } | { apiKey: string },
 ): Promise<FastModeResponse> {
-  const endpoint = `${getOauthConfig().BASE_API_URL}/api/claude_code_penguin_mode`
+  const endpoint = `${getOauthConfig().BASE_API_URL}/api/claude_code_next_penguin_mode`
   const headers: Record<string, string> =
     'accessToken' in auth
       ? {
@@ -390,7 +372,7 @@ export function resolveFastModeStatusFromCache(): void {
 }
 
 export async function prefetchFastModeStatus(): Promise<void> {
-  // Skip network requests if nonessential traffic is disabled
+  
   if (isEssentialTrafficOnly()) {
     return
   }
@@ -406,7 +388,7 @@ export async function prefetchFastModeStatus(): Promise<void> {
     return inflightPrefetch
   }
 
-  // Service key OAuth sessions lack user:profile scope → endpoint 403s.
+  
   
   
   const apiKey = getAnthropicApiKey()
@@ -479,7 +461,7 @@ export async function prefetchFastModeStatus(): Promise<void> {
             reason: status.disabled_reason ?? 'preference',
           }
       if (previousEnabled !== status.enabled) {
-        // When org disables fast mode, permanently turn off the user's fast mode setting
+        
         if (!status.enabled) {
           updateSettingsForSource('userSettings', { fastMode: undefined })
         }
@@ -493,9 +475,9 @@ export async function prefetchFastModeStatus(): Promise<void> {
         `Org fast mode: ${status.enabled ? 'enabled' : `disabled (${status.disabled_reason ?? 'preference'})`}`,
       )
     } catch (err) {
-      // On failure: ants default to enabled (don't block internal users).
       
-      // if no positive cache, disable with network_error reason.
+      
+      
       const isAnt = process.env.USER_TYPE === 'ant'
       const cachedEnabled = getGlobalConfig().penguinModeOrgEnabled === true
       orgStatus =

@@ -29,9 +29,6 @@ function convertAssistantMessage(msg: SDKAssistantMessage): AssistantMessage {
   }
 }
 
-/**
- * Convert an SDKPartialAssistantMessage (streaming) to a StreamEvent
- */
 function convertStreamEvent(msg: SDKPartialAssistantMessage): StreamEvent {
   return {
     type: 'stream_event',
@@ -39,9 +36,6 @@ function convertStreamEvent(msg: SDKPartialAssistantMessage): StreamEvent {
   }
 }
 
-/**
- * Convert an SDKResultMessage to a SystemMessage
- */
 function convertResultMessage(msg: SDKResultMessage): SystemMessage {
   const isError = msg.subtype !== 'success'
   const content = isError
@@ -58,9 +52,6 @@ function convertResultMessage(msg: SDKResultMessage): SystemMessage {
   }
 }
 
-/**
- * Convert an SDKSystemMessage (init) to a SystemMessage
- */
 function convertInitMessage(msg: SDKSystemMessage): SystemMessage {
   return {
     type: 'system',
@@ -72,9 +63,6 @@ function convertInitMessage(msg: SDKSystemMessage): SystemMessage {
   }
 }
 
-/**
- * Convert an SDKStatusMessage to a SystemMessage
- */
 function convertStatusMessage(msg: SDKStatusMessage): SystemMessage | null {
   if (!msg.status) {
     return null
@@ -93,11 +81,6 @@ function convertStatusMessage(msg: SDKStatusMessage): SystemMessage | null {
   }
 }
 
-/**
- * Convert an SDKToolProgressMessage to a SystemMessage.
- * We use a system message instead of ProgressMessage since the Progress type
- * is a complex union that requires tool-specific data we don't have from CCR.
- */
 function convertToolProgressMessage(
   msg: SDKToolProgressMessage,
 ): SystemMessage {
@@ -112,9 +95,6 @@ function convertToolProgressMessage(
   }
 }
 
-/**
- * Convert an SDKCompactBoundaryMessage to a SystemMessage
- */
 function convertCompactBoundaryMessage(
   msg: SDKCompactBoundaryMessage,
 ): SystemMessage {
@@ -129,28 +109,20 @@ function convertCompactBoundaryMessage(
   }
 }
 
-/**
- * Result of converting an SDKMessage
- */
 export type ConvertedMessage =
   | { type: 'message'; message: Message }
   | { type: 'stream_event'; event: StreamEvent }
   | { type: 'ignored' }
 
 type ConvertOptions = {
-  /** Convert user messages containing tool_result content blocks into UserMessages.
-   * Used by direct connect mode where tool results come from the remote server
-   * and need to be rendered locally. CCR mode ignores user messages since they
-   * are handled differently. */
+  
+
   convertToolResults?: boolean
   
 
   convertUserTextMessages?: boolean
 }
 
-/**
- * Convert an SDKMessage to REPL message format
- */
 export function convertSDKMessage(
   msg: SDKMessage,
   opts?: ConvertOptions,
@@ -179,7 +151,7 @@ export function convertSDKMessage(
           }),
         }
       }
-      // When converting historical events, user-typed messages need to be
+      
       
       
       if (opts?.convertUserTextMessages && !isToolResult) {
@@ -195,7 +167,7 @@ export function convertSDKMessage(
           }
         }
       }
-      // User-typed messages (string content) are already added locally by REPL.
+      
       
       return { type: 'ignored' }
     }
@@ -204,7 +176,7 @@ export function convertSDKMessage(
       return { type: 'stream_event', event: convertStreamEvent(msg) }
 
     case 'result':
-      // Only show result messages for errors. Success results are noise
+      
       
       if (msg.subtype !== 'success') {
         return { type: 'message', message: convertResultMessage(msg) }
@@ -227,7 +199,7 @@ export function convertSDKMessage(
           message: convertCompactBoundaryMessage(msg),
         }
       }
-      // hook_response and other subtypes
+      
       logForDebugging(
         `[sdkMessageAdapter] Ignoring system message subtype: ${msg.subtype}`,
       )
@@ -237,23 +209,23 @@ export function convertSDKMessage(
       return { type: 'message', message: convertToolProgressMessage(msg) }
 
     case 'auth_status':
-      // Auth status is handled separately, not converted to a display message
+      
       logForDebugging('[sdkMessageAdapter] Ignoring auth_status message')
       return { type: 'ignored' }
 
     case 'tool_use_summary':
-      // Tool use summaries are SDK-only events, not displayed in REPL
+      
       logForDebugging('[sdkMessageAdapter] Ignoring tool_use_summary message')
       return { type: 'ignored' }
 
     case 'rate_limit_event':
-      // Rate limit events are SDK-only events, not displayed in REPL
+      
       logForDebugging('[sdkMessageAdapter] Ignoring rate_limit_event message')
       return { type: 'ignored' }
 
     default: {
-      // Gracefully ignore unknown message types. The backend may send new
-      // types before the client is updated; logging helps with debugging
+      
+      
       
       logForDebugging(
         `[sdkMessageAdapter] Unknown message type: ${(msg as { type: string }).type}`,
@@ -263,23 +235,14 @@ export function convertSDKMessage(
   }
 }
 
-/**
- * Check if an SDKMessage indicates the session has ended
- */
 export function isSessionEndMessage(msg: SDKMessage): boolean {
   return msg.type === 'result'
 }
 
-/**
- * Check if an SDKResultMessage indicates success
- */
 export function isSuccessResult(msg: SDKResultMessage): boolean {
   return msg.subtype === 'success'
 }
 
-/**
- * Extract the result text from a successful SDKResultMessage
- */
 export function getResultText(msg: SDKResultMessage): string | null {
   if (msg.subtype === 'success') {
     return msg.result

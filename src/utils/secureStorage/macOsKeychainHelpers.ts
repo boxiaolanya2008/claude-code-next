@@ -19,25 +19,21 @@ export function getMacOsKeychainStorageServiceName(
   const dirHash = isDefaultDir
     ? ''
     : `-${createHash('sha256').update(configDir).digest('hex').substring(0, 8)}`
-  return `Claude Code${getOauthConfig().OAUTH_FILE_SUFFIX}${serviceSuffix}${dirHash}`
+  return `Claude Code Next${getOauthConfig().OAUTH_FILE_SUFFIX}${serviceSuffix}${dirHash}`
 }
 
 export function getUsername(): string {
   try {
     return process.env.USER || userInfo().username
   } catch {
-    return 'claude-code-user'
+    return 'claude-code-next-user'
   }
 }
-
-// --
-
-// OAuth tokens expire in hours, and the only cross-process writer is another
 
 export const KEYCHAIN_CACHE_TTL_MS = 30_000
 
 export const keychainCacheState: {
-  cache: { data: SecureStorageData | null; cachedAt: number } // cachedAt 0 = invalid
+  cache: { data: SecureStorageData | null; cachedAt: number } 
   
   
   
@@ -58,20 +54,15 @@ export function clearKeychainCache(): void {
   keychainCacheState.readInFlight = null
 }
 
-/**
- * Prime the keychain cache from a prefetch result (keychainPrefetch.ts).
- * Only writes if the cache hasn't been touched yet — if sync read() or
- * update() already ran, their result is authoritative and we discard this.
- */
 export function primeKeychainCacheFromPrefetch(stdout: string | null): void {
   if (keychainCacheState.cache.cachedAt !== 0) return
   let data: SecureStorageData | null = null
   if (stdout) {
     try {
-      // eslint-disable-next-line custom-rules/no-direct-json-operations -- jsonParse() pulls slowOperations (lodash-es/cloneDeep) into the early-startup import chain; see file header
+      
       data = JSON.parse(stdout)
     } catch {
-      // malformed prefetch result — let sync read() re-fetch
+      
       return
     }
   }

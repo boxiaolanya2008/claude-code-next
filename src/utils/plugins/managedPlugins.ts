@@ -7,7 +7,7 @@ export function getManagedPluginNames(): Set<string> | null {
   }
   const names = new Set<string>()
   for (const [pluginId, value] of Object.entries(enabledPlugins)) {
-    // Only plugin@marketplace boolean entries (true OR false) are
+    
     
     if (typeof value !== 'boolean' || !pluginId.includes('@')) {
       continue

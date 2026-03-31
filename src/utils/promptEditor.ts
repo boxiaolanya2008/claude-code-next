@@ -13,8 +13,8 @@ import { writeFileSync_DEPRECATED } from './slowOperations.js'
 import { generateTempFilePath } from './tempfile.js'
 
 const EDITOR_OVERRIDES: Record<string, string> = {
-  code: 'code -w', // VS Code: wait for file to be closed
-  subl: 'subl --wait', // Sublime Text: wait for file to be closed
+  code: 'code -w', 
+  subl: 'subl --wait', 
 }
 
 function isGuiEditor(editor: string): boolean {
@@ -26,7 +26,6 @@ export type EditorResult = {
   error?: string
 }
 
-// sync IO: called from sync context (React components, sync command handlers)
 export function editFileInEditor(filePath: string): EditorResult {
   const fs = getFsImplementation()
   const inkInstance = instances.get(process.stdout)
@@ -48,7 +47,7 @@ export function editFileInEditor(filePath: string): EditorResult {
   const useAlternateScreen = !isGuiEditor(editor)
 
   if (useAlternateScreen) {
-    // Terminal editors (vi, nano, etc.) take over the terminal. Delegate to
+    
     
     
     
@@ -56,14 +55,14 @@ export function editFileInEditor(filePath: string): EditorResult {
     
     inkInstance.enterAlternateScreen()
   } else {
-    // GUI editors (code, subl, etc.) open in a separate window — just pause
+    
     
     inkInstance.pause()
     inkInstance.suspendStdin()
   }
 
   try {
-    // Use override command if available, otherwise use the editor as-is
+    
     const editorCommand = EDITOR_OVERRIDES[editor] ?? editor
     execSync_DEPRECATED(`${editorCommand} "${filePath}"`, {
       stdio: 'inherit',
@@ -99,10 +98,6 @@ export function editFileInEditor(filePath: string): EditorResult {
   }
 }
 
-/**
- * Re-collapse expanded pasted text by finding content that matches
- * pastedContents and replacing it with references.
- */
 function recollapsePastedContent(
   editedPrompt: string,
   originalPrompt: string,
@@ -119,7 +114,7 @@ function recollapsePastedContent(
       
       const contentIndex = collapsed.indexOf(contentStr)
       if (contentIndex !== -1) {
-        // Replace with reference
+        
         const numLines = getPastedTextRefNumLines(contentStr)
         const ref = formatPastedTextRef(pasteId, numLines)
         collapsed =
@@ -133,7 +128,6 @@ function recollapsePastedContent(
   return collapsed
 }
 
-// sync IO: called from sync context (React components, sync command handlers)
 export function editPromptInEditor(
   currentPrompt: string,
   pastedContents?: Record<number, PastedContent>,
@@ -142,7 +136,7 @@ export function editPromptInEditor(
   const tempFile = generateTempFilePath()
 
   try {
-    // Expand any pasted text references before editing
+    
     const expandedPrompt = pastedContents
       ? expandPastedTextRefs(currentPrompt, pastedContents)
       : currentPrompt
@@ -160,13 +154,13 @@ export function editPromptInEditor(
       return result
     }
 
-    // Trim a single trailing newline if present (common editor behavior)
+    
     let finalContent = result.content
     if (finalContent.endsWith('\n') && !finalContent.endsWith('\n\n')) {
       finalContent = finalContent.slice(0, -1)
     }
 
-    // Re-collapse pasted content if it wasn't edited
+    
     if (pastedContents) {
       finalContent = recollapsePastedContent(
         finalContent,
@@ -177,11 +171,11 @@ export function editPromptInEditor(
 
     return { content: finalContent }
   } finally {
-    // Clean up temp file
+    
     try {
       fs.unlinkSync(tempFile)
     } catch {
-      // Ignore cleanup errors
+      
     }
   }
 }

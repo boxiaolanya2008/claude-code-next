@@ -6,8 +6,6 @@ import type { CreateOutput } from './CronCreateTool.js';
 import type { DeleteOutput } from './CronDeleteTool.js';
 import type { ListOutput } from './CronListTool.js';
 
-// --- CronCreate -------------------------------------------------------------
-
 export function renderCreateToolUseMessage(input: Partial<{
   cron: string;
   prompt: string;
@@ -23,8 +21,6 @@ export function renderCreateResultMessage(output: CreateOutput): React.ReactNode
     </MessageResponse>;
 }
 
-// --- CronDelete -------------------------------------------------------------
-
 export function renderDeleteToolUseMessage(input: Partial<{
   id: string;
 }>): React.ReactNode {
@@ -37,8 +33,6 @@ export function renderDeleteResultMessage(output: DeleteOutput): React.ReactNode
       </Text>
     </MessageResponse>;
 }
-
-// --- CronList ---------------------------------------------------------------
 
 export function renderListToolUseMessage(): React.ReactNode {
   return '';
@@ -56,4 +50,3 @@ export function renderListResultMessage(output: ListOutput): React.ReactNode {
     </MessageResponse>;
 }
 
-// --- Shared -----------------------------------------------------------------

@@ -33,7 +33,6 @@ export function redactSecrets(s: string): string {
   })
 }
 
-/** Truncate a string for debug logging, collapsing newlines. */
 export function debugTruncate(s: string): string {
   const flat = s.replace(/\n/g, '\\n')
   if (flat.length <= DEBUG_MSG_LIMIT) {
@@ -42,7 +41,6 @@ export function debugTruncate(s: string): string {
   return flat.slice(0, DEBUG_MSG_LIMIT) + `... (${flat.length} chars)`
 }
 
-/** Truncate a JSON-serializable value for debug logging. */
 export function debugBody(data: unknown): string {
   const raw = typeof data === 'string' ? data : jsonStringify(data)
   const s = redactSecrets(raw)
@@ -52,11 +50,6 @@ export function debugBody(data: unknown): string {
   return s.slice(0, DEBUG_MSG_LIMIT) + `... (${s.length} chars)`
 }
 
-/**
- * Extract a descriptive error message from an axios error (or any error).
- * For HTTP errors, appends the server's response body message if available,
- * since axios's default message only includes the status code.
- */
 export function describeAxiosError(err: unknown): string {
   const msg = errorMessage(err)
   if (err && typeof err === 'object' && 'response' in err) {
@@ -81,10 +74,6 @@ export function describeAxiosError(err: unknown): string {
   return msg
 }
 
-/**
- * Extract the HTTP status code from an axios error, if present.
- * Returns undefined for non-HTTP errors (e.g. network failures).
- */
 export function extractHttpStatus(err: unknown): number | undefined {
   if (
     err &&
@@ -99,10 +88,6 @@ export function extractHttpStatus(err: unknown): number | undefined {
   return undefined
 }
 
-/**
- * Pull a human-readable message out of an API error response body.
- * Checks `data.message` first, then `data.error.message`.
- */
 export function extractErrorDetail(data: unknown): string | undefined {
   if (!data || typeof data !== 'object') return undefined
   if ('message' in data && typeof data.message === 'string') {
@@ -120,11 +105,6 @@ export function extractErrorDetail(data: unknown): string | undefined {
   return undefined
 }
 
-/**
- * Log a bridge init skip — debug message + `tengu_bridge_repl_skipped`
- * analytics event. Centralizes the event name and the AnalyticsMetadata
- * cast so call sites don't each repeat the 5-line boilerplate.
- */
 export function logBridgeSkip(
   reason: string,
   debugMsg?: string,

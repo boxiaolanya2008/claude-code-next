@@ -29,8 +29,6 @@ import {
   type TimeBasedMCConfig,
 } from './timeBasedMCConfig.js'
 
-// sessionStorage → utils/messages → services/api/errors, completing a
-
 export const TIME_BASED_MC_CLEARED_MESSAGE = '[Old tool result content cleared]'
 
 const IMAGE_MAX_TOKEN_SIZE = 2000
@@ -73,11 +71,6 @@ function ensureCachedMCState(): import('./cachedMicrocompact.js').CachedMCState 
   return cachedMCState
 }
 
-/**
- * Get new pending cache edits to be included in the next API request.
- * Returns null if there are no new pending edits.
- * Clears the pending state (caller must pin them after insertion).
- */
 export function consumePendingCacheEdits():
   | import('./cachedMicrocompact.js').CacheEditsBlock
   | null {
@@ -86,10 +79,6 @@ export function consumePendingCacheEdits():
   return edits
 }
 
-/**
- * Get all previously-pinned cache edits that must be re-sent at their
- * original positions for cache hits.
- */
 export function getPinnedCacheEdits(): import('./cachedMicrocompact.js').PinnedCacheEdits[] {
   if (!cachedMCState) {
     return []
@@ -97,10 +86,6 @@ export function getPinnedCacheEdits(): import('./cachedMicrocompact.js').PinnedC
   return cachedMCState.pinnedEdits
 }
 
-/**
- * Pin a new cache_edits block to a specific user message position.
- * Called after inserting new edits so they are re-sent in subsequent calls.
- */
 export function pinCacheEdits(
   userMessageIndex: number,
   block: import('./cachedMicrocompact.js').CacheEditsBlock,
@@ -110,10 +95,6 @@ export function pinCacheEdits(
   }
 }
 
-/**
- * Marks all registered tools as sent to the API.
- * Called after a successful API response.
- */
 export function markToolsSentToAPIState(): void {
   if (cachedMCState && cachedMCModule) {
     cachedMCModule.markToolsSentToAPI(cachedMCState)
@@ -127,7 +108,6 @@ export function resetMicrocompactState(): void {
   pendingCacheEdits = null
 }
 
-// Helper to calculate tool result tokens
 function calculateToolResultTokens(block: ToolResultBlockParam): number {
   if (!block.content) {
     return 0
@@ -137,23 +117,18 @@ function calculateToolResultTokens(block: ToolResultBlockParam): number {
     return roughTokenCountEstimation(block.content)
   }
 
-  // Array of TextBlockParam | ImageBlockParam | DocumentBlockParam
+  
   return block.content.reduce((sum, item) => {
     if (item.type === 'text') {
       return sum + roughTokenCountEstimation(item.text)
     } else if (item.type === 'image' || item.type === 'document') {
-      // Images/documents are approximately 2000 tokens regardless of format
+      
       return sum + IMAGE_MAX_TOKEN_SIZE
     }
     return sum
   }, 0)
 }
 
-/**
- * Estimate token count for messages by extracting text content
- * Used for rough token estimation when we don't have accurate API counts
- * Pads estimate by 4/3 to be conservative since we're approximating
- */
 export function estimateMessageTokens(messages: Message[]): number {
   let totalTokens = 0
 
@@ -174,26 +149,26 @@ export function estimateMessageTokens(messages: Message[]): number {
       } else if (block.type === 'image' || block.type === 'document') {
         totalTokens += IMAGE_MAX_TOKEN_SIZE
       } else if (block.type === 'thinking') {
-        // Match roughTokenCountEstimationForBlock: count only the thinking
-        // text, not the JSON wrapper or signature (signature is metadata,
-        // not model-tokenized content).
+        
+        
+        
         totalTokens += roughTokenCountEstimation(block.thinking)
       } else if (block.type === 'redacted_thinking') {
         totalTokens += roughTokenCountEstimation(block.data)
       } else if (block.type === 'tool_use') {
-        // Match roughTokenCountEstimationForBlock: count name + input,
-        // not the JSON wrapper or id field.
+        
+        
         totalTokens += roughTokenCountEstimation(
           block.name + jsonStringify(block.input ?? {}),
         )
       } else {
-        // server_tool_use, web_search_tool_result, etc.
+        
         totalTokens += roughTokenCountEstimation(jsonStringify(block))
       }
     }
   }
 
-  // Pad estimate by 4/3 to be conservative since we're approximating
+  
   return Math.ceil(totalTokens * (4 / 3))
 }
 
@@ -201,7 +176,7 @@ export type PendingCacheEdits = {
   trigger: 'auto'
   deletedToolIds: string[]
   
-  // used to compute the per-operation delta (the API value is sticky/cumulative)
+  
   baselineCacheDeletedTokens: number
 }
 
@@ -212,10 +187,6 @@ export type MicrocompactResult = {
   }
 }
 
-/**
- * Walk messages and collect tool_use IDs whose tool name is in
- * COMPACTABLE_TOOLS, in encounter order. Shared by both microcompact paths.
- */
 function collectCompactableToolIds(messages: Message[]): string[] {
   const ids: string[] = []
   for (const message of messages) {
@@ -233,8 +204,6 @@ function collectCompactableToolIds(messages: Message[]): string[] {
   return ids
 }
 
-// Prefix-match because promptCategory.ts sets the querySource to
-
 function isMainThreadSource(querySource: QuerySource | undefined): boolean {
   return !querySource || querySource.startsWith('repl_main_thread')
 }
@@ -244,7 +213,7 @@ export async function microcompactMessages(
   toolUseContext?: ToolUseContext,
   querySource?: QuerySource,
 ): Promise<MicrocompactResult> {
-  // Clear suppression flag at start of new microcompact attempt
+  
   clearCompactWarningSuppression()
 
   
@@ -258,7 +227,7 @@ export async function microcompactMessages(
     return timeBasedResult
   }
 
-  // Only run cached MC for the main thread to prevent forked agents
+  
   
   
   
@@ -274,23 +243,13 @@ export async function microcompactMessages(
     }
   }
 
-  // Legacy microcompact path removed — tengu_cache_plum_violet is always true.
   
-  // non-ant users, unsupported models, sub-agents), no compaction happens here;
-  // autocompact handles context pressure instead.
+  
+  
+  
   return { messages }
 }
 
-/**
- * Cached microcompact path - uses cache editing API to remove tool results
- * without invalidating the cached prefix.
- *
- * Key differences from regular microcompact:
- * - Does NOT modify local message content (cache_reference and cache_edits are added at API layer)
- * - Uses count-based trigger/keep thresholds from GrowthBook config
- * - Takes precedence over regular microcompact (no disk persistence)
- * - Tracks tool results and queues cache edits for the API layer
- */
 async function cachedMicrocompactPath(
   messages: Message[],
   querySource: QuerySource | undefined,
@@ -321,7 +280,7 @@ async function cachedMicrocompactPath(
   const toolsToDelete = mod.getToolResultsToDelete(state)
 
   if (toolsToDelete.length > 0) {
-    // Create and queue the cache_edits block for the API layer
+    
     const cacheEdits = mod.createCacheEditsBlock(state, toolsToDelete)
     if (cacheEdits) {
       pendingCacheEdits = cacheEdits
@@ -349,13 +308,13 @@ async function cachedMicrocompactPath(
 
     
     if (feature('PROMPT_CACHE_BREAK_DETECTION')) {
-      // Pass the actual querySource — isMainThreadSource now prefix-matches
+      
       
       
       notifyCacheDeletion(querySource ?? 'repl_main_thread')
     }
 
-    // Return messages unchanged - cache_reference and cache_edits are added at API layer
+    
     
     
     
@@ -383,21 +342,9 @@ async function cachedMicrocompactPath(
     }
   }
 
-  // No compaction needed, return messages unchanged
+  
   return { messages }
 }
-
-/**
- * Time-based microcompact: when the gap since the last main-loop assistant
- * message exceeds the configured threshold, content-clear all but the most
- * recent N compactable tool results.
- *
- * Returns null when the trigger doesn't fire (disabled, wrong source, gap
- * under threshold, nothing to clear) — caller falls through to other paths.
- *
- * Unlike cached MC, this mutates message content directly. The cache is cold,
- * so there's no cached prefix to preserve via cache_edits.
- */
 
 export function evaluateTimeBasedTrigger(
   messages: Message[],

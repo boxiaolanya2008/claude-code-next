@@ -38,11 +38,10 @@ function isTooSmallIssue(issue: ZodIssue): issue is ZodIssue & {
   return issue.code === 'too_small'
 }
 
-/** Field path in dot notation (e.g., "permissions.defaultMode", "env.DEBUG") */
 export type FieldPath = string
 
 export type ValidationError = {
-  /** Relative file path */
+  
   file?: string
   
   path: FieldPath
@@ -58,7 +57,7 @@ export type ValidationError = {
   docLink?: string
   
   mcpErrorMetadata?: {
-    /** Which configuration scope this error came from */
+    
     scope: ConfigScope
     
     serverName?: string
@@ -71,10 +70,6 @@ export type SettingsWithErrors = {
   settings: SettingsJson
   errors: ValidationError[]
 }
-
-/**
- * Format a Zod validation error into human-readable validation errors
- */
 
 function getReceivedType(value: unknown): string {
   if (value === null) return 'null'
@@ -166,10 +161,6 @@ export function formatZodError(
   })
 }
 
-/**
- * Validates that settings file content conforms to the SettingsSchema.
- * This is used during file edits to ensure the resulting file is valid.
- */
 export function validateSettingsFileContent(content: string):
   | {
       isValid: true
@@ -180,7 +171,7 @@ export function validateSettingsFileContent(content: string):
       fullSchema: string
     } {
   try {
-    // Parse the JSON first
+    
     const jsonData = jsonParse(content)
 
     
@@ -190,7 +181,7 @@ export function validateSettingsFileContent(content: string):
       return { isValid: true }
     }
 
-    // Format the validation error in a helpful way
+    
     const errors = formatZodError(result.error, 'settings')
     const errorMessage =
       'Settings validation failed:\n' +
@@ -210,11 +201,6 @@ export function validateSettingsFileContent(content: string):
   }
 }
 
-/**
- * Filters invalid permission rules from raw parsed JSON data before schema validation.
- * This prevents one bad rule from poisoning the entire settings file.
- * Returns warnings for each filtered rule.
- */
 export function filterInvalidPermissionRules(
   data: unknown,
   filePath: string,

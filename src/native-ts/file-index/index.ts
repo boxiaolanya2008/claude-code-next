@@ -5,7 +5,6 @@ export type SearchResult = {
   score: number
 }
 
-// nucleo-style scoring constants (approximating fzf-v2 / nucleo bonuses)
 const SCORE_MATCH = 16
 const BONUS_BOUNDARY = 8
 const BONUS_CAMEL = 6
@@ -34,7 +33,7 @@ export class FileIndex {
   
 
   loadFromFileList(fileList: string[]): void {
-    // Deduplicate and filter empty strings (matches Rust HashSet behavior)
+    
     const seen = new Set<string>()
     const paths: string[] = []
     for (const line of fileList) {
@@ -47,17 +46,8 @@ export class FileIndex {
     this.buildIndex(paths)
   }
 
-  /**
-   * Async variant: yields to the event loop every ~8–12k paths so large
-   * indexes (270k+ files) don't block the main thread for >10ms at a time.
-   * Identical result to loadFromFileList.
-   *
-   * Returns { queryable, done }:
-   *   - queryable: resolves as soon as the first chunk is indexed (search
-   *     returns partial results). For a 270k-path list this is ~5–10ms of
-   *     sync work after the paths array is available.
-   *   - done: resolves when the entire index is built.
-   */
+  
+
   loadFromFileListAsync(fileList: string[]): {
     queryable: Promise<void>
     done: Promise<void>
@@ -83,7 +73,7 @@ export class FileIndex {
         seen.add(line)
         paths.push(line)
       }
-      // Check every 256 iterations to amortize performance.now() overhead
+      
       if ((i & 0xff) === 0xff && performance.now() - chunkStart > CHUNK_MS) {
         await yieldToEventLoop()
         chunkStart = performance.now()
@@ -128,7 +118,7 @@ export class FileIndex {
     this.topLevelCache = computeTopLevelEntries(paths, TOP_LEVEL_CACHE_LIMIT)
   }
 
-  // Precompute: lowercase, a–z bitmap, length. Bitmap gives O(1) rejection
+  
   
   
   private indexPath(i: number): void {
@@ -144,10 +134,8 @@ export class FileIndex {
     this.charBits[i] = bits
   }
 
-  /**
-   * Search for files matching the query using fuzzy matching.
-   * Returns top N results sorted by match score.
-   */
+  
+
   search(query: string, limit: number): SearchResult[] {
     if (limit <= 0) return []
     if (query.length === 0) {
@@ -157,7 +145,7 @@ export class FileIndex {
       return []
     }
 
-    // Smart case: lowercase query → case-insensitive; any uppercase → case-sensitive
+    
     const caseSensitive = query !== query.toLowerCase()
     const needle = caseSensitive ? query : query.toLowerCase()
     const nLen = Math.min(needle.length, MAX_QUERY_LEN)
@@ -170,7 +158,7 @@ export class FileIndex {
       if (cc >= 97 && cc <= 122) needleBitmap |= 1 << (cc - 97)
     }
 
-    // Upper bound on score assuming every match gets the max boundary bonus.
+    
     
     
     const scoreCeiling =
@@ -184,12 +172,12 @@ export class FileIndex {
     const { paths, lowerPaths, charBits, pathLens, readyCount } = this
 
     outer: for (let i = 0; i < readyCount; i++) {
-      // O(1) bitmap reject: path must contain every letter in the needle
+      
       if ((charBits[i]! & needleBitmap) !== needleBitmap) continue
 
       const haystack = caseSensitive ? paths[i]! : lowerPaths[i]!
 
-      // Fused indexOf scan: find positions (SIMD-accelerated in JSC/V8) AND
+      
       
       
       
@@ -209,7 +197,7 @@ export class FileIndex {
         prev = pos
       }
 
-      // Gap-bound reject: if the best-case score (all boundary bonuses) minus
+      
       
       if (
         topK.length === limit &&
@@ -218,7 +206,7 @@ export class FileIndex {
         continue
       }
 
-      // Boundary/camelCase scoring: check the char before each match position.
+      
       const path = paths[i]!
       const hLen = pathLens[i]!
       let score = nLen * SCORE_MATCH + consecBonus - gapPenalty
@@ -248,7 +236,7 @@ export class FileIndex {
       }
     }
 
-    // topK is ascending; reverse to descending (best first)
+    
     topK.sort((a, b) => b.fuzzScore - a.fuzzScore)
 
     const matchCount = topK.length
@@ -268,10 +256,6 @@ export class FileIndex {
   }
 }
 
-/**
- * Boundary/camelCase bonus for a match at position `pos` in the original-case
- * path. `first` enables the start-of-string bonus (only for needle[0]).
- */
 function scoreBonusAt(path: string, pos: number, first: boolean): number {
   if (pos === 0) return first ? BONUS_FIRST_CHAR : 0
   const prevCh = path.charCodeAt(pos - 1)
@@ -281,13 +265,13 @@ function scoreBonusAt(path: string, pos: number, first: boolean): number {
 }
 
 function isBoundary(code: number): boolean {
-  // / \ - _ . space
+  
   return (
-    code === 47 || // /
-    code === 92 || // \
-    code === 45 || // -
-    code === 95 || // _
-    code === 46 || // .
+    code === 47 || 
+    code === 92 || 
+    code === 45 || 
+    code === 95 || 
+    code === 46 || 
     code === 32 
   )
 }
@@ -306,11 +290,6 @@ export function yieldToEventLoop(): Promise<void> {
 
 export { CHUNK_MS }
 
-/**
- * Extract unique top-level path segments, sorted by (length asc, then alpha asc).
- * Handles both Unix (/) and Windows (\) path separators.
- * Mirrors FileIndex::compute_top_level_entries in lib.rs.
- */
 function computeTopLevelEntries(
   paths: string[],
   limit: number,
@@ -318,7 +297,7 @@ function computeTopLevelEntries(
   const topLevel = new Set<string>()
 
   for (const p of paths) {
-    // Split on first / or \ separator
+    
     let end = p.length
     for (let i = 0; i < p.length; i++) {
       const c = p.charCodeAt(i)

@@ -32,12 +32,6 @@ type ClusteredChar = {
   hyperlink: string | undefined
 }
 
-/**
- * Collects write/blit/clear/clip operations from the render tree, then
- * applies them to a Screen buffer in `get()`. The Screen is what gets
- * diffed against the previous frame to produce terminal updates.
- */
-
 type Options = {
   width: number
   height: number
@@ -78,12 +72,6 @@ export type Clip = {
   y2: number | undefined
 }
 
-/**
- * Intersect two clips. `undefined` on an axis means unbounded; the other
- * clip's bound wins. If both are bounded, take the tighter constraint
- * (max of mins, min of maxes). If the resulting region is empty
- * (x1 >= x2 or y1 >= y2), writes clipped by it will be dropped.
- */
 function intersectClip(parent: Clip | undefined, child: Clip): Clip {
   if (!parent) return child
   return {
@@ -166,13 +154,8 @@ export default class Output {
     resetScreen(screen, width, height)
   }
 
-  /**
-   * Reuse this Output for a new frame. Zeroes the screen buffer, clears
-   * the operation list (backing storage is retained), and caps charCache
-   * growth. Preserving charCache across frames is the main win — most
-   * lines don't change between renders, so tokenize + grapheme clustering
-   * becomes a cache hit.
-   */
+  
+
   reset(width: number, height: number, screen: Screen): void {
     this.width = width
     this.height = height
@@ -182,36 +165,26 @@ export default class Output {
     if (this.charCache.size > 16384) this.charCache.clear()
   }
 
-  /**
-   * Copy cells from a source screen region (blit = block image transfer).
-   */
+  
+
   blit(src: Screen, x: number, y: number, width: number, height: number): void {
     this.operations.push({ type: 'blit', src, x, y, width, height })
   }
 
-  /**
-   * Shift full-width rows within [top, bottom] by n. n > 0 = up. Mirrors
-   * what DECSTBM + SU/SD does to the terminal. Paired with blit() to reuse
-   * prevScreen content during pure scroll, avoiding full child re-render.
-   */
+  
+
   shift(top: number, bottom: number, n: number): void {
     this.operations.push({ type: 'shift', top, bottom, n })
   }
 
-  /**
-   * Clear a region by writing empty cells. Used when a node shrinks to
-   * ensure stale content from the previous frame is removed.
-   */
+  
+
   clear(region: Rectangle, fromAbsolute?: boolean): void {
     this.operations.push({ type: 'clear', region, fromAbsolute })
   }
 
-  /**
-   * Mark a region as non-selectable (excluded from fullscreen text
-   * selection copy + highlight). Used by <NoSelect> to fence off
-   * gutters (line numbers, diff sigils). Applied AFTER blit/write so
-   * the mark wins regardless of what's blitted into the region.
-   */
+  
+
   noSelect(region: Rectangle): void {
     this.operations.push({ type: 'noSelect', region })
   }
@@ -248,19 +221,19 @@ export default class Output {
     const screenWidth = this.width
     const screenHeight = this.height
 
-    // Track blit vs write cell counts for debugging
+    
     let blitCells = 0
     let writeCells = 0
 
-    // Pass 1: expand damage to cover clear regions. The buffer is freshly
-    // zeroed by resetScreen, so this pass only marks damage so diff()
-    // checks these regions against the previous frame.
-    //
-    // Also collect clears from absolute-positioned nodes. An absolute
-    // node overlays normal-flow siblings; when it shrinks, its clear is
-    // pushed AFTER those siblings' clean-subtree blits (DOM order). The
     
-    // and since clear is damage-only, the ghost survives diff. Normal-
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     const absoluteClears: Rectangle[] = []
@@ -287,11 +260,11 @@ export default class Output {
     for (const operation of this.operations) {
       switch (operation.type) {
         case 'clear':
-          // handled in pass 1
+          
           continue
 
         case 'clip':
-          // Intersect with the parent clip (if any) so nested
+          
           
           
           
@@ -306,7 +279,7 @@ export default class Output {
           continue
 
         case 'blit': {
-          // Bulk-copy cells from source screen region using TypedArray.set().
+          
           
           
           const {
@@ -338,8 +311,8 @@ export default class Output {
           if (startX >= maxX || startY >= maxY) continue
           
           
-          // that region holds the absolute node's stale paint — blitting
-          // it back would ghost. See absoluteClears collection above.
+          
+          
           if (absoluteClears.length === 0) {
             blitRegion(screen, src, startX, startY, maxX, maxY)
             blitCells += (maxY - startY) * (maxX - startX)
@@ -388,8 +361,8 @@ export default class Output {
             const clipVertically =
               typeof clip?.y1 === 'number' && typeof clip?.y2 === 'number'
 
-            // If text is positioned outside of clipping area altogether,
-            // skip to the next operation to avoid unnecessary calculations
+            
+            
             if (clipHorizontally) {
               const width = widestLine(text)
 
@@ -412,12 +385,12 @@ export default class Output {
                 const width = stringWidth(line)
                 const to = x + width > clip.x2! ? clip.x2! - x : width
                 let sliced = sliceAnsi(line, from, to)
-                // Wide chars (CJK, emoji) occupy 2 cells. When `to` lands
-                // on the first cell of a wide char, sliceAnsi includes the
-                // entire glyph and the result overflows clip.x2 by one cell,
-                // writing a SpacerTail into the adjacent sibling. Re-slice
-                // one cell earlier; wide chars are exactly 2 cells, so a
-                // single retry always fits.
+                
+                
+                
+                
+                
+                
                 if (stringWidth(sliced) > to - from) {
                   sliced = sliceAnsi(line, from, to - 1)
                 }
@@ -434,8 +407,8 @@ export default class Output {
               const height = lines.length
               const to = y + height > clip.y2! ? clip.y2! - y : height
 
-              // If the first visible line is a soft-wrap continuation, we
-              // need the clipped previous line's content end so
+              
+              
               
               
               if (softWrap && from > 0 && softWrap[from] === true) {
@@ -485,7 +458,7 @@ export default class Output {
       }
     }
 
-    // noSelect ops go LAST so they win over blits (which copy noSelect
+    
     
     
     
@@ -497,7 +470,7 @@ export default class Output {
       }
     }
 
-    // Log blit/write ratio for debugging - high write count suggests blitting isn't working
+    
     const totalCells = blitCells + writeCells
     if (totalCells > 1000 && writeCells > blitCells) {
       logForDebugging(
@@ -510,24 +483,16 @@ export default class Output {
 }
 
 function stylesEqual(a: AnsiCode[], b: AnsiCode[]): boolean {
-  if (a === b) return true // Reference equality fast path
+  if (a === b) return true 
   const len = a.length
   if (len !== b.length) return false
-  if (len === 0) return true // Both empty
+  if (len === 0) return true 
   for (let i = 0; i < len; i++) {
     if (a[i]!.code !== b[i]!.code) return false
   }
   return true
 }
 
-/**
- * Convert a string with ANSI codes into styled characters with proper grapheme
- * clustering. Fixes ansi-tokenize splitting grapheme clusters (like family
- * emojis) into individual code points.
- *
- * Also precomputes styleId + hyperlink per style run (not per char) — an
- * 80-char line with 3 style runs does 3 intern calls instead of 80.
- */
 function styledCharsWithGraphemeClustering(
   chars: StyledChar[],
   stylePool: StylePool,
@@ -543,7 +508,7 @@ function styledCharsWithGraphemeClustering(
     const char = chars[i]!
     const styles = char.styles
 
-    // Different styles means we need to flush and start new buffer
+    
     if (bufferChars.length > 0 && !stylesEqual(styles, bufferStyles)) {
       flushBuffer(bufferChars.join(''), bufferStyles, stylePool, result)
       bufferChars.length = 0
@@ -553,7 +518,7 @@ function styledCharsWithGraphemeClustering(
     bufferStyles = styles
   }
 
-  // Final flush
+  
   if (bufferChars.length > 0) {
     flushBuffer(bufferChars.join(''), bufferStyles, stylePool, result)
   }
@@ -567,14 +532,14 @@ function flushBuffer(
   stylePool: StylePool,
   out: ClusteredChar[],
 ): void {
-  // Compute styleId + hyperlink ONCE for the whole style run.
-  // Every grapheme in this buffer shares the same styles.
-  //
-  // Extract and track hyperlinks separately, filter from styles.
-  // Always check for OSC 8 codes to filter, not just when a URL is
-  // extracted. The tokenizer treats OSC 8 close codes (empty URL) as
-  // active styles, so they must be filtered even when no hyperlink
-  // URL is present.
+  
+  
+  
+  
+  
+  
+  
+  
   const hyperlink = extractHyperlinkFromStyles(styles) ?? undefined
   const hasOsc8Styles =
     hyperlink !== undefined ||
@@ -597,17 +562,6 @@ function flushBuffer(
   }
 }
 
-/**
- * Write a single line's characters into the screen buffer.
- * Extracted from Output.get() so JSC can optimize this tight,
- * monomorphic loop independently — better register allocation,
- * setCellAt inlining, and type feedback than when buried inside
- * a 300-line dispatch function.
- *
- * Returns the end column (x + visual width, including tab expansion) so
- * the caller can record it in screen.softWrap without re-walking the
- * line via stringWidth(). Caller computes the debug cell-count as end-x.
- */
 function writeLineToScreen(
   screen: Screen,
   line: string,
@@ -638,7 +592,7 @@ function writeLineToScreen(
     
     
     if (codePoint !== undefined && codePoint <= 0x1f) {
-      // Tab (0x09): expand to spaces to reach next tab stop
+      
       if (codePoint === 0x09) {
         const tabWidth = 8
         const spacesToNextStop = tabWidth - (offsetX % tabWidth)
@@ -652,7 +606,7 @@ function writeLineToScreen(
           offsetX++
         }
       }
-      // ESC (0x1B): skip incomplete escape sequences that ansi-tokenize
+      
       
       
       
@@ -666,11 +620,11 @@ function writeLineToScreen(
           nextChar === '*' ||
           nextChar === '+'
         ) {
-          // Charset selection: ESC ( X, ESC ) X, etc.
+          
           
           charIdx += 2
         } else if (nextChar === '[') {
-          // CSI sequence: ESC [ ... final-byte
+          
           
           
           charIdx++ 
@@ -689,8 +643,8 @@ function writeLineToScreen(
           nextChar === '^' ||
           nextChar === 'X'
         ) {
-          // String-based sequences terminated by BEL (0x07) or ST (ESC \):
-          // - OSC: ESC ] ... (Operating System Command)
+          
+          
           
           
           
@@ -703,7 +657,7 @@ function writeLineToScreen(
             if (c === '\x07') {
               break
             }
-            // ST (String Terminator) is ESC \
+            
             
             if (c === '\x1b') {
               const nextC = characters[charIdx + 1]?.value
@@ -718,7 +672,7 @@ function writeLineToScreen(
           nextCode >= 0x30 &&
           nextCode <= 0x7e
         ) {
-          // Single-character escape sequences: ESC followed by 0x30-0x7E
+          
           
           
           
@@ -726,7 +680,7 @@ function writeLineToScreen(
           charIdx++ 
         }
       }
-      // Carriage return (0x0D): would move cursor to column 0, skip it
+      
       
       
       
@@ -734,7 +688,7 @@ function writeLineToScreen(
       continue
     }
 
-    // Zero-width characters (combining marks, ZWNJ, ZWS, etc.)
+    
     
     
     
@@ -759,7 +713,7 @@ function writeLineToScreen(
       continue
     }
 
-    // styleId + hyperlink were precomputed during clustering (once per
+    
     
     
     setCellAt(screen, offsetX, y, {

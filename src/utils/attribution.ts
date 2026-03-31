@@ -41,21 +41,13 @@ export type AttributionTexts = {
   pr: string
 }
 
-/**
- * Returns attribution text for commits and PRs based on user settings.
- * Handles:
- * - Dynamic model name via getPublicModelName()
- * - Custom attribution settings (settings.attribution.commit/pr)
- * - Backward compatibility with deprecated includeCoAuthoredBy setting
- * - Remote mode: returns session URL for attribution
- */
 export function getAttributionTexts(): AttributionTexts {
   if (process.env.USER_TYPE === 'ant' && isUndercover()) {
     return { commit: '', pr: '' }
   }
 
   if (getClientType() === 'remote') {
-    const remoteSessionId = process.env.CLAUDE_CODE_REMOTE_SESSION_ID
+    const remoteSessionId = process.env.CLAUDE_CODE_NEXT_REMOTE_SESSION_ID
     if (remoteSessionId) {
       const ingressUrl = process.env.SESSION_INGRESS_URL
       
@@ -67,16 +59,16 @@ export function getAttributionTexts(): AttributionTexts {
     return { commit: '', pr: '' }
   }
 
-  // @[MODEL LAUNCH]: Update the hardcoded fallback model name below (guards against codename leaks).
   
-  // fall back to "Claude Opus 4.6" for unrecognized models to avoid leaking codenames.
+  
+  
   const model = getMainLoopModel()
   const isKnownPublicModel = getPublicModelDisplayName(model) !== null
   const modelName =
     isInternalModelRepoCached() || isKnownPublicModel
       ? getPublicModelName(model)
       : 'Claude Opus 4.6'
-  const defaultAttribution = `🤖 Generated with [Claude Code](${PRODUCT_URL})`
+  const defaultAttribution = `🤖 Generated with [Claude Code Next](${PRODUCT_URL})`
   const defaultCommit = `Co-Authored-By: ${modelName} <noreply@anthropic.com>`
 
   const settings = getInitialSettings()
@@ -89,7 +81,7 @@ export function getAttributionTexts(): AttributionTexts {
     }
   }
 
-  // Backward compatibility: deprecated includeCoAuthoredBy setting
+  
   if (settings.includeCoAuthoredBy === false) {
     return { commit: '', pr: '' }
   }
@@ -97,10 +89,6 @@ export function getAttributionTexts(): AttributionTexts {
   return { commit: defaultCommit, pr: defaultAttribution }
 }
 
-/**
- * Check if a message content string is terminal output rather than a user prompt.
- * Terminal output includes bash input/output tags and caveat messages about local commands.
- */
 function isTerminalOutput(content: string): boolean {
   for (const tag of TERMINAL_OUTPUT_TAGS) {
     if (content.includes(`<${tag}>`)) {
@@ -110,12 +98,6 @@ function isTerminalOutput(content: string): boolean {
   return false
 }
 
-/**
- * Count user messages with visible text content in a list of non-sidechain messages.
- * Excludes tool_result blocks, terminal output, and empty messages.
- *
- * Callers should pass messages already filtered to exclude sidechain messages.
- */
 export function countUserPromptsInMessages(
   messages: ReadonlyArray<{ type: string; message?: { content?: unknown } }>,
 ): number {
@@ -161,13 +143,6 @@ export function countUserPromptsInMessages(
   return count
 }
 
-/**
- * Count non-sidechain user messages in transcript entries.
- * Used to calculate the number of "steers" (user prompts - 1).
- *
- * Counts user messages that contain actual user-typed text,
- * excluding tool_result blocks, sidechain messages, and terminal output.
- */
 function countUserPromptsFromEntries(entries: ReadonlyArray<Entry>): number {
   const nonSidechain = entries.filter(
     entry =>
@@ -176,12 +151,6 @@ function countUserPromptsFromEntries(entries: ReadonlyArray<Entry>): number {
   return countUserPromptsInMessages(nonSidechain)
 }
 
-/**
- * Get full attribution data from the provided AppState's attribution state.
- * Uses ALL tracked files from the attribution state (not just staged files)
- * because for PR attribution, files may not be staged yet.
- * Returns null if no attribution data is available.
- */
 async function getPRAttributionData(
   appState: AppState,
 ): Promise<AttributionData | null> {
@@ -191,7 +160,7 @@ async function getPRAttributionData(
     return null
   }
 
-  // Handle both Map and plain object (in case of serialization)
+  
   const fileStates = attribution.fileStates
   const isMap = fileStates instanceof Map
   const trackedFiles = isMap
@@ -238,12 +207,6 @@ function countMemoryFileAccessFromEntries(
   return count
 }
 
-/**
- * Read session transcript entries and compute prompt count and memory access
- * count. Pre-compact entries are skipped — the N-shot count and memory-access
- * count should reflect only the current conversation arc, not accumulated
- * prompts from before a compaction boundary.
- */
 async function getTranscriptStats(): Promise<{
   promptCount: number
   memoryAccessCount: number
@@ -256,7 +219,7 @@ async function getTranscriptStats(): Promise<{
     
     
     
-    // the findLastIndex below still slices to post-boundary.
+    
     const scan = await readTranscriptForLoad(filePath, fileSize)
     const buf = scan.postBoundaryBuf
     const entries = parseJSONL<Entry>(buf)
@@ -277,19 +240,6 @@ async function getTranscriptStats(): Promise<{
   }
 }
 
-/**
- * Get enhanced PR attribution text with Claude contribution stats.
- *
- * Format: "🤖 Generated with Claude Code (93% 3-shotted by claude-opus-4-5)"
- *
- * Rules:
- * - Shows Claude contribution percentage from commit attribution
- * - Shows N-shotted where N is the prompt count (1-shotted, 2-shotted, etc.)
- * - Shows short model name (e.g., claude-opus-4-5)
- * - Returns default attribution if stats can't be computed
- *
- * @param getAppState Function to get the current AppState (from command context)
- */
 export async function getEnhancedPRAttribution(
   getAppState: () => AppState,
 ): Promise<string> {
@@ -298,7 +248,7 @@ export async function getEnhancedPRAttribution(
   }
 
   if (getClientType() === 'remote') {
-    const remoteSessionId = process.env.CLAUDE_CODE_REMOTE_SESSION_ID
+    const remoteSessionId = process.env.CLAUDE_CODE_NEXT_REMOTE_SESSION_ID
     if (remoteSessionId) {
       const ingressUrl = process.env.SESSION_INGRESS_URL
       
@@ -316,12 +266,12 @@ export async function getEnhancedPRAttribution(
     return settings.attribution.pr
   }
 
-  // Backward compatibility: deprecated includeCoAuthoredBy setting
+  
   if (settings.includeCoAuthoredBy === false) {
     return ''
   }
 
-  const defaultAttribution = `🤖 Generated with [Claude Code](${PRODUCT_URL})`
+  const defaultAttribution = `🤖 Generated with [Claude Code Next](${PRODUCT_URL})`
 
   
   const appState = getAppState()
@@ -336,7 +286,7 @@ export async function getEnhancedPRAttribution(
     logForDebugging(`PR Attribution: fileStates count: ${fileCount}`)
   }
 
-  // Get attribution stats (transcript is read once for both prompt count and memory access)
+  
   const [attributionData, { promptCount, memoryAccessCount }, isInternal] =
     await Promise.all([
       getPRAttributionData(appState),
@@ -362,12 +312,12 @@ export async function getEnhancedPRAttribution(
     return defaultAttribution
   }
 
-  // Build the enhanced attribution: "🤖 Generated with Claude Code (93% 3-shotted by claude-opus-4-5, 2 memories recalled)"
+  
   const memSuffix =
     memoryAccessCount > 0
       ? `, ${memoryAccessCount} ${memoryAccessCount === 1 ? 'memory' : 'memories'} recalled`
       : ''
-  const summary = `🤖 Generated with [Claude Code](${PRODUCT_URL}) (${claudePercent}% ${promptCount}-shotted by ${shortModelName}${memSuffix})`
+  const summary = `🤖 Generated with [Claude Code Next](${PRODUCT_URL}) (${claudePercent}% ${promptCount}-shotted by ${shortModelName}${memSuffix})`
 
   
   

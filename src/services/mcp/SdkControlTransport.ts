@@ -27,7 +27,7 @@ export class SdkControlClientTransport implements Transport {
       throw new Error('Transport is closed')
     }
 
-    // Send the message and wait for the response
+    
     const response = await this.sendMcpMessage(this.serverName, message)
 
     
@@ -45,18 +45,6 @@ export class SdkControlClientTransport implements Transport {
   }
 }
 
-/**
- * SDK-side transport for SDK MCP servers.
- *
- * This transport is used in the SDK process to bridge communication between:
- * - Control requests coming from the CLI (via stdin)
- * - The actual MCP server running in the SDK process
- *
- * It acts as a simple pass-through that forwards messages to the MCP server
- * and sends responses back via a callback.
- *
- * Note: Query handles all request/response correlation and async flow.
- */
 export class SdkControlServerTransport implements Transport {
   private isClosed = false
 
@@ -73,7 +61,7 @@ export class SdkControlServerTransport implements Transport {
       throw new Error('Transport is closed')
     }
 
-    // Simply pass the response back through the callback
+    
     this.sendMcpMessage(message)
   }
 

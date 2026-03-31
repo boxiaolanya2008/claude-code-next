@@ -96,32 +96,17 @@ export function sanitizeName(name: string): string {
   return name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()
 }
 
-/**
- * Sanitizes an agent name for use in deterministic agent IDs.
- * Replaces @ with - to prevent ambiguity in the agentName@teamName format.
- */
 export function sanitizeAgentName(name: string): string {
   return name.replace(/@/g, '-')
 }
 
-/**
- * Gets the path to a team's directory
- */
 export function getTeamDir(teamName: string): string {
   return join(getTeamsDir(), sanitizeName(teamName))
 }
 
-/**
- * Gets the path to a team's config.json file
- */
 export function getTeamFilePath(teamName: string): string {
   return join(getTeamDir(teamName), 'config.json')
 }
-
-/**
- * Reads a team file by name (sync — for sync contexts like React render paths)
- * @internal Exported for team discovery UI
- */
 
 export function readTeamFile(teamName: string): TeamFile | null {
   try {
@@ -136,9 +121,6 @@ export function readTeamFile(teamName: string): TeamFile | null {
   }
 }
 
-/**
- * Reads a team file by name (async — for tool handlers and other async contexts)
- */
 export async function readTeamFileAsync(
   teamName: string,
 ): Promise<TeamFile | null> {
@@ -154,19 +136,12 @@ export async function readTeamFileAsync(
   }
 }
 
-/**
- * Writes a team file (sync — for sync contexts)
- */
-
 function writeTeamFile(teamName: string, teamFile: TeamFile): void {
   const teamDir = getTeamDir(teamName)
   mkdirSync(teamDir, { recursive: true })
   writeFileSync(getTeamFilePath(teamName), jsonStringify(teamFile, null, 2))
 }
 
-/**
- * Writes a team file (async — for tool handlers)
- */
 export async function writeTeamFileAsync(
   teamName: string,
   teamFile: TeamFile,
@@ -176,10 +151,6 @@ export async function writeTeamFileAsync(
   await writeFile(getTeamFilePath(teamName), jsonStringify(teamFile, null, 2))
 }
 
-/**
- * Removes a teammate from the team file by agent ID or name.
- * Used by the leader when processing shutdown approvals.
- */
 export function removeTeammateFromTeamFile(
   teamName: string,
   identifier: { agentId?: string; name?: string },
@@ -221,12 +192,6 @@ export function removeTeammateFromTeamFile(
   return true
 }
 
-/**
- * Adds a pane ID to the hidden panes list in the team file.
- * @param teamName - The name of the team
- * @param paneId - The pane ID to hide
- * @returns true if the pane was added to hidden list, false if team doesn't exist
- */
 export function addHiddenPaneId(teamName: string, paneId: string): boolean {
   const teamFile = readTeamFile(teamName)
   if (!teamFile) {
@@ -245,12 +210,6 @@ export function addHiddenPaneId(teamName: string, paneId: string): boolean {
   return true
 }
 
-/**
- * Removes a pane ID from the hidden panes list in the team file.
- * @param teamName - The name of the team
- * @param paneId - The pane ID to show (remove from hidden list)
- * @returns true if the pane was removed from hidden list, false if team doesn't exist
- */
 export function removeHiddenPaneId(teamName: string, paneId: string): boolean {
   const teamFile = readTeamFile(teamName)
   if (!teamFile) {
@@ -270,13 +229,6 @@ export function removeHiddenPaneId(teamName: string, paneId: string): boolean {
   return true
 }
 
-/**
- * Removes a teammate from the team config file by pane ID.
- * Also removes from hiddenPaneIds if present.
- * @param teamName - The name of the team
- * @param tmuxPaneId - The pane ID of the teammate to remove
- * @returns true if the member was removed, false if team or member doesn't exist
- */
 export function removeMemberFromTeam(
   teamName: string,
   tmuxPaneId: string,
@@ -293,7 +245,7 @@ export function removeMemberFromTeam(
     return false
   }
 
-  // Remove from members array
+  
   teamFile.members.splice(memberIndex, 1)
 
   
@@ -311,13 +263,6 @@ export function removeMemberFromTeam(
   return true
 }
 
-/**
- * Removes a teammate from a team's member list by agent ID.
- * Use this for in-process teammates which all share the same tmuxPaneId.
- * @param teamName - The name of the team
- * @param agentId - The agent ID of the teammate to remove (e.g., "researcher@my-team")
- * @returns true if the member was removed, false if team or member doesn't exist
- */
 export function removeMemberByAgentId(
   teamName: string,
   agentId: string,
@@ -332,7 +277,7 @@ export function removeMemberByAgentId(
     return false
   }
 
-  // Remove from members array
+  
   teamFile.members.splice(memberIndex, 1)
 
   writeTeamFile(teamName, teamFile)
@@ -342,13 +287,6 @@ export function removeMemberByAgentId(
   return true
 }
 
-/**
- * Sets a team member's permission mode.
- * Called when the team leader changes a teammate's mode via the TeamsDialog.
- * @param teamName - The name of the team
- * @param memberName - The name of the member to update
- * @param mode - The new permission mode
- */
 export function setMemberMode(
   teamName: string,
   memberName: string,
@@ -367,12 +305,12 @@ export function setMemberMode(
     return false
   }
 
-  // Only write if the value is actually changing
+  
   if (member.mode === mode) {
     return true
   }
 
-  // Create updated members array immutably
+  
   const updatedMembers = teamFile.members.map(m =>
     m.name === memberName ? { ...m, mode } : m,
   )
@@ -383,12 +321,6 @@ export function setMemberMode(
   return true
 }
 
-/**
- * Sync the current teammate's mode to config.json so team lead sees it.
- * No-op if not running as a teammate.
- * @param mode - The permission mode to sync
- * @param teamNameOverride - Optional team name override (uses env var if not provided)
- */
 export function syncTeammateMode(
   mode: PermissionMode,
   teamNameOverride?: string,
@@ -401,12 +333,6 @@ export function syncTeammateMode(
   }
 }
 
-/**
- * Sets multiple team members' permission modes in a single atomic operation.
- * Avoids race conditions when updating multiple teammates at once.
- * @param teamName - The name of the team
- * @param modeUpdates - Array of {memberName, mode} to update
- */
 export function setMultipleMemberModes(
   teamName: string,
   modeUpdates: Array<{ memberName: string; mode: PermissionMode }>,
@@ -416,7 +342,7 @@ export function setMultipleMemberModes(
     return false
   }
 
-  // Build a map of updates for efficient lookup
+  
   const updateMap = new Map(modeUpdates.map(u => [u.memberName, u.mode]))
 
   
@@ -439,13 +365,6 @@ export function setMultipleMemberModes(
   return true
 }
 
-/**
- * Sets a team member's active status.
- * Called when a teammate becomes idle (isActive=false) or starts a new turn (isActive=true).
- * @param teamName - The name of the team
- * @param memberName - The name of the member to update
- * @param isActive - Whether the member is active (true) or idle (false)
- */
 export async function setMemberActive(
   teamName: string,
   memberName: string,
@@ -467,7 +386,7 @@ export async function setMemberActive(
     return
   }
 
-  // Only write if the value is actually changing
+  
   if (member.isActive === isActive) {
     return
   }
@@ -479,13 +398,8 @@ export async function setMemberActive(
   )
 }
 
-/**
- * Destroys a git worktree at the given path.
- * First attempts to use `git worktree remove`, then falls back to rm -rf.
- * Safe to call on non-existent paths.
- */
 async function destroyWorktree(worktreePath: string): Promise<void> {
-  // Read the .git file in the worktree to find the main repo
+  
   const gitFilePath = join(worktreePath, '.git')
   let mainRepoPath: string | null = null
 
@@ -494,17 +408,17 @@ async function destroyWorktree(worktreePath: string): Promise<void> {
     
     const match = gitFileContent.match(/^gitdir:\s*(.+)$/)
     if (match && match[1]) {
-      // Extract the main repo .git directory (go up from .git/worktrees/name to .git)
+      
       const worktreeGitDir = match[1]
       
       const mainGitDir = join(worktreeGitDir, '..', '..')
       mainRepoPath = join(mainGitDir, '..')
     }
   } catch {
-    // Ignore errors reading .git file (path doesn't exist, not a file, etc.)
+    
   }
 
-  // Try to remove using git worktree remove command
+  
   if (mainRepoPath) {
     const result = await execFileNoThrowWithCwd(
       gitExe(),
@@ -519,7 +433,7 @@ async function destroyWorktree(worktreePath: string): Promise<void> {
       return
     }
 
-    // Check if the error is "not a working tree" (already removed)
+    
     if (result.stderr?.includes('not a working tree')) {
       logForDebugging(
         `[TeammateTool] Worktree already removed: ${worktreePath}`,
@@ -532,7 +446,7 @@ async function destroyWorktree(worktreePath: string): Promise<void> {
     )
   }
 
-  // Fallback: manually remove the directory
+  
   try {
     await rm(worktreePath, { recursive: true, force: true })
     logForDebugging(
@@ -545,29 +459,14 @@ async function destroyWorktree(worktreePath: string): Promise<void> {
   }
 }
 
-/**
- * Mark a team as created this session so it gets cleaned up on exit.
- * Call this right after the initial writeTeamFile. TeamDelete should
- * call unregisterTeamForSessionCleanup to prevent double-cleanup.
- * Backing Set lives in bootstrap/state.ts so resetStateForTests()
- * clears it between tests (avoids the PR #17615 cross-shard leak class).
- */
 export function registerTeamForSessionCleanup(teamName: string): void {
   getSessionCreatedTeams().add(teamName)
 }
 
-/**
- * Remove a team from session cleanup tracking (e.g., after explicit
- * TeamDelete — already cleaned, don't try again on shutdown).
- */
 export function unregisterTeamForSessionCleanup(teamName: string): void {
   getSessionCreatedTeams().delete(teamName)
 }
 
-/**
- * Clean up all teams created this session that weren't explicitly deleted.
- * Registered with gracefulShutdown from init.ts.
- */
 export async function cleanupSessionTeams(): Promise<void> {
   const sessionCreatedTeams = getSessionCreatedTeams()
   if (sessionCreatedTeams.size === 0) return
@@ -576,7 +475,7 @@ export async function cleanupSessionTeams(): Promise<void> {
     `cleanupSessionTeams: removing ${teams.length} orphan team dir(s): ${teams.join(', ')}`,
   )
   
-  // deleting directories alone would orphan them in open tmux/iTerm2 panes.
+  
   
   
   await Promise.allSettled(teams.map(name => killOrphanedTeammatePanes(name)))
@@ -584,12 +483,6 @@ export async function cleanupSessionTeams(): Promise<void> {
   sessionCreatedTeams.clear()
 }
 
-/**
- * Best-effort kill of all pane-backed teammate panes for a team.
- * Called from cleanupSessionTeams on ungraceful leader exit (SIGINT/SIGTERM).
- * Dynamic imports avoid adding registry/detection to this module's static
- * dep graph — this only runs at shutdown, so the import cost is irrelevant.
- */
 async function killOrphanedTeammatePanes(teamName: string): Promise<void> {
   const teamFile = readTeamFile(teamName)
   if (!teamFile) return
@@ -613,7 +506,7 @@ async function killOrphanedTeammatePanes(teamName: string): Promise<void> {
 
   await Promise.allSettled(
     paneMembers.map(async m => {
-      // filter above guarantees these; narrow for the type system
+      
       if (!m.tmuxPaneId || !m.backendType || !isPaneBackend(m.backendType)) {
         return
       }
@@ -628,15 +521,10 @@ async function killOrphanedTeammatePanes(teamName: string): Promise<void> {
   )
 }
 
-/**
- * Cleans up team and task directories for a given team name.
- * Also cleans up git worktrees created for teammates.
- * Called when a swarm session is terminated.
- */
 export async function cleanupTeamDirectories(teamName: string): Promise<void> {
   const sanitizedName = sanitizeName(teamName)
 
-  // Read team file to get worktree paths BEFORE deleting the team directory
+  
   const teamFile = readTeamFile(teamName)
   const worktreePaths: string[] = []
   if (teamFile) {
@@ -647,12 +535,12 @@ export async function cleanupTeamDirectories(teamName: string): Promise<void> {
     }
   }
 
-  // Clean up worktrees first
+  
   for (const worktreePath of worktreePaths) {
     await destroyWorktree(worktreePath)
   }
 
-  // Clean up team directory (~/.claude/teams/{team-name}/)
+  
   const teamDir = getTeamDir(teamName)
   try {
     await rm(teamDir, { recursive: true, force: true })
@@ -663,8 +551,8 @@ export async function cleanupTeamDirectories(teamName: string): Promise<void> {
     )
   }
 
-  // Clean up tasks directory (~/.claude/tasks/{taskListId}/)
-  // The leader and teammates all store tasks under the sanitized team name.
+  
+  
   const tasksDir = getTasksDir(sanitizedName)
   try {
     await rm(tasksDir, { recursive: true, force: true })

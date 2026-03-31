@@ -45,7 +45,6 @@ import type { PermissionMode } from '../utils/permissions/PermissionMode.js'
 
 const ANTHROPIC_VERSION = '2023-06-01'
 
-// Exclude<> makes that constraint explicit at both signatures.
 type ConnectCause = 'initial' | 'proactive_refresh' | 'auth_401_recovery'
 
 function oauthHeaders(accessToken: string): Record<string, string> {
@@ -79,23 +78,13 @@ export type EnvLessBridgeParams = {
     mode: PermissionMode,
   ) => { ok: true } | { ok: false; error: string }
   onStateChange?: (state: BridgeState, detail?: string) => void
-  /**
-   * When true, skip opening the SSE read stream — only the CCRClient write
-   * path is activated. Threaded to createV2ReplTransport and
-   * handleServerControlRequest.
-   */
+  
+
   outboundOnly?: boolean
   
   tags?: string[]
 }
 
-/**
- * Create a session, fetch a worker JWT, connect the v2 transport.
- *
- * Returns null on any pre-flight failure (session create failed, /bridge
- * failed, transport setup failed). Caller (initReplBridge) surfaces this
- * as a generic "initialization failed" state.
- */
 export async function initEnvLessBridgeCore(
   params: EnvLessBridgeParams,
 ): Promise<ReplBridgeHandle | null> {
@@ -185,7 +174,7 @@ export async function initEnvLessBridgeCore(
       epoch: credentials.worker_epoch,
       heartbeatIntervalMs: cfg.heartbeat_interval_ms,
       heartbeatJitterFraction: cfg.heartbeat_jitter_fraction,
-      // Per-instance closure — keeps the worker JWT out of
+      
       
       
       
@@ -230,12 +219,12 @@ export async function initEnvLessBridgeCore(
     }
   }
 
-  // Defensive dedup for re-delivered inbound prompts (seq-num negotiation
+  
   
   const recentInboundUUIDs = new BoundedUUIDSet(cfg.uuid_dedup_buffer_size)
 
   
-  // so the server receives [history..., live...] in order.
+  
   const flushGate = new FlushGate<Message>()
 
   let initialFlushDone = false
@@ -267,26 +256,26 @@ export async function initEnvLessBridgeCore(
     })
   }
 
-  // ── 5. JWT refresh scheduler ────────────────────────────────────────────
   
-  // re-fetch /bridge with OAuth → rebuild transport with fresh credentials.
+  
+  
   
   
   
   const refresh = createTokenRefreshScheduler({
     refreshBufferMs: cfg.token_refresh_buffer_ms,
     getAccessToken: async () => {
-      // Unconditionally refresh OAuth before calling /bridge — getAccessToken()
       
-      // so truthiness doesn't mean valid. Pass the stale token to onAuth401
-      // so handleOAuth401Error's keychain-comparison can detect parallel refresh.
+      
+      
+      
       const stale = getAccessToken()
       if (onAuth401) await onAuth401(stale ?? '')
       return getAccessToken() ?? stale
     },
     onRefresh: (sid, oauthToken) => {
       void (async () => {
-        // Laptop wake: overdue proactive timer + SSE 401 fire ~simultaneously.
+        
         
         
         
@@ -350,7 +339,7 @@ export async function initEnvLessBridgeCore(
       if (!initialFlushDone && initialMessages && initialMessages.length > 0) {
         initialFlushDone = true
         
-        // the stale .finally() must not drain the gate or signal connected.
+        
         
         const flushTransport = transport
         void flushHistory(initialMessages)
@@ -358,7 +347,7 @@ export async function initEnvLessBridgeCore(
             logForDebugging(`[remote-bridge] flushHistory failed: ${e}`),
           )
           .finally(() => {
-            // authRecoveryInFlight catches the v1-vs-v2 asymmetry: v1 nulls
+            
             
             
             
@@ -384,7 +373,7 @@ export async function initEnvLessBridgeCore(
         recentPostedUUIDs,
         recentInboundUUIDs,
         onInboundMessage,
-        // Remote client answered the permission prompt — the turn resumes.
+        
         
         
         onPermissionResponse
@@ -412,7 +401,7 @@ export async function initEnvLessBridgeCore(
       logForDebugging(`[remote-bridge] v2 transport closed (code=${code})`)
       logEvent('tengu_bridge_repl_ws_closed', { code, v2: true })
       
-      // 4090 (CCR epoch mismatch), 4091 (CCR init failed), or SSE 10-min
+      
       
       
       
@@ -424,23 +413,23 @@ export async function initEnvLessBridgeCore(
     })
   }
 
-  // ── 7. Transport rebuild (shared by proactive refresh + 401 recovery) ──
   
   
   
   
   
-  // before any await) and clear it in a finally. This function doesn't manage
-  // the flag — moving it here would be too late to prevent a double /bridge
-  // fetch, and each fetch bumps epoch.
+  
+  
+  
+  
   async function rebuildTransport(
     fresh: RemoteCredentials,
     cause: Exclude<ConnectCause, 'initial'>,
   ): Promise<void> {
     connectCause = cause
-    // Queue writes during rebuild — once /bridge returns, the old transport's
     
-    // writeMessages adds UUIDs to recentPostedUUIDs then writeBatch silently
+    
+    
     
     flushGate.start()
     try {
@@ -458,7 +447,7 @@ export async function initEnvLessBridgeCore(
         outboundOnly,
       })
       if (tornDown) {
-        // Teardown fired during the async createV2ReplTransport window.
+        
         
         
         transport.close()
@@ -474,20 +463,20 @@ export async function initEnvLessBridgeCore(
       refresh.scheduleFromExpiresIn(sessionId, fresh.expires_in)
       
       
-      // but the uploader serializes behind the initial PUT /worker. If
+      
       
       
       drainFlushGate()
     } finally {
-      // End the gate on failure paths too — drainFlushGate already ended
+      
       
       flushGate.drop()
     }
   }
 
-  // ── 8. 401 recovery (OAuth refresh + rebuild) ───────────────────────────
+  
   async function recoverFromAuthFailure(): Promise<void> {
-    // setOnClose already guards `!authRecoveryInFlight` but that check and
+    
     
     
     if (authRecoveryInFlight) return
@@ -495,7 +484,7 @@ export async function initEnvLessBridgeCore(
     onStateChange?.('reconnecting', 'JWT expired — refreshing')
     logForDebugging('[remote-bridge] 401 on SSE — attempting JWT refresh')
     try {
-      // Unconditionally try OAuth refresh — getAccessToken() returns expired
+      
       
       
       
@@ -526,7 +515,7 @@ export async function initEnvLessBridgeCore(
         }
         return
       }
-      // If 401 interrupted the initial flush, writeBatch may have silently
+      
       
       
       
@@ -581,7 +570,7 @@ export async function initEnvLessBridgeCore(
   }
 
   async function flushHistory(msgs: Message[]): Promise<void> {
-    // v2 always creates a fresh server session (unconditional createCodeSession
+    
     
     
     
@@ -600,8 +589,8 @@ export async function initEnvLessBridgeCore(
       session_id: sessionId,
     }))
     if (events.length === 0) return
-    // Mid-turn init: if Remote Control is enabled while a query is running,
-    // the last eligible message is a user prompt or tool_result (both 'user'
+    
+    
     
     
     
@@ -614,10 +603,10 @@ export async function initEnvLessBridgeCore(
     await transport.writeBatch(events)
   }
 
-  // ── 9. Teardown ───────────────────────────────────────────────────────────
   
   
-  //   - archive: teardown_archive_timeout_ms (default 1500, cap 2000)
+  
+  
   
   
   async function teardown(): Promise<void> {
@@ -650,7 +639,7 @@ export async function initEnvLessBridgeCore(
     
     
     
-    // which would waste budget 99% of the time. try/catch mirrors
+    
     
     
     if (status === 401 && onAuth401) {
@@ -718,7 +707,7 @@ export async function initEnvLessBridgeCore(
     })
   }
 
-  // ── 10. Handle ──────────────────────────────────────────────────────────
+  
   return {
     bridgeSessionId: sessionId,
     environmentId: '',
@@ -732,7 +721,7 @@ export async function initEnvLessBridgeCore(
       )
       if (filtered.length === 0) return
 
-      // Fire onUserMessage for title derivation. Scan before the flushGate
+      
       
       
       
@@ -820,7 +809,7 @@ export async function initEnvLessBridgeCore(
         request_id: requestId,
         session_id: sessionId,
       }
-      // Hook/classifier/channel/recheck resolved the permission locally —
+      
       
       
       transport.reportState('running')
@@ -845,8 +834,6 @@ export async function initEnvLessBridgeCore(
   }
 }
 
-// ─── Session API (v2 /code/sessions, no env) ─────────────────────────────────
-
 async function withRetry<T>(
   fn: () => Promise<T | null>,
   label: string,
@@ -869,8 +856,6 @@ async function withRetry<T>(
   }
   return null
 }
-
-// Moved to codeSessionApi.ts so the SDK /bridge subpath can bundle them
 
 export {
   createCodeSession,
@@ -903,8 +888,6 @@ export async function fetchRemoteCredentials(
 }
 
 type ArchiveStatus = number | 'timeout' | 'error' | 'no_token'
-
-// which distinguishes ECONNABORTED from other network errors — both map to
 
 type ArchiveTelemetryStatus =
   | 'ok'

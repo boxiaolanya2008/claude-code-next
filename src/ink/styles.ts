@@ -315,10 +315,10 @@ function applyPositionEdge(
 }
 
 const applyOverflowStyles = (node: LayoutNode, style: Styles): void => {
-  // Yoga's Overflow controls whether children expand the container.
-  // 'hidden' and 'scroll' both prevent expansion; 'scroll' additionally
-  // signals that the renderer should apply scrollTop translation.
-  // overflowX/Y are render-time concerns; for layout we use the union.
+  
+  
+  
+  
   const y = style.overflowY ?? style.overflow
   const x = style.overflowX ?? style.overflow
   if (y === 'scroll' || x === 'scroll') {
@@ -577,10 +577,10 @@ const applyBorderStyles = (
   style: Styles,
   resolvedStyle?: Styles,
 ): void => {
-  // resolvedStyle is the full current style (already set on the DOM node).
-  // style may be a diff with only changed properties. For border side props,
-  // we need the resolved value because `borderStyle` in a diff may not include
-  // unchanged border side values (e.g. borderTop stays false but isn't in the diff).
+  
+  
+  
+  
   const resolved = resolvedStyle ?? style
 
   if ('borderStyle' in style) {
@@ -603,9 +603,9 @@ const applyBorderStyles = (
       resolved.borderRight !== false ? borderWidth : 0,
     )
   } else {
-    // Handle individual border property changes (when only borderX changes without borderStyle).
     
-    // not that a border should be enabled.
+    
+    
     if ('borderTop' in style && style.borderTop !== undefined) {
       node.setBorder(LayoutEdge.Top, style.borderTop === false ? 0 : 1)
     }

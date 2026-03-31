@@ -28,7 +28,7 @@ export async function createCodeSession(
   try {
     response = await axios.post(
       url,
-      // bridge: {} is the positive signal for the oneof runner — omitting it
+      
       
       
       { title, bridge: {}, ...(tags?.length ? { tags } : {}) },
@@ -72,10 +72,6 @@ export async function createCodeSession(
   return data.session.id
 }
 
-/**
- * Credentials from POST /bridge. JWT is opaque — do not decode.
- * Each /bridge call bumps worker_epoch server-side (it IS the register).
- */
 export type RemoteCredentials = {
   worker_jwt: string
   api_base_url: string
@@ -138,8 +134,8 @@ export async function fetchRemoteCredentials(
     )
     return null
   }
-  // protojson serializes int64 as a string to avoid JS precision loss;
-  // Go may also return a number depending on encoder settings.
+  
+  
   const rawEpoch = data.worker_epoch
   const epoch = typeof rawEpoch === 'string' ? Number(rawEpoch) : rawEpoch
   if (

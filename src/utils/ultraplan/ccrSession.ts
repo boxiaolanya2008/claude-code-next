@@ -1,7 +1,5 @@
 
 
-// teleportToRemote's CreateSession events array.
-
 import type {
   ToolResultBlockParam,
   ToolUseBlock,
@@ -17,8 +15,7 @@ import {
 } from '../teleport.js'
 
 const POLL_INTERVAL_MS = 3000
-// pollRemoteSessionEvents doesn't retry. A 30min poll makes ~600 calls;
-// at any nonzero 5xx rate one blip would kill the run.
+
 const MAX_CONSECUTIVE_FAILURES = 5
 
 export type PollFailReason =
@@ -41,8 +38,6 @@ export class UltraplanPollError extends Error {
   }
 }
 
-// Sentinel string the browser PlanModal includes in the feedback when the user
-
 export const ULTRAPLAN_TELEPORT_SENTINEL = '__ULTRAPLAN_TELEPORT_LOCAL__'
 
 export type ScanResult =
@@ -53,14 +48,6 @@ export type ScanResult =
   | { kind: 'terminated'; subtype: string }
   | { kind: 'unchanged' }
 
-/**
- * Pill/detail-view state derived from the event stream. Transitions:
- *   running → (turn ends, no ExitPlanMode) → needs_input
- *   needs_input → (user replies in browser) → running
- *   running → (ExitPlanMode emitted, no result yet) → plan_ready
- *   plan_ready → (rejected) → running
- *   plan_ready → (approved) → poll resolves, pill removed
- */
 export type UltraplanPhase = 'running' | 'needs_input' | 'plan_ready'
 
 export class ExitPlanModeScanner {
@@ -75,10 +62,8 @@ export class ExitPlanModeScanner {
     return this.rejectedIds.size
   }
 
-  /**
-   * True when an ExitPlanMode tool_use exists with no tool_result yet —
-   * the remote is showing the approval dialog in the browser.
-   */
+  
+
   get hasPendingPlan(): boolean {
     const id = this.exitPlanCalls.findLast(c => !this.rejectedIds.has(c))
     return id !== undefined && !this.results.has(id)
@@ -103,17 +88,17 @@ export class ExitPlanModeScanner {
           }
         }
       } else if (m.type === 'result' && m.subtype !== 'success') {
-        // result(success) fires after EVERY CCR turn
         
         
-        // the browser and reach ExitPlanMode in a later turn.
         
-        // etc.) mean the session is actually dead.
+        
+        
+        
         this.terminated = { subtype: m.subtype }
       }
     }
 
-    // Skip-scan when nothing could have moved the target: no new events, no
+    
     
     const shouldScan = newEvents.length > 0 || this.rescanAfterRejection
     this.rescanAfterRejection = false
@@ -145,7 +130,7 @@ export class ExitPlanModeScanner {
       if (found?.kind === 'approved' || found?.kind === 'teleport') return found
     }
 
-    // Bookkeeping before the terminated check — a batch can contain BOTH a
+    
     
     
     if (found?.kind === 'rejected') {
@@ -173,8 +158,6 @@ export type PollResult = {
   executionTarget: 'local' | 'remote'
 }
 
-// Returns the approved plan text and where the user wants it executed.
-
 export async function pollForApprovedExitPlanMode(
   sessionId: string,
   timeoutMs: number,
@@ -198,7 +181,7 @@ export async function pollForApprovedExitPlanMode(
     let newEvents: SDKMessage[]
     let sessionStatus: PollRemoteSessionResponse['sessionStatus']
     try {
-      // Metadata fetch (session_status) is the needs_input signal —
+      
       
       
       const resp = await pollRemoteSessionEvents(sessionId, cursor)
@@ -251,7 +234,7 @@ export async function pollForApprovedExitPlanMode(
         scanner.rejectCount,
       )
     }
-    // plan_ready from the event stream wins; otherwise idle session status
+    
     
     
     
@@ -285,8 +268,6 @@ export async function pollForApprovedExitPlanMode(
   )
 }
 
-// tool_result content may be string or [{type:'text',text}] depending on
-
 function contentToText(content: ToolResultBlockParam['content']): string {
   return typeof content === 'string'
     ? content
@@ -294,8 +275,6 @@ function contentToText(content: ToolResultBlockParam['content']): string {
       ? content.map(b => ('text' in b ? b.text : '')).join('')
       : ''
 }
-
-// Extracts the plan text after the ULTRAPLAN_TELEPORT_SENTINEL marker.
 
 function extractTeleportPlan(
   content: ToolResultBlockParam['content'],
@@ -306,8 +285,6 @@ function extractTeleportPlan(
   if (idx === -1) return null
   return text.slice(idx + marker.length).trimEnd()
 }
-
-// Plan is echoed in tool_result content as "## Approved Plan:\n<text>" or
 
 function extractApprovedPlan(content: ToolResultBlockParam['content']): string {
   const text = contentToText(content)

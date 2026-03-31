@@ -151,10 +151,6 @@ export class McpAuthError extends Error {
   }
 }
 
-/**
- * Thrown when an MCP session has expired and the connection cache has been cleared.
- * The caller should get a fresh client via ensureConnectedClient and retry.
- */
 class McpSessionExpiredError extends Error {
   constructor(serverName: string) {
     super(`MCP server "${serverName}" session expired`)
@@ -162,11 +158,6 @@ class McpSessionExpiredError extends Error {
   }
 }
 
-/**
- * Thrown when an MCP tool returns `isError: true`. Carries the result's `_meta`
- * so SDK consumers can still receive it — per the MCP spec, `_meta` is on the
- * base Result type and is valid on error results.
- */
 export class McpToolCallError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS extends TelemetrySafeError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS {
   constructor(
     message: string,
@@ -178,29 +169,21 @@ export class McpToolCallError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS extends T
   }
 }
 
-/**
- * Detects whether an error is an MCP "Session not found" error (HTTP 404 + JSON-RPC code -32001).
- * Per the MCP spec, servers return 404 when a session ID is no longer valid.
- * We check both signals to avoid false positives from generic 404s (wrong URL, server gone, etc.).
- */
 export function isMcpSessionExpiredError(error: Error): boolean {
   const httpStatus =
     'code' in error ? (error as Error & { code?: number }).code : undefined
   if (httpStatus !== 404) {
     return false
   }
-  // The SDK embeds the response body text in the error message.
   
-  // Check for the JSON-RPC error code to distinguish from generic web server 404s.
+  
+  
   return (
     error.message.includes('"code":-32001') ||
     error.message.includes('"code": -32001')
   )
 }
 
-/**
- * Default timeout for MCP tool calls (effectively infinite - ~27.8 hours).
- */
 const DEFAULT_MCP_TOOL_TIMEOUT_MS = 100_000_000
 
 const MAX_MCP_DESCRIPTION_LENGTH = 2048
@@ -242,8 +225,6 @@ function getMcpAuthCachePath(): string {
   return join(getClaudeConfigHomeDir(), 'mcp-needs-auth-cache.json')
 }
 
-// Memoized so N concurrent isMcpAuthCached() calls during batched connection
-
 let authCachePromise: Promise<McpAuthCacheData> | null = null
 
 function getMcpAuthCache(): Promise<McpAuthCacheData> {
@@ -264,8 +245,6 @@ async function isMcpAuthCached(serverId: string): Promise<boolean> {
   return Date.now() - entry.timestamp < MCP_AUTH_CACHE_TTL_MS
 }
 
-// Serialize cache writes through a promise chain to prevent concurrent
-
 let writeChain = Promise.resolve()
 
 function setMcpAuthCacheEntry(serverId: string): void {
@@ -282,22 +261,17 @@ function setMcpAuthCacheEntry(serverId: string): void {
       authCachePromise = null
     })
     .catch(() => {
-      // Best-effort cache write
+      
     })
 }
 
 export function clearMcpAuthCache(): void {
   authCachePromise = null
   void unlink(getMcpAuthCachePath()).catch(() => {
-    // Cache file may not exist
+    
   })
 }
 
-/**
- * Spread-ready analytics field for the server's base URL. Calls
- * getLoggingSafeMcpBaseUrl once (not twice like the inline ternary it replaces).
- * Typed as AnalyticsMetadata since the URL is query-stripped and safe to log.
- */
 function mcpBaseUrlAnalytics(serverRef: ScopedMcpServerConfig): {
   mcpServerBaseUrl?: AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
 } {
@@ -310,11 +284,6 @@ function mcpBaseUrlAnalytics(serverRef: ScopedMcpServerConfig): {
     : {}
 }
 
-/**
- * Shared handler for sse/http/claudeai-proxy auth failures during connect:
- * emits tengu_mcp_server_needs_auth, caches the needs-auth entry, and returns
- * the needs-auth connection result.
- */
 function handleRemoteAuthFailure(
   name: string,
   serverRef: ScopedMcpServerConfig,
@@ -338,15 +307,6 @@ function handleRemoteAuthFailure(
   return { name, type: 'needs-auth', config: serverRef }
 }
 
-/**
- * Fetch wrapper for claude.ai proxy connections. Attaches the OAuth bearer
- * token and retries once on 401 via handleOAuth401Error (force-refresh).
- *
- * The Anthropic API path has this retry (withRetry.ts, grove.ts) to handle
- * memoize-cache staleness and clock drift. Without the same here, a single
- * stale token mass-401s every claude.ai connector and sticks them all in the
- * 15-min needs-auth cache.
- */
 export function createClaudeAiProxyFetch(innerFetch: FetchLike): FetchLike {
   return async (url, init) => {
     const doRequest = async () => {
@@ -355,7 +315,7 @@ export function createClaudeAiProxyFetch(innerFetch: FetchLike): FetchLike {
       if (!currentTokens) {
         throw new Error('No claude.ai OAuth token available')
       }
-      // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
+      
       const headers = new Headers(init?.headers)
       headers.set('Authorization', `Bearer ${currentTokens.accessToken}`)
       const response = await innerFetch(url, { ...init, headers })
@@ -372,7 +332,7 @@ export function createClaudeAiProxyFetch(innerFetch: FetchLike): FetchLike {
     if (response.status !== 401) {
       return response
     }
-    // handleOAuth401Error returns true only if the token actually changed
+    
     
     
     
@@ -383,7 +343,7 @@ export function createClaudeAiProxyFetch(innerFetch: FetchLike): FetchLike {
         tokenChanged as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     })
     if (!tokenChanged) {
-      // ELOCKED contention: another connector may have won the lockfile and refreshed — check if token changed underneath us
+      
       const now = getClaudeAIOAuthTokens()?.accessToken
       if (!now || now === sentToken) {
         return response
@@ -392,25 +352,19 @@ export function createClaudeAiProxyFetch(innerFetch: FetchLike): FetchLike {
     try {
       return (await doRequest()).response
     } catch {
-      // Retry itself failed (network error). Return the original 401 so the
+      
       
       return response
     }
   }
 }
 
-// Minimal interface for WebSocket instances passed to mcpWebSocketTransport
 type WsClientLike = {
   readonly readyState: number
   close(): void
   send(data: string): void
 }
 
-/**
- * Create a ws.WebSocket client with the MCP protocol.
- * Bun's ws shim types lack the 3-arg constructor (url, protocols, options)
- * that the real ws package supports, so we cast the constructor here.
- */
 async function createNodeWsClient(
   url: string,
   options: Record<string, unknown>,
@@ -435,9 +389,6 @@ function getConnectionTimeoutMs(): number {
   return parseInt(process.env.MCP_TIMEOUT || '', 10) || 30000
 }
 
-/**
- * Default timeout for individual MCP requests (auth, tool calls, etc.)
- */
 const MCP_REQUEST_TIMEOUT_MS = 60000
 
 const MCP_STREAMABLE_HTTP_ACCEPT = 'application/json, text/event-stream'
@@ -452,9 +403,9 @@ export function wrapFetchWithTimeout(baseFetch: FetchLike): FetchLike {
       return baseFetch(url, init)
     }
 
-    // Normalize headers and guarantee the Streamable-HTTP Accept value. new Headers()
     
-    // and existing Headers instances — so whatever shape the SDK handed us, the
+    
+    
     
     
     const headers = new Headers(init?.headers)
@@ -462,7 +413,7 @@ export function wrapFetchWithTimeout(baseFetch: FetchLike): FetchLike {
       headers.set('accept', MCP_STREAMABLE_HTTP_ACCEPT)
     }
 
-    // Use setTimeout instead of AbortSignal.timeout() so we can clearTimeout on
+    
     
     
     
@@ -517,7 +468,6 @@ function isLocalMcpServer(config: ScopedMcpServerConfig): boolean {
   return !config.type || config.type === 'stdio' || config.type === 'sdk'
 }
 
-// For the IDE MCP servers, we only include specific tools
 const ALLOWED_IDE_TOOLS = ['mcp__ide__executeCode', 'mcp__ide__getDiagnostics']
 function isIncludedMcpTool(tool: Tool): boolean {
   return (
@@ -525,12 +475,6 @@ function isIncludedMcpTool(tool: Tool): boolean {
   )
 }
 
-/**
- * Generates the cache key for a server connection
- * @param name Server name
- * @param serverRef Server configuration
- * @returns Cache key string
- */
 export function getServerCacheKey(
   name: string,
   serverRef: ScopedMcpServerConfig,
@@ -538,13 +482,6 @@ export function getServerCacheKey(
   return `${name}-${jsonStringify(serverRef)}`
 }
 
-/**
- * TODO (ollie): The memoization here increases complexity by a lot, and im not sure it really improves performance
- * Attempts to connect to a single MCP server
- * @param name Server name
- * @param serverRef Scoped server configuration
- * @returns A wrapped client (either connected or failed)
- */
 export const connectToServer = memoize(
   async (
     name: string,
@@ -570,7 +507,7 @@ export const connectToServer = memoize(
       const sessionIngressToken = getSessionIngressAuthToken()
 
       if (serverRef.type === 'sse') {
-        // Create an auth provider for this server
+        
         const authProvider = new ClaudeAuthProvider(name, serverRef)
 
         
@@ -579,7 +516,7 @@ export const connectToServer = memoize(
         
         const transportOptions: SSEClientTransportOptions = {
           authProvider,
-          // Use fresh timeout per request to avoid stale AbortSignal bug.
+          
           
           
           fetch: wrapFetchWithTimeout(
@@ -593,14 +530,14 @@ export const connectToServer = memoize(
           },
         }
 
-        // IMPORTANT: Always set eventSourceInit with a fetch that does NOT use the
+        
         
         
         
         
         transportOptions.eventSourceInit = {
           fetch: async (url: string | URL, init?: RequestInit) => {
-            // Get auth headers from the auth provider
+            
             const authHeaders: Record<string, string> = {}
             const tokens = await authProvider.tokens()
             if (tokens) {
@@ -638,7 +575,7 @@ export const connectToServer = memoize(
             ? {
                 eventSourceInit: {
                   fetch: async (url: string | URL, init?: RequestInit) => {
-                    // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
+                    
                     return fetch(url, {
                       ...init,
                       ...proxyOptions,
@@ -669,7 +606,7 @@ export const connectToServer = memoize(
 
         let wsClient: WsClientLike
         if (typeof Bun !== 'undefined') {
-          // Bun's WebSocket supports headers/proxy/tls options but the DOM typings don't
+          
           
           wsClient = new globalThis.WebSocket(serverRef.url, {
             protocols: ['mcp'],
@@ -702,7 +639,7 @@ export const connectToServer = memoize(
           ...combinedHeaders,
         }
 
-        // Redact sensitive headers before logging
+        
         const wsHeadersForLogging = mapValues(wsHeaders, (value, key) =>
           key.toLowerCase() === 'authorization' ? '[REDACTED]' : value,
         )
@@ -718,7 +655,7 @@ export const connectToServer = memoize(
 
         let wsClient: WsClientLike
         if (typeof Bun !== 'undefined') {
-          // Bun's WebSocket supports headers/proxy/tls options but the DOM typings don't
+          
           
           wsClient = new globalThis.WebSocket(serverRef.url, {
             protocols: ['mcp'],
@@ -773,7 +710,7 @@ export const connectToServer = memoize(
 
         const transportOptions: StreamableHTTPClientTransportOptions = {
           authProvider,
-          // Use fresh timeout per request to avoid stale AbortSignal bug.
+          
           
           
           fetch: wrapFetchWithTimeout(
@@ -792,7 +729,7 @@ export const connectToServer = memoize(
           },
         }
 
-        // Redact sensitive headers before logging
+        
         const headersForLogging = transportOptions.requestInit?.headers
           ? mapValues(
               transportOptions.requestInit.headers as Record<string, string>,
@@ -839,7 +776,7 @@ export const connectToServer = memoize(
 
         const proxyOptions = getProxyFetchOptions()
         const transportOptions: StreamableHTTPClientTransportOptions = {
-          // Wrap fetchWithAuth with fresh timeout per request
+          
           fetch: wrapFetchWithTimeout(fetchWithAuth),
           requestInit: {
             ...proxyOptions,
@@ -859,7 +796,7 @@ export const connectToServer = memoize(
         (serverRef.type === 'stdio' || !serverRef.type) &&
         isClaudeInChromeMCPServer(name)
       ) {
-        // Run the Chrome MCP server in-process to avoid spawning a ~325 MB subprocess
+        
         const { createChromeContext } = await import(
           '../../utils/claudeInChrome/mcpServer.js'
         )
@@ -880,7 +817,7 @@ export const connectToServer = memoize(
         (serverRef.type === 'stdio' || !serverRef.type) &&
         isComputerUseMCPServer!(name)
       ) {
-        // Run the Computer Use MCP server in-process — same rationale as
+        
         
         
         const { createComputerUseMcpServerForCli } = await import(
@@ -896,8 +833,8 @@ export const connectToServer = memoize(
         logMCPDebug(name, `In-process Computer Use MCP server started`)
       } else if (serverRef.type === 'stdio' || !serverRef.type) {
         const finalCommand =
-          process.env.CLAUDE_CODE_SHELL_PREFIX || serverRef.command
-        const finalArgs = process.env.CLAUDE_CODE_SHELL_PREFIX
+          process.env.CLAUDE_CODE_NEXT_SHELL_PREFIX || serverRef.command
+        const finalArgs = process.env.CLAUDE_CODE_NEXT_SHELL_PREFIX
           ? [[serverRef.command, ...serverRef.args].join(' ')]
           : serverRef.args
         transport = new StdioClientTransport({
@@ -907,13 +844,13 @@ export const connectToServer = memoize(
             ...subprocessEnv(),
             ...serverRef.env,
           } as Record<string, string>,
-          stderr: 'pipe', // prevents error output from the MCP server from printing to the UI
+          stderr: 'pipe', 
         })
       } else {
         throw new Error(`Unsupported server type: ${serverRef.type}`)
       }
 
-      // Set up stderr logging for stdio transport before connecting in case there are any stderr
+      
       
       
       let stderrHandler: ((data: Buffer) => void) | undefined
@@ -922,12 +859,12 @@ export const connectToServer = memoize(
         const stdioTransport = transport as StdioClientTransport
         if (stdioTransport.stderr) {
           stderrHandler = (data: Buffer) => {
-            // Cap stderr accumulation to prevent unbounded memory growth
+            
             if (stderrOutput.length < 64 * 1024 * 1024) {
               try {
                 stderrOutput += data.toString()
               } catch {
-                // Ignore errors from exceeding max string length
+                
               }
             }
           }
@@ -937,8 +874,8 @@ export const connectToServer = memoize(
 
       const client = new Client(
         {
-          name: 'claude-code',
-          title: 'Claude Code',
+          name: 'claude-code-next',
+          title: 'Claude Code Next',
           version: MACRO.VERSION ?? 'unknown',
           description: "Anthropic's agentic coding tool",
           websiteUrl: PRODUCT_URL,
@@ -946,8 +883,8 @@ export const connectToServer = memoize(
         {
           capabilities: {
             roots: {},
-            // Empty object declares the capability. Sending {form:{},url:{}}
-            // breaks Java MCP SDK servers (Spring AI) whose Elicitation class
+            
+            
             
             elicitation: {},
           },
@@ -1123,7 +1060,7 @@ export const connectToServer = memoize(
         )
       }
 
-      // Log successful connection details
+      
       logMCPDebug(
         name,
         `Connection established with capabilities: ${jsonStringify({
@@ -1140,7 +1077,7 @@ export const connectToServer = memoize(
 
       
       
-      // onConnectionAttempt (useManageMCPConnections).
+      
       client.setRequestHandler(ElicitRequestSchema, async request => {
         logMCPDebug(
           name,
@@ -1166,7 +1103,7 @@ export const connectToServer = memoize(
         }
       }
 
-      // Enhanced connection drop detection and logging for all transport types
+      
       const connectionStartTime = Date.now()
       let hasErrorOccurred = false
 
@@ -1175,7 +1112,7 @@ export const connectToServer = memoize(
       const originalOnclose = client.onclose
 
       
-      // which CC uses to trigger reconnection. We bridge this gap by tracking consecutive
+      
       
       let consecutiveConnectionErrors = 0
       const MAX_ERRORS_BEFORE_RECONNECT = 3
@@ -1185,7 +1122,7 @@ export const connectToServer = memoize(
       let hasTriggeredClose = false
 
       
-      // rejects all pending request handlers (so hung callTool() promises fail with
+      
       
       
       
@@ -1208,14 +1145,14 @@ export const connectToServer = memoize(
           msg.includes('ECONNREFUSED') ||
           msg.includes('Body Timeout Error') ||
           msg.includes('terminated') ||
-          // SDK SSE reconnection intermediate errors — may be wrapped around the
+          
           
           msg.includes('SSE stream disconnected') ||
           msg.includes('Failed to reconnect SSE stream')
         )
       }
 
-      // Enhanced error handler with detailed logging
+      
       client.onerror = (error: Error) => {
         const uptime = Date.now() - connectionStartTime
         hasErrorOccurred = true
@@ -1263,7 +1200,7 @@ export const connectToServer = memoize(
           }
         }
 
-        // For HTTP transports, detect session expiry (404 + JSON-RPC -32001)
+        
         
         
         if (
@@ -1281,17 +1218,17 @@ export const connectToServer = memoize(
           return
         }
 
-        // For remote transports (SSE/HTTP), track terminal connection errors
+        
         
         if (
           transportType === 'sse' ||
           transportType === 'http' ||
           transportType === 'claudeai-proxy'
         ) {
-          // The SDK's StreamableHTTP transport fires this after exhausting its
-          // own SSE reconnect attempts (default maxRetries: 2) — but it never
-          // calls onclose, so pending callTool() promises hang indefinitely.
-          // This is the definitive "transport gave up" signal.
+          
+          
+          
+          
           if (error.message.includes('Maximum reconnection attempts')) {
             closeTransportAndRejectPending('SSE reconnection exhausted')
             if (originalOnerror) {
@@ -1312,18 +1249,18 @@ export const connectToServer = memoize(
               closeTransportAndRejectPending('max consecutive terminal errors')
             }
           } else {
-            // Non-terminal error (e.g., transient issue), reset counter
+            
             consecutiveConnectionErrors = 0
           }
         }
 
-        // Call original handler
+        
         if (originalOnerror) {
           originalOnerror(error)
         }
       }
 
-      // Enhanced close handler with connection drop context
+      
       client.onclose = () => {
         const uptime = Date.now() - connectionStartTime
         const transportType = serverRef.type ?? 'unknown'
@@ -1333,12 +1270,12 @@ export const connectToServer = memoize(
           `${transportType.toUpperCase()} connection closed after ${Math.floor(uptime / 1000)}s (${hasErrorOccurred ? 'with errors' : 'cleanly'})`,
         )
 
-        // Clear the memoization cache so next operation reconnects
+        
         const key = getServerCacheKey(name, serverRef)
 
-        // Also clear fetch caches (keyed by server name). Reconnection
-        // creates a new connection object; without clearing, the next
-        // fetch would return stale tools/resources from the old connection.
+        
+        
+        
         fetchToolsForClient.cache.delete(name)
         fetchResourcesForClient.cache.delete(name)
         fetchCommandsForClient.cache.delete(name)
@@ -1355,7 +1292,7 @@ export const connectToServer = memoize(
       }
 
       const cleanup = async () => {
-        // In-process servers (e.g. Chrome MCP) don't have child processes or stderr
+        
         if (inProcessServer) {
           try {
             await inProcessServer.close()
@@ -1370,13 +1307,13 @@ export const connectToServer = memoize(
           return
         }
 
-        // Remove stderr event listener to prevent memory leaks
+        
         if (stderrHandler && (serverRef.type === 'stdio' || !serverRef.type)) {
           const stdioTransport = transport as StdioClientTransport
           stdioTransport.stderr?.off('data', stderrHandler)
         }
 
-        // For stdio transports, explicitly terminate the child process with proper signals
+        
         
         
         if (serverRef.type === 'stdio') {
@@ -1395,17 +1332,17 @@ export const connectToServer = memoize(
                 return
               }
 
-              // Wait for graceful shutdown with rapid escalation (total 500ms to keep CLI responsive)
+              
               await new Promise<void>(async resolve => {
                 let resolved = false
 
                 
                 const checkInterval = setInterval(() => {
                   try {
-                    // process.kill(pid, 0) checks if process exists without killing it
+                    
                     process.kill(childPid, 0)
                   } catch {
-                    // Process no longer exists
+                    
                     if (!resolved) {
                       resolved = true
                       clearInterval(checkInterval)
@@ -1430,11 +1367,11 @@ export const connectToServer = memoize(
                 }, 600)
 
                 try {
-                  // Wait 100ms for SIGINT to work (usually much faster)
+                  
                   await sleep(100)
 
                   if (!resolved) {
-                    // Check if process still exists
+                    
                     try {
                       process.kill(childPid, 0)
                       
@@ -1453,7 +1390,7 @@ export const connectToServer = memoize(
                         return
                       }
                     } catch {
-                      // Process already exited
+                      
                       resolved = true
                       clearInterval(checkInterval)
                       clearTimeout(failsafeTimeout)
@@ -1461,11 +1398,11 @@ export const connectToServer = memoize(
                       return
                     }
 
-                    // Wait 400ms for SIGTERM to work (slower than SIGINT, often used for cleanup)
+                    
                     await sleep(400)
 
                     if (!resolved) {
-                      // Check if process still exists
+                      
                       try {
                         process.kill(childPid, 0)
                         
@@ -1482,7 +1419,7 @@ export const connectToServer = memoize(
                           )
                         }
                       } catch {
-                        // Process already exited
+                        
                         resolved = true
                         clearInterval(checkInterval)
                         clearTimeout(failsafeTimeout)
@@ -1491,7 +1428,7 @@ export const connectToServer = memoize(
                     }
                   }
 
-                  // Final timeout - always resolve after 500ms max (total cleanup time)
+                  
                   if (!resolved) {
                     resolved = true
                     clearInterval(checkInterval)
@@ -1499,7 +1436,7 @@ export const connectToServer = memoize(
                     resolve()
                   }
                 } catch {
-                  // Handle any errors in the escalation sequence
+                  
                   if (!resolved) {
                     resolved = true
                     clearInterval(checkInterval)
@@ -1514,7 +1451,7 @@ export const connectToServer = memoize(
           }
         }
 
-        // Close the client connection (which also closes the transport)
+        
         try {
           await client.close()
         } catch (error) {
@@ -1522,7 +1459,7 @@ export const connectToServer = memoize(
         }
       }
 
-      // Register cleanup for all transport types - even network transports might need cleanup
+      
       
       const cleanupUnregister = registerCleanup(cleanup)
 
@@ -1606,10 +1543,10 @@ export async function clearServerCache(
       await wrappedClient.cleanup()
     }
   } catch {
-    // Ignore errors - server might have failed to connect
+    
   }
 
-  // Clear from cache (both connection and fetch caches so reconnect
+  
   
   connectToServer.cache.delete(key)
   fetchToolsForClient.cache.delete(name)
@@ -1620,23 +1557,10 @@ export async function clearServerCache(
   }
 }
 
-/**
- * Ensures a valid connected client for an MCP server.
- * For most server types, uses the memoization cache if available, or reconnects
- * if the cache was cleared (e.g., after onclose). This ensures tool/resource
- * calls always use a valid connection.
- *
- * SDK MCP servers run in-process and are handled separately via setupSdkMcpClients,
- * so they are returned as-is without going through connectToServer.
- *
- * @param client The connected MCP server client
- * @returns Connected MCP server client (same or reconnected)
- * @throws Error if server cannot be connected
- */
 export async function ensureConnectedClient(
   client: ConnectedMCPServer,
 ): Promise<ConnectedMCPServer> {
-  // SDK MCP servers run in-process and are handled separately via setupSdkMcpClients
+  
   if (client.config.type === 'sdk') {
     return client
   }
@@ -1651,15 +1575,11 @@ export async function ensureConnectedClient(
   return connectedClient
 }
 
-/**
- * Compares two MCP server configurations to determine if they are equivalent.
- * Used to detect when a server needs to be reconnected due to config changes.
- */
 export function areMcpConfigsEqual(
   a: ScopedMcpServerConfig,
   b: ScopedMcpServerConfig,
 ): boolean {
-  // Quick type check first
+  
   if (a.type !== b.type) return false
 
   
@@ -1668,8 +1588,6 @@ export function areMcpConfigsEqual(
   const { scope: _scopeB, ...configB } = b
   return jsonStringify(configA) === jsonStringify(configB)
 }
-
-// Max cache size for fetch* caches. Keyed by server name (stable across
 
 const MCP_FETCH_CACHE_SIZE = 20
 
@@ -1711,12 +1629,12 @@ export const fetchToolsForClient = memoizeWithLRU(
           const fullyQualifiedName = buildMcpToolName(client.name, tool.name)
           return {
             ...MCPTool,
-            // In skip-prefix mode, use the original name for model invocation so MCP tools
+            
             
             name: skipPrefix ? tool.name : fullyQualifiedName,
             mcpInfo: { serverName: client.name, toolName: tool.name },
             isMcp: true,
-            // Collapse whitespace: _meta is open to external MCP servers, and
+            
             
             
             searchHint:
@@ -1785,7 +1703,7 @@ export const fetchToolsForClient = memoizeWithLRU(
                 ? { 'claudecode/toolUseId': toolUseId }
                 : {}
 
-              // Emit progress when tool starts
+              
               if (onProgress && toolUseId) {
                 onProgress({
                   toolUseID: toolUseId,
@@ -1851,7 +1769,7 @@ export const fetchToolsForClient = memoizeWithLRU(
                     }),
                   }
                 } catch (error) {
-                  // Session expired — the connection cache has been
+                  
                   
                   if (
                     error instanceof McpSessionExpiredError &&
@@ -1864,7 +1782,7 @@ export const fetchToolsForClient = memoizeWithLRU(
                     continue
                   }
 
-                  // Emit progress when tool fails
+                  
                   if (onProgress && toolUseId) {
                     onProgress({
                       toolUseID: toolUseId,
@@ -1877,7 +1795,7 @@ export const fetchToolsForClient = memoizeWithLRU(
                       },
                     })
                   }
-                  // Wrap MCP SDK errors so telemetry gets useful context
+                  
                   
                   
                   
@@ -1895,7 +1813,7 @@ export const fetchToolsForClient = memoizeWithLRU(
                         error.message.slice(0, 200),
                       )
                     }
-                    // McpError has a numeric `code` with the JSON-RPC error
+                    
                     
                     if (
                       name === 'McpError' &&
@@ -1913,7 +1831,7 @@ export const fetchToolsForClient = memoizeWithLRU(
               }
             },
             userFacingName() {
-              // Prefer title annotation if available, otherwise use tool name
+              
               const displayName = tool.annotations?.title || tool.name
               return `${client.name} - ${displayName} (MCP)`
             },
@@ -1982,7 +1900,7 @@ export const fetchCommandsForClient = memoizeWithLRU(
         return []
       }
 
-      // Request prompts list from client
+      
       const result = (await client.client.request(
         { method: 'prompts/list' },
         ListPromptsResultSchema,
@@ -2001,13 +1919,13 @@ export const fetchCommandsForClient = memoizeWithLRU(
           name: 'mcp__' + normalizeNameForMCP(client.name) + '__' + prompt.name,
           description: prompt.description ?? '',
           hasUserSpecifiedDescription: !!prompt.description,
-          contentLength: 0, // Dynamic MCP content
+          contentLength: 0, 
           isEnabled: () => true,
           isHidden: false,
           isMcp: true,
           progressMessage: 'running',
           userFacingName() {
-            // Use prompt.name (programmatic identifier) not prompt.title (display name)
+            
             
             return `${client.name}:${prompt.name} (MCP)`
           },
@@ -2063,13 +1981,6 @@ export async function callIdeRpc(
   return result.content
 }
 
-/**
- * Note: This should not be called by UI components directly, they should use the reconnectMcpServer
- * function from useManageMcpConnections.
- * @param name Server name
- * @param config Server configuration
- * @returns Object containing the client connection and its resources
- */
 export async function reconnectMcpServerImpl(
   name: string,
   config: ScopedMcpServerConfig,
@@ -2080,7 +1991,7 @@ export async function reconnectMcpServerImpl(
   resources?: ServerResource[]
 }> {
   try {
-    // Invalidate the keychain cache so we read fresh credentials from disk.
+    
     
     
     
@@ -2117,7 +2028,7 @@ export async function reconnectMcpServerImpl(
     
     const resourceTools: Tool[] = []
     if (supportsResources) {
-      // Only add resource tools if no other server has them
+      
       const hasResourceTools = [ListMcpResourcesTool, ReadMcpResourceTool].some(
         tool => tools.some(t => toolMatchesName(t, tool.name)),
       )
@@ -2133,7 +2044,7 @@ export async function reconnectMcpServerImpl(
       resources: resources.length > 0 ? resources : undefined,
     }
   } catch (error) {
-    // Handle errors gracefully - connection might have closed during fetch
+    
     logMCPError(name, `Error during reconnection: ${errorMessage(error)}`)
 
     
@@ -2144,10 +2055,6 @@ export async function reconnectMcpServerImpl(
     }
   }
 }
-
-// Replaced 2026-03: previous implementation ran fixed-size sequential batches
-
-// batch N held up ALL servers in batch N+1, even if the other 19 slots were
 
 async function processBatched<T>(
   items: T[],
@@ -2187,7 +2094,7 @@ export async function getMcpToolsCommandsAndResources(
     }
   }
 
-  // Calculate transport counts for logging
+  
   const totalServers = configEntries.length
   const stdioCount = count(configEntries, ([_, c]) => c.type === 'stdio')
   const sseCount = count(configEntries, ([_, c]) => c.type === 'sse')
@@ -2218,7 +2125,7 @@ export async function getMcpToolsCommandsAndResources(
     ScopedMcpServerConfig,
   ]): Promise<void> => {
     try {
-      // Check if server is disabled - if so, just add it to state without connecting
+      
       if (isMcpServerDisabled(name)) {
         onConnectionAttempt({
           client: {
@@ -2232,8 +2139,8 @@ export async function getMcpToolsCommandsAndResources(
         return
       }
 
-      // Skip connection for servers that recently returned 401 (15min TTL),
-      // or that we have probed before but hold no token for. The second
+      
+      
       
       
       
@@ -2278,11 +2185,11 @@ export async function getMcpToolsCommandsAndResources(
       const [tools, mcpCommands, mcpSkills, resources] = await Promise.all([
         fetchToolsForClient(client),
         fetchCommandsForClient(client),
-        // Discover skills from skill:// resources
+        
         feature('MCP_SKILLS') && supportsResources
           ? fetchMcpSkillsForClient!(client)
           : Promise.resolve([]),
-        // Fetch resources if supported
+        
         supportsResources
           ? fetchResourcesForClient(client)
           : Promise.resolve([]),
@@ -2290,7 +2197,7 @@ export async function getMcpToolsCommandsAndResources(
       const commands = [...mcpCommands, ...mcpSkills]
 
       
-      // include our resource tools with this client's tools
+      
       const resourceTools: Tool[] = []
       if (supportsResources && !resourceToolsAdded) {
         resourceToolsAdded = true
@@ -2304,13 +2211,13 @@ export async function getMcpToolsCommandsAndResources(
         resources: resources.length > 0 ? resources : undefined,
       })
     } catch (error) {
-      // Handle errors gracefully - connection might have closed during fetch
+      
       logMCPError(
         name,
         `Error fetching tools/commands/resources: ${errorMessage(error)}`,
       )
 
-      // Still update with the client but no tools/commands
+      
       onConnectionAttempt({
         client: { name, type: 'failed' as const, config },
         tools: [],
@@ -2319,9 +2226,9 @@ export async function getMcpToolsCommandsAndResources(
     }
   }
 
-  // Process both groups concurrently, each with their own concurrency limits:
-  // - Local servers (stdio/sdk): lower concurrency to avoid process spawning resource contention
-  // - Remote servers: higher concurrency since they're just network connections
+  
+  
+  
   await Promise.all([
     processBatched(
       localServers,
@@ -2335,8 +2242,6 @@ export async function getMcpToolsCommandsAndResources(
     ),
   ])
 }
-
-// Not memoized: called only 2-3 times at startup/reconfig. The inner work
 
 export function prefetchAllMcpResources(
   mcpConfigs: Record<string, ScopedMcpServerConfig>,
@@ -2405,9 +2310,6 @@ export function prefetchAllMcpResources(
   })
 }
 
-/**
- * Transform result content from an MCP tool or MCP prompt into message blocks
- */
 export async function transformResultContent(
   resultContent: PromptMessage['content'],
   serverName: string,
@@ -2434,7 +2336,7 @@ export async function transformResultContent(
       )
     }
     case 'image': {
-      // Resize and compress image data, enforcing API dimension limits
+      
       const imageBuffer = Buffer.from(String(resultContent.data), 'base64')
       const ext = resultContent.mimeType?.split('/')[1] || 'png'
       const resized = await maybeResizeAndDownsampleImageBuffer(
@@ -2469,7 +2371,7 @@ export async function transformResultContent(
         const isImage = IMAGE_MIME_TYPES.has(resource.mimeType ?? '')
 
         if (isImage) {
-          // Resize and compress image blob, enforcing API dimension limits
+          
           const imageBuffer = Buffer.from(resource.blob, 'base64')
           const ext = resource.mimeType?.split('/')[1] || 'png'
           const resized = await maybeResizeAndDownsampleImageBuffer(
@@ -2523,11 +2425,6 @@ export async function transformResultContent(
   }
 }
 
-/**
- * Decode base64 binary content, write it to disk with the proper extension,
- * and return a small text block with the file path. Replaces the old behavior
- * of dumping raw base64 into the context.
- */
 async function persistBlobToTextBlock(
   bytes: Buffer,
   mimeType: string | undefined,
@@ -2559,9 +2456,6 @@ async function persistBlobToTextBlock(
   ]
 }
 
-/**
- * Processes MCP tool result into a normalized format.
- */
 export type MCPResultType = 'toolResult' | 'structuredContent' | 'contentArray'
 
 export type TransformedMCPResult = {
@@ -2570,10 +2464,6 @@ export type TransformedMCPResult = {
   schema?: string
 }
 
-/**
- * Generates a compact, jq-friendly type signature for a value.
- * e.g. "{title: string, items: [{id: number, name: string}]}"
- */
 export function inferCompactSchema(value: unknown, depth = 2): string {
   if (value === null) return 'null'
   if (Array.isArray(value)) {
@@ -2594,8 +2484,8 @@ export function inferCompactSchema(value: unknown, depth = 2): string {
 
 export async function transformMCPResult(
   result: unknown,
-  tool: string, // Tool name for validation (e.g., "search")
-  name: string, // Server name for transformation (e.g., "slack")
+  tool: string, 
+  name: string, 
 ): Promise<TransformedMCPResult> {
   if (result && typeof result === 'object') {
     if ('toolResult' in result) {
@@ -2638,11 +2528,6 @@ export async function transformMCPResult(
   )
 }
 
-/**
- * Check if MCP content contains any image blocks.
- * Used to decide whether to persist to file (images should use truncation instead
- * to preserve image compression and viewability).
- */
 function contentContainsImages(content: MCPToolResult): boolean {
   if (!content || typeof content === 'string') {
     return false
@@ -2652,8 +2537,8 @@ function contentContainsImages(content: MCPToolResult): boolean {
 
 export async function processMCPResult(
   result: unknown,
-  tool: string, // Tool name for validation (e.g., "search")
-  name: string, // Server name for IDE check and transformation (e.g., "slack")
+  tool: string, 
+  name: string, 
 ): Promise<MCPToolResult> {
   const { content, type, schema } = await transformMCPResult(result, tool, name)
 
@@ -2663,7 +2548,7 @@ export async function processMCPResult(
     return content
   }
 
-  // Check if content needs truncation (i.e., is too large)
+  
   if (!(await mcpContentNeedsTruncation(content))) {
     return content
   }
@@ -2680,13 +2565,13 @@ export async function processMCPResult(
     return await truncateMcpContentIfNeeded(content)
   }
 
-  // Save large output to file and return instructions for reading it
+  
   
   if (!content) {
     return content
   }
 
-  // If content contains images, fall back to truncation - persisting images as JSON
+  
   
   if (contentContainsImages(content)) {
     logEvent('tengu_mcp_large_result_handled', {
@@ -2697,7 +2582,7 @@ export async function processMCPResult(
     return await truncateMcpContentIfNeeded(content)
   }
 
-  // Generate a unique ID for the persisted file (server__tool-timestamp)
+  
   const timestamp = Date.now()
   const persistId = `mcp-${normalizeNameForMCP(name)}-${normalizeNameForMCP(tool)}-${timestamp}`
   
@@ -2706,7 +2591,7 @@ export async function processMCPResult(
   const persistResult = await persistToolResult(contentStr, persistId)
 
   if (isPersistError(persistResult)) {
-    // If file save failed, fall back to returning truncated content info
+    
     const contentLength = contentStr.length
     logEvent('tengu_mcp_large_result_handled', {
       outcome: 'truncated',
@@ -2731,18 +2616,12 @@ export async function processMCPResult(
   )
 }
 
-/**
- * Call an MCP tool, handling UrlElicitationRequiredError (-32042) by
- * displaying the URL elicitation to the user, waiting for the completion
- * notification, and retrying the tool call.
- */
 type MCPToolCallResult = {
   content: MCPToolResult
   _meta?: Record<string, unknown>
   structuredContent?: Record<string, unknown>
 }
 
-/** @internal Exported for testing. */
 export async function callMCPToolWithUrlElicitationRetry({
   client: connectedClient,
   clientConnection,
@@ -2763,7 +2642,7 @@ export async function callMCPToolWithUrlElicitationRetry({
   signal: AbortSignal
   setAppState: (f: (prev: AppState) => AppState) => void
   onProgress?: (data: MCPProgress) => void
-  /** Injectable for testing. Defaults to callMCPTool. */
+  
   callToolFn?: (opts: {
     client: ConnectedMCPServer
     tool: string
@@ -2792,8 +2671,8 @@ export async function callMCPToolWithUrlElicitationRetry({
         onProgress,
       })
     } catch (error) {
-      // The MCP SDK's Protocol creates plain McpError (not UrlElicitationRequiredError)
-      // for error responses, so we check the error code instead of instanceof.
+      
+      
       if (
         !(error instanceof McpError) ||
         error.code !== ErrorCode.UrlElicitationRequired
@@ -2801,7 +2680,7 @@ export async function callMCPToolWithUrlElicitationRetry({
         throw error
       }
 
-      // Limit the number of URL elicitation retries
+      
       if (attempt >= MAX_URL_ELICITATION_RETRIES) {
         throw error
       }
@@ -2815,7 +2694,7 @@ export async function callMCPToolWithUrlElicitationRetry({
           ? (errorData.elicitations as unknown[])
           : []
 
-      // Validate each element has the required fields for ElicitRequestURLParams
+      
       const elicitations = rawElicitations.filter(
         (e): e is ElicitRequestURLParams => {
           if (e == null || typeof e !== 'object') return false
@@ -2847,13 +2726,13 @@ export async function callMCPToolWithUrlElicitationRetry({
         `Tool '${tool}' requires URL elicitation (error -32042, attempt ${attempt + 1}), processing ${elicitations.length} elicitation(s)`,
       )
 
-      // Process each URL elicitation from the error.
-      // The completion notification handler (in registerElicitationHandler) sets
-      // `completed: true` on the matching queue event; the dialog reacts to this flag.
+      
+      
+      
       for (const elicitation of elicitations) {
         const { elicitationId } = elicitation
 
-        // Run elicitation hooks — they can resolve URL elicitations programmatically
+        
         const hookResponse = await runElicitationHooks(
           serverName,
           elicitation,
@@ -2869,17 +2748,17 @@ export async function callMCPToolWithUrlElicitationRetry({
               content: `URL elicitation was ${hookResponse.action === 'decline' ? 'declined' : hookResponse.action + 'ed'} by a hook. The tool "${tool}" could not complete because it requires the user to open a URL.`,
             }
           }
-          // Hook accepted — skip the UI and proceed to retry
+          
           continue
         }
 
-        // Resolve the URL elicitation via callback (print/SDK mode) or queue (REPL mode).
+        
         let userResult: ElicitResult
         if (handleElicitation) {
-          // Print/SDK mode: delegate to structuredIO which sends a control request
+          
           userResult = await handleElicitation(serverName, elicitation, signal)
         } else {
-          // REPL mode: queue for ElicitationDialog with two-phase consent/waiting flow
+          
           const waitingState: ElicitationWaitingState = {
             actionLabel: 'Retry now',
             showCancel: true,
@@ -2906,11 +2785,11 @@ export async function callMCPToolWithUrlElicitationRetry({
                     signal,
                     waitingState,
                     respond: result => {
-                      // Phase 1 consent: accept is a no-op (doesn't resolve retry Promise)
+                      
                       if (result.action === 'accept') {
                         return
                       }
-                      // Decline or cancel: resolve the retry Promise
+                      
                       signal.removeEventListener('abort', onAbort)
                       void resolve(result)
                     },
@@ -2929,7 +2808,7 @@ export async function callMCPToolWithUrlElicitationRetry({
           })
         }
 
-        // Run ElicitationResult hooks — they can modify or block the response
+        
         const finalResult = await runElicitationResultHooks(
           serverName,
           userResult,
@@ -2954,7 +2833,7 @@ export async function callMCPToolWithUrlElicitationRetry({
         )
       }
 
-      // Loop back to retry the tool call
+      
     }
   }
 }
@@ -2992,7 +2871,7 @@ async function callMCPTool({
         const duration = `${elapsedSeconds}s`
         logMCPDebug(name, `Tool '${tool}' still running (${duration} elapsed)`)
       },
-      30000, // Log every 30 seconds
+      30000, 
       toolStartTime,
       name,
       tool,
@@ -3070,7 +2949,7 @@ async function callMCPTool({
           errorDetails = firstContent.text
         }
       } else if ('error' in result) {
-        // Fallback for legacy error format
+        
         errorDetails = String(result.error)
       }
       logMCPError(name, errorDetails)
@@ -3110,7 +2989,7 @@ async function callMCPTool({
         | undefined,
     }
   } catch (e) {
-    // Clear intervals on error
+    
     if (progressInterval !== undefined) {
       clearInterval(progressInterval)
     }
@@ -3124,7 +3003,7 @@ async function callMCPTool({
       )
     }
 
-    // Check for 401 errors indicating expired/invalid OAuth tokens
+    
     
     if (e instanceof Error) {
       const errorCode = 'code' in e ? (e.code as number | undefined) : undefined
@@ -3140,8 +3019,8 @@ async function callMCPTool({
         )
       }
 
-      // Check for session expiry — two error shapes can surface here:
-      // 1. Direct 404 + JSON-RPC -32001 from the server (StreamableHTTPError)
+      
+      
       
       
       
@@ -3164,13 +3043,13 @@ async function callMCPTool({
       }
     }
 
-    // When the users hits esc, avoid logspew
+    
     if (!(e instanceof Error) || e.name !== 'AbortError') {
       throw e
     }
     return { content: undefined }
   } finally {
-    // Always clear intervals
+    
     if (progressInterval !== undefined) {
       clearInterval(progressInterval)
     }
@@ -3184,14 +3063,6 @@ function extractToolUseId(message: AssistantMessage): string | undefined {
   return message.message.content[0].id
 }
 
-/**
- * Sets up SDK MCP clients by creating transports and connecting them.
- * This is used for SDK MCP servers that run in the same process as the SDK.
- *
- * @param sdkMcpConfigs - The SDK MCP server configurations
- * @param sendMcpMessage - Callback to send MCP messages through the control channel
- * @returns Connected clients, their tools, and transport map for message routing
- */
 export async function setupSdkMcpClients(
   sdkMcpConfigs: Record<string, McpSdkServerConfig>,
   sendMcpMessage: (
@@ -3212,8 +3083,8 @@ export async function setupSdkMcpClients(
 
       const client = new Client(
         {
-          name: 'claude-code',
-          title: 'Claude Code',
+          name: 'claude-code-next',
+          title: 'Claude Code Next',
           version: MACRO.VERSION ?? 'unknown',
           description: "Anthropic's agentic coding tool",
           websiteUrl: PRODUCT_URL,
@@ -3224,7 +3095,7 @@ export async function setupSdkMcpClients(
       )
 
       try {
-        // Connect the client
+        
         await client.connect(transport)
 
         
@@ -3242,7 +3113,7 @@ export async function setupSdkMcpClients(
           },
         }
 
-        // Fetch tools if the server has them
+        
         const serverTools: Tool[] = []
         if (capabilities?.tools) {
           const sdkTools = await fetchToolsForClient(connectedClient)
@@ -3254,7 +3125,7 @@ export async function setupSdkMcpClients(
           tools: serverTools,
         }
       } catch (error) {
-        // If connection fails, return failed server
+        
         logMCPError(name, `Failed to connect SDK MCP server: ${error}`)
         return {
           client: {
@@ -3274,7 +3145,7 @@ export async function setupSdkMcpClients(
       clients.push(result.value.client)
       tools.push(...result.value.tools)
     }
-    // If rejected (unexpected), the error was already logged inside the promise
+    
   }
 
   return { clients, tools }

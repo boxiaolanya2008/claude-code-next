@@ -56,10 +56,10 @@ function getAdvisorConfig(): AdvisorConfig {
 }
 
 export function isAdvisorEnabled(): boolean {
-  if (isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_ADVISOR_TOOL)) {
+  if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_ADVISOR_TOOL)) {
     return false
   }
-  // The advisor beta header is first-party only (Bedrock/Vertex 400 on it).
+  
   if (!shouldIncludeFirstPartyOnlyBetas()) {
     return false
   }
@@ -82,8 +82,6 @@ export function getExperimentAdvisorModels():
     : undefined
 }
 
-// @[MODEL LAUNCH]: Add the new model if it supports the advisor tool.
-
 export function modelSupportsAdvisor(model: string): boolean {
   const m = model.toLowerCase()
   return (
@@ -93,7 +91,6 @@ export function modelSupportsAdvisor(model: string): boolean {
   )
 }
 
-// @[MODEL LAUNCH]: Add the new model if it can serve as an advisor model.
 export function isValidAdvisorModel(model: string): boolean {
   const m = model.toLowerCase()
   return (

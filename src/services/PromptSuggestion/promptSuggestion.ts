@@ -35,8 +35,8 @@ export function getPromptVariant(): PromptVariant {
 }
 
 export function shouldEnablePromptSuggestion(): boolean {
-  // Env var overrides everything (for testing)
-  const envOverride = process.env.CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION
+  
+  const envOverride = process.env.CLAUDE_CODE_NEXT_ENABLE_PROMPT_SUGGESTION
   if (isEnvDefinedFalsy(envOverride)) {
     logEvent('tengu_prompt_suggestion_init', {
       enabled: false,
@@ -54,7 +54,7 @@ export function shouldEnablePromptSuggestion(): boolean {
     return true
   }
 
-  // Keep default in sync with Config.tsx (settings toggle visibility)
+  
   if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_chomp_inflection', false)) {
     logEvent('tengu_prompt_suggestion_init', {
       enabled: false,
@@ -64,7 +64,7 @@ export function shouldEnablePromptSuggestion(): boolean {
     return false
   }
 
-  // Disable in non-interactive mode (print mode, piped input, SDK)
+  
   if (getIsNonInteractiveSession()) {
     logEvent('tengu_prompt_suggestion_init', {
       enabled: false,
@@ -74,7 +74,7 @@ export function shouldEnablePromptSuggestion(): boolean {
     return false
   }
 
-  // Disable for swarm teammates (only leader should show suggestions)
+  
   if (isAgentSwarmsEnabled() && isTeammate()) {
     logEvent('tengu_prompt_suggestion_init', {
       enabled: false,
@@ -100,10 +100,6 @@ export function abortPromptSuggestion(): void {
   }
 }
 
-/**
- * Returns a suppression reason if suggestions should not be generated,
- * or null if generation is allowed. Shared by main and pipelined paths.
- */
 export function getSuggestionSuppressReason(appState: AppState): string | null {
   if (!appState.promptSuggestionEnabled) return 'disabled'
   if (appState.pendingWorkerRequest || appState.pendingSandboxRequest)
@@ -118,10 +114,6 @@ export function getSuggestionSuppressReason(appState: AppState): string | null {
   return null
 }
 
-/**
- * Shared guard + generation logic used by both CLI TUI and SDK push paths.
- * Returns the suggestion with metadata, or null if suppressed/filtered.
- */
 export async function tryGenerateSuggestion(
   abortController: AbortController,
   messages: Message[],
@@ -255,7 +247,7 @@ export function getParentCacheSuppressReason(
     : null
 }
 
-const SUGGESTION_PROMPT = `[SUGGESTION MODE: Suggest what the user might naturally type next into Claude Code.]
+const SUGGESTION_PROMPT = `[SUGGESTION MODE: Suggest what the user might naturally type next into Claude Code Next.]
 
 FIRST: Look at the user's recent messages and original request.
 
@@ -312,13 +304,13 @@ export async function generateSuggestion(
   
   
   
-  //   - abortController (not sent to API)
+  
   
   
   
   const result = await runForkedAgent({
     promptMessages: [createUserMessage({ content: prompt })],
-    cacheSafeParams, // Don't override tools/thinking settings - busts cache
+    cacheSafeParams, 
     canUseTool,
     querySource: 'prompt_suggestion',
     forkLabel: 'prompt_suggestion',
@@ -329,8 +321,8 @@ export async function generateSuggestion(
     skipCacheWrite: true,
   })
 
-  // Check ALL messages - model may loop (try tool → denied → text in next message)
-  // Also extract the requestId from the first assistant message for RL dataset joins
+  
+  
   const firstAssistantMsg = result.messages.find(m => m.type === 'assistant')
   const generationRequestId =
     firstAssistantMsg?.type === 'assistant'
@@ -373,14 +365,14 @@ export function shouldFilterSuggestion(
         lower === 'nothing found.' ||
         lower.startsWith('nothing to suggest') ||
         lower.startsWith('no suggestion') ||
-        // Model spells out the prompt's "stay silent" instruction
+        
         /\bsilence is\b|\bstay(s|ing)? silent\b/.test(lower) ||
-        // Model outputs bare "silence" wrapped in punctuation/whitespace
+        
         /^\W*silence\W*$/.test(lower),
     ],
     [
       'meta_wrapped',
-      // Model wraps meta-reasoning in parens/brackets: (silence — ...), [no suggestion]
+      
       () => /^\(.*\)$|^\[.*\]$/.test(suggestion),
     ],
     [
@@ -410,7 +402,7 @@ export function shouldFilterSuggestion(
           'sure',
           'ok',
           'okay',
-          // Actions
+          
           'push',
           'commit',
           'deploy',
@@ -419,7 +411,7 @@ export function shouldFilterSuggestion(
           'check',
           'exit',
           'quit',
-          // Negation
+          
           'no',
         ])
         return !ALLOWED_SINGLE_WORDS.has(lower)
@@ -455,10 +447,6 @@ export function shouldFilterSuggestion(
   return false
 }
 
-/**
- * Log acceptance/ignoring of a prompt suggestion. Used by the SDK push path
- * to track outcomes when the next user message arrives.
- */
 export function logSuggestionOutcome(
   suggestion: string,
   userInput: string,

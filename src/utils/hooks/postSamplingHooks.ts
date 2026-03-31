@@ -18,23 +18,16 @@ export type PostSamplingHook = (
   context: REPLHookContext,
 ) => Promise<void> | void
 
-// Internal registry for post-sampling hooks
 const postSamplingHooks: PostSamplingHook[] = []
 
 export function registerPostSamplingHook(hook: PostSamplingHook): void {
   postSamplingHooks.push(hook)
 }
 
-/**
- * Clear all registered post-sampling hooks (for testing)
- */
 export function clearPostSamplingHooks(): void {
   postSamplingHooks.length = 0
 }
 
-/**
- * Execute all registered post-sampling hooks
- */
 export async function executePostSamplingHooks(
   messages: Message[],
   systemPrompt: SystemPrompt,
@@ -56,7 +49,7 @@ export async function executePostSamplingHooks(
     try {
       await hook(context)
     } catch (error) {
-      // Log but don't fail on hook errors
+      
       logError(toError(error))
     }
   }

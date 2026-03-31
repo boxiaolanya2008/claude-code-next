@@ -29,12 +29,12 @@ import applyStyles, { type Styles, type TextStyles } from './styles.js'
 
 if (process.env.NODE_ENV === 'development') {
   try {
-    // eslint-disable-next-line custom-rules/no-top-level-dynamic-import -- dev-only; NODE_ENV check is DCE'd in production
+    
     void import('./devtools.js')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    
   } catch (error: any) {
     if (error.code === 'ERR_MODULE_NOT_FOUND') {
-      // biome-ignore lint/suspicious/noConsole: intentional warning
+      
       console.warn(
         `
 The environment variable DEV is set to true, so Ink tried to import \`react-devtools-core\`,
@@ -46,13 +46,11 @@ $ npm install --save-dev react-devtools-core
 				`.trim() + '\n',
       )
     } else {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      
       throw error
     }
   }
 }
-
-// --
 
 type AnyObject = Record<string, unknown>
 
@@ -93,14 +91,12 @@ const cleanupYogaNode = (node: DOMElement | TextNode): void => {
   const yogaNode = node.yogaNode
   if (yogaNode) {
     yogaNode.unsetMeasureFunc()
-    // Clear all references BEFORE freeing to prevent other code from
-    // accessing freed WASM memory during concurrent operations
+    
+    
     clearYogaNodeReferences(node)
     yogaNode.freeRecursive()
   }
 }
-
-// --
 
 type Props = Record<string, unknown>
 
@@ -139,12 +135,6 @@ function applyProp(node: DOMElement, key: string, value: unknown): void {
   setAttribute(node, key, value as DOMNodeAttribute)
 }
 
-// --
-
-// react-reconciler's Fiber shape — only the fields we walk. The 5th arg to
-
-// return is the parent fiber (always present). We prefer _debugOwner since it
-
 type FiberLike = {
   elementType?: { displayName?: string; name?: string } | string | null
   _debugOwner?: FiberLike | null
@@ -175,14 +165,14 @@ export function getOwnerChain(fiber: unknown): string[] {
 let debugRepaints: boolean | undefined
 export function isDebugRepaintsEnabled(): boolean {
   if (debugRepaints === undefined) {
-    debugRepaints = isEnvTruthy(process.env.CLAUDE_CODE_DEBUG_REPAINTS)
+    debugRepaints = isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DEBUG_REPAINTS)
   }
   return debugRepaints
 }
 
 export const dispatcher = new Dispatcher()
 
-const COMMIT_LOG = process.env.CLAUDE_CODE_COMMIT_LOG
+const COMMIT_LOG = process.env.CLAUDE_CODE_NEXT_COMMIT_LOG
 let _commits = 0
 let _lastLog = 0
 let _lastCommitAt = 0
@@ -210,7 +200,6 @@ export function resetProfileCounters(): void {
   _lastCommitMs = 0
   _commitStart = 0
 }
-// --- END ---
 
 const reconciler = createReconciler<
   ElementNames,
@@ -223,7 +212,7 @@ const reconciler = createReconciler<
   unknown,
   DOMElement,
   HostContext,
-  null, // UpdatePayload - not used in React 19
+  null, 
   NodeJS.Timeout,
   -1,
   null
@@ -246,7 +235,7 @@ const reconciler = createReconciler<
       _lastCommitAt = now
       const reconcileMs = _prepareAt > 0 ? now - _prepareAt : 0
       if (gap > 30 || reconcileMs > 20 || _createCount > 50) {
-        // eslint-disable-next-line custom-rules/no-sync-fs -- debug instrumentation
+        
         appendFileSync(
           COMMIT_LOG,
           `${now.toFixed(1)} gap=${gap.toFixed(1)}ms reconcile=${reconcileMs.toFixed(1)}ms creates=${_createCount}\n`,
@@ -254,7 +243,7 @@ const reconciler = createReconciler<
       }
       _createCount = 0
       if (now - _lastLog > 1000) {
-        // eslint-disable-next-line custom-rules/no-sync-fs -- debug instrumentation
+        
         appendFileSync(
           COMMIT_LOG,
           `${now.toFixed(1)} commits=${_commits}/s maxGap=${_maxGapMs.toFixed(1)}ms\n`,
@@ -296,7 +285,7 @@ const reconciler = createReconciler<
     if (COMMIT_LOG) {
       const renderMs = performance.now() - _tr
       if (renderMs > 10) {
-        // eslint-disable-next-line custom-rules/no-sync-fs -- debug instrumentation
+        
         appendFileSync(
           COMMIT_LOG,
           `${_tr.toFixed(1)} SLOW_PAINT ${renderMs.toFixed(1)}ms\n`,
@@ -413,7 +402,7 @@ const reconciler = createReconciler<
     cleanupYogaNode(removeNode)
     getFocusManager(node).handleNodeRemoved(removeNode, node)
   },
-  // React 19 commitUpdate receives old and new props directly instead of an updatePayload
+  
   commitUpdate(
     node: DOMElement,
     _type: ElementNames,
@@ -459,7 +448,7 @@ const reconciler = createReconciler<
       root.focusManager!.handleNodeRemoved(removeNode, root)
     }
   },
-  // React 19 required methods
+  
   maySuspendCommit(): boolean {
     return false
   },

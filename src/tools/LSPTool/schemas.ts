@@ -2,10 +2,8 @@ import { z } from 'zod/v4'
 import { lazySchema } from '../../utils/lazySchema.js'
 
 export const lspToolInputSchema = lazySchema(() => {
-  /**
-   * Go to Definition operation
-   * Finds the definition location of a symbol at the given position
-   */
+  
+
   const goToDefinitionSchema = z.strictObject({
     operation: z.literal('goToDefinition'),
     filePath: z.string().describe('The absolute or relative path to the file'),

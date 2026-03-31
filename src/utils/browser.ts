@@ -9,7 +9,7 @@ function validateUrl(url: string): void {
     throw new Error(`Invalid URL format: ${url}`)
   }
 
-  // Validate URL protocol for security
+  
   if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
     throw new Error(
       `Invalid URL protocol: must use http:// or https://, got ${parsedUrl.protocol}`,
@@ -17,10 +17,6 @@ function validateUrl(url: string): void {
   }
 }
 
-/**
- * Open a file or folder path using the system's default handler.
- * Uses `open` on macOS, `explorer` on Windows, `xdg-open` on Linux.
- */
 export async function openPath(path: string): Promise<boolean> {
   try {
     const platform = process.platform
@@ -38,7 +34,7 @@ export async function openPath(path: string): Promise<boolean> {
 
 export async function openBrowser(url: string): Promise<boolean> {
   try {
-    // Parse and validate the URL
+    
     validateUrl(url)
 
     const browserEnv = process.env.BROWSER
@@ -46,7 +42,7 @@ export async function openBrowser(url: string): Promise<boolean> {
 
     if (platform === 'win32') {
       if (browserEnv) {
-        // browsers require shell, else they will treat this as a file:/// handle
+        
         const { code } = await execFileNoThrow(browserEnv, [`"${url}"`])
         return code === 0
       }

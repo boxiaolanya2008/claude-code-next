@@ -202,7 +202,7 @@ export default createMovedToPluginCommand({
   pluginName: 'security-review',
   pluginCommand: 'security-review',
   async getPromptWhileMarketplaceIsPrivate(_args, context) {
-    // Parse frontmatter from the markdown
+    
     const parsed = parseFrontmatter(SECURITY_REVIEW_MARKDOWN)
 
     

@@ -86,7 +86,7 @@ import { isToolSearchEnabledOptimistic } from './utils/toolSearch.js'
 import { isTodoV2Enabled } from './utils/tasks.js'
 
 const VerifyPlanExecutionTool =
-  process.env.CLAUDE_CODE_VERIFY_PLAN === 'true'
+  process.env.CLAUDE_CODE_NEXT_VERIFY_PLAN === 'true'
     ? require('./tools/VerifyPlanExecutionTool/VerifyPlanExecutionTool.js')
         .VerifyPlanExecutionTool
     : null
@@ -142,14 +142,13 @@ import {
   isReplModeEnabled,
 } from './tools/REPLTool/constants.js'
 export { REPL_ONLY_TOOLS }
-/* eslint-disable @typescript-eslint/no-require-imports */
+
 const getPowerShellTool = () => {
   if (!isPowerShellToolEnabled()) return null
   return (
     require('./tools/PowerShellTool/PowerShellTool.js') as typeof import('./tools/PowerShellTool/PowerShellTool.js')
   ).PowerShellTool
 }
-/* eslint-enable @typescript-eslint/no-require-imports */
 
 export const TOOL_PRESETS = ['default'] as const
 
@@ -163,30 +162,18 @@ export function parseToolPreset(preset: string): ToolPreset | null {
   return presetString as ToolPreset
 }
 
-/**
- * Get the list of tool names for a given preset
- * Filters out tools that are disabled via isEnabled() check
- * @param preset The preset name
- * @returns Array of tool names
- */
 export function getToolsForDefaultPreset(): string[] {
   const tools = getAllBaseTools()
   const isEnabled = tools.map(tool => tool.isEnabled())
   return tools.filter((_, i) => isEnabled[i]).map(tool => tool.name)
 }
 
-/**
- * Get the complete exhaustive list of all tools that could be available
- * in the current environment (respecting process.env flags).
- * This is the source of truth for ALL tools.
- */
-
 export function getAllBaseTools(): Tools {
   return [
     AgentTool,
     TaskOutputTool,
     BashTool,
-    // Ant-native builds have bfs/ugrep embedded in the bun binary (same ARGV0
+    
     
     
     ...(hasEmbeddedSearchTools() ? [] : [GlobTool, GrepTool]),
@@ -235,21 +222,12 @@ export function getAllBaseTools(): Tools {
     ...(process.env.NODE_ENV === 'test' ? [TestingPermissionTool] : []),
     ListMcpResourcesTool,
     ReadMcpResourceTool,
-    // Include ToolSearchTool when tool search might be enabled (optimistic check)
+    
     
     ...(isToolSearchEnabledOptimistic() ? [ToolSearchTool] : []),
   ]
 }
 
-/**
- * Filters out tools that are blanket-denied by the permission context.
- * A tool is filtered out if there's a deny rule matching its name with no
- * ruleContent (i.e., a blanket deny for that tool).
- *
- * Uses the same matcher as the runtime permission check (step 1a), so MCP
- * server-prefix rules like `mcp__server` strip all tools from that server
- * before the model sees them — not just at call time.
- */
 export function filterToolsByDenyRules<
   T extends {
     name: string
@@ -260,9 +238,9 @@ export function filterToolsByDenyRules<
 }
 
 export const getTools = (permissionContext: ToolPermissionContext): Tools => {
-  // Simple mode: only Bash, Read, and Edit tools
-  if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
-    // --bare + REPL mode: REPL wraps Bash/Read/Edit/etc inside the VM, so
+  
+  if (isEnvTruthy(process.env.CLAUDE_CODE_NEXT_SIMPLE)) {
+    
     
     
     if (isReplModeEnabled() && REPLTool) {
@@ -288,7 +266,7 @@ export const getTools = (permissionContext: ToolPermissionContext): Tools => {
     return filterToolsByDenyRules(simpleTools, permissionContext)
   }
 
-  // Get all base tools and filter out special tools that get added conditionally
+  
   const specialTools = new Set([
     ListMcpResourcesTool.name,
     ReadMcpResourceTool.name,
@@ -317,22 +295,6 @@ export const getTools = (permissionContext: ToolPermissionContext): Tools => {
   return allowedTools.filter((_, i) => isEnabled[i])
 }
 
-/**
- * Assemble the full tool pool for a given permission context and MCP tools.
- *
- * This is the single source of truth for combining built-in tools with MCP tools.
- * Both REPL.tsx (via useMergedTools hook) and runAgent.ts (for coordinator workers)
- * use this function to ensure consistent tool pool assembly.
- *
- * The function:
- * 1. Gets built-in tools via getTools() (respects mode filtering)
- * 2. Filters MCP tools by deny rules
- * 3. Deduplicates by tool name (built-in tools take precedence)
- *
- * @param permissionContext - Permission context for filtering built-in tools
- * @param mcpTools - MCP tools from appState.mcp.tools
- * @returns Combined, deduplicated array of built-in and MCP tools
- */
 export function assembleToolPool(
   permissionContext: ToolPermissionContext,
   mcpTools: Tools,
@@ -357,20 +319,6 @@ export function assembleToolPool(
   )
 }
 
-/**
- * Get all tools including both built-in tools and MCP tools.
- *
- * This is the preferred function when you need the complete tools list for:
- * - Tool search threshold calculations (isToolSearchEnabled)
- * - Token counting that includes MCP tools
- * - Any context where MCP tools should be considered
- *
- * Use getTools() only when you specifically need just built-in tools.
- *
- * @param permissionContext - Permission context for filtering built-in tools
- * @param mcpTools - MCP tools from appState.mcp.tools
- * @returns Combined array of built-in and MCP tools
- */
 export function getMergedTools(
   permissionContext: ToolPermissionContext,
   mcpTools: Tools,

@@ -14,11 +14,6 @@ export function getMaxTaskOutputLength(): number {
   return result.effective
 }
 
-/**
- * Format task output for API consumption, truncating if too large.
- * When truncated, includes a header with the file path and returns
- * the last N characters that fit within the limit.
- */
 export function formatTaskOutput(
   output: string,
   taskId: string,

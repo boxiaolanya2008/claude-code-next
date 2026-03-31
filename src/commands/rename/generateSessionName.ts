@@ -56,7 +56,7 @@ export async function generateSessionName(
     }
     return null
   } catch (error) {
-    // Haiku timeout/rate-limit/network are expected operational failures —
+    
     
     
     logForDebugging(`generateSessionName failed: ${errorMessage(error)}`, {

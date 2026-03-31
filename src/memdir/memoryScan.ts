@@ -61,11 +61,6 @@ export async function scanMemoryFiles(
   }
 }
 
-/**
- * Format memory headers as a text manifest: one line per file with
- * [type] filename (timestamp): description. Used by both the recall
- * selector prompt and the extraction-agent prompt.
- */
 export function formatMemoryManifest(memories: MemoryHeader[]): string {
   return memories
     .map(m => {

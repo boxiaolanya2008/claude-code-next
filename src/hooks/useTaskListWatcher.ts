@@ -14,7 +14,7 @@ import {
 const DEBOUNCE_MS = 1000
 
 type Props = {
-  /** When undefined, the hook does nothing. The task list id is also used as the agent ID. */
+  
   taskListId?: string
   isLoading: boolean
   
@@ -22,13 +22,6 @@ type Props = {
   onSubmitTask: (prompt: string) => boolean
 }
 
-/**
- * Hook that watches a task list directory and automatically picks up
- * open, unowned tasks to work on.
- *
- * This enables "tasks mode" where Claude watches for externally-created
- * tasks and processes them one at a time.
- */
 export function useTaskListWatcher({
   taskListId,
   isLoading,
@@ -60,14 +53,14 @@ export function useTaskListWatcher({
       return
     }
 
-    // Don't need to submit new tasks if we are already working
+    
     if (isLoadingRef.current) {
       return
     }
 
     const tasks = await listTasks(taskListId)
 
-    // If we have a current task, check if it's been resolved
+    
     if (currentTaskRef.current !== null) {
       const currentTask = tasks.find(t => t.id === currentTaskRef.current)
       if (!currentTask || currentTask.status === 'completed') {
@@ -76,12 +69,12 @@ export function useTaskListWatcher({
         )
         currentTaskRef.current = null
       } else {
-        // Still working on current task
+        
         return
       }
     }
 
-    // Find an open task with no owner that isn't blocked
+    
     const availableTask = findAvailableTask(tasks)
 
     if (!availableTask) {
@@ -92,7 +85,7 @@ export function useTaskListWatcher({
       `[TaskListWatcher] Found available task #${availableTask.id}: ${availableTask.subject}`,
     )
 
-    // Claim the task using the task list's agent ID
+    
     const result = await claimTask(taskListId, availableTask.id, agentId)
 
     if (!result.success) {
@@ -122,7 +115,7 @@ export function useTaskListWatcher({
     }
   }
 
-  // -- Watcher setup
+  
 
   
   
@@ -153,16 +146,16 @@ export function useTaskListWatcher({
       watcher.unref()
       logForDebugging(`[TaskListWatcher] Watching for tasks in ${tasksDir}`)
     } catch (error) {
-      // fs.watch throws synchronously on ENOENT — ensureTasksDir should have
+      
       
       logForDebugging(`[TaskListWatcher] Failed to watch ${tasksDir}: ${error}`)
     }
 
-    // Initial check
+    
     debouncedCheck()
 
     return () => {
-      // This cleanup only fires when taskListId changes or on unmount —
+      
       
       
       scheduleCheckRef.current = () => {}
@@ -186,12 +179,6 @@ export function useTaskListWatcher({
   }, [enabled, isLoading])
 }
 
-/**
- * Find an available task that can be worked on:
- * - Status is 'pending'
- * - No owner assigned
- * - Not blocked by any unresolved tasks
- */
 function findAvailableTask(tasks: Task[]): Task | undefined {
   const unresolvedTaskIds = new Set(
     tasks.filter(t => t.status !== 'completed').map(t => t.id),
@@ -205,9 +192,6 @@ function findAvailableTask(tasks: Task[]): Task | undefined {
   })
 }
 
-/**
- * Format a task as a prompt for Claude to work on.
- */
 function formatTaskAsPrompt(task: Task): string {
   let prompt = `Complete all open tasks. Start with task #${task.id}: \n\n ${task.subject}`
 

@@ -11,16 +11,16 @@ const SSL_ERROR_CODES = new Set([
   'CERT_REVOKED',
   'CERT_REJECTED',
   'CERT_UNTRUSTED',
-  // Self-signed certificate errors
+  
   'DEPTH_ZERO_SELF_SIGNED_CERT',
   'SELF_SIGNED_CERT_IN_CHAIN',
-  // Chain errors
+  
   'CERT_CHAIN_TOO_LONG',
   'PATH_LENGTH_EXCEEDED',
-  // Hostname/altname errors
+  
   'ERR_TLS_CERT_ALTNAME_INVALID',
   'HOSTNAME_MISMATCH',
-  // TLS handshake errors
+  
   'ERR_TLS_HANDSHAKE_TIMEOUT',
   'ERR_SSL_WRONG_VERSION_NUMBER',
   'ERR_SSL_DECRYPTION_FAILED_OR_BAD_RECORD_MAC',
@@ -32,11 +32,6 @@ export type ConnectionErrorDetails = {
   isSSLError: boolean
 }
 
-/**
- * Extracts connection error details from the error cause chain.
- * The Anthropic SDK wraps underlying errors in the `cause` property.
- * This function walks the cause chain to find the root error code/message.
- */
 export function extractConnectionErrorDetails(
   error: unknown,
 ): ConnectionErrorDetails | null {
@@ -44,7 +39,7 @@ export function extractConnectionErrorDetails(
     return null
   }
 
-  // Walk the cause chain to find the root error with a code
+  
   let current: unknown = error
   const maxDepth = 5 
   let depth = 0
@@ -64,7 +59,7 @@ export function extractConnectionErrorDetails(
       }
     }
 
-    // Move to the next cause in the chain
+    
     if (
       current instanceof Error &&
       'cause' in current &&
@@ -80,15 +75,6 @@ export function extractConnectionErrorDetails(
   return null
 }
 
-/**
- * Returns an actionable hint for SSL/TLS errors, intended for contexts outside
- * the main API client (OAuth token exchange, preflight connectivity checks)
- * where `formatAPIError` doesn't apply.
- *
- * Motivation: enterprise users behind TLS-intercepting proxies (Zscaler et al.)
- * see OAuth complete in-browser but the CLI's token exchange silently fails
- * with a raw SSL code. Surfacing the likely fix saves a support round-trip.
- */
 export function getSSLErrorHint(error: unknown): string | null {
   const details = extractConnectionErrorDetails(error)
   if (!details?.isSSLError) {
@@ -97,11 +83,6 @@ export function getSSLErrorHint(error: unknown): string | null {
   return `SSL certificate error (${details.code}). If you are behind a corporate proxy or TLS-intercepting firewall, set NODE_EXTRA_CA_CERTS to your CA bundle path, or ask IT to allowlist *.anthropic.com. Run /doctor for details.`
 }
 
-/**
- * Strips HTML content (e.g., CloudFlare error pages) from a message string,
- * returning a user-friendly title or empty string if HTML is detected.
- * Returns the original message unchanged if no HTML is found.
- */
 function sanitizeMessageHTML(message: string): string {
   if (message.includes('<!DOCTYPE html') || message.includes('<html')) {
     const titleMatch = message.match(/<title>([^<]+)<\/title>/)
@@ -113,32 +94,16 @@ function sanitizeMessageHTML(message: string): string {
   return message
 }
 
-/**
- * Detects if an error message contains HTML content (e.g., CloudFlare error pages)
- * and returns a user-friendly message instead
- */
 export function sanitizeAPIError(apiError: APIError): string {
   const message = apiError.message
   if (!message) {
-    // Sometimes message is undefined
+    
     
     return ''
   }
   return sanitizeMessageHTML(message)
 }
 
-/**
- * Shapes of deserialized API errors from session JSONL.
- *
- * After JSON round-tripping, the SDK's APIError loses its `.message` property.
- * The actual message lives at different nesting levels depending on the provider:
- *
- * - Bedrock/proxy: `{ error: { message: "..." } }`
- * - Standard Anthropic API: `{ error: { error: { message: "..." } } }`
- *   (the outer `.error` is the response body, the inner `.error` is the API error)
- *
- * See also: `getErrorMessage` in `logging.ts` which handles the same shapes.
- */
 type NestedAPIError = {
   error?: {
     message?: string
@@ -156,20 +121,12 @@ function hasNestedError(value: unknown): value is NestedAPIError {
   )
 }
 
-/**
- * Extract a human-readable message from a deserialized API error that lacks
- * a top-level `.message`.
- *
- * Checks two nesting levels (deeper first for specificity):
- * 1. `error.error.error.message` — standard Anthropic API shape
- * 2. `error.error.message` — Bedrock shape
- */
 function extractNestedErrorMessage(error: APIError): string | null {
   if (!hasNestedError(error)) {
     return null
   }
 
-  // Access `.error` via the narrowed type so TypeScript sees the nested shape
+  
   
   const narrowed: NestedAPIError = error
   const nested = narrowed.error
@@ -183,7 +140,7 @@ function extractNestedErrorMessage(error: APIError): string | null {
     }
   }
 
-  // Bedrock shape: { error: { message } }
+  
   const msg = nested?.message
   if (typeof msg === 'string' && msg.length > 0) {
     const sanitized = sanitizeMessageHTML(msg)
@@ -196,7 +153,7 @@ function extractNestedErrorMessage(error: APIError): string | null {
 }
 
 export function formatAPIError(error: APIError): string {
-  // Extract connection error details from the cause chain
+  
   const connectionDetails = extractConnectionErrorDetails(error)
 
   if (connectionDetails) {
@@ -207,7 +164,7 @@ export function formatAPIError(error: APIError): string {
       return 'Request timed out. Check your internet connection and proxy settings'
     }
 
-    // Handle SSL/TLS errors with specific messages
+    
     if (isSSLError) {
       switch (code) {
         case 'UNABLE_TO_VERIFY_LEAF_SIGNATURE':
@@ -233,16 +190,16 @@ export function formatAPIError(error: APIError): string {
   }
 
   if (error.message === 'Connection error.') {
-    // If we have a code but it's not SSL, include it for debugging
+    
     if (connectionDetails?.code) {
       return `Unable to connect to API (${connectionDetails.code})`
     }
     return 'Unable to connect to API. Check your internet connection'
   }
 
-  // Guard: when deserialized from JSONL (e.g. --resume), the error object may
-  // be a plain object without a `.message` property.  Return a safe fallback
-  // instead of undefined, which would crash callers that access `.length`.
+  
+  
+  
   if (!error.message) {
     return (
       extractNestedErrorMessage(error) ??
@@ -251,7 +208,7 @@ export function formatAPIError(error: APIError): string {
   }
 
   const sanitizedMessage = sanitizeAPIError(error)
-  // Use sanitized message if it's different from the original (i.e., HTML was sanitized)
+  
   return sanitizedMessage !== error.message && sanitizedMessage.length > 0
     ? sanitizedMessage
     : error.message

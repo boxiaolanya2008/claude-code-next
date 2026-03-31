@@ -26,7 +26,7 @@ export type Transport = z.infer<ReturnType<typeof TransportSchema>>
 
 export const McpStdioServerConfigSchema = lazySchema(() =>
   z.object({
-    type: z.literal('stdio').optional(), // Optional for backwards compatibility
+    type: z.literal('stdio').optional(), 
     command: z.string().min(1, 'Command cannot be empty'),
     args: z.array(z.string()).default([]),
     env: z.record(z.string(), z.string()).optional(),
@@ -218,7 +218,6 @@ export type MCPServerConnection =
 
 export type ServerResource = Resource & { server: string }
 
-// MCP CLI State types
 export interface SerializedTool {
   name: string
   description: string

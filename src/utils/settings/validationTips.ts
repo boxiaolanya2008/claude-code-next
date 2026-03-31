@@ -76,11 +76,11 @@ const TIP_MATCHERS: TipMatcher[] = [
       ctx.path.includes('hooks') && ctx.code === 'invalid_type',
     tip: {
       suggestion:
-        // gh-31187 / CC-282: prior example showed {"matcher": {"tools": ["BashTool"]}}
-        // — an object format that never existed in the schema (matcher is z.string(),
-        // always has been). Users copied the tip's example and got the same validation
-        // error again. See matchesPattern() in hooks.ts: matcher is exact-match,
-        // pipe-separated ("Edit|Write"), or regex. Empty/"*" matches all.
+        
+        
+        
+        
+        
         'Hooks use a matcher + hooks array. The matcher is a string: a tool name ("Bash"), pipe-separated list ("Edit|Write"), or empty to match all. Example: {"PostToolUse": [{"matcher": "Edit|Write", "hooks": [{"type": "command", "command": "echo Done"}]}]}',
     },
   },
@@ -151,7 +151,7 @@ export function getValidationTip(context: TipContext): ValidationTip | null {
     tip.suggestion = `Valid values: ${context.enumValues.map(v => `"${v}"`).join(', ')}`
   }
 
-  // Add documentation link based on path prefix
+  
   if (!tip.docLink && context.path) {
     const pathPrefix = context.path.split('.')[0]
     if (pathPrefix) {

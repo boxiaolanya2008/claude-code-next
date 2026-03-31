@@ -6,7 +6,7 @@ const reloadPlugins = {
   type: 'local',
   name: 'reload-plugins',
   description: 'Activate pending plugin changes in the current session',
-  // SDK callers use query.reloadPlugins() (control request) instead of
+  
   
   
   supportsNonInteractive: false,

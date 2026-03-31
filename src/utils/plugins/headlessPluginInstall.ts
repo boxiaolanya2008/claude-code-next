@@ -44,13 +44,13 @@ export async function installPluginsForHeadless(): Promise<boolean> {
     clearPluginCache('headlessPluginInstall: seed marketplaces registered')
   }
 
-  // Ensure zip cache directory structure exists
+  
   if (zipCacheMode) {
     await getFsImplementation().mkdir(getZipCacheMarketplacesDir())
     await getFsImplementation().mkdir(getZipCachePluginsDir())
   }
 
-  // Declared now includes an implicit claude-plugins-official entry when any
+  
   
   
   
@@ -62,7 +62,7 @@ export async function installPluginsForHeadless(): Promise<boolean> {
     delisted_count: 0,
   }
 
-  // Initialize from seedChanged so the caller (print.ts) calls
+  
   
   
   
@@ -72,7 +72,7 @@ export async function installPluginsForHeadless(): Promise<boolean> {
     if (declaredCount === 0) {
       logForDebugging('installPluginsForHeadless: no marketplaces declared')
     } else {
-      // Reconcile declared marketplaces (settings intent + implicit official)
+      
       
       const reconcileResult = await withDiagnosticsTiming(
         'headless_marketplace_reconcile',
@@ -124,14 +124,14 @@ export async function installPluginsForHeadless(): Promise<boolean> {
       metrics.marketplaces_installed = marketplacesChanged
     }
 
-    // Zip cache: save marketplace JSONs for offline access on ephemeral containers.
+    
     
     
     if (zipCacheMode) {
       await syncMarketplacesToZipCache()
     }
 
-    // Delisting enforcement
+    
     const newlyDelisted = await detectAndUninstallDelistedPlugins()
     metrics.delisted_count = newlyDelisted.length
     if (newlyDelisted.length > 0) {
@@ -142,7 +142,7 @@ export async function installPluginsForHeadless(): Promise<boolean> {
       clearPluginCache('headlessPluginInstall: plugins changed')
     }
 
-    // Zip cache: register session cleanup for extracted plugin temp dirs
+    
     if (zipCacheMode) {
       registerCleanup(cleanupSessionPluginCache)
     }

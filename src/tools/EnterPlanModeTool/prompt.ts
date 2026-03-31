@@ -14,7 +14,7 @@ In plan mode, you'll:
 `
 
 function getEnterPlanModeToolPromptExternal(): string {
-  // When interview phase is enabled, omit the "What Happens" section —
+  
   
   const whatHappens = isPlanModeInterviewPhaseEnabled()
     ? ''
@@ -99,7 +99,7 @@ User: "What files handle routing?"
 }
 
 function getEnterPlanModeToolPromptAnt(): string {
-  // When interview phase is enabled, omit the "What Happens" section —
+  
   
   const whatHappens = isPlanModeInterviewPhaseEnabled()
     ? ''

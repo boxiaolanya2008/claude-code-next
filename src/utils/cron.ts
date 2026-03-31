@@ -1,7 +1,5 @@
 
 
-//   minute hour day-of-month month day-of-week
-
 export type CronFields = {
   minute: number[]
   hour: number[]
@@ -13,11 +11,11 @@ export type CronFields = {
 type FieldRange = { min: number; max: number }
 
 const FIELD_RANGES: FieldRange[] = [
-  { min: 0, max: 59 }, // minute
-  { min: 0, max: 23 }, // hour
-  { min: 1, max: 31 }, // dayOfMonth
-  { min: 1, max: 12 }, // month
-  { min: 0, max: 6 }, // dayOfWeek (0=Sunday; 7 accepted as Sunday alias)
+  { min: 0, max: 59 }, 
+  { min: 0, max: 23 }, 
+  { min: 1, max: 31 }, 
+  { min: 1, max: 12 }, 
+  { min: 0, max: 6 }, 
 ]
 
 function expandField(field: string, range: FieldRange): number[] | null {
@@ -25,7 +23,7 @@ function expandField(field: string, range: FieldRange): number[] | null {
   const out = new Set<number>()
 
   for (const part of field.split(',')) {
-    // wildcard or star-slash-N
+    
     const stepMatch = part.match(/^\*(?:\/(\d+))?$/)
     if (stepMatch) {
       const step = stepMatch[1] ? parseInt(stepMatch[1], 10) : 1
@@ -34,7 +32,7 @@ function expandField(field: string, range: FieldRange): number[] | null {
       continue
     }
 
-    // N-M or N-M/S
+    
     const rangeMatch = part.match(/^(\d+)-(\d+)(?:\/(\d+))?$/)
     if (rangeMatch) {
       const lo = parseInt(rangeMatch[1]!, 10)
@@ -50,7 +48,7 @@ function expandField(field: string, range: FieldRange): number[] | null {
       continue
     }
 
-    // plain N
+    
     const singleMatch = part.match(/^\d+$/)
     if (singleMatch) {
       let n = parseInt(part, 10)
@@ -68,10 +66,6 @@ function expandField(field: string, range: FieldRange): number[] | null {
   return Array.from(out).sort((a, b) => a - b)
 }
 
-/**
- * Parse a 5-field cron expression into expanded number arrays.
- * Returns null if invalid or unsupported syntax.
- */
 export function parseCronExpression(expr: string): CronFields | null {
   const parts = expr.trim().split(/\s+/)
   if (parts.length !== 5) return null
@@ -92,22 +86,6 @@ export function parseCronExpression(expr: string): CronFields | null {
   }
 }
 
-/**
- * Compute the next Date strictly after `from` that matches the cron fields,
- * using the process's local timezone. Walks forward minute-by-minute. Bounded
- * at 366 days; returns null if no match (impossible for valid cron, but
- * satisfies the type).
- *
- * Standard cron semantics: when both dayOfMonth and dayOfWeek are constrained
- * (neither is the full range), a date matches if EITHER matches.
- *
- * DST: fixed-hour crons targeting a spring-forward gap (e.g. `30 2 * * *`
- * in a US timezone) skip the transition day — the gap hour never appears
- * in local time, so the hour-set check fails and the loop moves on.
- * Wildcard-hour crons (`30 * * * *`) fire at the first valid minute after
- * the gap. Fall-back repeats fire once (the step-forward logic jumps past
- * the second occurrence). This matches vixie-cron behavior.
- */
 export function computeNextCronRun(
   fields: CronFields,
   from: Date,
@@ -131,7 +109,7 @@ export function computeNextCronRun(
   for (let i = 0; i < maxIter; i++) {
     const month = t.getMonth() + 1
     if (!monthSet.has(month)) {
-      // Jump to start of next month
+      
       t.setMonth(t.getMonth() + 1, 1)
       t.setHours(0, 0, 0, 0)
       continue
@@ -150,7 +128,7 @@ export function computeNextCronRun(
             : domSet.has(dom) || dowSet.has(dow)
 
     if (!dayMatches) {
-      // Jump to start of next day
+      
       t.setDate(t.getDate() + 1)
       t.setHours(0, 0, 0, 0)
       continue
@@ -172,8 +150,6 @@ export function computeNextCronRun(
   return null
 }
 
-// --- cronToHuman ------------------------------------------------------------
-
 const DAY_NAMES = [
   'Sunday',
   'Monday',
@@ -185,14 +161,14 @@ const DAY_NAMES = [
 ]
 
 function formatLocalTime(minute: number, hour: number): string {
-  // January 1 — no DST gap anywhere. Using `new Date()` (today) would roll
+  
   
   const d = new Date(2000, 0, 1, hour, minute)
   return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
 function formatUtcTimeAsLocal(minute: number, hour: number): string {
-  // Create a date in UTC and format in user's local timezone
+  
   const d = new Date()
   d.setUTCHours(hour, minute, 0, 0)
   return d.toLocaleTimeString('en-US', {
@@ -215,7 +191,7 @@ export function cronToHuman(cron: string, opts?: { utc?: boolean }): string {
     string,
   ]
 
-  // Every N minutes: step/N * * * *
+  
   const everyMinMatch = minute.match(/^\*\/(\d+)$/)
   if (
     everyMinMatch &&
@@ -228,7 +204,7 @@ export function cronToHuman(cron: string, opts?: { utc?: boolean }): string {
     return n === 1 ? 'Every minute' : `Every ${n} minutes`
   }
 
-  // Every hour: 0 * * * *
+  
   if (
     minute.match(/^\d+$/) &&
     hour === '*' &&
@@ -241,7 +217,7 @@ export function cronToHuman(cron: string, opts?: { utc?: boolean }): string {
     return `Every hour at :${m.toString().padStart(2, '0')}`
   }
 
-  // Every N hours: 0 step/N * * *
+  
   const everyHourMatch = hour.match(/^\*\/(\d+)$/)
   if (
     minute.match(/^\d+$/) &&
@@ -256,25 +232,25 @@ export function cronToHuman(cron: string, opts?: { utc?: boolean }): string {
     return n === 1 ? `Every hour${suffix}` : `Every ${n} hours${suffix}`
   }
 
-  // --- Remaining cases reference hour+minute: branch on utc ----------------
+  
 
   if (!minute.match(/^\d+$/) || !hour.match(/^\d+$/)) return cron
   const m = parseInt(minute, 10)
   const h = parseInt(hour, 10)
   const fmtTime = utc ? formatUtcTimeAsLocal : formatLocalTime
 
-  // Daily at specific time: M H * * *
+  
   if (dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
     return `Every day at ${fmtTime(m, h)}`
   }
 
-  // Specific day of week: M H * * D
+  
   if (dayOfMonth === '*' && month === '*' && dayOfWeek.match(/^\d$/)) {
-    const dayIndex = parseInt(dayOfWeek, 10) % 7 // normalize 7 (Sunday alias) -> 0
+    const dayIndex = parseInt(dayOfWeek, 10) % 7 
     let dayName: string | undefined
     if (utc) {
-      // UTC day+time may land on a different local day (midnight crossing).
-      // Compute the actual local weekday by constructing the UTC instant.
+      
+      
       const ref = new Date()
       const daysToAdd = (dayIndex - ref.getUTCDay() + 7) % 7
       ref.setUTCDate(ref.getUTCDate() + daysToAdd)
@@ -286,7 +262,7 @@ export function cronToHuman(cron: string, opts?: { utc?: boolean }): string {
     if (dayName) return `Every ${dayName} at ${fmtTime(m, h)}`
   }
 
-  // Weekdays: M H * * 1-5
+  
   if (dayOfMonth === '*' && month === '*' && dayOfWeek === '1-5') {
     return `Weekdays at ${fmtTime(m, h)}`
   }

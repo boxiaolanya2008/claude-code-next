@@ -20,10 +20,10 @@ const NO_PROXY_LIST = [
   '10.0.0.0/8',
   '172.16.0.0/12',
   '192.168.0.0/16',
-  // Anthropic API: no upstream route will ever match, and the MITM breaks
   
   
-  //   *.anthropic.com  — Bun, curl, Go (glob match)
+  
+  
   
   
   'anthropic.com',
@@ -48,22 +48,16 @@ type UpstreamProxyState = {
 
 let state: UpstreamProxyState = { enabled: false }
 
-/**
- * Initialize upstreamproxy. Called once from init.ts. Safe to call when the
- * feature is off or the token file is absent — returns {enabled: false}.
- *
- * Overridable paths are for tests; production uses the defaults.
- */
 export async function initUpstreamProxy(opts?: {
   tokenPath?: string
   systemCaPath?: string
   caBundlePath?: string
   ccrBaseUrl?: string
 }): Promise<UpstreamProxyState> {
-  if (!isEnvTruthy(process.env.CLAUDE_CODE_REMOTE)) {
+  if (!isEnvTruthy(process.env.CLAUDE_CODE_NEXT_REMOTE)) {
     return state
   }
-  // CCR evaluates ccr_upstream_proxy_enabled server-side (where GrowthBook is
+  
   
   
   
@@ -71,10 +65,10 @@ export async function initUpstreamProxy(opts?: {
     return state
   }
 
-  const sessionId = process.env.CLAUDE_CODE_REMOTE_SESSION_ID
+  const sessionId = process.env.CLAUDE_CODE_NEXT_REMOTE_SESSION_ID
   if (!sessionId) {
     logForDebugging(
-      '[upstreamproxy] CLAUDE_CODE_REMOTE_SESSION_ID unset; proxy disabled',
+      '[upstreamproxy] CLAUDE_CODE_NEXT_REMOTE_SESSION_ID unset; proxy disabled',
       { level: 'warn' },
     )
     return state
@@ -92,7 +86,7 @@ export async function initUpstreamProxy(opts?: {
   
   
   
-  // so it always returned the prod URL and the CA fetch 404'd.
+  
   const baseUrl =
     opts?.ccrBaseUrl ??
     process.env.ANTHROPIC_BASE_URL ??
@@ -113,8 +107,8 @@ export async function initUpstreamProxy(opts?: {
     registerCleanup(async () => relay.stop())
     state = { enabled: true, port: relay.port, caBundlePath }
     logForDebugging(`[upstreamproxy] enabled on 127.0.0.1:${relay.port}`)
-    // Only unlink after the listener is up: if CA download or listen()
-    // fails, a supervisor restart can retry with the token still on disk.
+    
+    
     await unlink(tokenPath).catch(() => {
       logForDebugging('[upstreamproxy] token file unlink failed', {
         level: 'warn',
@@ -130,14 +124,9 @@ export async function initUpstreamProxy(opts?: {
   return state
 }
 
-/**
- * Env vars to merge into every agent subprocess. Empty when the proxy is
- * disabled. Called from subprocessEnv() so Bash/MCP/LSP/hooks all inherit
- * the same recipe.
- */
 export function getUpstreamProxyEnv(): Record<string, string> {
   if (!state.enabled || !state.port || !state.caBundlePath) {
-    // Child CLI processes can't re-initialize the relay (token file was
+    
     
     
     
@@ -176,7 +165,6 @@ export function getUpstreamProxyEnv(): Record<string, string> {
   }
 }
 
-/** Test-only: reset module state between test cases. */
 export function resetUpstreamProxyForTests(): void {
   state = { enabled: false }
 }
@@ -195,15 +183,10 @@ async function readToken(path: string): Promise<string | null> {
   }
 }
 
-/**
- * prctl(PR_SET_DUMPABLE, 0) via libc FFI. Blocks same-UID ptrace of this
- * process, so a prompt-injected `gdb -p $PPID` can't scrape the token from
- * the heap. Linux-only; silently no-ops elsewhere.
- */
 function setNonDumpable(): void {
   if (process.platform !== 'linux' || typeof Bun === 'undefined') return
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    
     const ffi = require('bun:ffi') as typeof import('bun:ffi')
     const lib = ffi.dlopen('libc.so.6', {
       prctl: {
@@ -235,9 +218,9 @@ async function downloadCaBundle(
   outPath: string,
 ): Promise<boolean> {
   try {
-    // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
+    
     const resp = await fetch(`${baseUrl}/v1/code/upstreamproxy/ca-cert`, {
-      // Bun has no default fetch timeout — a hung endpoint would block CLI
+      
       
       signal: AbortSignal.timeout(5000),
     })

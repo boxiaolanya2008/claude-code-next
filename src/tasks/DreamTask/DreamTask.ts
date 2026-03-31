@@ -12,8 +12,6 @@ export type DreamTurn = {
   toolUseCount: number
 }
 
-// No phase detection — the dream prompt has a 4-stage structure
-
 export type DreamPhase = 'starting' | 'updating'
 
 export type DreamTaskState = TaskStateBase & {
@@ -97,7 +95,7 @@ export function completeDreamTask(
   taskId: string,
   setAppState: SetAppState,
 ): void {
-  // notified: true immediately — dream has no model-facing notification path
+  
   
   
   updateTaskState<DreamTaskState>(taskId, setAppState, task => ({

@@ -34,12 +34,12 @@ export function useDoublePress(
       timeoutRef.current !== undefined
 
     if (isDoublePress) {
-      // Double press detected
+      
       clearTimeoutSafe()
       setPending(false)
       onDoublePress()
     } else {
-      // First press
+      
       onFirstPress?.()
       setPending(true)
 

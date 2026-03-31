@@ -26,10 +26,6 @@ export type HeapDumpResult = {
   error?: string
 }
 
-/**
- * Memory diagnostics captured alongside heap dump.
- * Helps identify if leak is in V8 heap (captured in snapshot) or native memory (not captured).
- */
 export type MemoryDiagnostics = {
   timestamp: string
   sessionId: string
@@ -78,10 +74,6 @@ export type MemoryDiagnostics = {
   ccVersion: string
 }
 
-/**
- * Capture memory diagnostics.
- * This helps identify if the leak is in V8 heap (captured) or native memory (not captured).
- */
 export async function captureMemoryDiagnostics(
   trigger: 'manual' | 'auto-1.5GB',
   dumpNumber = 0,
@@ -96,10 +88,10 @@ export async function captureMemoryDiagnostics(
   try {
     heapSpaceStats = getHeapSpaceStatistics()
   } catch {
-    // Not available in Bun runtime
+    
   }
 
-  // Get active handles/requests count (these are internal APIs but stable)
+  
   const activeHandles = (
     process as unknown as { _getActiveHandles: () => unknown[] }
   )._getActiveHandles().length
@@ -112,18 +104,18 @@ export async function captureMemoryDiagnostics(
   try {
     openFileDescriptors = (await readdir('/proc/self/fd')).length
   } catch {
-    // Not on Linux - try macOS approach would require lsof, skip for now
+    
   }
 
-  // Try to read Linux smaps_rollup for detailed memory breakdown
+  
   let smapsRollup: string | undefined
   try {
     smapsRollup = await readFile('/proc/self/smaps_rollup', 'utf8')
   } catch {
-    // Not on Linux or no access - this is fine
+    
   }
 
-  // Calculate native memory (RSS - heap) and growth rate
+  
   const nativeMemory = usage.rss - usage.heapUsed
   const bytesPerSecond = uptimeSeconds > 0 ? usage.rss / uptimeSeconds : 0
   const mbPerHour = (bytesPerSecond * 3600) / (1024 * 1024)
@@ -187,7 +179,7 @@ export async function captureMemoryDiagnostics(
       available: space.space_available_size,
     })),
     resourceUsage: {
-      maxRSS: resourceUsage.maxRSS * 1024, // Convert KB to bytes
+      maxRSS: resourceUsage.maxRSS * 1024, 
       userCPUTime: resourceUsage.userCPUTime,
       systemCPUTime: resourceUsage.systemCPUTime,
     },
@@ -208,13 +200,6 @@ export async function captureMemoryDiagnostics(
   }
 }
 
-/**
- * Core heap dump function — captures heap snapshot + diagnostics to ~/Desktop.
- *
- * Diagnostics are written BEFORE the heap snapshot is captured, because the
- * V8 heap snapshot serialization can crash for very large heaps. By writing
- * diagnostics first, we still get useful memory info even if the snapshot fails.
- */
 export async function performHeapDump(
   trigger: 'manual' | 'auto-1.5GB' = 'manual',
   dumpNumber = 0,
@@ -274,13 +259,9 @@ export async function performHeapDump(
   }
 }
 
-/**
- * Write heap snapshot to a file.
- * Uses pipeline() which handles stream cleanup automatically on errors.
- */
 async function writeHeapSnapshot(filepath: string): Promise<void> {
   if (typeof Bun !== 'undefined') {
-    // In Bun, heapsnapshots are currently not streaming.
+    
     
     
     

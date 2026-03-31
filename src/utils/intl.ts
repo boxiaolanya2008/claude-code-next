@@ -12,10 +12,6 @@ export function getGraphemeSegmenter(): Intl.Segmenter {
   return graphemeSegmenter
 }
 
-/**
- * Extract the first grapheme cluster from a string.
- * Returns '' for empty strings.
- */
 export function firstGrapheme(text: string): string {
   if (!text) return ''
   const segments = getGraphemeSegmenter().segment(text)
@@ -23,10 +19,6 @@ export function firstGrapheme(text: string): string {
   return first?.segment ?? ''
 }
 
-/**
- * Extract the last grapheme cluster from a string.
- * Returns '' for empty strings.
- */
 export function lastGrapheme(text: string): string {
   if (!text) return ''
   let last = ''
@@ -43,7 +35,6 @@ export function getWordSegmenter(): Intl.Segmenter {
   return wordSegmenter
 }
 
-// RelativeTimeFormat cache (keyed by style:numeric)
 const rtfCache = new Map<string, Intl.RelativeTimeFormat>()
 
 export function getRelativeTimeFormat(
@@ -59,7 +50,6 @@ export function getRelativeTimeFormat(
   return rtf
 }
 
-// Timezone is constant for the process lifetime
 let cachedTimeZone: string | null = null
 
 export function getTimeZone(): string {
@@ -68,8 +58,6 @@ export function getTimeZone(): string {
   }
   return cachedTimeZone
 }
-
-// System locale language subtag (e.g. 'en', 'ja') is constant for the process
 
 let cachedSystemLocaleLanguage: string | undefined | null = null
 

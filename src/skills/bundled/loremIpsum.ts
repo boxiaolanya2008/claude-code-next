@@ -26,7 +26,7 @@ const ONE_TOKEN_WORDS = [
   'that',
   'what',
   'who',
-  // Common verbs
+  
   'is',
   'are',
   'was',
@@ -76,7 +76,7 @@ const ONE_TOKEN_WORDS = [
   'seem',
   'leave',
   'put',
-  // Common nouns & adjectives
+  
   'time',
   'year',
   'day',
@@ -113,7 +113,7 @@ const ONE_TOKEN_WORDS = [
   'bad',
   'same',
   'able',
-  // Prepositions & conjunctions
+  
   'in',
   'on',
   'at',
@@ -149,7 +149,7 @@ const ONE_TOKEN_WORDS = [
   'where',
   'why',
   'how',
-  // Common adverbs
+  
   'not',
   'now',
   'just',
@@ -176,7 +176,7 @@ const ONE_TOKEN_WORDS = [
   'down',
   'out',
   'up',
-  // Tech/common words
+  
   'test',
   'code',
   'data',
@@ -202,7 +202,7 @@ function generateLoremIpsum(targetTokens: number): string {
   let result = ''
 
   while (tokens < targetTokens) {
-    // Sentence: 10-20 words
+    
     const sentenceLength = 10 + Math.floor(Math.random() * 11)
     let wordsInSentence = 0
 
@@ -220,7 +220,7 @@ function generateLoremIpsum(targetTokens: number): string {
       }
     }
 
-    // Paragraph break every 5-8 sentences (roughly 20% chance per sentence)
+    
     if (wordsInSentence > 0 && Math.random() < 0.2 && tokens < targetTokens) {
       result += '\n\n'
     }

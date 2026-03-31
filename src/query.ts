@@ -123,7 +123,7 @@ function* yieldMissingToolResultBlocks(
   errorMessage: string,
 ) {
   for (const assistantMessage of assistantMessages) {
-    // Extract all tool use blocks from this assistant message
+    
     const toolUseBlocks = assistantMessage.message.content.filter(
       content => content.type === 'tool_use',
     ) as ToolUseBlock[]
@@ -146,19 +146,6 @@ function* yieldMissingToolResultBlocks(
   }
 }
 
-/**
- * The rules of thinking are lengthy and fortuitous. They require plenty of thinking
- * of most long duration and deep meditation for a wizard to wrap one's noggin around.
- *
- * The rules follow:
- * 1. A message that contains a thinking or redacted_thinking block must be part of a query whose max_thinking_length > 0
- * 2. A thinking block may not be the last message in a block
- * 3. Thinking blocks must be preserved for the duration of an assistant trajectory (a single turn, or if that turn includes a tool_use block then also its subsequent tool_result and the following assistant message)
- *
- * Heed these rules well, young wizard. For they are the rules of thinking, and
- * the rules of thinking are the rules of the universe. If ye does not heed these
- * rules, ye will be punished with an entire day of debugging and hair pulling.
- */
 const MAX_OUTPUT_TOKENS_RECOVERY_LIMIT = 3
 
 function isWithheldMaxOutputTokens(
@@ -186,8 +173,6 @@ export type QueryParams = {
   taskBudget?: { total: number }
   deps?: QueryDeps
 }
-
-// -- query loop state
 
 type State = {
   messages: Message[]
@@ -237,7 +222,7 @@ async function* queryLoop(
   | ToolUseSummaryMessage,
   Terminal
 > {
-  // Immutable params — never reassigned during the query loop.
+  
   const {
     systemPrompt,
     userContext,
@@ -283,7 +268,7 @@ async function* queryLoop(
   const config = buildQueryConfig()
 
   
-  // so per-iteration firing would ask sideQuery the same question N times.
+  
   
   
   using pendingMemoryPrefetch = startRelevantMemoryPrefetch(
@@ -293,9 +278,9 @@ async function* queryLoop(
 
   
   while (true) {
-    // Destructure state at the top of each iteration. toolUseContext alone
     
-    // the rest are read-only between continue sites.
+    
+    
     let { toolUseContext } = state
     const {
       messages,
@@ -314,7 +299,7 @@ async function* queryLoop(
     
     
     
-    // userInputAttachments — that's the one signal where there's no prior
+    
     
     const pendingSkillPrefetch = skillPrefetch?.startSkillDiscoveryPrefetch(
       null,
@@ -331,7 +316,7 @@ async function* queryLoop(
       headlessProfilerCheckpoint('query_started')
     }
 
-    // Initialize or increment query chain tracking
+    
     const queryTracking = toolUseContext.queryTracking
       ? {
           chainId: toolUseContext.queryTracking.chainId,
@@ -397,7 +382,7 @@ async function* queryLoop(
       queryCheckpoint('query_snip_end')
     }
 
-    // Apply microcompact before autocompact
+    
     queryCheckpoint('query_microcompact_start')
     const microcompactResult = await deps.microcompact(
       messagesForQuery,
@@ -502,7 +487,7 @@ async function* queryLoop(
         )
       }
 
-      // Reset on every compact so turnCounter/turnId reflect the MOST RECENT
+      
       
       
       
@@ -519,10 +504,10 @@ async function* queryLoop(
         yield message
       }
 
-      // Continue on with the current query call using the post compact messages
+      
       messagesForQuery = postCompactMessages
     } else if (consecutiveFailures !== undefined) {
-      // Autocompact failed — propagate failure count so the circuit breaker
+      
       
       tracking = {
         ...(tracking ?? { compacted: false, turnId: '', turnCounter: 0 }),
@@ -530,7 +515,7 @@ async function* queryLoop(
       }
     }
 
-    //TODO: no need to set toolUseContext.messages during set-up since it is updated here
+    
     toolUseContext = {
       ...toolUseContext,
       messages: messagesForQuery,
@@ -570,7 +555,7 @@ async function* queryLoop(
     
     
     
-    // instead of all request bodies from the session (~500MB for long sessions).
+    
     
     
     const dumpPromptsFetch = config.gates.isAnt
@@ -591,7 +576,7 @@ async function* queryLoop(
     
     
     
-    // so reactive compact would never see a prompt-too-long to react to.
+    
     
     
     
@@ -606,7 +591,7 @@ async function* queryLoop(
         (contextCollapse?.isContextCollapseEnabled() ?? false) &&
         isAutoCompactEnabled()
     }
-    // Hoist media-recovery gate once per turn. Withholding (inside the
+    
     
     
     
@@ -694,13 +679,13 @@ async function* queryLoop(
               }),
             },
           })) {
-            // We won't use the tool_calls from the first attempt
-            // We could.. but then we'd have to merge assistant messages
+            
+            
             
             if (streamingFallbackOccured) {
-              // Yield tombstones for orphaned messages so they're removed from UI and transcript.
-              // These partial messages (especially thinking blocks) have invalid signatures
-              // that would cause "thinking blocks cannot be modified" API errors.
+              
+              
+              
               for (const msg of assistantMessages) {
                 yield { type: 'tombstone' as const, message: msg }
               }
@@ -715,9 +700,9 @@ async function* queryLoop(
               toolUseBlocks.length = 0
               needsFollowUp = false
 
-              // Discard pending results from the failed streaming attempt and create
-              // a fresh executor. This prevents orphan tool_results (with old tool_use_ids)
-              // from being yielded after the fallback response arrives.
+              
+              
+              
               if (streamingToolExecutor) {
                 streamingToolExecutor.discard()
                 streamingToolExecutor = new StreamingToolExecutor(
@@ -727,11 +712,11 @@ async function* queryLoop(
                 )
               }
             }
-            // Backfill tool_use inputs on a cloned message before yield so
-            // SDK stream output and transcript serialization see legacy/derived
-            // fields. The original `message` is left untouched for
-            // assistantMessages.push below — it flows back to the API and
-            // mutating it would break prompt caching (byte mismatch).
+            
+            
+            
+            
+            
             let yieldMessage: typeof message = message
             if (message.type === 'assistant') {
               let clonedContent: typeof message.message.content | undefined
@@ -750,12 +735,12 @@ async function* queryLoop(
                     const originalInput = block.input as Record<string, unknown>
                     const inputCopy = { ...originalInput }
                     tool.backfillObservableInput(inputCopy)
-                    // Only yield a clone when backfill ADDED fields; skip if
-                    // it only OVERWROTE existing ones (e.g. file tools
-                    // expanding file_path). Overwrites change the serialized
-                    // transcript and break VCR fixture hashes on resume,
-                    // while adding nothing the SDK stream needs — hooks get
-                    // the expanded path via toolExecution.ts separately.
+                    
+                    
+                    
+                    
+                    
+                    
                     const addedFields = Object.keys(inputCopy).some(
                       k => !(k in originalInput),
                     )
@@ -773,17 +758,17 @@ async function* queryLoop(
                 }
               }
             }
-            // Withhold recoverable errors (prompt-too-long, max-output-tokens)
-            // until we know whether recovery (collapse drain / reactive
-            // compact / truncation retry) can succeed. Still pushed to
-            // assistantMessages so the recovery checks below find them.
-            // Either subsystem's withhold is sufficient — they're
-            // independent so turning one off doesn't break the other's
-            // recovery path.
-            //
-            // feature() only works in if/ternary conditions (bun:bundle
-            // tree-shaking constraint), so the collapse check is nested
-            // rather than composed.
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
             let withheld = false
             if (feature('CONTEXT_COLLAPSE')) {
               if (
@@ -851,14 +836,14 @@ async function* queryLoop(
           }
           queryCheckpoint('query_api_streaming_end')
 
-          // Yield deferred microcompact boundary message using actual API-reported
-          // token deletion count instead of client-side estimates.
-          // Entire block gated behind feature() so the excluded string
-          // is eliminated from external builds.
+          
+          
+          
+          
           if (feature('CACHED_MICROCOMPACT') && pendingCacheEdits) {
             const lastAssistant = assistantMessages.at(-1)
-            // The API field is cumulative/sticky across requests, so we
-            // subtract the baseline captured before this request to get the delta.
+            
+            
             const usage = lastAssistant?.message.usage
             const cumulativeDeleted = usage
               ? ((usage as unknown as Record<string, number>)
@@ -880,11 +865,11 @@ async function* queryLoop(
           }
         } catch (innerError) {
           if (innerError instanceof FallbackTriggeredError && fallbackModel) {
-            // Fallback was triggered - switch model and retry
+            
             currentModel = fallbackModel
             attemptWithFallback = true
 
-            // Clear assistant messages since we'll retry the entire request
+            
             yield* yieldMissingToolResultBlocks(
               assistantMessages,
               'Model fallback triggered',
@@ -906,7 +891,7 @@ async function* queryLoop(
               )
             }
 
-            // Update tool use context with new model
+            
             toolUseContext.options.mainLoopModel = fallbackModel
 
             
@@ -916,7 +901,7 @@ async function* queryLoop(
               messagesForQuery = stripSignatureBlocks(messagesForQuery)
             }
 
-            // Log the fallback event
+            
             logEvent('tengu_model_fallback_triggered', {
               original_model:
                 innerError.originalModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -965,9 +950,9 @@ async function* queryLoop(
         return { reason: 'image_error' }
       }
 
-      // Generally queryModelWithStreaming should not throw errors but instead
       
-      // due to a bug, we may end up in a state where we have already emitted
+      
+      
       
       yield* yieldMissingToolResultBlocks(assistantMessages, errorMessage)
 
@@ -984,7 +969,7 @@ async function* queryLoop(
       return { reason: 'model_error', error }
     }
 
-    // Execute post-sampling hooks after model response is complete
+    
     if (assistantMessages.length > 0) {
       void executePostSamplingHooks(
         [...messagesForQuery, ...assistantMessages],
@@ -996,13 +981,13 @@ async function* queryLoop(
       )
     }
 
-    // We need to handle a streaming abort before anything else.
+    
     
     
     
     if (toolUseContext.abortController.signal.aborted) {
       if (streamingToolExecutor) {
-        // Consume remaining results - executor generates synthetic tool_results for
+        
         
         for await (const update of streamingToolExecutor.getRemainingResults()) {
           if (update.message) {
@@ -1015,7 +1000,7 @@ async function* queryLoop(
           'Interrupted by user',
         )
       }
-      // chicago MCP: auto-unhide + lock release on interrupt. Same cleanup
+      
       
       
       if (feature('CHICAGO_MCP') && !toolUseContext.agentId) {
@@ -1025,11 +1010,11 @@ async function* queryLoop(
           )
           await cleanupComputerUseAfterTurn(toolUseContext)
         } catch {
-          // Failures are silent — this is dogfooding cleanup, not critical path
+          
         }
       }
 
-      // Skip the interruption message for submit-interrupts — the queued
+      
       
       if (toolUseContext.abortController.signal.reason !== 'interrupt') {
         yield createUserInterruptionMessage({
@@ -1039,7 +1024,7 @@ async function* queryLoop(
       return { reason: 'aborted_streaming' }
     }
 
-    // Yield tool use summary from previous turn — haiku (~1s) resolved during model streaming (5-30s)
+    
     if (pendingToolUseSummary) {
       const summary = await pendingToolUseSummary
       if (summary) {
@@ -1054,7 +1039,7 @@ async function* queryLoop(
       
       
       
-      // the next stage handles it or the error surfaces.
+      
       const isWithheld413 =
         lastMessage?.type === 'assistant' &&
         lastMessage.isApiErrorMessage &&
@@ -1071,7 +1056,7 @@ async function* queryLoop(
         mediaRecoveryEnabled &&
         reactiveCompact?.isWithheldMediaSizeError(lastMessage)
       if (isWithheld413) {
-        // First: drain all staged context-collapses. Gated on the PREVIOUS
+        
         
         
         if (
@@ -1120,7 +1105,7 @@ async function* queryLoop(
         })
 
         if (compacted) {
-          // task_budget: same carryover as the proactive path above.
+          
           
           
           if (params.taskBudget) {
@@ -1153,16 +1138,16 @@ async function* queryLoop(
           continue
         }
 
-        // No recovery — surface the withheld error and exit. Do NOT fall
         
-        // so hooks have nothing meaningful to evaluate. Running stop hooks
+        
+        
         
         
         yield lastMessage
         void executeStopFailureHooks(lastMessage, toolUseContext)
         return { reason: isWithheldMedia ? 'image_error' : 'prompt_too_long' }
       } else if (feature('CONTEXT_COLLAPSE') && isWithheld413) {
-        // reactiveCompact compiled out but contextCollapse withheld and
+        
         
         
         yield lastMessage
@@ -1170,11 +1155,11 @@ async function* queryLoop(
         return { reason: 'prompt_too_long' }
       }
 
-      // Check for max_output_tokens and inject recovery message. The error
+      
       
       
       if (isWithheldMaxOutputTokens(lastMessage)) {
-        // Escalating retry: if we used the capped 8k default and hit the
+        
         
         
         
@@ -1187,7 +1172,7 @@ async function* queryLoop(
         if (
           capEnabled &&
           maxOutputTokensOverride === undefined &&
-          !process.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS
+          !process.env.CLAUDE_CODE_NEXT_MAX_OUTPUT_TOKENS
         ) {
           logEvent('tengu_max_tokens_escalate', {
             escalatedTo: ESCALATED_MAX_TOKENS,
@@ -1239,14 +1224,14 @@ async function* queryLoop(
           continue
         }
 
-        // Recovery exhausted — surface the withheld error now.
+        
         yield lastMessage
       }
 
-      // Skip stop hooks when the last message is an API error (rate limit,
-      // prompt-too-long, auth failure, etc.). The model never produced a
       
-      // error → hook blocking → retry → error → …
+      
+      
+      
       if (lastMessage?.isApiErrorMessage) {
         void executeStopFailureHooks(lastMessage, toolUseContext)
         return { reason: 'completed' }
@@ -1277,7 +1262,7 @@ async function* queryLoop(
           toolUseContext,
           autoCompactTracking: tracking,
           maxOutputTokensRecoveryCount: 0,
-          // Preserve the reactive compact guard — if compact already ran and
+          
           
           
           
@@ -1405,7 +1390,7 @@ async function* queryLoop(
       !toolUseContext.abortController.signal.aborted &&
       !toolUseContext.agentId 
     ) {
-      // Extract the last assistant text block for context
+      
       const lastAssistantMessage = assistantMessages.at(-1)
       let lastAssistantText: string | undefined
       if (lastAssistantMessage) {
@@ -1420,10 +1405,10 @@ async function* queryLoop(
         }
       }
 
-      // Collect tool info for summary generation
+      
       const toolUseIds = toolUseBlocks.map(block => block.id)
       const toolInfoForSummary = toolUseBlocks.map(block => {
-        // Find the corresponding tool result
+        
         const toolResult = toolResults.find(
           result =>
             result.type === 'user' &&
@@ -1468,9 +1453,9 @@ async function* queryLoop(
         .catch(() => null)
     }
 
-    // We were aborted during tool calls
+    
     if (toolUseContext.abortController.signal.aborted) {
-      // chicago MCP: auto-unhide + lock release when aborted mid-tool-call.
+      
       
       
       if (feature('CHICAGO_MCP') && !toolUseContext.agentId) {
@@ -1480,17 +1465,17 @@ async function* queryLoop(
           )
           await cleanupComputerUseAfterTurn(toolUseContext)
         } catch {
-          // Failures are silent — this is dogfooding cleanup, not critical path
+          
         }
       }
-      // Skip the interruption message for submit-interrupts — the queued
+      
       
       if (toolUseContext.abortController.signal.reason !== 'interrupt') {
         yield createUserInterruptionMessage({
           toolUse: true,
         })
       }
-      // Check maxTurns before returning when aborted
+      
       const nextTurnCountOnAbort = turnCount + 1
       if (maxTurns && nextTurnCountOnAbort > maxTurns) {
         yield createAttachmentMessage({
@@ -1502,7 +1487,7 @@ async function* queryLoop(
       return { reason: 'aborted_tools' }
     }
 
-    // If a hook indicated to prevent continuation, stop here
+    
     if (shouldPreventContinuation) {
       return { reason: 'hook_stopped' }
     }
@@ -1519,7 +1504,7 @@ async function* queryLoop(
       })
     }
 
-    // Be careful to do this after tool calls are done, because the API
+    
     
 
     
@@ -1576,7 +1561,7 @@ async function* queryLoop(
       toolResults.push(attachment)
     }
 
-    // Memory prefetch consume: only if settled and not already consumed on
+    
     
     
     
@@ -1600,7 +1585,7 @@ async function* queryLoop(
       pendingMemoryPrefetch.consumedOnIteration = turnCount - 1
     }
 
-    // Inject prefetched skill discovery. collectSkillDiscoveryPrefetch emits
+    
     
     
     if (skillPrefetch && pendingSkillPrefetch) {
@@ -1613,7 +1598,7 @@ async function* queryLoop(
       }
     }
 
-    // Remove only commands that were actually consumed as attachments.
+    
     
     const consumedCommands = queuedCommandsSnapshot.filter(
       cmd => cmd.mode === 'prompt' || cmd.mode === 'task-notification',
@@ -1628,7 +1613,7 @@ async function* queryLoop(
       removeFromQueue(consumedCommands)
     }
 
-    // Instrumentation: Track file change attachments after they're added
+    
     const fileChangeAttachmentCount = count(
       toolResults,
       tr =>
@@ -1642,7 +1627,7 @@ async function* queryLoop(
       queryDepth: queryTracking.depth,
     })
 
-    // Refresh tools between turns so newly-connected MCP servers become available
+    
     if (updatedToolUseContext.options.refreshTools) {
       const refreshedTools = updatedToolUseContext.options.refreshTools()
       if (refreshedTools !== updatedToolUseContext.options.tools) {
@@ -1661,13 +1646,13 @@ async function* queryLoop(
       queryTracking,
     }
 
-    // Each time we have tool results and are about to recurse, that's a turn
+    
     const nextTurnCount = turnCount + 1
 
     
     
     
-    // remote) generates summaries; subagents/forks don't.
+    
     if (feature('BG_SESSIONS')) {
       if (
         !toolUseContext.agentId &&
@@ -1687,7 +1672,7 @@ async function* queryLoop(
       }
     }
 
-    // Check if we've reached the max turns limit
+    
     if (maxTurns && nextTurnCount > maxTurns) {
       yield createAttachmentMessage({
         type: 'max_turns_reached',
@@ -1711,5 +1696,5 @@ async function* queryLoop(
       transition: { reason: 'next_turn' },
     }
     state = next
-  } // while (true)
+  } 
 }

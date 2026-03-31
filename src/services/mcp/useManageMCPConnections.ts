@@ -92,9 +92,6 @@ function getErrorKey(error: PluginError): string {
   return `${error.type}:${error.source}:${plugin}`
 }
 
-/**
- * Add errors to AppState, deduplicating to avoid showing the same error multiple times
- */
 function addErrorsToAppState(
   setAppState: (updater: (prev: AppState) => AppState) => void,
   newErrors: PluginError[],
@@ -102,7 +99,7 @@ function addErrorsToAppState(
   if (newErrors.length === 0) return
 
   setAppState(prevState => {
-    // Build set of existing error keys
+    
     const existingKeys = new Set(
       prevState.plugins.errors.map(e => getErrorKey(e)),
     )
@@ -126,15 +123,6 @@ function addErrorsToAppState(
   })
 }
 
-/**
- * Hook to manage MCP (Model Context Protocol) server connections and updates
- *
- * This hook:
- * 1. Initializes MCP client connections based on config
- * 2. Sets up handlers for connection lifecycle events and sync with app state
- * 3. Manages automatic reconnection for SSE connections
- * 4. Returns a reconnect function
- */
 export function useManageMCPConnections(
   dynamicMcpConfig: Record<string, ScopedMcpServerConfig> | undefined,
   isStrictMcpConfig = false,
@@ -158,7 +146,7 @@ export function useManageMCPConnections(
     Set<'disabled' | 'auth' | 'policy' | 'marketplace' | 'allowlist'>
   >(new Set())
   
-  // AppState so interactiveHandler can subscribe. The pending Map lives inside
+  
   
   const channelPermCallbacksRef = useRef<ChannelPermissionCallbacks | null>(
     null,
@@ -169,13 +157,13 @@ export function useManageMCPConnections(
   ) {
     channelPermCallbacksRef.current = createChannelPermissionCallbacks()
   }
-  // Store callbacks in AppState so interactiveHandler.ts can reach them via
+  
   
   useEffect(() => {
     if (feature('KAIROS') || feature('KAIROS_CHANNELS')) {
       const callbacks = channelPermCallbacksRef.current
       if (!callbacks) return
-      // GrowthBook runtime gate — separate from channels so channels can
+      
       
       
       
@@ -319,7 +307,7 @@ export function useManageMCPConnections(
       
       switch (client.type) {
         case 'connected': {
-          // Overwrite the default elicitation handler registered in connectToServer
+          
           
           
           
@@ -346,7 +334,7 @@ export function useManageMCPConnections(
               return
             }
 
-            // Handle automatic reconnection for remote transports
+            
             
             if (configType !== 'stdio' && configType !== 'sdk') {
               const transportType = getTransportDisplayName(configType)
@@ -362,14 +350,14 @@ export function useManageMCPConnections(
                 reconnectTimersRef.current.delete(client.name)
               }
 
-              // Attempt reconnection with exponential backoff
+              
               const reconnectWithBackoff = async () => {
                 for (
                   let attempt = 1;
                   attempt <= MAX_RECONNECT_ATTEMPTS;
                   attempt++
                 ) {
-                  // Check if server was disabled while we were waiting
+                  
                   if (isMcpServerDisabled(client.name)) {
                     logMCPDebug(
                       client.name,
@@ -438,7 +426,7 @@ export function useManageMCPConnections(
                     }
                   }
 
-                  // Schedule next retry with exponential backoff
+                  
                   const backoffMs = Math.min(
                     INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1),
                     MAX_BACKOFF_MS,
@@ -449,7 +437,7 @@ export function useManageMCPConnections(
                   )
 
                   await new Promise<void>(resolve => {
-                    // eslint-disable-next-line no-restricted-syntax -- timer stored in ref for cancellation; sleep() doesn't expose the handle
+                    
                     const timer = setTimeout(resolve, backoffMs)
                     reconnectTimersRef.current.set(client.name, timer)
                   })
@@ -462,9 +450,9 @@ export function useManageMCPConnections(
             }
           }
 
-          // Channel push: notifications/claude/channel → enqueue().
-          // Gate decides whether to register the handler; connection stays
-          // up either way (allowedMcpServers controls that).
+          
+          
+          
           if (feature('KAIROS') || feature('KAIROS_CHANNELS')) {
             const gate = gateChannelServer(
               client.name,
@@ -472,17 +460,17 @@ export function useManageMCPConnections(
               client.config.pluginSource,
             )
             const entry = findChannelEntry(client.name, getAllowedChannels())
-            // Plugin identifier for telemetry — log name@marketplace for any
-            // plugin-kind entry (same tier as tengu_plugin_installed, which
-            // logs arbitrary plugin_id+marketplace_name ungated). server-kind
-            // names are MCP-server-name tier; those are opt-in-only elsewhere
-            // (see isAnalyticsToolDetailsLoggingEnabled in metadata.ts) and
-            // stay unlogged here. is_dev/entry_kind segment the rest.
+            
+            
+            
+            
+            
+            
             const pluginId =
               entry?.kind === 'plugin'
                 ? (`${entry.name}@${entry.marketplace}` as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
                 : undefined
-            // Skip capability-miss — every non-channel MCP server trips it.
+            
             if (gate.action === 'register' || gate.kind !== 'capability') {
               logEvent('tengu_mcp_channel_gate', {
                 registered: gate.action === 'register',
@@ -525,10 +513,10 @@ export function useManageMCPConnections(
                     })
                   },
                 )
-                // Permission-reply handler — separate event, separate
-                // capability. Only registers if the server declares
-                // claude/channel/permission (same opt-in check as the send
-                // path in interactiveHandler.ts). Server parses the user's
+                
+                
+                
+                
                 
                 
                 if (
@@ -555,10 +543,10 @@ export function useManageMCPConnections(
                 }
                 break
               case 'skip':
-                // Idempotent teardown so a register→skip re-gate (e.g.
                 
                 
-                // the gate says skip but the earlier handler keeps enqueuing.
+                
+                
                 
                 client.client.removeNotificationHandler(
                   'notifications/claude/channel',
@@ -586,8 +574,8 @@ export function useManageMCPConnections(
                 ) {
                   channelWarnedKindsRef.current.add(gate.kind)
                   
-                  // marketplace/allowlist reuse the gate's reason verbatim
-                  // since it already names the mismatch.
+                  
+                  
                   const text =
                     gate.kind === 'disabled'
                       ? 'Channels are not currently available'
@@ -608,8 +596,8 @@ export function useManageMCPConnections(
             }
           }
 
-          // Register notification handlers for list_changed notifications
-          // These allow the server to notify us when tools, prompts, or resources change
+          
+          
           if (client.capabilities?.tools?.listChanged) {
             client.client.setNotificationHandler(
               ToolListChangedNotificationSchema,
@@ -619,7 +607,7 @@ export function useManageMCPConnections(
                   `Received tools/list_changed notification, refreshing tools`,
                 )
                 try {
-                  // Grab cached promise before invalidating to log previous count
+                  
                   const previousToolsPromise = fetchToolsForClient.cache.get(
                     client.name,
                   )
@@ -671,7 +659,7 @@ export function useManageMCPConnections(
                   type: 'prompts' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
                 })
                 try {
-                  // Skills come from resources, not prompts — don't invalidate their
+                  
                   
                   fetchCommandsForClient.cache.delete(client.name)
                   const [mcpPrompts, mcpSkills] = await Promise.all([
@@ -711,9 +699,9 @@ export function useManageMCPConnections(
                 try {
                   fetchResourcesForClient.cache.delete(client.name)
                   if (feature('MCP_SKILLS')) {
-                    // Skills are discovered from resources, so refresh them too.
                     
-                    // and a concurrent prompts/list_changed could otherwise have
+                    
+                    
                     
                     fetchMcpSkillsForClient!.cache.delete(client.name)
                     fetchCommandsForClient.cache.delete(client.name)
@@ -771,11 +759,11 @@ export function useManageMCPConnections(
         : await getClaudeCodeMcpConfigs(dynamicMcpConfig)
       const configs = { ...existingConfigs, ...dynamicMcpConfig }
 
-      // Add MCP errors to plugin errors for UI visibility (deduplicated)
+      
       addErrorsToAppState(setAppState, mcpErrors)
 
       setAppState(prevState => {
-        // Disconnect MCP servers that are stale: plugin servers removed from
+        
         
         
         
@@ -785,7 +773,7 @@ export function useManageMCPConnections(
         )
         
         
-        //   1. Pending reconnect timer would fire with the OLD config.
+        
         
         
         
@@ -854,7 +842,7 @@ export function useManageMCPConnections(
     let cancelled = false
 
     async function loadAndConnectMcpConfigs() {
-      // Clear claude.ai MCP cache so we fetch fresh configs with current auth
+      
       
       
       
@@ -867,7 +855,7 @@ export function useManageMCPConnections(
         claudeaiPromise = fetchClaudeAIMcpConfigsIfEligible()
       }
 
-      // Phase 1: Load Claude Code configs. Plugin MCP servers that duplicate a
+      
       
       
       const { servers: claudeCodeConfigs, errors: mcpErrors } =
@@ -876,13 +864,13 @@ export function useManageMCPConnections(
           : await getClaudeCodeMcpConfigs(dynamicMcpConfig, claudeaiPromise)
       if (cancelled) return
 
-      // Add MCP errors to plugin errors for UI visibility (deduplicated)
+      
       addErrorsToAppState(setAppState, mcpErrors)
 
       const configs = { ...claudeCodeConfigs, ...dynamicMcpConfig }
 
-      // Start connecting to Claude Code servers (don't wait - runs concurrently with Phase 2)
-      // Filter out disabled servers to avoid unnecessary connection attempts
+      
+      
       const enabledConfigs = Object.fromEntries(
         Object.entries(configs).filter(([name]) => !isMcpServerDisabled(name)),
       )
@@ -896,7 +884,7 @@ export function useManageMCPConnections(
         )
       })
 
-      // Phase 2: Await claude.ai configs (started above; memoized — no second fetch)
+      
       let claudeaiConfigs: Record<string, ScopedMcpServerConfig> = {}
       if (!isStrictMcpConfig) {
         claudeaiConfigs = filterMcpServersByPolicy(
@@ -904,9 +892,9 @@ export function useManageMCPConnections(
         ).allowed
         if (cancelled) return
 
-        // Suppress claude.ai connectors that duplicate an enabled manual server.
-        // Keys never collide (`slack` vs `claude.ai Slack`) so the merge below
-        // won't catch this — need content-based dedup by URL signature.
+        
+        
+        
         if (Object.keys(claudeaiConfigs).length > 0) {
           const { servers: dedupedClaudeAi } = dedupClaudeAiMcpServers(
             claudeaiConfigs,
@@ -916,7 +904,7 @@ export function useManageMCPConnections(
         }
 
         if (Object.keys(claudeaiConfigs).length > 0) {
-          // Add claude.ai servers as pending immediately so they show up in UI
+          
           setAppState(prevState => {
             const existingServerNames = new Set(
               prevState.mcp.clients.map(c => c.name),
@@ -958,7 +946,7 @@ export function useManageMCPConnections(
         }
       }
 
-      // Log server counts after both phases complete
+      
       const allConfigs = { ...configs, ...claudeaiConfigs }
       const counts = {
         enterprise: 0,
@@ -968,7 +956,7 @@ export function useManageMCPConnections(
         plugin: 0,
         claudeai: 0,
       }
-      // Ant-only: collect stdio command basenames to correlate with RSS/FPS
+      
       
       
       const stdioCommands: string[] = []
@@ -1047,7 +1035,7 @@ export function useManageMCPConnections(
         throw new Error(`MCP server ${serverName} not found`)
       }
 
-      // Cancel any pending automatic reconnection attempt
+      
       const existingTimer = reconnectTimersRef.current.get(serverName)
       if (existingTimer) {
         clearTimeout(existingTimer)
@@ -1078,14 +1066,14 @@ export function useManageMCPConnections(
       const isCurrentlyDisabled = client.type === 'disabled'
 
       if (!isCurrentlyDisabled) {
-        // Cancel any pending automatic reconnection attempt
+        
         const existingTimer = reconnectTimersRef.current.get(serverName)
         if (existingTimer) {
           clearTimeout(existingTimer)
           reconnectTimersRef.current.delete(serverName)
         }
 
-        // Persist disabled state to disk FIRST before clearing cache
+        
         
         setMcpServerEnabled(serverName, false)
 
@@ -1094,14 +1082,14 @@ export function useManageMCPConnections(
           await clearServerCache(serverName, client.config)
         }
 
-        // Update to disabled state (tools/commands/resources auto-cleared)
+        
         updateServer({
           name: serverName,
           type: 'disabled',
           config: client.config,
         })
       } else {
-        // Enabling: persist enabled state to disk first
+        
         setMcpServerEnabled(serverName, true)
 
         

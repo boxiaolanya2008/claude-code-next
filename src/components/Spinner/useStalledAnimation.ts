@@ -1,6 +1,5 @@
 import { useRef } from 'react'
 
-// so it slows down when the terminal is blurred.
 export function useStalledAnimation(
   time: number,
   currentResponseLength: number,
@@ -24,7 +23,7 @@ export function useStalledAnimation(
     lastSmoothTime.current = time
   }
 
-  // Derive time since last token from animation clock
+  
   let timeSinceLastToken: number
   if (hasActiveTools) {
     timeSinceLastToken = 0
@@ -35,7 +34,7 @@ export function useStalledAnimation(
     timeSinceLastToken = time - mountTime.current
   }
 
-  // Calculate stalled intensity based on time since last token
+  
   
   const isStalled = timeSinceLastToken > 3000 && !hasActiveTools
   const intensity = isStalled
@@ -64,7 +63,7 @@ export function useStalledAnimation(
     lastSmoothTime.current = time
   }
 
-  // When reducedMotion is enabled, use instant intensity change
+  
   const effectiveIntensity = reducedMotion
     ? intensity
     : stalledIntensityRef.current

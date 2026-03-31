@@ -13,7 +13,6 @@ const BATCH_FLUSH_INTERVAL_MS = 100
 
 const POST_TIMEOUT_MS = 15_000
 
-// 3s here exceeds it, but the process lives ~2s longer for hooks+analytics.
 const CLOSE_GRACE_MS = 3000
 
 export class HybridTransport extends WebSocketTransport {
@@ -39,11 +38,11 @@ export class HybridTransport extends WebSocketTransport {
     const { maxConsecutiveFailures, onBatchDropped } = options ?? {}
     this.postUrl = convertWsUrlToPostUrl(url)
     this.uploader = new SerialBatchEventUploader<StdoutMessage>({
-      // Large cap — session-ingress accepts arbitrary batch sizes. Events
+      
       
       maxBatchSize: 500,
-      // Bridge callers use `void transport.write()` — backpressure doesn't
-      // apply (they don't await). A batch >maxQueueSize deadlocks (see
+      
+      
       
       
       
@@ -51,9 +50,9 @@ export class HybridTransport extends WebSocketTransport {
       baseDelayMs: 500,
       maxDelayMs: 8000,
       jitterMs: 1000,
-      // Optional cap so a persistently-failing server can't pin the drain
-      // loop for the lifetime of the process. Undefined = indefinite retry.
-      // replBridge sets this; the 1P transportUtils path does not.
+      
+      
+      
       maxConsecutiveFailures,
       onBatchDropped: (batchSize, failures) => {
         logForDiagnosticsNoPII(
@@ -72,16 +71,11 @@ export class HybridTransport extends WebSocketTransport {
     logForDiagnosticsNoPII('info', 'cli_hybrid_transport_initialized')
   }
 
-  /**
-   * Enqueue a message and wait for the queue to drain. Returning flush()
-   * preserves the contract that `await write()` resolves after the event is
-   * POSTed (relied on by tests and replBridge's initial flush). Fire-and-forget
-   * callers (`void transport.write()`) are unaffected — they don't await,
-   * so the later resolution doesn't add latency.
-   */
+  
+
   override async write(message: StdoutMessage): Promise<void> {
     if (message.type === 'stream_event') {
-      // Delay: accumulate stream_events briefly before enqueueing.
+      
       
       this.streamEventBuffer.push(message)
       if (!this.streamEventTimer) {
@@ -92,7 +86,7 @@ export class HybridTransport extends WebSocketTransport {
       }
       return
     }
-    // Immediate: flush any buffered stream_events (ordering), then this event.
+    
     await this.uploader.enqueue([...this.takeStreamEvents(), message])
     return this.uploader.flush()
   }
@@ -102,21 +96,19 @@ export class HybridTransport extends WebSocketTransport {
     return this.uploader.flush()
   }
 
-  /** Snapshot before/after writeBatch() to detect silent drops. */
+  
   get droppedBatchCount(): number {
     return this.uploader.droppedBatchCount
   }
 
-  /**
-   * Block until all pending events are POSTed. Used by bridge's initial
-   * history flush so onStateChange('connected') fires after persistence.
-   */
+  
+
   flush(): Promise<void> {
     void this.uploader.enqueue(this.takeStreamEvents())
     return this.uploader.flush()
   }
 
-  /** Take ownership of buffered stream_events and clear the delay timer. */
+  
   private takeStreamEvents(): StdoutMessage[] {
     if (this.streamEventTimer) {
       clearTimeout(this.streamEventTimer)
@@ -127,7 +119,7 @@ export class HybridTransport extends WebSocketTransport {
     return buffered
   }
 
-  /** Delay timer fired — enqueue accumulated stream_events. */
+  
   private flushStreamEvents(): void {
     this.streamEventTimer = null
     void this.uploader.enqueue(this.takeStreamEvents())
@@ -149,7 +141,7 @@ export class HybridTransport extends WebSocketTransport {
     void Promise.race([
       uploader.flush(),
       new Promise<void>(r => {
-        // eslint-disable-next-line no-restricted-syntax -- need timer ref for clearTimeout
+        
         graceTimer = setTimeout(r, CLOSE_GRACE_MS)
       }),
     ]).finally(() => {
@@ -159,11 +151,8 @@ export class HybridTransport extends WebSocketTransport {
     super.close()
   }
 
-  /**
-   * Single-attempt POST. Throws on retryable failures (429, 5xx, network)
-   * so SerialBatchEventUploader re-queues and retries. Returns on success
-   * and on permanent failures (4xx non-429, no token) so the uploader moves on.
-   */
+  
+
   private async postOnce(events: StdoutMessage[]): Promise<void> {
     const sessionToken = getSessionIngressAuthToken()
     if (!sessionToken) {
@@ -200,7 +189,7 @@ export class HybridTransport extends WebSocketTransport {
       return
     }
 
-    // 4xx (except 429) are permanent — drop, don't retry.
+    
     if (
       response.status >= 400 &&
       response.status < 500 &&
@@ -215,7 +204,7 @@ export class HybridTransport extends WebSocketTransport {
       return
     }
 
-    // 429 / 5xx — retryable. Throw so uploader re-queues and backs off.
+    
     logForDebugging(
       `HybridTransport: POST returned ${response.status} (retryable)`,
     )
@@ -226,15 +215,10 @@ export class HybridTransport extends WebSocketTransport {
   }
 }
 
-/**
- * Convert a WebSocket URL to the HTTP POST endpoint URL.
- * From: wss://api.example.com/v2/session_ingress/ws/<session_id>
- * To: https://api.example.com/v2/session_ingress/session/<session_id>/events
- */
 function convertWsUrlToPostUrl(wsUrl: URL): string {
   const protocol = wsUrl.protocol === 'wss:' ? 'https:' : 'http:'
 
-  // Replace /ws/ with /session/ and append /events
+  
   let pathname = wsUrl.pathname
   pathname = pathname.replace('/ws/', '/session/')
   if (!pathname.endsWith('/events')) {

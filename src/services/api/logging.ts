@@ -42,7 +42,6 @@ import { extractConnectionErrorDetails } from './errorUtils.js'
 export type { NonNullableUsage }
 export { EMPTY_USAGE }
 
-// Strategy used for global prompt caching
 export type GlobalCacheStrategy = 'tool_based' | 'system_prompt' | 'none'
 
 function getErrorMessage(error: unknown): string {
@@ -65,36 +64,34 @@ type KnownGateway =
 const GATEWAY_FINGERPRINTS: Partial<
   Record<KnownGateway, { prefixes: string[] }>
 > = {
-  // https://docs.litellm.ai/docs/proxy/response_headers
+  
   litellm: {
     prefixes: ['x-litellm-'],
   },
-  // https://docs.helicone.ai/helicone-headers/header-directory
+  
   helicone: {
     prefixes: ['helicone-'],
   },
-  // https://portkey.ai/docs/api-reference/response-schema
+  
   portkey: {
     prefixes: ['x-portkey-'],
   },
-  // https://developers.cloudflare.com/ai-gateway/evaluations/add-human-feedback-api/
+  
   'cloudflare-ai-gateway': {
     prefixes: ['cf-aig-'],
   },
-  // https://developer.konghq.com/ai-gateway/ — X-Kong-Upstream-Latency, X-Kong-Proxy-Latency
+  
   kong: {
     prefixes: ['x-kong-'],
   },
-  // https://www.braintrust.dev/docs/guides/proxy — x-bt-used-endpoint, x-bt-cached
+  
   braintrust: {
     prefixes: ['x-bt-'],
   },
 }
 
-// Gateways that use provider-owned domains (not self-hosted), so the
-
 const GATEWAY_HOST_SUFFIXES: Partial<Record<KnownGateway, string[]>> = {
-  // https://docs.databricks.com/aws/en/ai-gateway/
+  
   databricks: [
     '.cloud.databricks.com',
     '.azuredatabricks.net',
@@ -110,7 +107,7 @@ function detectGateway({
   baseUrl?: string
 }): KnownGateway | undefined {
   if (headers) {
-    // Header names are already lowercase from the Headers API
+    
     const headerNames: string[] = []
     headers.forEach((_, key) => headerNames.push(key))
     for (const [gw, { prefixes }] of Object.entries(GATEWAY_FINGERPRINTS)) {
@@ -129,7 +126,7 @@ function detectGateway({
         }
       }
     } catch {
-      // malformed URL — ignore
+      
     }
   }
 
@@ -550,7 +547,7 @@ function logAPISuccess({
         } as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
       : {}),
     fastMode,
-    // Log cache_deleted_input_tokens for cache editing analysis. Casts needed
+    
     
     
     ...(feature('CACHED_MICROCOMPACT') &&
@@ -730,7 +727,7 @@ export function logAPISuccessAndDuration({
   let hasToolCall: boolean | undefined
 
   if (isBetaTracingEnabled() && newMessages) {
-    // Model output - visible to all users
+    
     modelOutput =
       newMessages
         .flatMap(m =>
@@ -752,13 +749,13 @@ export function logAPISuccessAndDuration({
           .join('\n') || undefined
     }
 
-    // Check if any tool_use blocks were in the output
+    
     hasToolCall = newMessages.some(m =>
       m.message.content.some(c => c.type === 'tool_use'),
     )
   }
 
-  // Pass the span to correctly match responses to requests when beta tracing is enabled
+  
   endLLMRequestSpan(llmSpan, {
     success: true,
     inputTokens: usage.input_tokens,

@@ -20,7 +20,7 @@ import type { Message, SystemInformationalMessage } from '../types/message.js'
 import { logForDebugging } from '../utils/debug.js'
 
 type Props = {
-  /** Gated on viewerOnly — non-viewer sessions have no remote history to page. */
+  
   config: RemoteSessionConfig | undefined
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>
   scrollRef: RefObject<ScrollBoxHandle | null>
@@ -30,11 +30,10 @@ type Props = {
 }
 
 type Result = {
-  /** Trigger for ScrollKeybindingHandler's onScroll composition. */
+  
   maybeLoadOlder: (handle: ScrollBoxHandle) => void
 }
 
-/** Fire loadOlder when scrolled within this many rows of the top. */
 const PREFETCH_THRESHOLD_ROWS = 40
 
 const MAX_FILL_PAGES = 10
@@ -56,16 +55,6 @@ function pageToMessages(page: HistoryPage): Message[] {
   return out
 }
 
-/**
- * Lazy-load `claude assistant` history on scroll-up.
- *
- * On mount: fetch newest page via anchor_to_latest, prepend to messages.
- * On scroll-up near top: fetch next-older page via before_id, prepend with
- * scroll anchoring (viewport stays put).
- *
- * No-op unless config.viewerOnly. REPL only calls this hook inside a
- * feature('KAIROS') gate, so build-time elimination is handled there.
- */
 export function useAssistantHistory({
   config,
   setMessages,
@@ -81,7 +70,7 @@ export function useAssistantHistory({
   const inflightRef = useRef(false)
 
   
-  // compensate in useLayoutEffect after React commits. getFreshScrollHeight
+  
   
   const anchorRef = useRef<{ beforeHeight: number; count: number } | null>(null)
 
@@ -107,8 +96,8 @@ export function useAssistantHistory({
     }
   }
 
-  /** Prepend a page at the front, with scroll-anchor snapshot for non-initial.
-   *  Replaces the sentinel (always at index 0 when present) in-place. */
+  
+
   const prepend = useCallback(
     (page: HistoryPage, isInitial: boolean) => {
       const msgs = pageToMessages(page)
@@ -123,7 +112,7 @@ export function useAssistantHistory({
 
       const sentinel = page.hasMore ? null : mkSentinel(SENTINEL_START)
       setMessages(prev => {
-        // Drop existing sentinel (index 0, known stable UUID — O(1)).
+        
         const base =
           prev[0]?.uuid === sentinelUuidRef.current ? prev.slice(1) : prev
         return sentinel ? [sentinel, ...msgs, ...base] : [...msgs, ...base]
@@ -133,7 +122,7 @@ export function useAssistantHistory({
         `[useAssistantHistory] ${isInitial ? 'initial' : 'older'} page: ${msgs.length} msgs (raw ${page.events.length}), hasMore=${page.hasMore}`,
       )
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- scrollRef is a stable ref; mkSentinel reads refs only
+    
     [setMessages],
   )
 
@@ -153,7 +142,7 @@ export function useAssistantHistory({
     return () => {
       cancelled = true
     }
-    // config identity is stable (created once in main.tsx, never recreated)
+    
     
   }, [enabled])
 
@@ -161,7 +150,7 @@ export function useAssistantHistory({
     if (!enabled || inflightRef.current) return
     const cursor = cursorRef.current
     const ctx = ctxRef.current
-    if (!cursor || !ctx) return // null=exhausted, undefined=initial pending
+    if (!cursor || !ctx) return 
     inflightRef.current = true
     
     setMessages(prev => {
@@ -172,7 +161,7 @@ export function useAssistantHistory({
     try {
       const page = await fetchOlderEvents(ctx, cursor)
       if (!page) {
-        // Fetch failed — revert sentinel back to "start" placeholder so the user
+        
         
         setMessages(prev => {
           const base =
@@ -185,11 +174,11 @@ export function useAssistantHistory({
     } finally {
       inflightRef.current = false
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mkSentinel reads refs only
+    
   }, [enabled, prepend, setMessages])
 
   
-  // shift scrollTop by the height delta so the viewport stays put. Also
+  
   
   
   
@@ -198,14 +187,14 @@ export function useAssistantHistory({
     if (anchor === null) return
     anchorRef.current = null
     const s = scrollRef.current
-    if (!s || s.isSticky()) return // sticky = pinned bottom; prepend is invisible
+    if (!s || s.isSticky()) return 
     const delta = s.getFreshScrollHeight() - anchor.beforeHeight
     if (delta > 0) s.scrollBy(delta)
     onPrepend?.(anchor.count, delta)
   })
 
   
-  // load another page. Runs as useEffect (not layout effect) so Ink has
+  
   
   
   

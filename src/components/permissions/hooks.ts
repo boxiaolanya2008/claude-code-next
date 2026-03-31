@@ -94,10 +94,6 @@ function decisionReasonToString(
   }
 }
 
-/**
- * Logs permission request events using analytics and unary logging.
- * Handles both the analytics event and the unary event logging.
- */
 export function usePermissionRequestLogging(
   toolUseConfirm: ToolUseConfirm,
   unaryEvent: UnaryEvent,
@@ -108,7 +104,7 @@ export function usePermissionRequestLogging(
   
   
   
-  // pegging CPU at 100% and leaking ~500MB/min in JSRopeString/RegExp allocs.
+  
   
   
   const loggedToolUseID = useRef<string | null>(null)
@@ -146,7 +142,7 @@ export function usePermissionRequestLogging(
         permissionResult.behavior === 'ask' &&
         !hasRules(permissionResult.suggestions)
       ) {
-        // Log if no rule suggestions ("always allow") are provided
+        
         logEvent('tengu_internal_tool_use_permission_request_no_always_allow', {
           messageID: toolUseConfirm.assistantMessage.message
             .id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -156,7 +152,7 @@ export function usePermissionRequestLogging(
             'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
           sandboxEnabled: SandboxManager.isSandboxingEnabled(),
 
-          // This DOES contain code/filepaths and should not be logged in the public build!
+          
           decisionReasonDetails: decisionReasonToString(
             permissionResult.decisionReason,
           ) as never,
@@ -164,7 +160,7 @@ export function usePermissionRequestLogging(
       }
     }
 
-    // [ANT-ONLY] Log bash tool calls, so we can categorize
+    
     
     if (process.env.USER_TYPE === 'ant') {
       const parsedInput = BashTool.inputSchema.safeParse(toolUseConfirm.input)
@@ -173,12 +169,12 @@ export function usePermissionRequestLogging(
         toolUseConfirm.permissionResult.behavior === 'ask' &&
         parsedInput.success
       ) {
-        // Note: All metadata fields in this event contain code/filepaths
+        
         let split = [parsedInput.data.command]
         try {
           split = splitCommand_DEPRECATED(parsedInput.data.command)
         } catch {
-          // Ignore parse errors here - just log the full command
+          
         }
         logEvent('tengu_internal_bash_tool_use_permission_request', {
           parts: jsonStringify(

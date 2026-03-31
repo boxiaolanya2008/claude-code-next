@@ -23,16 +23,13 @@ export function isPidBasedLockingEnabled(): boolean {
   if (isEnvDefinedFalsy(envVar)) {
     return false
   }
-  // GrowthBook controls gradual rollout (returns false for external users)
+  
   return getFeatureValue_CACHED_MAY_BE_STALE(
     'tengu_pid_based_version_locking',
     false,
   )
 }
 
-/**
- * Content stored in a version lock file
- */
 export type VersionLockContent = {
   pid: number
   version: string
@@ -40,9 +37,6 @@ export type VersionLockContent = {
   acquiredAt: number 
 }
 
-/**
- * Information about a lock for diagnostic purposes
- */
 export type LockInfo = {
   version: string
   pid: number
@@ -52,12 +46,10 @@ export type LockInfo = {
   lockFilePath: string
 }
 
-// Fallback stale timeout (2 hours) - used when PID check is inconclusive
-
 const FALLBACK_STALE_MS = 2 * 60 * 60 * 1000
 
 export function isProcessRunning(pid: number): boolean {
-  // PID 0 is special - it refers to the current process group, not a real process
+  
   
   if (pid <= 1) {
     return false
@@ -71,17 +63,13 @@ export function isProcessRunning(pid: number): boolean {
   }
 }
 
-/**
- * Validate that a running process is actually a Claude process
- * This helps mitigate PID reuse issues
- */
 function isClaudeProcess(pid: number, expectedExecPath: string): boolean {
   if (!isProcessRunning(pid)) {
     return false
   }
 
-  // If the PID matches our current process, we know it's valid
-  // This handles test environments where the command might not contain 'claude'
+  
+  
   if (pid === process.pid) {
     return true
   }
@@ -89,12 +77,12 @@ function isClaudeProcess(pid: number, expectedExecPath: string): boolean {
   try {
     const command = getProcessCommand(pid)
     if (!command) {
-      // If we can't get the command, trust the PID check
+      
       
       return true
     }
 
-    // Check if the command contains 'claude' or the expected exec path
+    
     const normalizedCommand = command.toLowerCase()
     const normalizedExecPath = expectedExecPath.toLowerCase()
 
@@ -103,14 +91,11 @@ function isClaudeProcess(pid: number, expectedExecPath: string): boolean {
       normalizedCommand.includes(normalizedExecPath)
     )
   } catch {
-    // If command check fails, trust the PID check
+    
     return true
   }
 }
 
-/**
- * Read and parse a lock file's content
- */
 export function readLockContent(
   lockFilePath: string,
 ): VersionLockContent | null {
@@ -135,9 +120,6 @@ export function readLockContent(
   }
 }
 
-/**
- * Check if a lock file represents an active lock (process still running)
- */
 export function isLockActive(lockFilePath: string): boolean {
   const content = readLockContent(lockFilePath)
 
@@ -152,8 +134,8 @@ export function isLockActive(lockFilePath: string): boolean {
     return false
   }
 
-  // Secondary validation: is it actually a Claude process?
-  // This helps with PID reuse scenarios
+  
+  
   if (!isClaudeProcess(pid, execPath)) {
     logForDebugging(
       `Lock PID ${pid} is running but does not appear to be Claude - treating as stale`,
@@ -161,29 +143,26 @@ export function isLockActive(lockFilePath: string): boolean {
     return false
   }
 
-  // Fallback: if the lock is very old (> 2 hours) and we can't validate
-  // the command, be conservative and consider it potentially stale
-  // This handles edge cases like network filesystems
+  
+  
+  
   const fs = getFsImplementation()
   try {
     const stats = fs.statSync(lockFilePath)
     const age = Date.now() - stats.mtimeMs
     if (age > FALLBACK_STALE_MS) {
-      // Double-check that we can still see the process
+      
       if (!isProcessRunning(pid)) {
         return false
       }
     }
   } catch {
-    // If we can't stat the file, trust the PID check
+    
   }
 
   return true
 }
 
-/**
- * Write lock content to a file atomically
- */
 function writeLockFile(
   lockFilePath: string,
   content: VersionLockContent,
@@ -198,20 +177,16 @@ function writeLockFile(
     })
     fs.renameSync(tempPath, lockFilePath)
   } catch (error) {
-    // Clean up temp file on failure (best-effort)
+    
     try {
       fs.unlinkSync(tempPath)
     } catch {
-      // Ignore cleanup errors (ENOENT expected if write failed before file creation)
+      
     }
     throw error
   }
 }
 
-/**
- * Try to acquire a lock on a version file
- * Returns a release function if successful, null if the lock is already held
- */
 export async function tryAcquireLock(
   versionPath: string,
   lockFilePath: string,
@@ -230,7 +205,7 @@ export async function tryAcquireLock(
     return null
   }
 
-  // Try to acquire the lock
+  
   const lockContent: VersionLockContent = {
     pid: process.pid,
     version: versionName,
@@ -244,7 +219,7 @@ export async function tryAcquireLock(
     
     const verifyContent = readLockContent(lockFilePath)
     if (verifyContent?.pid !== process.pid) {
-      // Another process won the race
+      
       return null
     }
 
@@ -253,7 +228,7 @@ export async function tryAcquireLock(
     
     return () => {
       try {
-        // Only release if we still own the lock
+        
         const currentContent = readLockContent(lockFilePath)
         if (currentContent?.pid === process.pid) {
           fs.unlinkSync(lockFilePath)
@@ -269,10 +244,6 @@ export async function tryAcquireLock(
   }
 }
 
-/**
- * Acquire a lock and hold it for the lifetime of the process
- * This is used for locking the currently running version
- */
 export async function acquireProcessLifetimeLock(
   versionPath: string,
   lockFilePath: string,
@@ -283,12 +254,12 @@ export async function acquireProcessLifetimeLock(
     return false
   }
 
-  // Register cleanup on process exit
+  
   const cleanup = () => {
     try {
       release()
     } catch {
-      // Ignore errors during process exit
+      
     }
   }
 
@@ -300,10 +271,6 @@ export async function acquireProcessLifetimeLock(
   return true
 }
 
-/**
- * Execute a callback while holding a lock
- * Returns true if the callback executed, false if lock couldn't be acquired
- */
 export async function withLock(
   versionPath: string,
   lockFilePath: string,
@@ -323,9 +290,6 @@ export async function withLock(
   }
 }
 
-/**
- * Get information about all version locks for diagnostics
- */
 export function getAllLockInfo(locksDir: string): LockInfo[] {
   const fs = getFsImplementation()
   const lockInfos: LockInfo[] = []
@@ -360,14 +324,6 @@ export function getAllLockInfo(locksDir: string): LockInfo[] {
   return lockInfos
 }
 
-/**
- * Clean up stale locks (locks where the process is no longer running)
- * Returns the number of locks cleaned up
- *
- * Handles both:
- * - PID-based locks (files containing JSON with PID)
- * - Legacy proper-lockfile locks (directories created by mtime-based locking)
- */
 export function cleanupStaleLocks(locksDir: string): number {
   const fs = getFsImplementation()
   let cleanedCount = 0
@@ -384,19 +340,19 @@ export function cleanupStaleLocks(locksDir: string): number {
         const stats = fs.lstatSync(lockFilePath)
 
         if (stats.isDirectory()) {
-          // Legacy proper-lockfile directory lock - always remove when PID-based
+          
           
           fs.rmSync(lockFilePath, { recursive: true, force: true })
           cleanedCount++
           logForDebugging(`Cleaned up legacy directory lock: ${lockEntry}`)
         } else if (!isLockActive(lockFilePath)) {
-          // PID-based file lock with no running process
+          
           fs.unlinkSync(lockFilePath)
           cleanedCount++
           logForDebugging(`Cleaned up stale lock: ${lockEntry}`)
         }
       } catch {
-        // Ignore individual cleanup errors
+        
       }
     }
   } catch (error) {

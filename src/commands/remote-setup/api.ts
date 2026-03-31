@@ -35,12 +35,6 @@ export type ImportTokenError =
   | { kind: 'server'; status: number }
   | { kind: 'network' }
 
-/**
- * POSTs a GitHub token to the CCR backend, which validates it against
- * GitHub's /user endpoint and stores it Fernet-encrypted in sync_user_tokens.
- * The stored token satisfies the same read paths as an OAuth token, so
- * clone/push in claude.ai/code works immediately after this succeeds.
- */
 export async function importGithubToken(
   token: RedactedGithubToken,
 ): Promise<
@@ -82,7 +76,7 @@ export async function importGithubToken(
     return { ok: false, error: { kind: 'server', status: response.status } }
   } catch (err) {
     if (axios.isAxiosError(err)) {
-      // err.config.data would contain the POST body with the raw token.
+      
       
       logForDebugging(`import-token network error: ${err.code ?? 'unknown'}`, {
         level: 'error',
@@ -101,14 +95,6 @@ async function hasExistingEnvironment(): Promise<boolean> {
   }
 }
 
-/**
- * Best-effort default environment creation. Mirrors the web onboarding's
- * DEFAULT_CLOUD_ENVIRONMENT_REQUEST so a first-time user lands on the
- * composer instead of env-setup. Checks for existing environments first
- * so re-running /web-setup doesn't pile up duplicates. Failures are
- * non-fatal — the token import already succeeded, and the web state
- * machine falls back to env-setup on next load.
- */
 export async function createDefaultEnvironment(): Promise<boolean> {
   let accessToken: string, orgUUID: string
   try {
@@ -121,9 +107,9 @@ export async function createDefaultEnvironment(): Promise<boolean> {
     return true
   }
 
-  // The /private/organizations/{org}/ path rejects CLI OAuth tokens (wrong
-  // auth dep). The public path uses build_flexible_auth — same path
-  // fetchEnvironments() uses. Org is passed via x-organization-uuid header.
+  
+  
+  
   const url = `${getOauthConfig().BASE_API_URL}/v1/environment_providers/cloud/create`
   const headers = {
     ...getOAuthHeaders(accessToken),
@@ -160,7 +146,6 @@ export async function createDefaultEnvironment(): Promise<boolean> {
   }
 }
 
-/** Returns true when the user has valid Claude OAuth credentials. */
 export async function isSignedIn(): Promise<boolean> {
   try {
     await prepareApiRequest()

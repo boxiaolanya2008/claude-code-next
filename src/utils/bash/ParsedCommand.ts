@@ -14,10 +14,6 @@ export type OutputRedirection = {
   operator: '>' | '>>'
 }
 
-/**
- * Interface for parsed command implementations.
- * Both tree-sitter and regex fallback implementations conform to this.
- */
 export interface IParsedCommand {
   readonly originalCommand: string
   toString(): string
@@ -29,14 +25,6 @@ export interface IParsedCommand {
   getTreeSitterAnalysis(): TreeSitterAnalysis | null
 }
 
-/**
- * @deprecated Legacy regex/shell-quote path. Only used when tree-sitter is
- * unavailable. The primary gate is parseForSecurity (ast.ts).
- *
- * Regex-based fallback implementation using shell-quote parser.
- * Used when tree-sitter is not available.
- * Exported for testing purposes.
- */
 export class RegexParsedCommand_DEPRECATED implements IParsedCommand {
   readonly originalCommand: string
 
@@ -150,7 +138,7 @@ class TreeSitterParsedCommand implements IParsedCommand {
   readonly originalCommand: string
   
   
-  // for multi-byte code points (e.g. `—` U+2014: 3 UTF-8 bytes, 1 code unit)
+  
   
   
   
@@ -269,30 +257,25 @@ async function doParse(command: string): Promise<IParsedCommand | null> {
       const { parseCommand } = await import('./parser.js')
       const data = await parseCommand(command)
       if (data) {
-        // Native NAPI parser returns plain JS objects (no WASM handles);
-        // nothing to free — extract directly.
+        
+        
         return buildParsedCommandFromRoot(command, data.rootNode)
       }
     } catch {
-      // Fall through to regex implementation
+      
     }
   }
 
-  // Fallback to regex implementation
+  
   return new RegexParsedCommand_DEPRECATED(command)
 }
-
-// Single-entry cache: legacy callers (bashCommandIsSafeAsync,
-// buildSegmentWithoutRedirections) may call ParsedCommand.parse repeatedly
 
 let lastCmd: string | undefined
 let lastResult: Promise<IParsedCommand | null> | undefined
 
 export const ParsedCommand = {
-  /**
-   * Parse a command string and return a ParsedCommand instance.
-   * Returns null if parsing fails completely.
-   */
+  
+
   parse(command: string): Promise<IParsedCommand | null> {
     if (command === lastCmd && lastResult !== undefined) {
       return lastResult

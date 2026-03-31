@@ -59,7 +59,7 @@ export function getContentSizeEstimate(content: MCPToolResult): number {
     if (isTextBlock(block)) {
       return total + roughTokenCountEstimation(block.text)
     } else if (isImageBlock(block)) {
-      // Estimate for image tokens
+      
       return total + IMAGE_TOKEN_ESTIMATE
     }
     return total
@@ -103,16 +103,16 @@ async function truncateContentBlocks(
         break
       }
     } else if (isImageBlock(block)) {
-      // Include images but count their estimated size
+      
       const imageChars = IMAGE_TOKEN_ESTIMATE * 4
       if (currentChars + imageChars <= maxChars) {
         result.push(block)
         currentChars += imageChars
       } else {
-        // Image exceeds budget - try to compress it to fit remaining space
+        
         const remainingChars = maxChars - currentChars
         if (remainingChars > 0) {
-          // Convert remaining chars to bytes for compression
+          
           
           const remainingBytes = Math.floor(remainingChars * 0.75)
           try {
@@ -128,7 +128,7 @@ async function truncateContentBlocks(
               currentChars += imageChars
             }
           } catch {
-            // If compression fails, skip the image
+            
           }
         }
       }

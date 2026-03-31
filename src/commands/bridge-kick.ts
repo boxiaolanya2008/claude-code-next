@@ -60,8 +60,8 @@ const call: LocalCommandCall = async args => {
           value: `poll: need 'transient' or a status code\n${USAGE}`,
         }
       }
-      // Default to what the server ACTUALLY sends for 404 (BQ-verified),
-      // so `/bridge-kick poll 404` reproduces the real 147K/week state.
+      
+      
       const errorType =
         b ?? (status === 404 ? 'not_found_error' : 'authentication_error')
       h.injectFault({

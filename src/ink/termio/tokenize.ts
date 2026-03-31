@@ -18,36 +18,22 @@ type State =
   | 'apc'
 
 export type Tokenizer = {
-  /** Feed input and get resulting tokens */
+  
   feed(input: string): Token[]
   
   flush(): Token[]
   
   reset(): void
-  /** Get any buffered incomplete sequence */
+  
   buffer(): string
 }
 
 type TokenizerOptions = {
-  /**
-   * Treat `CSI M` as an X10 mouse event prefix and consume 3 payload bytes.
-   * Only enable for stdin input — `\x1b[M` is also CSI DL (Delete Lines) in
-   * output streams, and enabling this there swallows display text. Default false.
-   */
+  
+
   x10Mouse?: boolean
 }
 
-/**
- * Create a streaming tokenizer for terminal input.
- *
- * Usage:
- * ```typescript
- * const tokenizer = createTokenizer()
- * const tokens1 = tokenizer.feed('hello\x1b[')
- * const tokens2 = tokenizer.feed('A')  // completes the escape sequence
- * const remaining = tokenizer.flush()  // force output incomplete sequences
- * ```
- */
 export function createTokenizer(options?: TokenizerOptions): Tokenizer {
   let currentState: State = 'ground'
   let currentBuffer = ''
@@ -155,48 +141,47 @@ function tokenize(
           result.state = 'apc'
           i++
         } else if (code === 0x4f) {
-          // 'O' - SS3
+          
           result.state = 'ss3'
           i++
         } else if (isCSIIntermediate(code)) {
-          // Intermediate byte (e.g., ESC ( for charset) - continue buffering
+          
           result.state = 'escapeIntermediate'
           i++
         } else if (isEscFinal(code)) {
-          // Two-character escape sequence
+          
           i++
           emitSequence(data.slice(seqStart, i))
         } else if (code === C0.ESC) {
-          // Double escape - emit first, start new
+          
           emitSequence(data.slice(seqStart, i))
           seqStart = i
           result.state = 'escape'
           i++
         } else {
-          // Invalid - treat ESC as text
+          
           result.state = 'ground'
           textStart = seqStart
         }
         break
 
       case 'escapeIntermediate':
-        // After intermediate byte(s), wait for final byte
+        
         if (isCSIIntermediate(code)) {
-          // More intermediate bytes
+          
           i++
         } else if (isEscFinal(code)) {
-          // Final byte - complete the sequence
+          
           i++
           emitSequence(data.slice(seqStart, i))
         } else {
-          // Invalid - treat as text
+          
           result.state = 'ground'
           textStart = seqStart
         }
         break
 
       case 'csi':
-        // X10 mouse: CSI M + 3 raw payload bytes (Cb+32, Cx+32, Cy+32).
         
         
         
@@ -208,7 +193,8 @@ function tokenize(
         
         
         
-        // any slot means this is CSI DL adjacent to another sequence, not a
+        
+        
         
         
         
@@ -231,7 +217,7 @@ function tokenize(
             i += 4
             emitSequence(data.slice(seqStart, i))
           } else {
-            // Incomplete — exit loop; end-of-input buffers from seqStart.
+            
             
             i = data.length
           }
@@ -243,19 +229,19 @@ function tokenize(
         } else if (isCSIParam(code) || isCSIIntermediate(code)) {
           i++
         } else {
-          // Invalid CSI - abort, treat as text
+          
           result.state = 'ground'
           textStart = seqStart
         }
         break
 
       case 'ss3':
-        // SS3 sequences: ESC O followed by a single final byte
+        
         if (code >= 0x40 && code <= 0x7e) {
           i++
           emitSequence(data.slice(seqStart, i))
         } else {
-          // Invalid - treat as text
+          
           result.state = 'ground'
           textStart = seqStart
         }
@@ -296,16 +282,16 @@ function tokenize(
     }
   }
 
-  // Handle end of input
+  
   if (result.state === 'ground') {
     flushText()
   } else if (flush) {
-    // Force output incomplete sequence
+    
     const remaining = data.slice(seqStart)
     if (remaining) tokens.push({ type: 'sequence', value: remaining })
     result.state = 'ground'
   } else {
-    // Buffer incomplete sequence for next call
+    
     result.buffer = data.slice(seqStart)
   }
 

@@ -32,7 +32,6 @@ import {
 export type { Span }
 export { isBetaTracingEnabled, type LLMRequestNewContext }
 
-// Message type for API calls (UserMessage or AssistantMessage)
 type APIMessage = UserMessage | AssistantMessage
 
 type SpanType =
@@ -51,8 +50,6 @@ interface SpanContext {
   perfettoSpanId?: string
 }
 
-// ALS stores SpanContext directly so it holds a strong reference while a span
-
 const interactionContext = new AsyncLocalStorage<SpanContext | undefined>()
 const toolContext = new AsyncLocalStorage<SpanContext | undefined>()
 const activeSpans = new Map<string, WeakRef<SpanContext>>()
@@ -67,21 +64,6 @@ function getSpanId(span: Span): string {
   return span.spanContext().spanId || ''
 }
 
-/**
- * Lazily start a background interval that evicts orphaned spans from activeSpans.
- *
- * Normal teardown calls endInteractionSpan / endToolSpan, which delete spans
- * immediately. This interval is a safety net for spans that were never ended
- * (e.g. aborted streams, uncaught exceptions mid-query) — without it they
- * accumulate in activeSpans indefinitely, holding references to Span objects
- * and the OpenTelemetry context chain.
- *
- * Initialized on the first startInteractionSpan call (not at module load) to
- * avoid triggering the no-top-level-side-effects lint rule and to keep the
- * interval from running in processes that never start a span.
- * unref() prevents the timer from keeping the process alive after all other
- * work is done.
- */
 function ensureCleanupInterval(): void {
   if (_cleanupIntervalStarted) return
   _cleanupIntervalStarted = true
@@ -104,14 +86,10 @@ function ensureCleanupInterval(): void {
   }
 }
 
-/**
- * Check if enhanced telemetry is enabled.
- * Priority: env var override > ant build > GrowthBook gate
- */
 export function isEnhancedTelemetryEnabled(): boolean {
   if (feature('ENHANCED_TELEMETRY_BETA')) {
     const env =
-      process.env.CLAUDE_CODE_ENHANCED_TELEMETRY_BETA ??
+      process.env.CLAUDE_CODE_NEXT_ENHANCED_TELEMETRY_BETA ??
       process.env.ENABLE_ENHANCED_TELEMETRY_BETA
     if (isEnvTruthy(env)) {
       return true
@@ -127,15 +105,12 @@ export function isEnhancedTelemetryEnabled(): boolean {
   return false
 }
 
-/**
- * Check if any tracing is enabled (either standard enhanced telemetry OR beta tracing)
- */
 function isAnyTracingEnabled(): boolean {
   return isEnhancedTelemetryEnabled() || isBetaTracingEnabled()
 }
 
 function getTracer() {
-  return trace.getTracer('com.anthropic.claude_code.tracing', '1.0.0')
+  return trace.getTracer('com.anthropic.claude_code_next.tracing', '1.0.0')
 }
 
 function createSpanAttributes(
@@ -153,11 +128,6 @@ function createSpanAttributes(
   return attributes
 }
 
-/**
- * Start an interaction span. This wraps a user request -> Claude response cycle.
- * This is now a root span that includes all session-level attributes.
- * Sets the interaction context for all subsequent operations.
- */
 export function startInteractionSpan(userPrompt: string): Span {
   ensureCleanupInterval()
 
@@ -167,7 +137,7 @@ export function startInteractionSpan(userPrompt: string): Span {
     : undefined
 
   if (!isAnyTracingEnabled()) {
-    // Still track Perfetto span even if OTel is disabled
+    
     if (perfettoSpanId) {
       const dummySpan = trace.getActiveSpan() || getTracer().startSpan('dummy')
       const spanId = getSpanId(dummySpan)
@@ -198,7 +168,7 @@ export function startInteractionSpan(userPrompt: string): Span {
     'interaction.sequence': interactionSequence,
   })
 
-  const span = tracer.startSpan('claude_code.interaction', {
+  const span = tracer.startSpan('claude_code_next.interaction', {
     attributes,
   })
 
@@ -229,7 +199,7 @@ export function endInteractionSpan(): void {
     return
   }
 
-  // End Perfetto span
+  
   if (spanContext.perfettoSpanId) {
     endInteractionPerfettoSpan(spanContext.perfettoSpanId)
   }
@@ -238,7 +208,7 @@ export function endInteractionSpan(): void {
     spanContext.ended = true
     activeSpans.delete(getSpanId(spanContext.span))
     
-    // promise callbacks, I/O) do not inherit a reference to the ended span.
+    
     
     
     interactionContext.enterWith(undefined)
@@ -262,17 +232,17 @@ export function startLLMRequestSpan(
   messagesForAPI?: APIMessage[],
   fastMode?: boolean,
 ): Span {
-  // Start Perfetto span regardless of OTel tracing state
+  
   const perfettoSpanId = isPerfettoTracingEnabled()
     ? startLLMRequestPerfettoSpan({
         model,
         querySource: newContext?.querySource,
-        messageId: undefined, // Will be set in endLLMRequestSpan
+        messageId: undefined, 
       })
     : undefined
 
   if (!isAnyTracingEnabled()) {
-    // Still track Perfetto span even if OTel is disabled
+    
     if (perfettoSpanId) {
       const dummySpan = trace.getActiveSpan() || getTracer().startSpan('dummy')
       const spanId = getSpanId(dummySpan)
@@ -301,14 +271,14 @@ export function startLLMRequestSpan(
   const ctx = parentSpanCtx
     ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
     : otelContext.active()
-  const span = tracer.startSpan('claude_code.llm_request', { attributes }, ctx)
+  const span = tracer.startSpan('claude_code_next.llm_request', { attributes }, ctx)
 
   
   if (newContext?.querySource) {
     span.setAttribute('query_source', newContext.querySource)
   }
 
-  // Add experimental attributes (system prompt, new_context)
+  
   addBetaLLMRequestAttributes(span, newContext, messagesForAPI)
 
   const spanId = getSpanId(span)
@@ -324,17 +294,6 @@ export function startLLMRequestSpan(
   return span
 }
 
-/**
- * End an LLM request span and attach response metadata.
- *
- * @param span - Optional. The exact span returned by startLLMRequestSpan().
- *   IMPORTANT: When multiple LLM requests run in parallel (e.g., warmup requests,
- *   topic classifier, file path extractor, main thread), you MUST pass the specific span
- *   to ensure responses are attached to the correct request. Without it, responses may be
- *   incorrectly attached to whichever span happens to be "last" in the activeSpans map.
- *
- *   If not provided, falls back to finding the most recent llm_request span (legacy behavior).
- */
 export function endLLMRequestSpan(
   span?: Span,
   metadata?: {
@@ -364,11 +323,11 @@ export function endLLMRequestSpan(
   let llmSpanContext: SpanContext | undefined
 
   if (span) {
-    // Use the provided span directly - this is the correct approach for parallel requests
+    
     const spanId = getSpanId(span)
     llmSpanContext = activeSpans.get(spanId)?.deref()
   } else {
-    // Legacy fallback: find the most recent llm_request span
+    
     
     llmSpanContext = Array.from(activeSpans.values())
       .findLast(r => {
@@ -382,7 +341,7 @@ export function endLLMRequestSpan(
   }
 
   if (!llmSpanContext) {
-    // Span was already ended or never tracked
+    
     return
   }
 
@@ -392,7 +351,7 @@ export function endLLMRequestSpan(
   if (llmSpanContext.perfettoSpanId) {
     endLLMRequestPerfettoSpan(llmSpanContext.perfettoSpanId, {
       ttftMs: metadata?.ttftMs,
-      ttltMs: duration, // Time to last token is the total duration
+      ttltMs: duration, 
       promptTokens: metadata?.inputTokens,
       outputTokens: metadata?.outputTokens,
       cacheReadTokens: metadata?.cacheReadTokens,
@@ -453,13 +412,13 @@ export function startToolSpan(
   toolAttributes?: Record<string, string | number | boolean>,
   toolInput?: string,
 ): Span {
-  // Start Perfetto span regardless of OTel tracing state
+  
   const perfettoSpanId = isPerfettoTracingEnabled()
     ? startToolPerfettoSpan(toolName, toolAttributes)
     : undefined
 
   if (!isAnyTracingEnabled()) {
-    // Still track Perfetto span even if OTel is disabled
+    
     if (perfettoSpanId) {
       const dummySpan = trace.getActiveSpan() || getTracer().startSpan('dummy')
       const spanId = getSpanId(dummySpan)
@@ -487,7 +446,7 @@ export function startToolSpan(
   const ctx = parentSpanCtx
     ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
     : otelContext.active()
-  const span = tracer.startSpan('claude_code.tool', { attributes }, ctx)
+  const span = tracer.startSpan('claude_code_next.tool', { attributes }, ctx)
 
   
   if (toolInput) {
@@ -509,13 +468,13 @@ export function startToolSpan(
 }
 
 export function startToolBlockedOnUserSpan(): Span {
-  // Start Perfetto span regardless of OTel tracing state
+  
   const perfettoSpanId = isPerfettoTracingEnabled()
     ? startUserInputPerfettoSpan('tool_permission')
     : undefined
 
   if (!isAnyTracingEnabled()) {
-    // Still track Perfetto span even if OTel is disabled
+    
     if (perfettoSpanId) {
       const dummySpan = trace.getActiveSpan() || getTracer().startSpan('dummy')
       const spanId = getSpanId(dummySpan)
@@ -541,7 +500,7 @@ export function startToolBlockedOnUserSpan(): Span {
     ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
     : otelContext.active()
   const span = tracer.startSpan(
-    'claude_code.tool.blocked_on_user',
+    'claude_code_next.tool.blocked_on_user',
     { attributes },
     ctx,
   )
@@ -573,7 +532,7 @@ export function endToolBlockedOnUserSpan(
     return
   }
 
-  // End Perfetto span
+  
   if (blockedSpanContext.perfettoSpanId) {
     endUserInputPerfettoSpan(blockedSpanContext.perfettoSpanId, {
       decision,
@@ -622,7 +581,7 @@ export function startToolExecutionSpan(): Span {
     ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
     : otelContext.active()
   const span = tracer.startSpan(
-    'claude_code.tool.execution',
+    'claude_code_next.tool.execution',
     { attributes },
     ctx,
   )
@@ -680,7 +639,7 @@ export function endToolSpan(toolResult?: string, resultTokens?: number): void {
     return
   }
 
-  // End Perfetto span
+  
   if (toolSpanContext.perfettoSpanId) {
     endToolPerfettoSpan(toolSpanContext.perfettoSpanId, {
       success: true,
@@ -702,7 +661,7 @@ export function endToolSpan(toolResult?: string, resultTokens?: number): void {
     duration_ms: duration,
   }
 
-  // Add experimental tool result attributes (new_context)
+  
   if (toolResult) {
     const toolName = toolSpanContext.attributes['tool_name'] || 'unknown'
     addBetaToolResultAttributes(endAttributes, toolName, toolResult)
@@ -724,11 +683,6 @@ function isToolContentLoggingEnabled(): boolean {
   return isEnvTruthy(process.env.OTEL_LOG_TOOL_CONTENT)
 }
 
-/**
- * Add a span event with tool content/output data.
- * Only logs if OTEL_LOG_TOOL_CONTENT=1 is set.
- * Truncates content if it exceeds MAX_CONTENT_SIZE.
- */
 export function addToolContentEvent(
   eventName: string,
   attributes: Record<string, string | number | boolean>,
@@ -742,7 +696,7 @@ export function addToolContentEvent(
     return
   }
 
-  // Truncate string attributes that might be large
+  
   const processedAttributes: Record<string, string | number | boolean> = {}
   for (const [key, value] of Object.entries(attributes)) {
     if (typeof value === 'string') {
@@ -817,15 +771,6 @@ export async function executeInSpan<T>(
   }
 }
 
-/**
- * Start a hook execution span.
- * Only creates a span when beta tracing is enabled.
- * @param hookEvent The hook event type (e.g., 'PreToolUse', 'PostToolUse')
- * @param hookName The full hook name (e.g., 'PreToolUse:Write')
- * @param numHooks The number of hooks being executed
- * @param hookDefinitions JSON string of hook definitions for tracing
- * @returns The span (or a dummy span if tracing is disabled)
- */
 export function startHookSpan(
   hookEvent: string,
   hookName: string,
@@ -849,7 +794,7 @@ export function startHookSpan(
   const ctx = parentSpanCtx
     ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
     : otelContext.active()
-  const span = tracer.startSpan('claude_code.hook', { attributes }, ctx)
+  const span = tracer.startSpan('claude_code_next.hook', { attributes }, ctx)
 
   const spanId = getSpanId(span)
   const spanContextObj: SpanContext = {
@@ -863,12 +808,6 @@ export function startHookSpan(
   return span
 }
 
-/**
- * End a hook execution span with outcome metadata.
- * Only does work when beta tracing is enabled.
- * @param span The span to end (returned from startHookSpan)
- * @param metadata The outcome metadata for the hook execution
- */
 export function endHookSpan(
   span: Span,
   metadata?: {

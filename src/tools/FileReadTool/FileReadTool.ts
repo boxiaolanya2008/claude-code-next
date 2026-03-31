@@ -99,14 +99,14 @@ const BLOCKED_DEVICE_PATHS = new Set([
   '/dev/random',
   '/dev/urandom',
   '/dev/full',
-  // Blocks waiting for input
+  
   '/dev/stdin',
   '/dev/tty',
   '/dev/console',
-  // Nonsensical to read
+  
   '/dev/stdout',
   '/dev/stderr',
-  // fd aliases for stdin/stdout/stderr
+  
   '/dev/fd/0',
   '/dev/fd/1',
   '/dev/fd/2',
@@ -125,7 +125,6 @@ function isBlockedDevicePath(filePath: string): boolean {
   return false
 }
 
-// Narrow no-break space (U+202F) used by some macOS versions in screenshot filenames
 const THIN_SPACE = String.fromCharCode(8239)
 
 function getAlternateScreenshotPath(filePath: string): string | undefined {
@@ -142,7 +141,6 @@ function getAlternateScreenshotPath(filePath: string): string | undefined {
   )
 }
 
-// File read listeners - allows other services to be notified when files are read
 type FileReadListener = (filePath: string, content: string) => void
 const fileReadListeners: FileReadListener[] = []
 
@@ -168,7 +166,6 @@ export class MaxFileReadTokenExceededError extends Error {
   }
 }
 
-// Common image extensions
 const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp'])
 
 function detectSessionFileType(
@@ -181,7 +178,7 @@ function detectSessionFileType(
     return null
   }
 
-  // Normalize path to use forward slashes for consistent matching across platforms
+  
   const normalizedPath = filePath.split(win32.sep).join(posix.sep)
 
   
@@ -192,7 +189,7 @@ function detectSessionFileType(
     return 'session_memory'
   }
 
-  // Session JSONL transcript files: ~/.claude/projects
+  
 
 function formatFileLines(file: { content: string; startLine: number }): string {
   return addLineNumbers(file)
@@ -208,13 +205,6 @@ function shouldIncludeFileReadMitigation(): boolean {
   return !MITIGATION_EXEMPT_MODELS.has(shortName)
 }
 
-/**
- * Side-channel from call() to mapToolResultToToolResultBlockParam: mtime
- * of auto-memory files, keyed by the `data` object identity. Avoids
- * adding a presentation-only field to the output schema (which flows
- * into SDK types) and avoids sync fs in the mapper. WeakMap auto-GCs
- * when the data object becomes unreachable after rendering.
- */
 const memoryFileMtimes = new WeakMap<object, number>()
 
 function memoryFileFreshnessPrefix(data: object): string {
@@ -269,9 +259,6 @@ function createImageResponse(
   }
 }
 
-/**
- * Inner implementation of call, separated to allow ENOENT handling in the outer call.
- */
 async function callInner(
   file_path: string,
   fullFilePath: string,
@@ -289,7 +276,7 @@ async function callInner(
   data: Output
   newMessages?: ReturnType<typeof createUserMessage>[]
 }> {
-  // --- Notebook ---
+  
   if (ext === 'ipynb') {
     const cells = await readNotebook(resolvedFilePath)
     const cellsJson = jsonStringify(cells)
@@ -333,9 +320,9 @@ async function callInner(
     return { data }
   }
 
-  // --- Image (single read, no double-read) ---
+  
   if (IMAGE_EXTENSIONS.has(ext)) {
-    // Images have their own size limits (token budget + compression) —
+    
     
     const data = await readImageWithTokenBudget(resolvedFilePath, maxTokens)
     context.nestedMemoryAttachmentTriggers?.add(fullFilePath)
@@ -361,7 +348,7 @@ async function callInner(
     }
   }
 
-  // --- PDF ---
+  
   if (isPDFExtension(ext)) {
     if (pages) {
       const parsedRange = parsePDFPageRange(pages)
@@ -487,7 +474,7 @@ async function callInner(
     }
   }
 
-  // --- Text file (single async read via readFileInRange) ---
+  
   const lineOffset = offset === 0 ? 0 : offset - 1
   const { content, lineCount, totalLines, totalBytes, readBytes, mtimeMs } =
     await readFileInRange(
@@ -556,21 +543,12 @@ async function callInner(
   return { data }
 }
 
-/**
- * Reads an image file and applies token-based compression if needed.
- * Reads the file ONCE, then applies standard resize. If the result exceeds
- * the token limit, applies aggressive compression from the same buffer.
- *
- * @param filePath - Path to the image file
- * @param maxTokens - Maximum token budget for the image
- * @returns Image data with appropriate compression applied
- */
 export async function readImageWithTokenBudget(
   filePath: string,
   maxTokens: number = getDefaultFileReadingLimits().maxTokens,
   maxBytes?: number,
 ): Promise<ImageResult> {
-  // Read file ONCE — capped to maxBytes to avoid OOM on huge files
+  
   const imageBuffer = await getFsImplementation().readFileBytes(
     filePath,
     maxBytes,
@@ -604,10 +582,10 @@ export async function readImageWithTokenBudget(
     result = createImageResponse(imageBuffer, detectedFormat, originalSize)
   }
 
-  // Check if it fits in token budget
+  
   const estimatedTokens = Math.ceil(result.file.base64.length * 0.125)
   if (estimatedTokens > maxTokens) {
-    // Aggressive compression from the SAME buffer (no re-read)
+    
     try {
       const compressed = await compressImageBufferWithTokenLimit(
         imageBuffer,

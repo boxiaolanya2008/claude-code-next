@@ -11,13 +11,6 @@ type ResizeEventHandler = (event: ResizeEvent) => void
 type ClickEventHandler = (event: ClickEvent) => void
 type HoverEventHandler = () => void
 
-/**
- * Props for event handlers on Box and other host components.
- *
- * Follows the React/DOM naming convention:
- * - onEventName: handler for bubble phase
- * - onEventNameCapture: handler for capture phase
- */
 export type EventHandlerProps = {
   onKeyDown?: KeyboardEventHandler
   onKeyDownCapture?: KeyboardEventHandler
@@ -37,10 +30,6 @@ export type EventHandlerProps = {
   onMouseLeave?: HoverEventHandler
 }
 
-/**
- * Reverse lookup: event type string → handler prop names.
- * Used by the dispatcher for O(1) handler lookup per node.
- */
 export const HANDLER_FOR_EVENT: Record<
   string,
   { bubble?: keyof EventHandlerProps; capture?: keyof EventHandlerProps }
@@ -53,10 +42,6 @@ export const HANDLER_FOR_EVENT: Record<
   click: { bubble: 'onClick' },
 }
 
-/**
- * Set of all event handler prop names, for the reconciler to detect
- * event props and store them in _eventHandlers instead of attributes.
- */
 export const EVENT_HANDLER_PROPS = new Set<string>([
   'onKeyDown',
   'onKeyDownCapture',

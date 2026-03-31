@@ -11,7 +11,7 @@ export const BINARY_EXTENSIONS = new Set([
   '.webp',
   '.tiff',
   '.tif',
-  // Videos
+  
   '.mp4',
   '.mov',
   '.avi',
@@ -22,7 +22,7 @@ export const BINARY_EXTENSIONS = new Set([
   '.m4v',
   '.mpeg',
   '.mpg',
-  // Audio
+  
   '.mp3',
   '.wav',
   '.ogg',
@@ -32,7 +32,7 @@ export const BINARY_EXTENSIONS = new Set([
   '.wma',
   '.aiff',
   '.opus',
-  // Archives
+  
   '.zip',
   '.tar',
   '.gz',
@@ -43,7 +43,7 @@ export const BINARY_EXTENSIONS = new Set([
   '.z',
   '.tgz',
   '.iso',
-  // Executables/binaries
+  
   '.exe',
   '.dll',
   '.so',
@@ -57,7 +57,7 @@ export const BINARY_EXTENSIONS = new Set([
   '.msi',
   '.deb',
   '.rpm',
-  // Documents (PDF is here; FileReadTool excludes it at the call site)
+  
   '.pdf',
   '.doc',
   '.docx',
@@ -68,13 +68,13 @@ export const BINARY_EXTENSIONS = new Set([
   '.odt',
   '.ods',
   '.odp',
-  // Fonts
+  
   '.ttf',
   '.otf',
   '.woff',
   '.woff2',
   '.eot',
-  // Bytecode / VM artifacts
+  
   '.pyc',
   '.pyo',
   '.class',
@@ -84,13 +84,13 @@ export const BINARY_EXTENSIONS = new Set([
   '.node',
   '.wasm',
   '.rlib',
-  // Database files
+  
   '.sqlite',
   '.sqlite3',
   '.db',
   '.mdb',
   '.idx',
-  // Design / 3D
+  
   '.psd',
   '.ai',
   '.eps',
@@ -100,10 +100,10 @@ export const BINARY_EXTENSIONS = new Set([
   '.blend',
   '.3ds',
   '.max',
-  // Flash
+  
   '.swf',
   '.fla',
-  // Lock/profiling data
+  
   '.lockb',
   '.dat',
   '.data',
@@ -114,34 +114,31 @@ export function hasBinaryExtension(filePath: string): boolean {
   return BINARY_EXTENSIONS.has(ext)
 }
 
-/**
- * Number of bytes to read for binary content detection.
- */
 const BINARY_CHECK_SIZE = 8192
 
 export function isBinaryContent(buffer: Buffer): boolean {
-  // Check first BINARY_CHECK_SIZE bytes (or full buffer if smaller)
+  
   const checkSize = Math.min(buffer.length, BINARY_CHECK_SIZE)
 
   let nonPrintable = 0
   for (let i = 0; i < checkSize; i++) {
     const byte = buffer[i]!
-    // Null byte is a strong indicator of binary
+    
     if (byte === 0) {
       return true
     }
-    // Count non-printable, non-whitespace bytes
+    
     
     if (
       byte < 32 &&
-      byte !== 9 && // tab
-      byte !== 10 && // newline
+      byte !== 9 && 
+      byte !== 10 && 
       byte !== 13 
     ) {
       nonPrintable++
     }
   }
 
-  // If more than 10% non-printable, likely binary
+  
   return nonPrintable / checkSize > 0.1
 }

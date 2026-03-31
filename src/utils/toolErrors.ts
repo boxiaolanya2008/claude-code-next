@@ -40,10 +40,6 @@ export function getErrorParts(error: Error): string[] {
   return parts
 }
 
-/**
- * Formats a Zod validation path into a readable string
- * e.g., ['todos', 0, 'activeForm'] => 'todos[0].activeForm'
- */
 function formatValidationPath(path: PropertyKey[]): string {
   if (path.length === 0) return ''
 
@@ -56,13 +52,6 @@ function formatValidationPath(path: PropertyKey[]): string {
   }, '') as string
 }
 
-/**
- * Converts Zod validation errors into a human-readable and LLM friendly error message
- *
- * @param toolName The name of the tool that failed validation
- * @param error The Zod error object
- * @returns A formatted error message string
- */
 export function formatZodValidationError(
   toolName: string,
   error: ZodError,

@@ -201,7 +201,7 @@ function isUserMessageWithArrayContent(
 }
 
 export function prepareMessagesForInjection(messages: Message[]): Message[] {
-  // Find tool_use IDs that have SUCCESSFUL results (not errors/interruptions)
+  
   
   type ToolResult = {
     type: 'tool_result'
@@ -243,7 +243,7 @@ export function prepareMessagesForInjection(messages: Message[]): Message[] {
       b.type === 'tool_result' &&
       !toolIdsWithSuccessfulResults.has(b.tool_use_id!)
     ) &&
-    // Abort during speculation yields a standalone interrupt user message
+    
     
     
     !(
@@ -408,7 +408,7 @@ export async function startSpeculation(
 ): Promise<void> {
   if (!isSpeculationEnabled()) return
 
-  // Abort any existing speculation before starting a new one
+  
   abortSpeculation(setAppState)
 
   const id = randomUUID().slice(0, 8)
@@ -494,7 +494,7 @@ export async function startSpeculation(
           }
         }
 
-        // Handle file path rewriting for overlay isolation
+        
         if (isWriteTool || isSafeReadOnlyTool) {
           const pathKey =
             'notebook_path' in input
@@ -526,24 +526,24 @@ export async function startSpeculation(
             }
 
             if (isWriteTool) {
-              // Copy-on-write: copy original to overlay if not yet there
+              
               if (!writtenPathsRef.current.has(rel)) {
                 const overlayFile = join(overlayPath, rel)
                 await mkdir(dirname(overlayFile), { recursive: true })
                 try {
                   await copyFile(join(cwd, rel), overlayFile)
                 } catch {
-                  // Original may not exist (new file creation) - that's fine
+                  
                 }
                 writtenPathsRef.current.add(rel)
               }
               input = { ...input, [pathKey]: join(overlayPath, rel) }
             } else {
-              // Read: redirect to overlay if file was previously written
+              
               if (writtenPathsRef.current.has(rel)) {
                 input = { ...input, [pathKey]: join(overlayPath, rel) }
               }
-              // Otherwise read from main (no rewrite)
+              
             }
 
             logForDebugging(
@@ -559,7 +559,7 @@ export async function startSpeculation(
               },
             }
           }
-          // Read tools without explicit path (e.g. Glob/Grep defaulting to CWD) are safe
+          
           if (isSafeReadOnlyTool) {
             return {
               behavior: 'allow' as const,
@@ -570,10 +570,10 @@ export async function startSpeculation(
               },
             }
           }
-          // Write tools with undefined path → fall through to default deny
+          
         }
 
-        // Stop at non-read-only bash commands
+        
         if (tool.name === 'Bash') {
           const command =
             'command' in input && typeof input.command === 'string'
@@ -596,7 +596,7 @@ export async function startSpeculation(
               'speculation_bash_boundary',
             )
           }
-          // Read-only bash command — allow during speculation
+          
           return {
             behavior: 'allow' as const,
             updatedInput: input,
@@ -607,7 +607,7 @@ export async function startSpeculation(
           }
         }
 
-        // Deny all other tools by default
+        
         logForDebugging(`[Speculation] Stopping at denied tool: ${tool.name}`)
         const detail = String(
           ('url' in input && input.url) ||
@@ -669,7 +669,7 @@ export async function startSpeculation(
       `[Speculation] Complete: ${countToolsInMessages(messagesRef.current)} tools`,
     )
 
-    // Pipeline: generate the next suggestion while we wait for the user to accept
+    
     void generatePipelinedSuggestion(
       contextRef.current,
       suggestionText,
@@ -688,7 +688,7 @@ export async function startSpeculation(
 
     safeRemoveOverlay(overlayPath)
 
-    // eslint-disable-next-line no-restricted-syntax -- custom fallback message, not toError(e)
+    
     logError(error instanceof Error ? error : new Error('Speculation failed'))
 
     logSpeculation(
@@ -741,13 +741,13 @@ export async function acceptSpeculation(
   }
   safeRemoveOverlay(overlayPath)
 
-  // Use snapshot boundary as default (available since state.status === 'active' was checked above)
+  
   let boundary: CompletionBoundary | null = state.boundary
   let timeSavedMs =
     Math.min(acceptedAt, boundary?.completedAt ?? Infinity) - startTime
 
   setAppState(prev => {
-    // Refine with latest React state if speculation is still active
+    
     if (prev.speculation.status === 'active' && prev.speculation.boundary) {
       boundary = prev.speculation.boundary
       const endTime = Math.min(acceptedAt, boundary.completedAt ?? Infinity)
@@ -846,8 +846,8 @@ export async function handleSpeculationAccept(
   try {
     const { setMessages, readFileState, cwd } = deps
 
-    // Clear prompt suggestion state. logOutcomeAtSubmission logged the accept
-    // but was called with skipReset to avoid aborting speculation before we use it.
+    
+    
     setAppState(prev => {
       if (
         prev.promptSuggestion.text === null &&
@@ -867,11 +867,11 @@ export async function handleSpeculationAccept(
       }
     })
 
-    // Capture speculation messages before any state updates - must be stable reference
+    
     const speculationMessages = speculationState.messagesRef.current
     let cleanMessages = prepareMessagesForInjection(speculationMessages)
 
-    // Inject user message first for instant visual feedback before any async work
+    
     const userMessage = createUserMessage({ content: input })
     setMessages(prev => [...prev, userMessage])
 
@@ -883,7 +883,7 @@ export async function handleSpeculationAccept(
 
     const isComplete = result?.boundary?.type === 'complete'
 
-    // When speculation didn't complete, the follow-up query needs the
+    
     
     
     
@@ -957,7 +957,7 @@ export async function handleSpeculationAccept(
 
     return { queryRequired: !isComplete }
   } catch (error) {
-    // Fail open: log error and fall back to normal query flow
+    
     
     logError(
       error instanceof Error

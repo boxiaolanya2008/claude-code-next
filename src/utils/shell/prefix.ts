@@ -32,22 +32,16 @@ const DANGEROUS_SHELL_PREFIXES = new Set([
 ])
 
 export type CommandPrefixResult = {
-  /** The detected command prefix, or null if no prefix could be determined */
+  
   commandPrefix: string | null
 }
 
-/**
- * Result including subcommand prefixes for compound commands
- */
 export type CommandSubcommandPrefixResult = CommandPrefixResult & {
   subcommandPrefixes: Map<string, CommandPrefixResult>
 }
 
-/**
- * Configuration for creating a command prefix extractor
- */
 export type PrefixExtractorConfig = {
-  /** Tool name for logging and warning messages */
+  
   toolName: string
 
   
@@ -62,18 +56,6 @@ export type PrefixExtractorConfig = {
   preCheck?: (command: string) => CommandPrefixResult | null
 }
 
-/**
- * Creates a memoized command prefix extractor function.
- *
- * Uses two-layer memoization: the outer memoized function creates the promise
- * and attaches a .catch handler that evicts the cache entry on rejection.
- * This prevents aborted or failed Haiku calls from poisoning future lookups.
- *
- * Bounded to 200 entries via LRU to prevent unbounded growth in heavy sessions.
- *
- * @param config - Configuration for the extractor
- * @returns A memoized async function that extracts command prefixes
- */
 export function createCommandPrefixExtractor(config: PrefixExtractorConfig) {
   const { toolName, policySpec, eventName, querySource, preCheck } = config
 
@@ -103,23 +85,13 @@ export function createCommandPrefixExtractor(config: PrefixExtractorConfig) {
       })
       return promise
     },
-    command => command, // memoize by command only
+    command => command, 
     200,
   )
 
   return memoized
 }
 
-/**
- * Creates a memoized function to get prefixes for compound commands with subcommands.
- *
- * Uses the same two-layer memoization pattern as createCommandPrefixExtractor:
- * a .catch handler evicts the cache entry on rejection to prevent poisoning.
- *
- * @param getPrefix - The single-command prefix extractor (from createCommandPrefixExtractor)
- * @param splitCommand - Function to split a compound command into subcommands
- * @returns A memoized async function that extracts prefixes for the main command and all subcommands
- */
 export function createSubcommandPrefixExtractor(
   getPrefix: ReturnType<typeof createCommandPrefixExtractor>,
   splitCommand: (command: string) => string[] | Promise<string[]>,
@@ -147,7 +119,7 @@ export function createSubcommandPrefixExtractor(
       })
       return promise
     },
-    command => command, // memoize by command only
+    command => command, 
     200,
   )
 
@@ -168,7 +140,7 @@ async function getCommandPrefixImpl(
     return null
   }
 
-  // Run pre-check if provided (e.g., isHelpCommand for Bash)
+  
   if (preCheck) {
     const preCheckResult = preCheck(command)
     if (preCheckResult !== null) {
@@ -181,18 +153,18 @@ async function getCommandPrefixImpl(
   let result: CommandPrefixResult | null = null
 
   try {
-    // Log a warning if the pre-flight check takes too long
+    
     preflightCheckTimeoutId = setTimeout(
       (tn, nonInteractive) => {
         const message = `[${tn}Tool] Pre-flight check is taking longer than expected. Run with ANTHROPIC_LOG=debug to check for failed or slow API requests.`
         if (nonInteractive) {
           process.stderr.write(jsonStringify({ level: 'warn', message }) + '\n')
         } else {
-          // biome-ignore lint/suspicious/noConsole: intentional warning
+          
           console.warn(chalk.yellow(`⚠️  ${message}`))
         }
       },
-      10000, // 10 seconds
+      10000, 
       toolName,
       isNonInteractiveSession,
     )
@@ -247,7 +219,7 @@ async function getCommandPrefixImpl(
       })
       result = null
     } else if (prefix === 'command_injection_detected') {
-      // Haiku detected something suspicious - treat as no prefix available
+      
       logEvent(eventName, {
         success: false,
         error:
@@ -261,7 +233,7 @@ async function getCommandPrefixImpl(
       prefix === 'git' ||
       DANGEROUS_SHELL_PREFIXES.has(prefix.toLowerCase())
     ) {
-      // Never accept bare `git` or shell executables as a prefix
+      
       logEvent(eventName, {
         success: false,
         error:
@@ -272,7 +244,7 @@ async function getCommandPrefixImpl(
         commandPrefix: null,
       }
     } else if (prefix === 'none') {
-      // No prefix detected
+      
       logEvent(eventName, {
         success: false,
         error:
@@ -283,10 +255,10 @@ async function getCommandPrefixImpl(
         commandPrefix: null,
       }
     } else {
-      // Validate that the prefix is actually a prefix of the command
+      
 
       if (!command.startsWith(prefix)) {
-        // Prefix isn't actually a prefix of the command
+        
         logEvent(eventName, {
           success: false,
           error:

@@ -10,11 +10,6 @@ export type DeepLinkAction = {
   repo?: string
 }
 
-/**
- * Check if a string contains ASCII control characters (0x00-0x1F, 0x7F).
- * These can act as command separators in shells (newlines, carriage returns, etc.).
- * Allows printable ASCII and Unicode (CJK, emoji, accented chars, etc.).
- */
 function containsControlChars(s: string): boolean {
   for (let i = 0; i < s.length; i++) {
     const code = s.charCodeAt(i)
@@ -25,10 +20,6 @@ function containsControlChars(s: string): boolean {
   return false
 }
 
-/**
- * GitHub owner/repo slug: alphanumerics, dots, hyphens, underscores,
- * exactly one slash. Keeps this from becoming a path traversal vector.
- */
 const REPO_SLUG_PATTERN = /^[\w.-]+\/[\w.-]+$/
 
 const MAX_QUERY_LENGTH = 5000
@@ -36,7 +27,7 @@ const MAX_QUERY_LENGTH = 5000
 const MAX_CWD_LENGTH = 4096
 
 export function parseDeepLink(uri: string): DeepLinkAction {
-  // Normalize: accept with or without the trailing colon in protocol
+  
   const normalized = uri.startsWith(`${DEEP_LINK_PROTOCOL}://`)
     ? uri
     : uri.startsWith(`${DEEP_LINK_PROTOCOL}:`)
@@ -71,7 +62,7 @@ export function parseDeepLink(uri: string): DeepLinkAction {
     )
   }
 
-  // Reject control characters in cwd (newlines, etc.) but allow path chars like backslash.
+  
   if (cwd && containsControlChars(cwd)) {
     throw new Error('Deep link cwd contains disallowed control characters')
   }
@@ -81,7 +72,7 @@ export function parseDeepLink(uri: string): DeepLinkAction {
     )
   }
 
-  // Validate repo slug format. Resolution happens later (protocolHandler.ts) —
+  
   
   if (repo && !REPO_SLUG_PATTERN.test(repo)) {
     throw new Error(
@@ -91,7 +82,7 @@ export function parseDeepLink(uri: string): DeepLinkAction {
 
   let query: string | undefined
   if (rawQuery && rawQuery.trim().length > 0) {
-    // Strip hidden Unicode characters (ASCII smuggling / hidden prompt injection)
+    
     query = partiallySanitizeUnicode(rawQuery.trim())
     if (containsControlChars(query)) {
       throw new Error('Deep link query contains disallowed control characters')
@@ -106,9 +97,6 @@ export function parseDeepLink(uri: string): DeepLinkAction {
   return { query, cwd, repo }
 }
 
-/**
- * Build a claude-cli:// deep link URL.
- */
 export function buildDeepLink(action: DeepLinkAction): string {
   const url = new URL(`${DEEP_LINK_PROTOCOL}://open`)
   if (action.query) {

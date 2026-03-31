@@ -14,32 +14,32 @@ import type {
   BuiltInAgentDefinition,
 } from '../loadAgentsDir.js'
 
-const CLAUDE_CODE_DOCS_MAP_URL =
-  'https://code.claude.com/docs/en/claude_code_docs_map.md'
+const CLAUDE_CODE_NEXT_DOCS_MAP_URL =
+  'https://code.claude.com/docs/en/claude_code_next_docs_map.md'
 const CDP_DOCS_MAP_URL = 'https://platform.claude.com/llms.txt'
 
-export const CLAUDE_CODE_GUIDE_AGENT_TYPE = 'claude-code-guide'
+export const CLAUDE_CODE_NEXT_GUIDE_AGENT_TYPE = 'claude-code-next-guide'
 
 function getClaudeCodeGuideBasePrompt(): string {
-  // Ant-native builds alias find/grep to embedded bfs/ugrep and remove the
+  
   
   const localSearchHint = hasEmbeddedSearchTools()
     ? `${FILE_READ_TOOL_NAME}, \`find\`, and \`grep\``
     : `${FILE_READ_TOOL_NAME}, ${GLOB_TOOL_NAME}, and ${GREP_TOOL_NAME}`
 
-  return `You are the Claude guide agent. Your primary responsibility is helping users understand and use Claude Code, the Claude Agent SDK, and the Claude API (formerly the Anthropic API) effectively.
+  return `You are the Claude guide agent. Your primary responsibility is helping users understand and use Claude Code Next, the Claude Agent SDK, and the Claude API (formerly the Anthropic API) effectively.
 
 **Your expertise spans three domains:**
 
-1. **Claude Code** (the CLI tool): Installation, configuration, hooks, skills, MCP servers, keyboard shortcuts, IDE integrations, settings, and workflows.
+1. **Claude Code Next** (the CLI tool): Installation, configuration, hooks, skills, MCP servers, keyboard shortcuts, IDE integrations, settings, and workflows.
 
-2. **Claude Agent SDK**: A framework for building custom AI agents based on Claude Code technology. Available for Node.js/TypeScript and Python.
+2. **Claude Agent SDK**: A framework for building custom AI agents based on Claude Code Next technology. Available for Node.js/TypeScript and Python.
 
 3. **Claude API**: The Claude API (formerly known as the Anthropic API) for direct model interaction, tool use, and integrations.
 
 **Documentation sources:**
 
-- **Claude Code docs** (${CLAUDE_CODE_DOCS_MAP_URL}): Fetch this for questions about the Claude Code CLI tool, including:
+- **Claude Code Next docs** (${CLAUDE_CODE_NEXT_DOCS_MAP_URL}): Fetch this for questions about the Claude Code Next CLI tool, including:
   - Installation, setup, and getting started
   - Hooks (pre/post command execution)
   - Custom skills
@@ -87,18 +87,18 @@ Complete the user's request by providing accurate, documentation-based guidance.
 }
 
 function getFeedbackGuideline(): string {
-  // For 3P services (Bedrock/Vertex/Foundry), /feedback command is disabled
-  // Direct users to the appropriate feedback channel instead
+  
+  
   if (isUsing3PServices()) {
     return `- When you cannot find an answer or the feature doesn't exist, direct the user to ${MACRO.ISSUES_EXPLAINER}`
   }
   return "- When you cannot find an answer or the feature doesn't exist, direct the user to use /feedback to report a feature request or bug"
 }
 
-export const CLAUDE_CODE_GUIDE_AGENT: BuiltInAgentDefinition = {
-  agentType: CLAUDE_CODE_GUIDE_AGENT_TYPE,
-  whenToUse: `Use this agent when the user asks questions ("Can Claude...", "Does Claude...", "How do I...") about: (1) Claude Code (the CLI tool) - features, hooks, slash commands, MCP servers, settings, IDE integrations, keyboard shortcuts; (2) Claude Agent SDK - building custom agents; (3) Claude API (formerly Anthropic API) - API usage, tool use, Anthropic SDK usage. **IMPORTANT:** Before spawning a new agent, check if there is already a running or recently completed claude-code-guide agent that you can continue via ${SEND_MESSAGE_TOOL_NAME}.`,
-  // Ant-native builds: Glob/Grep tools are removed; use Bash (with embedded
+export const CLAUDE_CODE_NEXT_GUIDE_AGENT: BuiltInAgentDefinition = {
+  agentType: CLAUDE_CODE_NEXT_GUIDE_AGENT_TYPE,
+  whenToUse: `Use this agent when the user asks questions ("Can Claude...", "Does Claude...", "How do I...") about: (1) Claude Code Next (the CLI tool) - features, hooks, slash commands, MCP servers, settings, IDE integrations, keyboard shortcuts; (2) Claude Agent SDK - building custom agents; (3) Claude API (formerly Anthropic API) - API usage, tool use, Anthropic SDK usage. **IMPORTANT:** Before spawning a new agent, check if there is already a running or recently completed claude-code-next-guide agent that you can continue via ${SEND_MESSAGE_TOOL_NAME}.`,
+  
   
   tools: hasEmbeddedSearchTools()
     ? [
@@ -135,7 +135,7 @@ export const CLAUDE_CODE_GUIDE_AGENT: BuiltInAgentDefinition = {
       )
     }
 
-    // 2. Custom agents from .claude/agents/
+    
     const customAgents =
       toolUseContext.options.agentDefinitions.activeAgents.filter(
         (a: AgentDefinition) => a.source !== 'built-in',
@@ -149,7 +149,7 @@ export const CLAUDE_CODE_GUIDE_AGENT: BuiltInAgentDefinition = {
       )
     }
 
-    // 3. MCP servers
+    
     const mcpClients = toolUseContext.options.mcpClients
     if (mcpClients && mcpClients.length > 0) {
       const mcpList = mcpClients
@@ -158,7 +158,7 @@ export const CLAUDE_CODE_GUIDE_AGENT: BuiltInAgentDefinition = {
       contextSections.push(`**Configured MCP servers:**\n${mcpList}`)
     }
 
-    // 4. Plugin commands
+    
     const pluginCommands = commands.filter(
       cmd => cmd.type === 'prompt' && cmd.source === 'plugin',
     )
@@ -169,17 +169,17 @@ export const CLAUDE_CODE_GUIDE_AGENT: BuiltInAgentDefinition = {
       contextSections.push(`**Available plugin skills:**\n${pluginList}`)
     }
 
-    // 5. User settings
+    
     const settings = getSettings_DEPRECATED()
     if (Object.keys(settings).length > 0) {
-      // eslint-disable-next-line no-restricted-syntax -- human-facing UI, not tool_result
+      
       const settingsJson = jsonStringify(settings, null, 2)
       contextSections.push(
         `**User's settings.json:**\n\`\`\`json\n${settingsJson}\n\`\`\``,
       )
     }
 
-    // Add the feedback guideline (conditional based on whether user is using 3P services)
+    
     const feedbackGuideline = getFeedbackGuideline()
     const basePromptWithFeedback = `${getClaudeCodeGuideBasePrompt()}
 ${feedbackGuideline}`
@@ -199,7 +199,7 @@ ${contextSections.join('\n\n')}
 When answering questions, consider these configured features and proactively suggest them when relevant.`
     }
 
-    // Return the base prompt if no context to add
+    
     return basePromptWithFeedback
   },
 }

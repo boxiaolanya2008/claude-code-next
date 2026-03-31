@@ -13,15 +13,13 @@ import { gt } from './semver.js'
 const MAX_RELEASE_NOTES_SHOWN = 5
 
 export const CHANGELOG_URL =
-  'https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md'
+  'https://github.com/anthropics/claude-code-next/blob/main/CHANGELOG.md'
 const RAW_CHANGELOG_URL =
-  'https://raw.githubusercontent.com/anthropics/claude-code/refs/heads/main/CHANGELOG.md'
+  'https://raw.githubusercontent.com/anthropics/claude-code-next/refs/heads/main/CHANGELOG.md'
 
 function getChangelogCachePath(): string {
   return join(getClaudeConfigHomeDir(), 'cache', 'changelog.md')
 }
-
-// In-memory cache populated by async reads. Sync callers (React render, sync
 
 let changelogMemoryCache: string | null = null
 
@@ -29,11 +27,6 @@ export function _resetChangelogCacheForTesting(): void {
   changelogMemoryCache = null
 }
 
-/**
- * Migrate changelog from old config-based storage to file-based storage.
- * This should be called once at startup to ensure the migration happens
- * before any other config saves that might re-add the deprecated field.
- */
 export async function migrateChangelogFromConfig(): Promise<void> {
   const config = getGlobalConfig()
   if (!config.cachedChangelog) {
@@ -47,27 +40,23 @@ export async function migrateChangelogFromConfig(): Promise<void> {
     await mkdir(dirname(cachePath), { recursive: true })
     await writeFile(cachePath, config.cachedChangelog, {
       encoding: 'utf-8',
-      flag: 'wx', // Write only if file doesn't exist
+      flag: 'wx', 
     })
   } catch {
-    // File already exists, which is fine - skip silently
+    
   }
 
-  // Remove the deprecated field from config
+  
   saveGlobalConfig(({ cachedChangelog: _, ...rest }) => rest)
 }
 
-/**
- * Fetch the changelog from GitHub and store it in cache file
- * This runs in the background and doesn't block the UI
- */
 export async function fetchAndStoreChangelog(): Promise<void> {
-  // Skip in noninteractive mode
+  
   if (getIsNonInteractiveSession()) {
     return
   }
 
-  // Skip network requests if nonessential traffic is disabled
+  
   if (isEssentialTrafficOnly()) {
     return
   }
@@ -100,11 +89,6 @@ export async function fetchAndStoreChangelog(): Promise<void> {
   }
 }
 
-/**
- * Get the stored changelog from cache file if available.
- * Populates the in-memory cache for subsequent sync reads.
- * @returns The cached changelog content or empty string if not available
- */
 export async function getStoredChangelog(): Promise<string> {
   if (changelogMemoryCache !== null) {
     return changelogMemoryCache
@@ -120,29 +104,18 @@ export async function getStoredChangelog(): Promise<string> {
   }
 }
 
-/**
- * Synchronous accessor for the changelog, reading only from the in-memory cache.
- * Returns empty string if the async getStoredChangelog() hasn't been called yet.
- * Intended for React render paths where async is not possible; setup.ts ensures
- * the cache is populated before first render via `await checkForReleaseNotes()`.
- */
 export function getStoredChangelogFromMemory(): string {
   return changelogMemoryCache ?? ''
 }
 
-/**
- * Parses a changelog string in markdown format into a structured format
- * @param content - The changelog content string
- * @returns Record mapping version numbers to arrays of release notes
- */
 export function parseChangelog(content: string): Record<string, string[]> {
   try {
     if (!content) return {}
 
-    // Parse the content
+    
     const releaseNotes: Record<string, string[]> = {}
 
-    // Split by heading lines (## X.X.X)
+    
     const sections = content.split(/^## /gm).slice(1) 
 
     for (const section of sections) {
@@ -177,15 +150,6 @@ export function parseChangelog(content: string): Record<string, string[]> {
   }
 }
 
-/**
- * Gets release notes to show based on the previously seen version.
- * Shows up to MAX_RELEASE_NOTES_SHOWN items total, prioritizing the most recent versions.
- *
- * @param currentVersion - The current app version
- * @param previousVersion - The last version where release notes were seen (or null if first time)
- * @param readChangelog - Function to read the changelog (defaults to readChangelogFile)
- * @returns Array of release notes to display
- */
 export function getRecentReleaseNotes(
   currentVersion: string,
   previousVersion: string | null | undefined,
@@ -203,7 +167,7 @@ export function getRecentReleaseNotes(
       (baseCurrentVersion &&
         gt(baseCurrentVersion.version, basePreviousVersion.version))
     ) {
-      // Get all versions that are newer than the last seen version
+      
       return Object.entries(releaseNotes)
         .filter(
           ([version]) =>
@@ -221,13 +185,6 @@ export function getRecentReleaseNotes(
   return []
 }
 
-/**
- * Gets all release notes as an array of [version, notes] arrays.
- * Versions are sorted with oldest first.
- *
- * @param readChangelog - Function to read the changelog (defaults to readChangelogFile)
- * @returns Array of [version, notes[]] arrays
- */
 export function getAllReleaseNotes(
   changelogContent: string = getStoredChangelogFromMemory(),
 ): Array<[string, string[]]> {
@@ -257,20 +214,11 @@ export function getAllReleaseNotes(
   }
 }
 
-/**
- * Checks if there are release notes to show based on the last seen version.
- * Can be used by multiple components to determine whether to display release notes.
- * Also triggers a fetch of the latest changelog if the version has changed.
- *
- * @param lastSeenVersion The last version of release notes the user has seen
- * @param currentVersion The current application version, defaults to MACRO.VERSION
- * @returns An object with hasReleaseNotes and the releaseNotes content
- */
 export async function checkForReleaseNotes(
   lastSeenVersion: string | null | undefined,
   currentVersion: string = MACRO.VERSION,
 ): Promise<{ hasReleaseNotes: boolean; releaseNotes: string[] }> {
-  // For Ant builds, use VERSION_CHANGELOG bundled at build time
+  
   if (process.env.USER_TYPE === 'ant') {
     const changelog = MACRO.VERSION_CHANGELOG
     if (changelog) {
@@ -286,7 +234,7 @@ export async function checkForReleaseNotes(
     }
   }
 
-  // Ensure the in-memory cache is populated for subsequent sync reads
+  
   const cachedChangelog = await getStoredChangelog()
 
   
@@ -308,17 +256,11 @@ export async function checkForReleaseNotes(
   }
 }
 
-/**
- * Synchronous variant of checkForReleaseNotes for React render paths.
- * Reads only from the in-memory cache populated by the async version.
- * setup.ts awaits checkForReleaseNotes() before first render, so this
- * returns accurate results in component render bodies.
- */
 export function checkForReleaseNotesSync(
   lastSeenVersion: string | null | undefined,
   currentVersion: string = MACRO.VERSION,
 ): { hasReleaseNotes: boolean; releaseNotes: string[] } {
-  // For Ant builds, use VERSION_CHANGELOG bundled at build time
+  
   if (process.env.USER_TYPE === 'ant') {
     const changelog = MACRO.VERSION_CHANGELOG
     if (changelog) {

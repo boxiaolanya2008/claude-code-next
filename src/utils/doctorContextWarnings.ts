@@ -61,14 +61,11 @@ async function checkClaudeMdFiles(): Promise<ContextWarning | null> {
     severity: 'warning',
     message,
     details,
-    currentValue: largeFiles.length, // Number of files exceeding threshold
+    currentValue: largeFiles.length, 
     threshold: MAX_MEMORY_CHARACTER_COUNT,
   }
 }
 
-/**
- * Check agent descriptions token count
- */
 async function checkAgentDescriptions(
   agentInfo: AgentDefinitionsResult | null,
 ): Promise<ContextWarning | null> {
@@ -82,7 +79,7 @@ async function checkAgentDescriptions(
     return null
   }
 
-  // Calculate tokens for each agent
+  
   const agentTokens = agentInfo.activeAgents
     .filter(a => a.source !== 'built-in')
     .map(agent => {
@@ -112,9 +109,6 @@ async function checkAgentDescriptions(
   }
 }
 
-/**
- * Check MCP tools token count
- */
 async function checkMcpTools(
   tools: Tool[],
   getToolPermissionContext: () => Promise<ToolPermissionContext>,
@@ -129,7 +123,7 @@ async function checkMcpTools(
   }
 
   try {
-    // Use the existing countMcpToolTokens function from analyzeContext
+    
     const model = getMainLoopModel()
     const { mcpToolTokens, mcpToolDetails } = await countMcpToolTokens(
       tools,
@@ -142,11 +136,11 @@ async function checkMcpTools(
       return null
     }
 
-    // Group tools by server
+    
     const toolsByServer = new Map<string, { count: number; tokens: number }>()
 
     for (const tool of mcpToolDetails) {
-      // Extract server name from tool name (format: mcp__servername__toolname)
+      
       const parts = tool.name.split('__')
       const serverName = parts[1] || 'unknown'
 
@@ -157,7 +151,7 @@ async function checkMcpTools(
       })
     }
 
-    // Sort servers by token count
+    
     const sortedServers = Array.from(toolsByServer.entries()).sort(
       (a, b) => b[1].tokens - a[1].tokens,
     )
@@ -182,7 +176,7 @@ async function checkMcpTools(
       threshold: MCP_TOOLS_THRESHOLD,
     }
   } catch (_error) {
-    // If token counting fails, fall back to character-based estimation
+    
     const estimatedTokens = mcpTools.reduce((total, tool) => {
       const chars = (tool.name?.length || 0) + tool.description.length
       return total + roughTokenCountEstimation(chars.toString())
@@ -205,9 +199,6 @@ async function checkMcpTools(
   }
 }
 
-/**
- * Check for unreachable permission rules (e.g., specific allow rules shadowed by tool-wide ask rules)
- */
 async function checkUnreachableRules(
   getToolPermissionContext: () => Promise<ToolPermissionContext>,
 ): Promise<ContextWarning | null> {
@@ -239,9 +230,6 @@ async function checkUnreachableRules(
   }
 }
 
-/**
- * Check all context warnings for the doctor command
- */
 export async function checkContextWarnings(
   tools: Tool[],
   agentInfo: AgentDefinitionsResult | null,

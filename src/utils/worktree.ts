@@ -54,7 +54,7 @@ export function validateWorktreeSlug(slug: string): void {
       `Invalid worktree name: must be ${MAX_WORKTREE_SLUG_LENGTH} characters or fewer (got ${slug.length})`,
     )
   }
-  // Leading or trailing `/` would make path.join produce an absolute path
+  
   
   
   for (const segment of slug.split('/')) {
@@ -71,26 +71,17 @@ export function validateWorktreeSlug(slug: string): void {
   }
 }
 
-// Helper function to create directories recursively
 async function mkdirRecursive(dirPath: string): Promise<void> {
   await mkdir(dirPath, { recursive: true })
 }
 
-/**
- * Symlinks directories from the main repository to avoid duplication.
- * This prevents disk bloat from duplicating node_modules and other large directories.
- *
- * @param repoRootPath - Path to the main repository root
- * @param worktreePath - Path to the worktree directory
- * @param dirsToSymlink - Array of directory names to symlink (e.g., ['node_modules'])
- */
 async function symlinkDirectories(
   repoRootPath: string,
   worktreePath: string,
   dirsToSymlink: string[],
 ): Promise<void> {
   for (const dir of dirsToSymlink) {
-    // Validate directory doesn't escape repository boundaries
+    
     if (containsPathTraversal(dir)) {
       logForDebugging(
         `Skipping symlink for "${dir}": path traversal detected`,
@@ -109,10 +100,10 @@ async function symlinkDirectories(
       )
     } catch (error) {
       const code = getErrnoCode(error)
-      // ENOENT: source doesn't exist yet (expected - skip silently)
+      
       
       if (code !== 'ENOENT' && code !== 'EEXIST') {
-        // Unexpected error (e.g., permission denied, unsupported platform)
+        
         logForDebugging(
           `Failed to symlink ${dir} (${code ?? 'unknown'}): ${errorMessage(error)}`,
           { level: 'warn' },
@@ -144,11 +135,6 @@ export function getCurrentWorktreeSession(): WorktreeSession | null {
   return currentWorktreeSession
 }
 
-/**
- * Restore the worktree session on --resume. The caller must have already
- * verified the directory exists (via process.chdir) and set the bootstrap
- * state (cwd, originalCwd).
- */
 export function restoreWorktreeSession(session: WorktreeSession | null): void {
   currentWorktreeSession = session
 }
@@ -177,8 +163,6 @@ type WorktreeCreateResult =
       existed: false
     }
 
-// Env vars to prevent git/SSH from prompting for credentials (which hangs the CLI).
-
 const GIT_NO_PROMPT_ENV = {
   GIT_TERMINAL_PROMPT: '0',
   GIT_ASKPASS: '',
@@ -187,10 +171,6 @@ const GIT_NO_PROMPT_ENV = {
 function worktreesDir(repoRoot: string): string {
   return join(repoRoot, '.claude', 'worktrees')
 }
-
-// Flatten nested slugs (`user/feature` → `user+feature`) for both the branch
-
-//   - git refs: `worktree-user` (file) vs `worktree-user/feature` (needs dir)
 
 function flattenSlug(slug: string): string {
   return slug.replaceAll('/', '+')
@@ -204,12 +184,6 @@ function worktreePathFor(repoRoot: string, slug: string): string {
   return join(worktreesDir(repoRoot), flattenSlug(slug))
 }
 
-/**
- * Creates a new git worktree for the given slug, or resumes it if it already exists.
- * Named worktrees reuse the same path across invocations, so the existence check
- * prevents unconditionally running `git fetch` (which can hang waiting for credentials)
- * on every resume.
- */
 async function getOrCreateWorktree(
   repoRoot: string,
   slug: string,
@@ -232,7 +206,7 @@ async function getOrCreateWorktree(
     }
   }
 
-  // New worktree: fetch base branch then add
+  
   await mkdir(worktreesDir(repoRoot), { recursive: true })
 
   const fetchEnv = { ...process.env, ...GIT_NO_PROMPT_ENV }
@@ -253,7 +227,7 @@ async function getOrCreateWorktree(
     }
     baseBranch = 'FETCH_HEAD'
   } else {
-    // If origin/<branch> already exists locally, skip fetch. In large repos
+    
     
     
     
@@ -280,7 +254,7 @@ async function getOrCreateWorktree(
     }
   }
 
-  // For the fetch/PR-fetch paths we still need the SHA — the fs-only resolveRef
+  
   
   if (!baseSha) {
     const { stdout, code: shaCode } = await execFileNoThrowWithCwd(
@@ -301,7 +275,7 @@ async function getOrCreateWorktree(
   if (sparsePaths?.length) {
     addArgs.push('--no-checkout')
   }
-  // -B (not -b): reset any orphan branch left behind by a removed worktree dir.
+  
   
   addArgs.push('-B', worktreeBranch, worktreePath, baseBranch)
 
@@ -312,7 +286,7 @@ async function getOrCreateWorktree(
   }
 
   if (sparsePaths?.length) {
-    // If sparse-checkout or checkout fail after --no-checkout, the worktree
+    
     
     
     
@@ -352,20 +326,6 @@ async function getOrCreateWorktree(
   }
 }
 
-/**
- * Copy gitignored files specified in .worktreeinclude from base repo to worktree.
- *
- * Only copies files that are BOTH:
- * 1. Matched by patterns in .worktreeinclude (uses .gitignore syntax)
- * 2. Gitignored (not tracked by git)
- *
- * Uses `git ls-files --others --ignored --exclude-standard --directory` to list
- * gitignored entries with fully-ignored dirs collapsed to single entries (so large
- * build outputs like node_modules/ don't force a full tree walk), then filters
- * against .worktreeinclude patterns in-process using the `ignore` library. If a
- * .worktreeinclude pattern explicitly targets a path inside a collapsed directory,
- * that directory is expanded with a second scoped `ls-files` call.
- */
 export async function copyWorktreeIncludeFiles(
   repoRoot: string,
   worktreePath: string,
@@ -385,9 +345,9 @@ export async function copyWorktreeIncludeFiles(
     return []
   }
 
-  // Single pass with --directory: collapses fully-gitignored dirs (node_modules/,
-  // .turbo/, etc.) into single entries instead of listing every file inside.
-  // In a large repo this cuts ~500k entries/~7s down to ~hundreds of entries/~100ms.
+  
+  
+  
   const gitignored = await execFileNoThrowWithCwd(
     gitExe(),
     ['ls-files', '--others', '--ignored', '--exclude-standard', '--directory'],
@@ -400,16 +360,16 @@ export async function copyWorktreeIncludeFiles(
   const entries = gitignored.stdout.trim().split('\n').filter(Boolean)
   const matcher = ignore().add(includeContent)
 
-  // --directory emits collapsed dirs with a trailing slash; everything else is
-  // an individual file.
+  
+  
   const collapsedDirs = entries.filter(e => e.endsWith('/'))
   const files = entries.filter(e => !e.endsWith('/') && matcher.ignores(e))
 
-  // Edge case: a .worktreeinclude pattern targets a path inside a collapsed dir
-  // (e.g. pattern `config/secrets/api.key` when all of `config/secrets/` is
-  // gitignored with no tracked siblings). Expand only dirs where a pattern has
-  // that dir as its explicit path prefix (stripping redundant leading `/`), the
-  // dir falls under an anchored glob's literal prefix (e.g. `config/**/*.key`
+  
+  
+  
+  
+  
   
   
   
@@ -481,16 +441,12 @@ export async function copyWorktreeIncludeFiles(
   return copied
 }
 
-/**
- * Post-creation setup for a newly created worktree.
- * Propagates settings.local.json, configures git hooks, and symlinks directories.
- */
 async function performPostCreationSetup(
   repoRoot: string,
   worktreePath: string,
 ): Promise<void> {
-  // Copy settings.local.json to the worktree's .claude directory
-  // This propagates local settings (which may contain secrets) to the worktree
+  
+  
   const localSettingsRelativePath =
     getRelativeSettingsFilePathForSource('localSettings')
   const sourceSettingsLocal = join(repoRoot, localSettingsRelativePath)
@@ -511,8 +467,8 @@ async function performPostCreationSetup(
     }
   }
 
-  // Configure the worktree to use hooks from the main repository
-  // This solves issues with .husky and other git hooks that use relative paths
+  
+  
   const huskyPath = join(repoRoot, '.husky')
   const gitHooksPath = join(repoRoot, '.git', 'hooks')
   let hooksPath: string | null = null
@@ -524,12 +480,12 @@ async function performPostCreationSetup(
         break
       }
     } catch {
-      // Path doesn't exist or can't be accessed
+      
     }
   }
   if (hooksPath) {
-    // `git config` (no --worktree flag) writes to the main repo's .git/config,
-    // shared by all worktrees. Once set, every subsequent worktree create is a
+    
+    
     
     const gitDir = await resolveGitDir(repoRoot)
     const configDir = gitDir ? ((await getCommonDir(gitDir)) ?? gitDir) : null
@@ -555,14 +511,14 @@ async function performPostCreationSetup(
     }
   }
 
-  // Symlink directories to avoid disk bloat (opt-in via settings)
+  
   const settings = getInitialSettings()
   const dirsToSymlink = settings.worktree?.symlinkDirectories ?? []
   if (dirsToSymlink.length > 0) {
     await symlinkDirectories(repoRoot, worktreePath, dirsToSymlink)
   }
 
-  // Copy gitignored files specified in .worktreeinclude (best-effort)
+  
   await copyWorktreeIncludeFiles(repoRoot, worktreePath)
 
   
@@ -575,8 +531,8 @@ async function performPostCreationSetup(
   
   
   
-  // the absolute core.hooksPath we just set above (main repo's .husky),
-  // not the worktree's — `git rev-parse --git-path hooks` echoes the config
+  
+  
   
   if (feature('COMMIT_ATTRIBUTION')) {
     const worktreeHooksDir =
@@ -592,7 +548,7 @@ async function performPostCreationSetup(
           }),
       )
       .catch(error => {
-        // Dynamic import() itself rejected (module load failure). The inner
+        
         
         
         
@@ -601,17 +557,10 @@ async function performPostCreationSetup(
   }
 }
 
-/**
- * Parses a PR reference from a string.
- * Accepts GitHub-style PR URLs (e.g., https://github.com/owner/repo/pull/123,
- * or GHE equivalents like https://ghe.example.com/owner/repo/pull/123)
- * or `#N` format (e.g., #123).
- * Returns the PR number or null if the string is not a recognized PR reference.
- */
 export function parsePRReference(input: string): number | null {
-  // GitHub-style PR URL: https://<host>/owner/repo/pull/123 (with optional trailing slash, query, hash)
   
-  // Bitbucket uses /pull-requests/N — so matching any host here is safe.
+  
+  
   const urlMatch = input.match(
     /^https?:\/\/[^/]+\/[^/]+\/[^/]+\/pull\/(\d+)\/?(?:[?#].*)?$/i,
   )
@@ -619,7 +568,7 @@ export function parsePRReference(input: string): number | null {
     return parseInt(urlMatch[1], 10)
   }
 
-  // #N format
+  
   const hashMatch = input.match(/^#(\d+)$/)
   if (hashMatch?.[1]) {
     return parseInt(hashMatch[1], 10)
@@ -683,7 +632,7 @@ export async function createWorktreeForSession(
   tmuxSessionName?: string,
   options?: { prNumber?: number },
 ): Promise<WorktreeSession> {
-  // Must run before the hook branch below — hooks receive the raw slug as an
+  
   
   validateWorktreeSlug(slug)
 
@@ -705,7 +654,7 @@ export async function createWorktreeForSession(
       hookBased: true,
     }
   } else {
-    // Fall back to git worktree
+    
     const gitRoot = findGitRoot(getCwd())
     if (!gitRoot) {
       throw new Error(
@@ -746,7 +695,7 @@ export async function createWorktreeForSession(
     }
   }
 
-  // Save to project config for persistence
+  
   saveCurrentProjectConfig(current => ({
     ...current,
     activeWorktreeSession: currentWorktreeSession ?? undefined,
@@ -801,7 +750,7 @@ export async function cleanupWorktree(): Promise<void> {
     process.chdir(originalCwd)
 
     if (hookBased) {
-      // Hook-based worktree: delegate cleanup to WorktreeRemove hook
+      
       const hookRan = await executeWorktreeRemoveHook(worktreePath)
       if (hookRan) {
         logForDebugging(`Removed hook-based worktree at: ${worktreePath}`)
@@ -812,7 +761,7 @@ export async function cleanupWorktree(): Promise<void> {
         )
       }
     } else {
-      // Git-based worktree: use git worktree remove.
+      
       
       
       
@@ -832,7 +781,7 @@ export async function cleanupWorktree(): Promise<void> {
       }
     }
 
-    // Clear the session
+    
     currentWorktreeSession = null
 
     
@@ -843,7 +792,7 @@ export async function cleanupWorktree(): Promise<void> {
 
     
     if (!hookBased && worktreeBranch) {
-      // Wait a bit to ensure git has released all locks
+      
       await sleep(100)
 
       const { code: deleteBranchCode, stderr: deleteBranchError } =
@@ -871,12 +820,6 @@ export async function cleanupWorktree(): Promise<void> {
   }
 }
 
-/**
- * Create a lightweight worktree for a subagent.
- * Reuses getOrCreateWorktree/performPostCreationSetup but does NOT touch
- * global session state (currentWorktreeSession, process.chdir, project config).
- * Falls back to hook-based creation if not in a git repository.
- */
 export async function createAgentWorktree(slug: string): Promise<{
   worktreePath: string
   worktreeBranch?: string
@@ -896,11 +839,11 @@ export async function createAgentWorktree(slug: string): Promise<{
     return { worktreePath: hookResult.worktreePath, hookBased: true }
   }
 
-  // Fall back to git worktree
   
-  // the main repo's .claude/worktrees/ even when spawned from inside a session
-  // worktree — otherwise they nest at <worktree>/.claude/worktrees/ and the
-  // periodic cleanup (which scans the canonical root) never finds them.
+  
+  
+  
+  
   const gitRoot = findCanonicalGitRoot(getCwd())
   if (!gitRoot) {
     throw new Error(
@@ -918,7 +861,7 @@ export async function createAgentWorktree(slug: string): Promise<{
     )
     await performPostCreationSetup(gitRoot, worktreePath)
   } else {
-    // Bump mtime so the periodic stale-worktree cleanup doesn't consider this
+    
     
     
     const now = new Date()
@@ -929,13 +872,6 @@ export async function createAgentWorktree(slug: string): Promise<{
   return { worktreePath, worktreeBranch, headCommit, gitRoot }
 }
 
-/**
- * Remove a worktree created by createAgentWorktree.
- * For git-based worktrees, removes the worktree directory and deletes the temporary branch.
- * For hook-based worktrees, delegates to the WorktreeRemove hook.
- * Must be called with the main repo's git root (for git worktrees), not the worktree path,
- * since the worktree directory is deleted during this operation.
- */
 export async function removeAgentWorktree(
   worktreePath: string,
   worktreeBranch?: string,
@@ -962,7 +898,7 @@ export async function removeAgentWorktree(
     return false
   }
 
-  // Run from the main repo root, not the worktree (which we're about to delete)
+  
   const { code: removeCode, stderr: removeError } =
     await execFileNoThrowWithCwd(
       gitExe(),
@@ -982,7 +918,7 @@ export async function removeAgentWorktree(
     return true
   }
 
-  // Delete the temporary worktree branch from the main repo
+  
   const { code: deleteBranchCode, stderr: deleteBranchError } =
     await execFileNoThrowWithCwd(gitExe(), ['branch', '-D', worktreeBranch], {
       cwd: gitRoot,
@@ -997,42 +933,19 @@ export async function removeAgentWorktree(
   return true
 }
 
-/**
- * Slug patterns for throwaway worktrees created by AgentTool (`agent-a<7hex>`,
- * from earlyAgentId.slice(0,8)), WorkflowTool (`wf_<runId>-<idx>` where runId
- * is randomUUID().slice(0,12) = 8 hex + `-` + 3 hex), and bridgeMain
- * (`bridge-<safeFilenameId>`). These leak when the parent process is killed
- * (Ctrl+C, ESC, crash) before their in-process cleanup runs. Exact-shape
- * patterns avoid sweeping user-named EnterWorktree slugs like `wf-myfeature`.
- */
 const EPHEMERAL_WORKTREE_PATTERNS = [
   /^agent-a[0-9a-f]{7}$/,
   /^wf_[0-9a-f]{8}-[0-9a-f]{3}-\d+$/,
-  // Legacy wf-<idx> slugs from before workflowRunId disambiguation — kept so
-  // the 30-day sweep still cleans up worktrees leaked by older builds.
+  
+  
   /^wf-\d+$/,
-  // Real bridge slugs are `bridge-${safeFilenameId(sessionId)}`.
+  
   /^bridge-[A-Za-z0-9_]+(-[A-Za-z0-9_]+)*$/,
-  // Template job worktrees: job-<templateName>-<8hex>. Prefix distinguishes
-  // from user-named EnterWorktree slugs that happen to end in 8 hex.
+  
+  
   /^job-[a-zA-Z0-9._-]{1,55}-[0-9a-f]{8}$/,
 ]
 
-/**
- * Remove stale agent/workflow worktrees older than cutoffDate.
- *
- * Safety:
- * - Only touches slugs matching ephemeral patterns (never user-named worktrees)
- * - Skips the current session's worktree
- * - Fail-closed: skips if git status fails or shows tracked changes
- *   (-uno: untracked files in a 30-day-old crashed agent worktree are build
- *   artifacts; skipping the untracked scan is 5-10× faster on large repos)
- * - Fail-closed: skips if any commits aren't reachable from a remote
- *
- * `git worktree remove --force` handles both the directory and git's internal
- * worktree tracking. If git doesn't recognize the path as a worktree (orphaned
- * dir), it's left in place — a later readdir finding it stale again is harmless.
- */
 export async function cleanupStaleAgentWorktrees(
   cutoffDate: Date,
 ): Promise<number> {
@@ -1073,7 +986,7 @@ export async function cleanupStaleAgentWorktrees(
       continue
     }
 
-    // Both checks must succeed with empty output. Non-zero exit (corrupted
+    
     
     
     const [status, unpushed] = await Promise.all([
@@ -1113,12 +1026,6 @@ export async function cleanupStaleAgentWorktrees(
   return removed
 }
 
-/**
- * Check whether a worktree has uncommitted changes or new commits since creation.
- * Returns true if there are uncommitted changes (dirty working tree), if commits
- * were made on the worktree branch since `headCommit`, or if git commands fail
- * — callers use this to decide whether to remove a worktree, so fail-closed.
- */
 export async function hasWorktreeChanges(
   worktreePath: string,
   headCommit: string,
@@ -1150,16 +1057,11 @@ export async function hasWorktreeChanges(
   return false
 }
 
-/**
- * Fast-path handler for --worktree --tmux.
- * Creates the worktree and execs into tmux running Claude inside.
- * This is called early in cli.tsx before loading the full CLI.
- */
 export async function execIntoTmuxWorktree(args: string[]): Promise<{
   handled: boolean
   error?: string
 }> {
-  // Check platform - tmux doesn't work on Windows
+  
   if (process.platform === 'win32') {
     return {
       handled: false,
@@ -1167,7 +1069,7 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
     }
   }
 
-  // Check if tmux is available
+  
   const tmuxCheck = spawnSync('tmux', ['-V'], { encoding: 'utf-8' })
   if (tmuxCheck.status !== 0) {
     const installHint =
@@ -1180,14 +1082,14 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
     }
   }
 
-  // Parse worktree name and tmux mode from args
+  
   let worktreeName: string | undefined
   let forceClassicTmux = false
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
     if (!arg) continue
     if (arg === '-w' || arg === '--worktree') {
-      // Check if next arg exists and isn't another flag
+      
       const next = args[i + 1]
       if (next && !next.startsWith('-')) {
         worktreeName = next
@@ -1199,7 +1101,7 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
     }
   }
 
-  // Check if worktree name is a PR reference
+  
   let prNumber: number | null = null
   if (worktreeName) {
     prNumber = parsePRReference(worktreeName)
@@ -1208,7 +1110,7 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
     }
   }
 
-  // Generate a slug if no name provided
+  
   if (!worktreeName) {
     const adjectives = ['swift', 'bright', 'calm', 'keen', 'bold']
     const nouns = ['fox', 'owl', 'elm', 'oak', 'ray']
@@ -1218,7 +1120,7 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
     worktreeName = `${adj}-${noun}-${suffix}`
   }
 
-  // worktreeName is joined into worktreeDir via path.join below; apply the
+  
   
   
   try {
@@ -1230,7 +1132,7 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
     }
   }
 
-  // Mirror createWorktreeForSession(): hook takes precedence over git so the
+  
   
   
   let worktreeDir: string
@@ -1249,7 +1151,7 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
     
     console.log(`Using worktree via hook: ${worktreeDir}`)
   } else {
-    // Get main git repo root (resolves through worktrees)
+    
     const repoRoot = findCanonicalGitRoot(getCwd())
     if (!repoRoot) {
       return {
@@ -1269,7 +1171,7 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
         prNumber !== null ? { prNumber } : undefined,
       )
       if (!result.existed) {
-        // biome-ignore lint/suspicious/noConsole: intentional console output
+        
         console.log(
           `Created worktree: ${worktreeDir} (based on ${result.baseBranch})`,
         )
@@ -1283,7 +1185,7 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
     }
   }
 
-  // Sanitize for tmux session name (replace / and . with _)
+  
   const tmuxSessionName =
     `${repoName}_${worktreeBranchName(worktreeName)}`.replace(/[/.]/g, '_')
 
@@ -1294,7 +1196,7 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
     if (!arg) continue
     if (arg === '--tmux' || arg === '--tmux=classic') continue
     if (arg === '-w' || arg === '--worktree') {
-      // Skip the flag and its value if present
+      
       const next = args[i + 1]
       if (next && !next.startsWith('-')) {
         i++ 
@@ -1305,7 +1207,7 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
     newArgs.push(arg)
   }
 
-  // Get tmux prefix for user guidance
+  
   let tmuxPrefix = 'C-b' 
   const prefixResult = spawnSync('tmux', ['show-options', '-g', 'prefix'], {
     encoding: 'utf-8',
@@ -1317,7 +1219,7 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
     }
   }
 
-  // Check if tmux prefix conflicts with Claude keybindings
+  
   
   const claudeBindings = [
     'C-b',
@@ -1335,12 +1237,12 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
   
   const tmuxEnv = {
     ...process.env,
-    CLAUDE_CODE_TMUX_SESSION: tmuxSessionName,
-    CLAUDE_CODE_TMUX_PREFIX: tmuxPrefix,
-    CLAUDE_CODE_TMUX_PREFIX_CONFLICTS: prefixConflicts ? '1' : '',
+    CLAUDE_CODE_NEXT_TMUX_SESSION: tmuxSessionName,
+    CLAUDE_CODE_NEXT_TMUX_PREFIX: tmuxPrefix,
+    CLAUDE_CODE_NEXT_TMUX_PREFIX_CONFLICTS: prefixConflicts ? '1' : '',
   }
 
-  // Check if session already exists
+  
   const hasSessionResult = spawnSync(
     'tmux',
     ['has-session', '-t', tmuxSessionName],
@@ -1370,18 +1272,18 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
     )
   }
 
-  // For ants in claude-cli-internal, set up dev panes (watch + start)
+  
   const isAnt = process.env.USER_TYPE === 'ant'
   const isClaudeCliInternal = repoName === 'claude-cli-internal'
   const shouldSetupDevPanes = isAnt && isClaudeCliInternal && !sessionExists
 
   if (shouldSetupDevPanes) {
-    // Create detached session with Claude in first pane
+    
     spawnSync(
       'tmux',
       [
         'new-session',
-        '-d', // detached
+        '-d', 
         '-s',
         tmuxSessionName,
         '-c',
@@ -1422,12 +1324,12 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
 
     
     if (isAlreadyInTmux) {
-      // Switch to sibling session (avoid nesting)
+      
       spawnSync('tmux', ['switch-client', '-t', tmuxSessionName], {
         stdio: 'inherit',
       })
     } else {
-      // Attach to the session
+      
       spawnSync(
         'tmux',
         [...tmuxGlobalArgs, 'attach-session', '-t', tmuxSessionName],
@@ -1438,22 +1340,22 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
       )
     }
   } else {
-    // Standard behavior: create or attach
+    
     if (isAlreadyInTmux) {
-      // Already in tmux - create detached session, then switch to it (sibling)
+      
       
       if (sessionExists) {
-        // Just switch to existing session
+        
         spawnSync('tmux', ['switch-client', '-t', tmuxSessionName], {
           stdio: 'inherit',
         })
       } else {
-        // Create new detached session
+        
         spawnSync(
           'tmux',
           [
             'new-session',
-            '-d', // detached
+            '-d', 
             '-s',
             tmuxSessionName,
             '-c',
@@ -1471,16 +1373,16 @@ export async function execIntoTmuxWorktree(args: string[]): Promise<{
         })
       }
     } else {
-      // Not in tmux - create and attach (original behavior)
+      
       const tmuxArgs = [
         ...tmuxGlobalArgs,
         'new-session',
-        '-A', // Attach if exists, create if not
+        '-A', 
         '-s',
         tmuxSessionName,
         '-c',
         worktreeDir,
-        '--', // Separator before command
+        '--', 
         process.execPath,
         ...newArgs,
       ]

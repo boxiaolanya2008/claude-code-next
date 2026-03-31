@@ -79,11 +79,11 @@ export function filterToolsForAgent({
   permissionMode?: PermissionMode
 }): Tools {
   return tools.filter(tool => {
-    // Allow MCP tools for all agents
+    
     if (tool.name.startsWith('mcp__')) {
       return true
     }
-    // Allow ExitPlanMode for agents in plan mode (e.g., in-process teammates)
+    
     
     if (
       toolMatchesName(tool, EXIT_PLAN_MODE_V2_TOOL_NAME) &&
@@ -99,12 +99,12 @@ export function filterToolsForAgent({
     }
     if (isAsync && !ASYNC_AGENT_ALLOWED_TOOLS.has(tool.name)) {
       if (isAgentSwarmsEnabled() && isInProcessTeammate()) {
-        // Allow AgentTool for in-process teammates to spawn sync subagents.
+        
         
         if (toolMatchesName(tool, AGENT_TOOL_NAME)) {
           return true
         }
-        // Allow task tools for in-process teammates to coordinate via shared task list
+        
         if (IN_PROCESS_TEAMMATE_ALLOWED_TOOLS.has(tool.name)) {
           return true
         }
@@ -115,10 +115,6 @@ export function filterToolsForAgent({
   })
 }
 
-/**
- * Resolves and validates agent tools against available tools
- * Handles wildcard expansion and validation in one place
- */
 export function resolveAgentTools(
   agentDefinition: Pick<
     AgentDefinition,
@@ -184,22 +180,22 @@ export function resolveAgentTools(
   let allowedAgentTypes: string[] | undefined
 
   for (const toolSpec of agentTools) {
-    // Parse the tool spec to extract the base tool name and any permission pattern
+    
     const { toolName, ruleContent } = permissionRuleValueFromString(toolSpec)
 
     
     if (toolName === AGENT_TOOL_NAME) {
       if (ruleContent) {
-        // Parse comma-separated agent types: "worker, researcher" → ["worker", "researcher"]
+        
         allowedAgentTypes = ruleContent.split(',').map(s => s.trim())
       }
-      // For sub-agents, Agent is excluded by filterToolsForAgent — mark the spec
+      
       
       if (!isMainThread) {
         validTools.push(toolSpec)
         continue
       }
-      // For main thread, filtering was skipped so Agent is in availableToolMap —
+      
       
     }
 
@@ -227,9 +223,9 @@ export function resolveAgentTools(
 export const agentToolResultSchema = lazySchema(() =>
   z.object({
     agentId: z.string(),
-    // Optional: older persisted sessions won't have this (resume replays
-    // results verbatim without re-validation). Used to gate the sync
-    // result trailer — one-shot built-ins skip the SendMessage hint.
+    
+    
+    
     agentType: z.string().optional(),
     content: z.array(z.object({ type: z.literal('text'), text: z.string() })),
     totalToolUseCount: z.number(),
@@ -298,7 +294,7 @@ export function finalizeAgentTool(
   if (lastAssistantMessage === undefined) {
     throw new Error('No assistant messages found')
   }
-  // Extract text content from the agent's response. If the final assistant
+  
   
   
   let content = lastAssistantMessage.message.content.filter(
@@ -356,10 +352,6 @@ export function finalizeAgentTool(
   }
 }
 
-/**
- * Returns the name of the last tool_use block in an assistant message,
- * or undefined if the message is not an assistant message with tool_use.
- */
 export function getLastToolUseName(message: MessageType): string | undefined {
   if (message.type !== 'assistant') return undefined
   const block = message.message.content.findLast(b => b.type === 'tool_use')
@@ -432,7 +424,7 @@ export async function classifyHandoffIfNeeded({
       decision:
         handoffDecision as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       toolName:
-        // Use legacy name for analytics continuity across the Task→Agent rename
+        
         LEGACY_AGENT_TOOL_NAME as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       inProtectedNamespace: isInProtectedNamespace(),
       classifierModel:
@@ -441,9 +433,9 @@ export async function classifyHandoffIfNeeded({
         subagentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       toolUseCount: totalToolUseCount,
       isHandoff: true,
-      // For handoff, the relevant agent completion is the subagent's final
-      // assistant message — the last thing the classifier transcript shows
-      // before the handoff review prompt.
+      
+      
+      
       agentMsgId: getLastAssistantMessage(agentMessages)?.message
         .id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       classifierStage:
@@ -459,7 +451,7 @@ export async function classifyHandoffIfNeeded({
     })
 
     if (classifierResult.shouldBlock) {
-      // When classifier is unavailable, still propagate the sub-agent's
+      
       
       if (classifierResult.unavailable) {
         logForDebugging(
@@ -480,11 +472,6 @@ export async function classifyHandoffIfNeeded({
   return null
 }
 
-/**
- * Extract a partial result string from an agent's accumulated messages.
- * Used when an async agent is killed to preserve what it accomplished.
- * Returns undefined if no text content is found.
- */
 export function extractPartialResult(
   messages: MessageType[],
 ): string | undefined {
@@ -501,10 +488,6 @@ export function extractPartialResult(
 
 type SetAppState = (f: (prev: AppState) => AppState) => void
 
-/**
- * Drives a background agent from spawn to terminal notification.
- * Shared between AgentTool's async-from-start path and resumeAgentBackground.
- */
 export async function runAsyncAgentLifecycle({
   taskId,
   abortController,
@@ -555,7 +538,7 @@ export async function runAsyncAgentLifecycle({
       agentMessages.push(message)
       
       
-      // means live is always a suffix of disk, so merge is order-correct.
+      
       rootSetAppState(prev => {
         const t = prev.tasks[taskId]
         if (!isLocalAgentTask(t) || !t.retain) return prev
@@ -638,7 +621,7 @@ export async function runAsyncAgentLifecycle({
   } catch (error) {
     stopSummarization?.()
     if (error instanceof AbortError) {
-      // killAsyncAgent is a no-op if TaskStop already set status='killed' —
+      
       
       
       

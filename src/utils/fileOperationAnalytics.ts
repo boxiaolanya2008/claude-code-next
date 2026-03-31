@@ -11,10 +11,6 @@ function hashFilePath(
     .slice(0, 16) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
 }
 
-/**
- * Creates a full SHA256 hash (64 chars) for file contents
- * Used for deduplication and change detection analytics
- */
 function hashFileContent(
   content: string,
 ): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS {
@@ -22,8 +18,6 @@ function hashFileContent(
     .update(content)
     .digest('hex') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
 }
-
-// Maximum content size to hash (100KB)
 
 const MAX_CONTENT_HASH_SIZE = 100 * 1024
 
@@ -46,8 +40,8 @@ export function logFileOperation(params: {
     filePathHash: hashFilePath(params.filePath),
   }
 
-  // Only hash content if it's provided and below size limit
-  // This prevents memory exhaustion from hashing large files (e.g., base64-encoded images)
+  
+  
   if (
     params.content !== undefined &&
     params.content.length <= MAX_CONTENT_HASH_SIZE

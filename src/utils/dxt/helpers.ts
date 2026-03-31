@@ -25,9 +25,6 @@ export async function validateManifest(
   return parseResult.data
 }
 
-/**
- * Parses and validates a DXT manifest from raw text data.
- */
 export async function parseAndValidateManifestFromText(
   manifestText: string,
 ): Promise<McpbManifest> {
@@ -42,9 +39,6 @@ export async function parseAndValidateManifestFromText(
   return validateManifest(manifestJson)
 }
 
-/**
- * Parses and validates a DXT manifest from raw binary data.
- */
 export async function parseAndValidateManifestFromBytes(
   manifestData: Uint8Array,
 ): Promise<McpbManifest> {
@@ -52,10 +46,6 @@ export async function parseAndValidateManifestFromBytes(
   return parseAndValidateManifestFromText(manifestText)
 }
 
-/**
- * Generates an extension ID from author name and extension name.
- * Uses the same algorithm as the directory backend for consistency.
- */
 export function generateExtensionId(
   manifest: McpbManifest,
   prefix?: 'local.unpacked' | 'local.dxt',

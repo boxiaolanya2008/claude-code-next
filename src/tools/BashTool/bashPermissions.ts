@@ -83,7 +83,595 @@ const splitCommand = splitCommand_DEPRECATED
 
 const ENV_VAR_ASSIGN_RE = /^[A-Za-z_]\w*=/
 
-// strace showed /proc/self/stat reads at ~127Hz with no epoll_wait. Fifty is
+export const MAX_SUBCOMMANDS_FOR_SECURITY_CHECK = 50
+
+export const MAX_SUGGESTED_RULES_FOR_COMPOUND = 5
+
+function logClassifierResultForAnts(
+  command: string,
+  behavior: ClassifierBehavior,
+  descriptions: string[],
+  result: ClassifierResult,
+): void {
+  if (process.env.USER_TYPE !== 'ant') {
+    return
+  }
+
+  logEvent('tengu_internal_bash_classifier_result', {
+    behavior:
+      behavior as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    descriptions: jsonStringify(
+      descriptions,
+    ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    matches: result.matches,
+    matchedDescription: (result.matchedDescription ??
+      '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    confidence:
+      result.confidence as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    reason:
+      result.reason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    
+    command:
+      command as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  })
+}
+
+export function getSimpleCommandPrefix(command: string): string | null {
+  const tokens = command.trim().split(/\s+/).filter(Boolean)
+  if (tokens.length === 0) return null
+
+  
+  
+  
+  
+  
+  let i = 0
+  while (i < tokens.length && ENV_VAR_ASSIGN_RE.test(tokens[i]!)) {
+    const varName = tokens[i]!.split('=')[0]!
+    const isAntOnlySafe =
+      process.env.USER_TYPE === 'ant' && ANT_ONLY_SAFE_ENV_VARS.has(varName)
+    if (!SAFE_ENV_VARS.has(varName) && !isAntOnlySafe) {
+      return null
+    }
+    i++
+  }
+
+  const remaining = tokens.slice(i)
+  if (remaining.length < 2) return null
+  const subcmd = remaining[1]!
+  
+  
+  if (!/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(subcmd)) return null
+  return remaining.slice(0, 2).join(' ')
+}
+
+const BARE_SHELL_PREFIXES = new Set([
+  'sh',
+  'bash',
+  'zsh',
+  'fish',
+  'csh',
+  'tcsh',
+  'ksh',
+  'dash',
+  'cmd',
+  'powershell',
+  'pwsh',
+  
+  'env',
+  'xargs',
+  
+  
+  
+  
+  
+  'nice',
+  'stdbuf',
+  'nohup',
+  'timeout',
+  'time',
+  
+  
+  'sudo',
+  'doas',
+  'pkexec',
+])
+
+export function getFirstWordPrefix(command: string): string | null {
+  const tokens = command.trim().split(/\s+/).filter(Boolean)
+
+  let i = 0
+  while (i < tokens.length && ENV_VAR_ASSIGN_RE.test(tokens[i]!)) {
+    const varName = tokens[i]!.split('=')[0]!
+    const isAntOnlySafe =
+      process.env.USER_TYPE === 'ant' && ANT_ONLY_SAFE_ENV_VARS.has(varName)
+    if (!SAFE_ENV_VARS.has(varName) && !isAntOnlySafe) {
+      return null
+    }
+    i++
+  }
+
+  const cmd = tokens[i]
+  if (!cmd) return null
+  
+  
+  if (!/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(cmd)) return null
+  if (BARE_SHELL_PREFIXES.has(cmd)) return null
+  return cmd
+}
+
+function suggestionForExactCommand(command: string): PermissionUpdate[] {
+  
+  
+  
+  const heredocPrefix = extractPrefixBeforeHeredoc(command)
+  if (heredocPrefix) {
+    return sharedSuggestionForPrefix(BashTool.name, heredocPrefix)
+  }
+
+  
+  
+  
+  
+  if (command.includes('\n')) {
+    const firstLine = command.split('\n')[0]!.trim()
+    if (firstLine) {
+      return sharedSuggestionForPrefix(BashTool.name, firstLine)
+    }
+  }
+
+  
+  
+  
+  const prefix = getSimpleCommandPrefix(command)
+  if (prefix) {
+    return sharedSuggestionForPrefix(BashTool.name, prefix)
+  }
+
+  return sharedSuggestionForExactCommand(BashTool.name, command)
+}
+
+function extractPrefixBeforeHeredoc(command: string): string | null {
+  if (!command.includes('<<')) return null
+
+  const idx = command.indexOf('<<')
+  if (idx <= 0) return null
+
+  const before = command.substring(0, idx).trim()
+  if (!before) return null
+
+  const prefix = getSimpleCommandPrefix(before)
+  if (prefix) return prefix
+
+  
+  
+  
+  
+  
+  const tokens = before.split(/\s+/).filter(Boolean)
+  let i = 0
+  while (i < tokens.length && ENV_VAR_ASSIGN_RE.test(tokens[i]!)) {
+    const varName = tokens[i]!.split('=')[0]!
+    const isAntOnlySafe =
+      process.env.USER_TYPE === 'ant' && ANT_ONLY_SAFE_ENV_VARS.has(varName)
+    if (!SAFE_ENV_VARS.has(varName) && !isAntOnlySafe) {
+      return null
+    }
+    i++
+  }
+  if (i >= tokens.length) return null
+  return tokens.slice(i, i + 2).join(' ') || null
+}
+
+function suggestionForPrefix(prefix: string): PermissionUpdate[] {
+  return sharedSuggestionForPrefix(BashTool.name, prefix)
+}
+
+export const permissionRuleExtractPrefix = sharedPermissionRuleExtractPrefix
+
+export function matchWildcardPattern(
+  pattern: string,
+  command: string,
+): boolean {
+  return sharedMatchWildcardPattern(pattern, command)
+}
+
+export const bashPermissionRule: (
+  permissionRule: string,
+) => ShellPermissionRule = parsePermissionRule
+
+const SAFE_ENV_VARS = new Set([
+  
+  'GOEXPERIMENT', 
+  'GOOS', 
+  'GOARCH', 
+  'CGO_ENABLED', 
+  'GO111MODULE', 
+
+  
+  'RUST_BACKTRACE', 
+  'RUST_LOG', 
+
+  
+  'NODE_ENV',
+
+  
+  'PYTHONUNBUFFERED', 
+  'PYTHONDONTWRITEBYTECODE', 
+
+  
+  'PYTEST_DISABLE_PLUGIN_AUTOLOAD', 
+  'PYTEST_DEBUG', 
+
+  
+  'ANTHROPIC_API_KEY', 
+
+  
+  'LANG', 
+  'LANGUAGE', 
+  'LC_ALL', 
+  'LC_CTYPE', 
+  'LC_TIME', 
+  'CHARSET', 
+
+  
+  'TERM', 
+  'COLORTERM', 
+  'NO_COLOR', 
+  'FORCE_COLOR', 
+  'TZ', 
+
+  
+  'LS_COLORS', 
+  'LSCOLORS', 
+  'GREP_COLOR', 
+  'GREP_COLORS', 
+  'GCC_COLORS', 
+
+  
+  'TIME_STYLE', 
+  'BLOCK_SIZE', 
+  'BLOCKSIZE', 
+])
+
+const ANT_ONLY_SAFE_ENV_VARS = new Set([
+  
+  'KUBECONFIG', 
+  'DOCKER_HOST', 
+
+  
+  'AWS_PROFILE', 
+  'CLOUDSDK_CORE_PROJECT', 
+  'CLUSTER', 
+
+  
+  'COO_CLUSTER', 
+  'COO_CLUSTER_NAME', 
+  'COO_NAMESPACE', 
+  'COO_LAUNCH_YAML_DRY_RUN', 
+
+  
+  'SKIP_NODE_VERSION_CHECK', 
+  'EXPECTTEST_ACCEPT', 
+  'CI', 
+  'GIT_LFS_SKIP_SMUDGE', 
+
+  
+  'CUDA_VISIBLE_DEVICES', 
+  'JAX_PLATFORMS', 
+
+  
+  'COLUMNS', 
+  'TMUX', 
+
+  
+  'POSTGRESQL_VERSION', 
+  'FIRESTORE_EMULATOR_HOST', 
+  'HARNESS_QUIET', 
+  'TEST_CROSSCHECK_LISTS_MATCH_UPDATE', 
+  'DBT_PER_DEVELOPER_ENVIRONMENTS', 
+  'STATSIG_FORD_DB_CHECKS', 
+
+  
+  'ANT_ENVIRONMENT', 
+  'ANT_SERVICE', 
+  'MONOREPO_ROOT_DIR', 
+
+  
+  'PYENV_VERSION', 
+
+  
+  'PGPASSWORD', 
+  'GH_TOKEN', 
+  'GROWTHBOOK_API_KEY', 
+])
+
+function stripCommentLines(command: string): string {
+  const lines = command.split('\n')
+  const nonCommentLines = lines.filter(line => {
+    const trimmed = line.trim()
+    
+    return trimmed !== '' && !trimmed.startsWith('#')
+  })
+
+  
+  if (nonCommentLines.length === 0) {
+    return command
+  }
+
+  return nonCommentLines.join('\n')
+}
+
+export function stripSafeWrappers(command: string): string {
+  
+  
+  
+  
+  
+  
+  
+  const SAFE_WRAPPER_PATTERNS = [
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    /^timeout[ \t]+(?:(?:--(?:foreground|preserve-status|verbose)|--(?:kill-after|signal)=[A-Za-z0-9_.+-]+|--(?:kill-after|signal)[ \t]+[A-Za-z0-9_.+-]+|-v|-[ks][ \t]+[A-Za-z0-9_.+-]+|-[ks][A-Za-z0-9_.+-]+)[ \t]+)*(?:--[ \t]+)?\d+(?:\.\d+)?[smhd]?[ \t]+/,
+    /^time[ \t]+(?:--[ \t]+)?/,
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    /^nice(?:[ \t]+-n[ \t]+-?\d+|[ \t]+-\d+)?[ \t]+(?:--[ \t]+)?/,
+    
+    
+    
+    /^stdbuf(?:[ \t]+-[ioe][LN0-9]+)+[ \t]+(?:--[ \t]+)?/,
+    /^nohup[ \t]+(?:--[ \t]+)?/,
+  ] as const
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  const ENV_VAR_PATTERN = /^([A-Za-z_][A-Za-z0-9_]*)=([A-Za-z0-9_./:-]+)[ \t]+/
+
+  let stripped = command
+  let previousStripped = ''
+
+  
+  
+  
+  while (stripped !== previousStripped) {
+    previousStripped = stripped
+    stripped = stripCommentLines(stripped)
+
+    const envVarMatch = stripped.match(ENV_VAR_PATTERN)
+    if (envVarMatch) {
+      const varName = envVarMatch[1]!
+      const isAntOnlySafe =
+        process.env.USER_TYPE === 'ant' && ANT_ONLY_SAFE_ENV_VARS.has(varName)
+      if (SAFE_ENV_VARS.has(varName) || isAntOnlySafe) {
+        stripped = stripped.replace(ENV_VAR_PATTERN, '')
+      }
+    }
+  }
+
+  
+  
+  
+  
+  
+  
+  previousStripped = ''
+  while (stripped !== previousStripped) {
+    previousStripped = stripped
+    stripped = stripCommentLines(stripped)
+
+    for (const pattern of SAFE_WRAPPER_PATTERNS) {
+      stripped = stripped.replace(pattern, '')
+    }
+  }
+
+  return stripped.trim()
+}
+
+const TIMEOUT_FLAG_VALUE_RE = /^[A-Za-z0-9_.+-]+$/
+
+function skipTimeoutFlags(a: readonly string[]): number {
+  let i = 1
+  while (i < a.length) {
+    const arg = a[i]!
+    const next = a[i + 1]
+    if (
+      arg === '--foreground' ||
+      arg === '--preserve-status' ||
+      arg === '--verbose'
+    )
+      i++
+    else if (/^--(?:kill-after|signal)=[A-Za-z0-9_.+-]+$/.test(arg)) i++
+    else if (
+      (arg === '--kill-after' || arg === '--signal') &&
+      next &&
+      TIMEOUT_FLAG_VALUE_RE.test(next)
+    )
+      i += 2
+    else if (arg === '--') {
+      i++
+      break
+    } 
+    else if (arg.startsWith('--')) return -1
+    else if (arg === '-v') i++
+    else if (
+      (arg === '-k' || arg === '-s') &&
+      next &&
+      TIMEOUT_FLAG_VALUE_RE.test(next)
+    )
+      i += 2
+    else if (/^-[ks][A-Za-z0-9_.+-]+$/.test(arg)) i++
+    else if (arg.startsWith('-')) return -1
+    else break
+  }
+  return i
+}
+
+export function stripWrappersFromArgv(argv: string[]): string[] {
+  
+  
+  
+  let a = argv
+  for (;;) {
+    if (a[0] === 'time' || a[0] === 'nohup') {
+      a = a.slice(a[1] === '--' ? 2 : 1)
+    } else if (a[0] === 'timeout') {
+      const i = skipTimeoutFlags(a)
+      if (i < 0 || !a[i] || !/^\d+(?:\.\d+)?[smhd]?$/.test(a[i]!)) return a
+      a = a.slice(i + 1)
+    } else if (
+      a[0] === 'nice' &&
+      a[1] === '-n' &&
+      a[2] &&
+      /^-?\d+$/.test(a[2])
+    ) {
+      a = a.slice(a[3] === '--' ? 4 : 3)
+    } else {
+      return a
+    }
+  }
+}
+
+export const BINARY_HIJACK_VARS = /^(LD_|DYLD_|PATH$)/
+
+export function stripAllLeadingEnvVars(
+  command: string,
+  blocklist?: RegExp,
+): string {
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  const ENV_VAR_PATTERN =
+    /^([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?)\+?=(?:'[^'\n\r]*'|"(?:\\.|[^"import { feature } from 'bun:bundle'
+import { APIUserAbortError } from '@anthropic-ai/sdk'
+import type { z } from 'zod/v4'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
+import {
+  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  logEvent,
+} from '../../services/analytics/index.js'
+import type { ToolPermissionContext, ToolUseContext } from '../../Tool.js'
+import type { PendingClassifierCheck } from '../../types/permissions.js'
+import { count } from '../../utils/array.js'
+import {
+  checkSemantics,
+  nodeTypeId,
+  type ParseForSecurityResult,
+  parseForSecurityFromAst,
+  type Redirect,
+  type SimpleCommand,
+} from '../../utils/bash/ast.js'
+import {
+  type CommandPrefixResult,
+  extractOutputRedirections,
+  getCommandSubcommandPrefix,
+  splitCommand_DEPRECATED,
+} from '../../utils/bash/commands.js'
+import { parseCommandRaw } from '../../utils/bash/parser.js'
+import { tryParseShellCommand } from '../../utils/bash/shellQuote.js'
+import { getCwd } from '../../utils/cwd.js'
+import { logForDebugging } from '../../utils/debug.js'
+import { isEnvTruthy } from '../../utils/envUtils.js'
+import { AbortError } from '../../utils/errors.js'
+import type {
+  ClassifierBehavior,
+  ClassifierResult,
+} from '../../utils/permissions/bashClassifier.js'
+import {
+  classifyBashCommand,
+  getBashPromptAllowDescriptions,
+  getBashPromptAskDescriptions,
+  getBashPromptDenyDescriptions,
+  isClassifierPermissionsEnabled,
+} from '../../utils/permissions/bashClassifier.js'
+import type {
+  PermissionDecisionReason,
+  PermissionResult,
+} from '../../utils/permissions/PermissionResult.js'
+import type {
+  PermissionRule,
+  PermissionRuleValue,
+} from '../../utils/permissions/PermissionRule.js'
+import { extractRules } from '../../utils/permissions/PermissionUpdate.js'
+import type { PermissionUpdate } from '../../utils/permissions/PermissionUpdateSchema.js'
+import { permissionRuleValueToString } from '../../utils/permissions/permissionRuleParser.js'
+import {
+  createPermissionRequestMessage,
+  getRuleByContentsForTool,
+} from '../../utils/permissions/permissions.js'
+import {
+  parsePermissionRule,
+  type ShellPermissionRule,
+  matchWildcardPattern as sharedMatchWildcardPattern,
+  permissionRuleExtractPrefix as sharedPermissionRuleExtractPrefix,
+  suggestionForExactCommand as sharedSuggestionForExactCommand,
+  suggestionForPrefix as sharedSuggestionForPrefix,
+} from '../../utils/permissions/shellRuleMatching.js'
+import { getPlatform } from '../../utils/platform.js'
+import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'
+import { jsonStringify } from '../../utils/slowOperations.js'
+import { windowsPathToPosixPath } from '../../utils/windowsPaths.js'
+import { BashTool } from './BashTool.js'
+import { checkCommandOperatorPermissions } from './bashCommandHelpers.js'
+import {
+  bashCommandIsSafeAsync_DEPRECATED,
+  stripSafeHeredocSubstitutions,
+} from './bashSecurity.js'
+import { checkPermissionMode } from './modeValidation.js'
+import { checkPathConstraints } from './pathValidation.js'
+import { checkSedConstraints } from './sedValidation.js'
+import { shouldUseSandbox } from './shouldUseSandbox.js'
+
+const bashCommandIsSafeAsync = bashCommandIsSafeAsync_DEPRECATED
+const splitCommand = splitCommand_DEPRECATED
+
+const ENV_VAR_ASSIGN_RE = /^[A-Za-z_]\w*=/
 
 export const MAX_SUBCOMMANDS_FOR_SECURITY_CHECK = 50
 
@@ -112,27 +700,12 @@ function logClassifierResultForAnts(
       result.confidence as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     reason:
       result.reason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    // Note: command contains code/filepaths - this is ANT-ONLY so it's OK
+    
     command:
       command as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   })
 }
 
-/**
- * Extract a stable command prefix (command + subcommand) from a raw command string.
- * Skips leading env var assignments only if they are in SAFE_ENV_VARS (or
- * ANT_ONLY_SAFE_ENV_VARS for ant users). Returns null if a non-safe env var is
- * encountered (to fall back to exact match), or if the second token doesn't look
- * like a subcommand (lowercase alphanumeric, e.g., "commit", "run").
- *
- * Examples:
- *   'git commit -m "fix typo"' → 'git commit'
- *   'NODE_ENV=prod npm run build' → 'npm run' (NODE_ENV is safe)
- *   'MY_VAR=val npm run build' → null (MY_VAR is not safe)
- *   'ls -la' → null (flag, not a subcommand)
- *   'cat file.txt' → null (filename, not a subcommand)
- *   'chmod 755 file' → null (number, not a subcommand)
- */
 export function getSimpleCommandPrefix(command: string): string | null {
   const tokens = command.trim().split(/\s+/).filter(Boolean)
   if (tokens.length === 0) return null
@@ -156,17 +729,12 @@ export function getSimpleCommandPrefix(command: string): string | null {
   const remaining = tokens.slice(i)
   if (remaining.length < 2) return null
   const subcmd = remaining[1]!
-  // Second token must look like a subcommand (e.g., "commit", "run", "compose"),
-  // not a flag (-rf), filename (file.txt), path (/tmp), URL, or number (755).
+  
+  
   if (!/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(subcmd)) return null
   return remaining.slice(0, 2).join(' ')
 }
 
-// Bare-prefix suggestions like `bash:*` or `sh:*` would allow arbitrary code
-
-// `env` is NOT in SAFE_WRAPPER_PATTERNS, so `env bash -c "evil"` survives
-
-// src/utils/shell/prefix.ts which guarded the old Haiku extractor.
 const BARE_SHELL_PREFIXES = new Set([
   'sh',
   'bash',
@@ -179,10 +747,10 @@ const BARE_SHELL_PREFIXES = new Set([
   'cmd',
   'powershell',
   'pwsh',
-  // wrappers that exec their args as a command
+  
   'env',
   'xargs',
-  // SECURITY: checkSemantics (ast.ts) strips these wrappers to check the
+  
   
   
   
@@ -192,7 +760,7 @@ const BARE_SHELL_PREFIXES = new Set([
   'nohup',
   'timeout',
   'time',
-  // privilege escalation — sudo:* from `sudo -u foo ...` would auto-approve
+  
   
   'sudo',
   'doas',
@@ -216,25 +784,25 @@ export function getFirstWordPrefix(command: string): string | null {
   const cmd = tokens[i]
   if (!cmd) return null
   
-  // rejects paths (./script.sh, /usr/bin/python), flags, numbers, filenames.
+  
   if (!/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(cmd)) return null
   if (BARE_SHELL_PREFIXES.has(cmd)) return null
   return cmd
 }
 
 function suggestionForExactCommand(command: string): PermissionUpdate[] {
-  // Heredoc commands contain multi-line content that changes each invocation,
-  // making exact-match rules useless (they'll never match again). Extract a
-  // stable prefix before the heredoc operator and suggest a prefix rule instead.
+  
+  
+  
   const heredocPrefix = extractPrefixBeforeHeredoc(command)
   if (heredocPrefix) {
     return sharedSuggestionForPrefix(BashTool.name, heredocPrefix)
   }
 
-  // Multiline commands without heredoc also make poor exact-match rules.
-  // Saving the full multiline text can produce patterns containing `:*` in
-  // the middle, which fails permission validation and corrupts the settings
-  // file. Use the first line as a prefix rule instead.
+  
+  
+  
+  
   if (command.includes('\n')) {
     const firstLine = command.split('\n')[0]!.trim()
     if (firstLine) {
@@ -242,9 +810,9 @@ function suggestionForExactCommand(command: string): PermissionUpdate[] {
     }
   }
 
-  // Single-line commands: extract a 2-word prefix for reusable rules.
-  // Without this, exact-match rules are saved that never match future
-  // invocations with different arguments.
+  
+  
+  
   const prefix = getSimpleCommandPrefix(command)
   if (prefix) {
     return sharedSuggestionForPrefix(BashTool.name, prefix)
@@ -253,16 +821,6 @@ function suggestionForExactCommand(command: string): PermissionUpdate[] {
   return sharedSuggestionForExactCommand(BashTool.name, command)
 }
 
-/**
- * If the command contains a heredoc (<<), extract the command prefix before it.
- * Returns the first word(s) before the heredoc operator as a stable prefix,
- * or null if the command doesn't contain a heredoc.
- *
- * Examples:
- *   'git commit -m "$(cat <<\'EOF\'\n...\nEOF\n)"' → 'git commit'
- *   'cat <<EOF\nhello\nEOF' → 'cat'
- *   'echo hello' → null (no heredoc)
- */
 function extractPrefixBeforeHeredoc(command: string): string | null {
   if (!command.includes('<<')) return null
 
@@ -277,7 +835,7 @@ function extractPrefixBeforeHeredoc(command: string): string | null {
 
   
   
-  // not just "python3") and skips safe env var prefixes like "NODE_ENV=test".
+  
   
   
   const tokens = before.split(/\s+/).filter(Boolean)
@@ -299,10 +857,6 @@ function suggestionForPrefix(prefix: string): PermissionUpdate[] {
   return sharedSuggestionForPrefix(BashTool.name, prefix)
 }
 
-/**
- * Extract prefix from legacy :* syntax (e.g., "npm:*" -> "npm")
- * Delegates to shared implementation.
- */
 export const permissionRuleExtractPrefix = sharedPermissionRuleExtractPrefix
 
 export function matchWildcardPattern(
@@ -312,118 +866,114 @@ export function matchWildcardPattern(
   return sharedMatchWildcardPattern(pattern, command)
 }
 
-/**
- * Parse a permission rule into a structured rule object.
- * Delegates to shared implementation.
- */
 export const bashPermissionRule: (
   permissionRule: string,
 ) => ShellPermissionRule = parsePermissionRule
 
 const SAFE_ENV_VARS = new Set([
   
-  'GOEXPERIMENT', // experimental features
-  'GOOS', // target OS
-  'GOARCH', // target architecture
-  'CGO_ENABLED', // enable/disable CGO
-  'GO111MODULE', // module mode
+  'GOEXPERIMENT', 
+  'GOOS', 
+  'GOARCH', 
+  'CGO_ENABLED', 
+  'GO111MODULE', 
 
   
-  'RUST_BACKTRACE', // backtrace verbosity
-  'RUST_LOG', // logging filter
+  'RUST_BACKTRACE', 
+  'RUST_LOG', 
 
   
   'NODE_ENV',
 
-  // Python - behavior flags only (not PYTHONPATH!)
-  'PYTHONUNBUFFERED', // disable buffering
-  'PYTHONDONTWRITEBYTECODE', // no .pyc files
+  
+  'PYTHONUNBUFFERED', 
+  'PYTHONDONTWRITEBYTECODE', 
 
   
-  'PYTEST_DISABLE_PLUGIN_AUTOLOAD', // disable plugin loading
-  'PYTEST_DEBUG', // debug output
+  'PYTEST_DISABLE_PLUGIN_AUTOLOAD', 
+  'PYTEST_DEBUG', 
 
   
-  'ANTHROPIC_API_KEY', // API authentication
+  'ANTHROPIC_API_KEY', 
 
   
-  'LANG', // default locale
-  'LANGUAGE', // language preference list
-  'LC_ALL', // override all locale settings
-  'LC_CTYPE', // character classification
-  'LC_TIME', // time format
-  'CHARSET', // character set preference
+  'LANG', 
+  'LANGUAGE', 
+  'LC_ALL', 
+  'LC_CTYPE', 
+  'LC_TIME', 
+  'CHARSET', 
 
   
-  'TERM', // terminal type
-  'COLORTERM', // color terminal indicator
-  'NO_COLOR', // disable color output (universal standard)
-  'FORCE_COLOR', // force color output
-  'TZ', // timezone
+  'TERM', 
+  'COLORTERM', 
+  'NO_COLOR', 
+  'FORCE_COLOR', 
+  'TZ', 
 
   
-  'LS_COLORS', // colors for ls (GNU)
-  'LSCOLORS', // colors for ls (BSD/macOS)
-  'GREP_COLOR', // grep match color (deprecated)
-  'GREP_COLORS', // grep color scheme
-  'GCC_COLORS', // GCC diagnostic colors
+  'LS_COLORS', 
+  'LSCOLORS', 
+  'GREP_COLOR', 
+  'GREP_COLORS', 
+  'GCC_COLORS', 
 
   
-  'TIME_STYLE', // time display format for ls
-  'BLOCK_SIZE', // block size for du/df
-  'BLOCKSIZE', // alternative block size
+  'TIME_STYLE', 
+  'BLOCK_SIZE', 
+  'BLOCKSIZE', 
 ])
 
 const ANT_ONLY_SAFE_ENV_VARS = new Set([
   
-  'KUBECONFIG', // kubectl config file path — controls which cluster kubectl uses
-  'DOCKER_HOST', // Docker daemon socket/endpoint — controls which daemon docker talks to
+  'KUBECONFIG', 
+  'DOCKER_HOST', 
 
   
-  'AWS_PROFILE', // AWS profile name selection
-  'CLOUDSDK_CORE_PROJECT', // GCP project ID
-  'CLUSTER', // generic cluster name
+  'AWS_PROFILE', 
+  'CLOUDSDK_CORE_PROJECT', 
+  'CLUSTER', 
 
   
-  'COO_CLUSTER', // coo cluster name
-  'COO_CLUSTER_NAME', // coo cluster name (alternate)
-  'COO_NAMESPACE', // coo namespace
-  'COO_LAUNCH_YAML_DRY_RUN', // dry run mode
+  'COO_CLUSTER', 
+  'COO_CLUSTER_NAME', 
+  'COO_NAMESPACE', 
+  'COO_LAUNCH_YAML_DRY_RUN', 
 
   
-  'SKIP_NODE_VERSION_CHECK', // skip version check
-  'EXPECTTEST_ACCEPT', // accept test expectations
-  'CI', // CI environment indicator
-  'GIT_LFS_SKIP_SMUDGE', // skip LFS downloads
+  'SKIP_NODE_VERSION_CHECK', 
+  'EXPECTTEST_ACCEPT', 
+  'CI', 
+  'GIT_LFS_SKIP_SMUDGE', 
 
   
-  'CUDA_VISIBLE_DEVICES', // GPU device selection
-  'JAX_PLATFORMS', // JAX platform selection
+  'CUDA_VISIBLE_DEVICES', 
+  'JAX_PLATFORMS', 
 
   
-  'COLUMNS', // terminal width
-  'TMUX', // TMUX socket info
+  'COLUMNS', 
+  'TMUX', 
 
   
-  'POSTGRESQL_VERSION', // postgres version string
-  'FIRESTORE_EMULATOR_HOST', // emulator host:port
-  'HARNESS_QUIET', // quiet mode flag
-  'TEST_CROSSCHECK_LISTS_MATCH_UPDATE', // test update flag
-  'DBT_PER_DEVELOPER_ENVIRONMENTS', // DBT config
-  'STATSIG_FORD_DB_CHECKS', // statsig DB check flag
+  'POSTGRESQL_VERSION', 
+  'FIRESTORE_EMULATOR_HOST', 
+  'HARNESS_QUIET', 
+  'TEST_CROSSCHECK_LISTS_MATCH_UPDATE', 
+  'DBT_PER_DEVELOPER_ENVIRONMENTS', 
+  'STATSIG_FORD_DB_CHECKS', 
 
   
-  'ANT_ENVIRONMENT', // Anthropic environment name
-  'ANT_SERVICE', // Anthropic service name
-  'MONOREPO_ROOT_DIR', // monorepo root path
+  'ANT_ENVIRONMENT', 
+  'ANT_SERVICE', 
+  'MONOREPO_ROOT_DIR', 
 
   
-  'PYENV_VERSION', // Python version selection
+  'PYENV_VERSION', 
 
   
-  'PGPASSWORD', // Postgres password
-  'GH_TOKEN', // GitHub token
-  'GROWTHBOOK_API_KEY', // self-hosted growthbook
+  'PGPASSWORD', 
+  'GH_TOKEN', 
+  'GROWTHBOOK_API_KEY', 
 ])
 
 function stripCommentLines(command: string): string {
@@ -443,7 +993,7 @@ function stripCommentLines(command: string): string {
 }
 
 export function stripSafeWrappers(command: string): string {
-  // SECURITY: Use [ \t]+ not \s+ — \s matches \n/\r which are command
+  
   
   
   
@@ -452,9 +1002,9 @@ export function stripSafeWrappers(command: string): string {
   
   const SAFE_WRAPPER_PATTERNS = [
     
-    // --preserve-status, --verbose), value-taking in both =fused and
     
-    // --signal TERM). Short: -v (no-arg), -k/-s with separate or fused value.
+    
+    
     
     
     
@@ -462,7 +1012,7 @@ export function stripSafeWrappers(command: string): string {
     
     /^timeout[ \t]+(?:(?:--(?:foreground|preserve-status|verbose)|--(?:kill-after|signal)=[A-Za-z0-9_.+-]+|--(?:kill-after|signal)[ \t]+[A-Za-z0-9_.+-]+|-v|-[ks][ \t]+[A-Za-z0-9_.+-]+|-[ks][A-Za-z0-9_.+-]+)[ \t]+)*(?:--[ \t]+)?\d+(?:\.\d+)?[smhd]?[ \t]+/,
     /^time[ \t]+(?:--[ \t]+)?/,
-    // SECURITY: keep in sync with checkSemantics wrapper-strip (ast.ts
+    
     
     
     
@@ -473,15 +1023,13 @@ export function stripSafeWrappers(command: string): string {
     
     
     /^nice(?:[ \t]+-n[ \t]+-?\d+|[ \t]+-\d+)?[ \t]+(?:--[ \t]+)?/,
-    // stdbuf: fused short flags only (-o0, -eL). checkSemantics handles more
+    
     
     
     /^stdbuf(?:[ \t]+-[ioe][LN0-9]+)+[ \t]+(?:--[ \t]+)?/,
     /^nohup[ \t]+(?:--[ \t]+)?/,
   ] as const
 
-  // Pattern for environment variables:
-  // ^([A-Za-z_][A-Za-z0-9_]*)  - Variable name (standard identifier)
   
   
   
@@ -491,7 +1039,9 @@ export function stripSafeWrappers(command: string): string {
   
   
   
-  // leaving `echo curl evil.com` to match Bash(echo:*). But bash treats the
+  
+  
+  
   
   const ENV_VAR_PATTERN = /^([A-Za-z_][A-Za-z0-9_]*)=([A-Za-z0-9_./:-]+)[ \t]+/
 
@@ -516,10 +1066,10 @@ export function stripSafeWrappers(command: string): string {
     }
   }
 
-  // Phase 2: Strip wrapper commands and comments only. Do NOT strip env vars.
   
   
-  // not as an env var assignment. Stripping env vars here would create a
+  
+  
   
   
   previousStripped = ''
@@ -535,22 +1085,8 @@ export function stripSafeWrappers(command: string): string {
   return stripped.trim()
 }
 
-// SECURITY: allowlist for timeout flag VALUES (signals are TERM/KILL/9,
-// durations are 5/5s/10.5). Rejects $ ( ) ` | ; & and newlines that
-// previously matched via [^ \t]+ — `timeout -k$(id) 10 ls` must NOT strip.
 const TIMEOUT_FLAG_VALUE_RE = /^[A-Za-z0-9_.+-]+$/
 
-/**
- * Parse timeout's GNU flags (long + short, fused + space-separated) and
- * return the argv index of the DURATION token, or -1 if flags are unparseable.
- * Enumerates: --foreground/--preserve-status/--verbose (no value),
- * --kill-after/--signal (value, both =fused and space-separated), -v (no
- * value), -k/-s (value, both fused and space-separated).
- *
- * Extracted from stripWrappersFromArgv to keep bashToolHasPermission under
- * Bun's feature() DCE complexity threshold — inlining this breaks
- * feature('BASH_CLASSIFIER') evaluation in classifier tests.
- */
 function skipTimeoutFlags(a: readonly string[]): number {
   let i = 1
   while (i < a.length) {
@@ -572,7 +1108,7 @@ function skipTimeoutFlags(a: readonly string[]): number {
     else if (arg === '--') {
       i++
       break
-    } // end-of-options marker
+    } 
     else if (arg.startsWith('--')) return -1
     else if (arg === '-v') i++
     else if (
@@ -588,18 +1124,10 @@ function skipTimeoutFlags(a: readonly string[]): number {
   return i
 }
 
-/**
- * Argv-level counterpart to stripSafeWrappers. Strips the same wrapper
- * commands (timeout, time, nice, nohup) from AST-derived argv. Env vars
- * are already separated into SimpleCommand.envVars so no env-var stripping.
- *
- * KEEP IN SYNC with SAFE_WRAPPER_PATTERNS above — if you add a wrapper
- * there, add it here too.
- */
 export function stripWrappersFromArgv(argv: string[]): string[] {
-  // SECURITY: Consume optional `--` after wrapper options, matching what the
-  // wrapper does. Otherwise `['nohup','--','rm','--','-/../foo']` yields `--`
-  // as baseCmd and skips path validation. See SAFE_WRAPPER_PATTERNS comment.
+  
+  
+  
   let a = argv
   for (;;) {
     if (a[0] === 'time' || a[0] === 'nohup') {
@@ -621,64 +1149,626 @@ export function stripWrappersFromArgv(argv: string[]): string[] {
   }
 }
 
-/**
- * Env vars that make a *different binary* run (injection or resolution hijack).
- * Heuristic only — export-&& form bypasses this, and excludedCommands isn't a
- * security boundary anyway.
- */
 export const BINARY_HIJACK_VARS = /^(LD_|DYLD_|PATH$)/
 
-/**
- * Strip ALL leading env var prefixes from a command, regardless of whether the
- * var name is in the safe-list.
- *
- * Used for deny/ask rule matching: when a user denies `claude` or `rm`, the
- * command should stay blocked even if prefixed with arbitrary env vars like
- * `FOO=bar claude`. The safe-list restriction in stripSafeWrappers is correct
- * for allow rules (prevents `DOCKER_HOST=evil docker ps` from auto-matching
- * `Bash(docker ps:*)`), but deny rules must be harder to circumvent.
- *
- * Also used for sandbox.excludedCommands matching (not a security boundary —
- * permission prompts are), with BINARY_HIJACK_VARS as a blocklist.
- *
- * SECURITY: Uses a broader value pattern than stripSafeWrappers. The value
- * pattern excludes only actual shell injection characters ($, backtick, ;, |,
- * &, parens, redirects, quotes, backslash) and whitespace. Characters like
- * =, +, @, ~, , are harmless in unquoted env var assignment position and must
- * be matched to prevent trivial bypass via e.g. `FOO=a=b denied_command`.
- *
- * @param blocklist - optional regex tested against each var name; matching vars
- *   are NOT stripped (and stripping stops there). Omit for deny rules; pass
- *   BINARY_HIJACK_VARS for excludedCommands.
- */
 export function stripAllLeadingEnvVars(
   command: string,
   blocklist?: RegExp,
 ): string {
-  // Broader value pattern for deny-rule stripping. Handles:
-  //
-  // - Standard assignment (FOO=bar), append (FOO+=bar), array (FOO[0]=bar)
-  // - Single-quoted values: '[^'\n\r]*' — bash suppresses all expansion
-  // - Double-quoted values with backslash escapes: "(?:\\.|[^"$`\\\n\r])*"
-  //   In bash double quotes, only \$, \`, \", \\, and \newline are special.
-  //   Other \x sequences are harmless, so we allow \. inside double quotes.
-  //   We still exclude raw $ and ` (without backslash) to block expansion.
-  // - Unquoted values: excludes shell metacharacters, allows backslash escapes
-  // - Concatenated segments: FOO='x'y"z" — bash concatenates adjacent segments
-  //
-  // SECURITY: Trailing whitespace MUST be [ \t]+ (horizontal only), NOT \s+.
-  //
-  // The outer * matches one atomic unit per iteration: a complete quoted
-  // string, a backslash-escape pair, or a single unquoted safe character.
-  // The inner double-quote alternation (?:...|...)* is bounded by the
-  // closing ", so it cannot interact with the outer * for backtracking.
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   
   
   
   
   
   const ENV_VAR_PATTERN =
-    /^([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?)\+?=(?:'[^'\n\r]*'|"(?:\\.|[^"$`\\\n\r])*"|\\.|[^ \t\n\r$`;|&()<>\\\\'"])*[ \t]+/
+    /^([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?)\+?=(?:'[^'\n\r]*\\\n\r])*"|\\.|[^ \t\n\rimport { feature } from 'bun:bundle'
+import { APIUserAbortError } from '@anthropic-ai/sdk'
+import type { z } from 'zod/v4'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
+import {
+  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  logEvent,
+} from '../../services/analytics/index.js'
+import type { ToolPermissionContext, ToolUseContext } from '../../Tool.js'
+import type { PendingClassifierCheck } from '../../types/permissions.js'
+import { count } from '../../utils/array.js'
+import {
+  checkSemantics,
+  nodeTypeId,
+  type ParseForSecurityResult,
+  parseForSecurityFromAst,
+  type Redirect,
+  type SimpleCommand,
+} from '../../utils/bash/ast.js'
+import {
+  type CommandPrefixResult,
+  extractOutputRedirections,
+  getCommandSubcommandPrefix,
+  splitCommand_DEPRECATED,
+} from '../../utils/bash/commands.js'
+import { parseCommandRaw } from '../../utils/bash/parser.js'
+import { tryParseShellCommand } from '../../utils/bash/shellQuote.js'
+import { getCwd } from '../../utils/cwd.js'
+import { logForDebugging } from '../../utils/debug.js'
+import { isEnvTruthy } from '../../utils/envUtils.js'
+import { AbortError } from '../../utils/errors.js'
+import type {
+  ClassifierBehavior,
+  ClassifierResult,
+} from '../../utils/permissions/bashClassifier.js'
+import {
+  classifyBashCommand,
+  getBashPromptAllowDescriptions,
+  getBashPromptAskDescriptions,
+  getBashPromptDenyDescriptions,
+  isClassifierPermissionsEnabled,
+} from '../../utils/permissions/bashClassifier.js'
+import type {
+  PermissionDecisionReason,
+  PermissionResult,
+} from '../../utils/permissions/PermissionResult.js'
+import type {
+  PermissionRule,
+  PermissionRuleValue,
+} from '../../utils/permissions/PermissionRule.js'
+import { extractRules } from '../../utils/permissions/PermissionUpdate.js'
+import type { PermissionUpdate } from '../../utils/permissions/PermissionUpdateSchema.js'
+import { permissionRuleValueToString } from '../../utils/permissions/permissionRuleParser.js'
+import {
+  createPermissionRequestMessage,
+  getRuleByContentsForTool,
+} from '../../utils/permissions/permissions.js'
+import {
+  parsePermissionRule,
+  type ShellPermissionRule,
+  matchWildcardPattern as sharedMatchWildcardPattern,
+  permissionRuleExtractPrefix as sharedPermissionRuleExtractPrefix,
+  suggestionForExactCommand as sharedSuggestionForExactCommand,
+  suggestionForPrefix as sharedSuggestionForPrefix,
+} from '../../utils/permissions/shellRuleMatching.js'
+import { getPlatform } from '../../utils/platform.js'
+import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'
+import { jsonStringify } from '../../utils/slowOperations.js'
+import { windowsPathToPosixPath } from '../../utils/windowsPaths.js'
+import { BashTool } from './BashTool.js'
+import { checkCommandOperatorPermissions } from './bashCommandHelpers.js'
+import {
+  bashCommandIsSafeAsync_DEPRECATED,
+  stripSafeHeredocSubstitutions,
+} from './bashSecurity.js'
+import { checkPermissionMode } from './modeValidation.js'
+import { checkPathConstraints } from './pathValidation.js'
+import { checkSedConstraints } from './sedValidation.js'
+import { shouldUseSandbox } from './shouldUseSandbox.js'
+
+const bashCommandIsSafeAsync = bashCommandIsSafeAsync_DEPRECATED
+const splitCommand = splitCommand_DEPRECATED
+
+const ENV_VAR_ASSIGN_RE = /^[A-Za-z_]\w*=/
+
+export const MAX_SUBCOMMANDS_FOR_SECURITY_CHECK = 50
+
+export const MAX_SUGGESTED_RULES_FOR_COMPOUND = 5
+
+function logClassifierResultForAnts(
+  command: string,
+  behavior: ClassifierBehavior,
+  descriptions: string[],
+  result: ClassifierResult,
+): void {
+  if (process.env.USER_TYPE !== 'ant') {
+    return
+  }
+
+  logEvent('tengu_internal_bash_classifier_result', {
+    behavior:
+      behavior as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    descriptions: jsonStringify(
+      descriptions,
+    ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    matches: result.matches,
+    matchedDescription: (result.matchedDescription ??
+      '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    confidence:
+      result.confidence as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    reason:
+      result.reason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    
+    command:
+      command as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  })
+}
+
+export function getSimpleCommandPrefix(command: string): string | null {
+  const tokens = command.trim().split(/\s+/).filter(Boolean)
+  if (tokens.length === 0) return null
+
+  
+  
+  
+  
+  
+  let i = 0
+  while (i < tokens.length && ENV_VAR_ASSIGN_RE.test(tokens[i]!)) {
+    const varName = tokens[i]!.split('=')[0]!
+    const isAntOnlySafe =
+      process.env.USER_TYPE === 'ant' && ANT_ONLY_SAFE_ENV_VARS.has(varName)
+    if (!SAFE_ENV_VARS.has(varName) && !isAntOnlySafe) {
+      return null
+    }
+    i++
+  }
+
+  const remaining = tokens.slice(i)
+  if (remaining.length < 2) return null
+  const subcmd = remaining[1]!
+  
+  
+  if (!/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(subcmd)) return null
+  return remaining.slice(0, 2).join(' ')
+}
+
+const BARE_SHELL_PREFIXES = new Set([
+  'sh',
+  'bash',
+  'zsh',
+  'fish',
+  'csh',
+  'tcsh',
+  'ksh',
+  'dash',
+  'cmd',
+  'powershell',
+  'pwsh',
+  
+  'env',
+  'xargs',
+  
+  
+  
+  
+  
+  'nice',
+  'stdbuf',
+  'nohup',
+  'timeout',
+  'time',
+  
+  
+  'sudo',
+  'doas',
+  'pkexec',
+])
+
+export function getFirstWordPrefix(command: string): string | null {
+  const tokens = command.trim().split(/\s+/).filter(Boolean)
+
+  let i = 0
+  while (i < tokens.length && ENV_VAR_ASSIGN_RE.test(tokens[i]!)) {
+    const varName = tokens[i]!.split('=')[0]!
+    const isAntOnlySafe =
+      process.env.USER_TYPE === 'ant' && ANT_ONLY_SAFE_ENV_VARS.has(varName)
+    if (!SAFE_ENV_VARS.has(varName) && !isAntOnlySafe) {
+      return null
+    }
+    i++
+  }
+
+  const cmd = tokens[i]
+  if (!cmd) return null
+  
+  
+  if (!/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(cmd)) return null
+  if (BARE_SHELL_PREFIXES.has(cmd)) return null
+  return cmd
+}
+
+function suggestionForExactCommand(command: string): PermissionUpdate[] {
+  
+  
+  
+  const heredocPrefix = extractPrefixBeforeHeredoc(command)
+  if (heredocPrefix) {
+    return sharedSuggestionForPrefix(BashTool.name, heredocPrefix)
+  }
+
+  
+  
+  
+  
+  if (command.includes('\n')) {
+    const firstLine = command.split('\n')[0]!.trim()
+    if (firstLine) {
+      return sharedSuggestionForPrefix(BashTool.name, firstLine)
+    }
+  }
+
+  
+  
+  
+  const prefix = getSimpleCommandPrefix(command)
+  if (prefix) {
+    return sharedSuggestionForPrefix(BashTool.name, prefix)
+  }
+
+  return sharedSuggestionForExactCommand(BashTool.name, command)
+}
+
+function extractPrefixBeforeHeredoc(command: string): string | null {
+  if (!command.includes('<<')) return null
+
+  const idx = command.indexOf('<<')
+  if (idx <= 0) return null
+
+  const before = command.substring(0, idx).trim()
+  if (!before) return null
+
+  const prefix = getSimpleCommandPrefix(before)
+  if (prefix) return prefix
+
+  
+  
+  
+  
+  
+  const tokens = before.split(/\s+/).filter(Boolean)
+  let i = 0
+  while (i < tokens.length && ENV_VAR_ASSIGN_RE.test(tokens[i]!)) {
+    const varName = tokens[i]!.split('=')[0]!
+    const isAntOnlySafe =
+      process.env.USER_TYPE === 'ant' && ANT_ONLY_SAFE_ENV_VARS.has(varName)
+    if (!SAFE_ENV_VARS.has(varName) && !isAntOnlySafe) {
+      return null
+    }
+    i++
+  }
+  if (i >= tokens.length) return null
+  return tokens.slice(i, i + 2).join(' ') || null
+}
+
+function suggestionForPrefix(prefix: string): PermissionUpdate[] {
+  return sharedSuggestionForPrefix(BashTool.name, prefix)
+}
+
+export const permissionRuleExtractPrefix = sharedPermissionRuleExtractPrefix
+
+export function matchWildcardPattern(
+  pattern: string,
+  command: string,
+): boolean {
+  return sharedMatchWildcardPattern(pattern, command)
+}
+
+export const bashPermissionRule: (
+  permissionRule: string,
+) => ShellPermissionRule = parsePermissionRule
+
+const SAFE_ENV_VARS = new Set([
+  
+  'GOEXPERIMENT', 
+  'GOOS', 
+  'GOARCH', 
+  'CGO_ENABLED', 
+  'GO111MODULE', 
+
+  
+  'RUST_BACKTRACE', 
+  'RUST_LOG', 
+
+  
+  'NODE_ENV',
+
+  
+  'PYTHONUNBUFFERED', 
+  'PYTHONDONTWRITEBYTECODE', 
+
+  
+  'PYTEST_DISABLE_PLUGIN_AUTOLOAD', 
+  'PYTEST_DEBUG', 
+
+  
+  'ANTHROPIC_API_KEY', 
+
+  
+  'LANG', 
+  'LANGUAGE', 
+  'LC_ALL', 
+  'LC_CTYPE', 
+  'LC_TIME', 
+  'CHARSET', 
+
+  
+  'TERM', 
+  'COLORTERM', 
+  'NO_COLOR', 
+  'FORCE_COLOR', 
+  'TZ', 
+
+  
+  'LS_COLORS', 
+  'LSCOLORS', 
+  'GREP_COLOR', 
+  'GREP_COLORS', 
+  'GCC_COLORS', 
+
+  
+  'TIME_STYLE', 
+  'BLOCK_SIZE', 
+  'BLOCKSIZE', 
+])
+
+const ANT_ONLY_SAFE_ENV_VARS = new Set([
+  
+  'KUBECONFIG', 
+  'DOCKER_HOST', 
+
+  
+  'AWS_PROFILE', 
+  'CLOUDSDK_CORE_PROJECT', 
+  'CLUSTER', 
+
+  
+  'COO_CLUSTER', 
+  'COO_CLUSTER_NAME', 
+  'COO_NAMESPACE', 
+  'COO_LAUNCH_YAML_DRY_RUN', 
+
+  
+  'SKIP_NODE_VERSION_CHECK', 
+  'EXPECTTEST_ACCEPT', 
+  'CI', 
+  'GIT_LFS_SKIP_SMUDGE', 
+
+  
+  'CUDA_VISIBLE_DEVICES', 
+  'JAX_PLATFORMS', 
+
+  
+  'COLUMNS', 
+  'TMUX', 
+
+  
+  'POSTGRESQL_VERSION', 
+  'FIRESTORE_EMULATOR_HOST', 
+  'HARNESS_QUIET', 
+  'TEST_CROSSCHECK_LISTS_MATCH_UPDATE', 
+  'DBT_PER_DEVELOPER_ENVIRONMENTS', 
+  'STATSIG_FORD_DB_CHECKS', 
+
+  
+  'ANT_ENVIRONMENT', 
+  'ANT_SERVICE', 
+  'MONOREPO_ROOT_DIR', 
+
+  
+  'PYENV_VERSION', 
+
+  
+  'PGPASSWORD', 
+  'GH_TOKEN', 
+  'GROWTHBOOK_API_KEY', 
+])
+
+function stripCommentLines(command: string): string {
+  const lines = command.split('\n')
+  const nonCommentLines = lines.filter(line => {
+    const trimmed = line.trim()
+    
+    return trimmed !== '' && !trimmed.startsWith('#')
+  })
+
+  
+  if (nonCommentLines.length === 0) {
+    return command
+  }
+
+  return nonCommentLines.join('\n')
+}
+
+export function stripSafeWrappers(command: string): string {
+  
+  
+  
+  
+  
+  
+  
+  const SAFE_WRAPPER_PATTERNS = [
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    /^timeout[ \t]+(?:(?:--(?:foreground|preserve-status|verbose)|--(?:kill-after|signal)=[A-Za-z0-9_.+-]+|--(?:kill-after|signal)[ \t]+[A-Za-z0-9_.+-]+|-v|-[ks][ \t]+[A-Za-z0-9_.+-]+|-[ks][A-Za-z0-9_.+-]+)[ \t]+)*(?:--[ \t]+)?\d+(?:\.\d+)?[smhd]?[ \t]+/,
+    /^time[ \t]+(?:--[ \t]+)?/,
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    /^nice(?:[ \t]+-n[ \t]+-?\d+|[ \t]+-\d+)?[ \t]+(?:--[ \t]+)?/,
+    
+    
+    
+    /^stdbuf(?:[ \t]+-[ioe][LN0-9]+)+[ \t]+(?:--[ \t]+)?/,
+    /^nohup[ \t]+(?:--[ \t]+)?/,
+  ] as const
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  const ENV_VAR_PATTERN = /^([A-Za-z_][A-Za-z0-9_]*)=([A-Za-z0-9_./:-]+)[ \t]+/
+
+  let stripped = command
+  let previousStripped = ''
+
+  
+  
+  
+  while (stripped !== previousStripped) {
+    previousStripped = stripped
+    stripped = stripCommentLines(stripped)
+
+    const envVarMatch = stripped.match(ENV_VAR_PATTERN)
+    if (envVarMatch) {
+      const varName = envVarMatch[1]!
+      const isAntOnlySafe =
+        process.env.USER_TYPE === 'ant' && ANT_ONLY_SAFE_ENV_VARS.has(varName)
+      if (SAFE_ENV_VARS.has(varName) || isAntOnlySafe) {
+        stripped = stripped.replace(ENV_VAR_PATTERN, '')
+      }
+    }
+  }
+
+  
+  
+  
+  
+  
+  
+  previousStripped = ''
+  while (stripped !== previousStripped) {
+    previousStripped = stripped
+    stripped = stripCommentLines(stripped)
+
+    for (const pattern of SAFE_WRAPPER_PATTERNS) {
+      stripped = stripped.replace(pattern, '')
+    }
+  }
+
+  return stripped.trim()
+}
+
+const TIMEOUT_FLAG_VALUE_RE = /^[A-Za-z0-9_.+-]+$/
+
+function skipTimeoutFlags(a: readonly string[]): number {
+  let i = 1
+  while (i < a.length) {
+    const arg = a[i]!
+    const next = a[i + 1]
+    if (
+      arg === '--foreground' ||
+      arg === '--preserve-status' ||
+      arg === '--verbose'
+    )
+      i++
+    else if (/^--(?:kill-after|signal)=[A-Za-z0-9_.+-]+$/.test(arg)) i++
+    else if (
+      (arg === '--kill-after' || arg === '--signal') &&
+      next &&
+      TIMEOUT_FLAG_VALUE_RE.test(next)
+    )
+      i += 2
+    else if (arg === '--') {
+      i++
+      break
+    } 
+    else if (arg.startsWith('--')) return -1
+    else if (arg === '-v') i++
+    else if (
+      (arg === '-k' || arg === '-s') &&
+      next &&
+      TIMEOUT_FLAG_VALUE_RE.test(next)
+    )
+      i += 2
+    else if (/^-[ks][A-Za-z0-9_.+-]+$/.test(arg)) i++
+    else if (arg.startsWith('-')) return -1
+    else break
+  }
+  return i
+}
+
+export function stripWrappersFromArgv(argv: string[]): string[] {
+  
+  
+  
+  let a = argv
+  for (;;) {
+    if (a[0] === 'time' || a[0] === 'nohup') {
+      a = a.slice(a[1] === '--' ? 2 : 1)
+    } else if (a[0] === 'timeout') {
+      const i = skipTimeoutFlags(a)
+      if (i < 0 || !a[i] || !/^\d+(?:\.\d+)?[smhd]?$/.test(a[i]!)) return a
+      a = a.slice(i + 1)
+    } else if (
+      a[0] === 'nice' &&
+      a[1] === '-n' &&
+      a[2] &&
+      /^-?\d+$/.test(a[2])
+    ) {
+      a = a.slice(a[3] === '--' ? 4 : 3)
+    } else {
+      return a
+    }
+  }
+}
+
+export const BINARY_HIJACK_VARS = /^(LD_|DYLD_|PATH$)/
+
+export function stripAllLeadingEnvVars(
+  command: string,
+  blocklist?: RegExp,
+): string {
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  const ENV_VAR_PATTERN =
+    /^([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?)\+?=(?:'[^'\n\r]*;|&()<>\\\\'"])*[ \t]+/
 
   let stripped = command
   let previousStripped = ''
@@ -739,7 +1829,7 @@ function filterRulesByContentsMatchingInput(
   
   
   
-  //   1. stripSafeWrappers strips `nohup` → `FOO=bar timeout 5 claude`
+  
   
   
   
@@ -756,13 +1846,13 @@ function filterRulesByContentsMatchingInput(
         if (!cmd) {
           continue
         }
-        // Try stripping env vars
+        
         const envStripped = stripAllLeadingEnvVars(cmd)
         if (!seen.has(envStripped)) {
           commandsToTry.push(envStripped)
           seen.add(envStripped)
         }
-        // Try stripping safe wrappers
+        
         const wrapperStripped = stripSafeWrappers(cmd)
         if (!seen.has(wrapperStripped)) {
           commandsToTry.push(wrapperStripped)
@@ -773,7 +1863,7 @@ function filterRulesByContentsMatchingInput(
     }
   }
 
-  // Precompute compound-command status for each candidate to avoid re-parsing
+  
   
   
   
@@ -798,33 +1888,33 @@ function filterRulesByContentsMatchingInput(
             return bashRule.command === cmdToMatch
           case 'prefix':
             switch (matchMode) {
-              // In 'exact' mode, only return true if the command exactly matches the prefix rule
+              
               case 'exact':
                 return bashRule.prefix === cmdToMatch
               case 'prefix': {
-                // SECURITY: Don't allow prefix rules to match compound commands.
-                // e.g., Bash(cd:*) must NOT match "cd /path && python3 evil.py".
-                // In the normal flow commands are split before reaching here, but
-                // shell escaping can defeat the first splitCommand pass — e.g.,
-                //   cd src\&\& python3 hello.py  →  splitCommand  →  ["cd src&& python3 hello.py"]
-                // which then looks like a single command that starts with "cd ".
-                // Re-splitting the candidate here catches those cases.
+                
+                
+                
+                
+                
+                
+                
                 if (isCompoundCommand.get(cmdToMatch)) {
                   return false
                 }
-                // Ensure word boundary: prefix must be followed by space or end of string
-                // This prevents "ls:*" from matching "lsof" or "lsattr"
+                
+                
                 if (cmdToMatch === bashRule.prefix) {
                   return true
                 }
                 if (cmdToMatch.startsWith(bashRule.prefix + ' ')) {
                   return true
                 }
-                // Also match "xargs <prefix>" for bare xargs with no flags.
-                // This allows Bash(grep:*) to match "xargs grep pattern",
-                // and deny rules like Bash(rm:*) to block "xargs rm file".
-                // Natural word-boundary: "xargs -n1 grep" does NOT start with
-                // "xargs grep " so flagged xargs invocations are not matched.
+                
+                
+                
+                
+                
                 const xargsPrefix = 'xargs ' + bashRule.prefix
                 if (cmdToMatch === xargsPrefix) {
                   return true
@@ -834,20 +1924,20 @@ function filterRulesByContentsMatchingInput(
             }
             break
           case 'wildcard':
-            // SECURITY FIX: In exact match mode, wildcards must NOT match because we're
+            
             
             
             
             if (matchMode === 'exact') {
               return false
             }
-            // SECURITY: Same as for prefix rules, don't allow wildcard rules to match
-            // compound commands in prefix mode. e.g., Bash(cd *) must not match
-            // "cd /path && python3 evil.py" even though "cd *" pattern would match it.
+            
+            
+            
             if (isCompoundCommand.get(cmdToMatch)) {
               return false
             }
-            // In prefix mode (after splitting), wildcards can safely match subcommands
+            
             return matchWildcardPattern(bashRule.pattern, cmdToMatch)
         }
       })
@@ -866,8 +1956,8 @@ function matchingRulesForInput(
     BashTool,
     'deny',
   )
-  // SECURITY: Deny/ask rules use aggressive env var stripping so that
-  // `FOO=bar denied_command` still matches a deny rule for `denied_command`.
+  
+  
   const matchingDenyRules = filterRulesByContentsMatchingInput(
     input,
     denyRuleByContents,
@@ -906,9 +1996,6 @@ function matchingRulesForInput(
   }
 }
 
-/**
- * Checks if the subcommand is an exact match for a permission rule
- */
 export const bashToolCheckExactMatchPermission = (
   input: z.infer<typeof BashTool.inputSchema>,
   toolPermissionContext: ToolPermissionContext,
@@ -917,7 +2004,7 @@ export const bashToolCheckExactMatchPermission = (
   const { matchingDenyRules, matchingAskRules, matchingAllowRules } =
     matchingRulesForInput(input, toolPermissionContext, 'exact')
 
-  // 1. Deny if exact command was denied
+  
   if (matchingDenyRules[0] !== undefined) {
     return {
       behavior: 'deny',
@@ -929,7 +2016,7 @@ export const bashToolCheckExactMatchPermission = (
     }
   }
 
-  // 2. Ask if exact command was in ask rules
+  
   if (matchingAskRules[0] !== undefined) {
     return {
       behavior: 'ask',
@@ -941,7 +2028,7 @@ export const bashToolCheckExactMatchPermission = (
     }
   }
 
-  // 3. Allow if exact command was allowed
+  
   if (matchingAllowRules[0] !== undefined) {
     return {
       behavior: 'allow',
@@ -953,7 +2040,7 @@ export const bashToolCheckExactMatchPermission = (
     }
   }
 
-  // 4. Otherwise, passthrough
+  
   const decisionReason = {
     type: 'other' as const,
     reason: 'This command requires approval',
@@ -962,8 +2049,8 @@ export const bashToolCheckExactMatchPermission = (
     behavior: 'passthrough',
     message: createPermissionRequestMessage(BashTool.name, decisionReason),
     decisionReason,
-    // Suggest exact match rule to user
-    // this may be overridden by prefix suggestions in `checkCommandAndSuggestRules()`
+    
+    
     suggestions: suggestionForExactCommand(command),
   }
 }
@@ -976,13 +2063,13 @@ export const bashToolCheckPermission = (
 ): PermissionResult => {
   const command = input.command.trim()
 
-  // 1. Check exact match first
+  
   const exactMatchResult = bashToolCheckExactMatchPermission(
     input,
     toolPermissionContext,
   )
 
-  // 1a. Deny/ask if exact command has a rule
+  
   if (
     exactMatchResult.behavior === 'deny' ||
     exactMatchResult.behavior === 'ask'
@@ -990,17 +2077,17 @@ export const bashToolCheckPermission = (
     return exactMatchResult
   }
 
-  // 2. Find all matching rules (prefix or exact)
-  // SECURITY FIX: Check Bash deny/ask rules BEFORE path constraints to prevent bypass
-  // via absolute paths outside the project directory (HackerOne report)
-  // When AST-parsed, the subcommand is already atomic — skip the legacy
-  // splitCommand re-check that misparses mid-word # as compound.
+  
+  
+  
+  
+  
   const { matchingDenyRules, matchingAskRules, matchingAllowRules } =
     matchingRulesForInput(input, toolPermissionContext, 'prefix', {
       skipCompoundCheck: astCommand !== undefined,
     })
 
-  // 2a. Deny if command has a deny rule
+  
   if (matchingDenyRules[0] !== undefined) {
     return {
       behavior: 'deny',
@@ -1012,7 +2099,7 @@ export const bashToolCheckPermission = (
     }
   }
 
-  // 2b. Ask if command has an ask rule
+  
   if (matchingAskRules[0] !== undefined) {
     return {
       behavior: 'ask',
@@ -1024,12 +2111,12 @@ export const bashToolCheckPermission = (
     }
   }
 
-  // 3. Check path constraints
-  // This check comes after deny/ask rules so explicit rules take precedence.
-  // SECURITY: When AST-derived argv is available for this subcommand, pass
-  // it through so checkPathConstraints uses it directly instead of re-parsing
-  // with shell-quote (which has a single-quote backslash bug that causes
-  // parseCommandArguments to return [] and silently skip path validation).
+  
+  
+  
+  
+  
+  
   const pathResult = checkPathConstraints(
     input,
     getCwd(),
@@ -1042,12 +2129,12 @@ export const bashToolCheckPermission = (
     return pathResult
   }
 
-  // 4. Allow if command had an exact match allow
+  
   if (exactMatchResult.behavior === 'allow') {
     return exactMatchResult
   }
 
-  // 5. Allow if command has an allow rule
+  
   if (matchingAllowRules[0] !== undefined) {
     return {
       behavior: 'allow',
@@ -1059,19 +2146,19 @@ export const bashToolCheckPermission = (
     }
   }
 
-  // 5b. Check sed constraints (blocks dangerous sed operations before mode auto-allow)
+  
   const sedConstraintResult = checkSedConstraints(input, toolPermissionContext)
   if (sedConstraintResult.behavior !== 'passthrough') {
     return sedConstraintResult
   }
 
-  // 6. Check for mode-specific permission handling
+  
   const modeResult = checkPermissionMode(input, toolPermissionContext)
   if (modeResult.behavior !== 'passthrough') {
     return modeResult
   }
 
-  // 7. Check read-only rules
+  
   if (BashTool.isReadOnly(input)) {
     return {
       behavior: 'allow',
@@ -1083,7 +2170,7 @@ export const bashToolCheckPermission = (
     }
   }
 
-  // 8. Passthrough since no rules match, will trigger permission prompt
+  
   const decisionReason = {
     type: 'other' as const,
     reason: 'This command requires approval',
@@ -1092,15 +2179,12 @@ export const bashToolCheckPermission = (
     behavior: 'passthrough',
     message: createPermissionRequestMessage(BashTool.name, decisionReason),
     decisionReason,
-    // Suggest exact match rule to user
-    // this may be overridden by prefix suggestions in `checkCommandAndSuggestRules()`
+    
+    
     suggestions: suggestionForExactCommand(command),
   }
 }
 
-/**
- * Processes an individual subcommand and applies prefix checks & suggestions
- */
 export async function checkCommandAndSuggestRules(
   input: z.infer<typeof BashTool.inputSchema>,
   toolPermissionContext: ToolPermissionContext,
@@ -1108,7 +2192,7 @@ export async function checkCommandAndSuggestRules(
   compoundCommandHasCd?: boolean,
   astParseSucceeded?: boolean,
 ): Promise<PermissionResult> {
-  // 1. Check exact match first
+  
   const exactMatchResult = bashToolCheckExactMatchPermission(
     input,
     toolPermissionContext,
@@ -1117,13 +2201,13 @@ export async function checkCommandAndSuggestRules(
     return exactMatchResult
   }
 
-  // 2. Check the command prefix
+  
   const permissionResult = bashToolCheckPermission(
     input,
     toolPermissionContext,
     compoundCommandHasCd,
   )
-  // 2a. Deny/ask if command was explictly denied/asked
+  
   if (
     permissionResult.behavior === 'deny' ||
     permissionResult.behavior === 'ask'
@@ -1131,13 +2215,13 @@ export async function checkCommandAndSuggestRules(
     return permissionResult
   }
 
-  // 3. Ask for permission if command injection is detected. Skip when the
-  // AST parse already succeeded — tree-sitter has verified there are no
-  // hidden substitutions or structural tricks, so the legacy regex-based
-  // validators (backslash-escaped operators, etc.) would only add FPs.
+  
+  
+  
+  
   if (
     !astParseSucceeded &&
-    !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_COMMAND_INJECTION_CHECK)
+    !isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_COMMAND_INJECTION_CHECK)
   ) {
     const safetyResult = await bashCommandIsSafeAsync(input.command)
 
@@ -1154,17 +2238,17 @@ export async function checkCommandAndSuggestRules(
         behavior: 'ask',
         message: createPermissionRequestMessage(BashTool.name, decisionReason),
         decisionReason,
-        suggestions: [], // Don't suggest saving a potentially dangerous command
+        suggestions: [], 
       }
     }
   }
 
-  // 4. Allow if command was allowed
+  
   if (permissionResult.behavior === 'allow') {
     return permissionResult
   }
 
-  // 5. Suggest prefix if available, otherwise exact command
+  
   const suggestedUpdates = commandPrefixResult?.commandPrefix
     ? suggestionForPrefix(commandPrefixResult.commandPrefix)
     : suggestionForExactCommand(input.command)
@@ -1175,33 +2259,20 @@ export async function checkCommandAndSuggestRules(
   }
 }
 
-/**
- * Checks if a command should be auto-allowed when sandboxed.
- * Returns early if there are explicit deny/ask rules that should be respected.
- *
- * NOTE: This function should only be called when sandboxing and auto-allow are enabled.
- *
- * @param input - The bash tool input
- * @param toolPermissionContext - The permission context
- * @returns PermissionResult with:
- *   - deny/ask if explicit rule exists (exact or prefix)
- *   - allow if no explicit rules (sandbox auto-allow applies)
- *   - passthrough should not occur since we're in auto-allow mode
- */
 function checkSandboxAutoAllow(
   input: z.infer<typeof BashTool.inputSchema>,
   toolPermissionContext: ToolPermissionContext,
 ): PermissionResult {
   const command = input.command.trim()
 
-  // Check for explicit deny/ask rules on the full command (exact + prefix)
+  
   const { matchingDenyRules, matchingAskRules } = matchingRulesForInput(
     input,
     toolPermissionContext,
     'prefix',
   )
 
-  // Return immediately if there's an explicit deny rule on the full command
+  
   if (matchingDenyRules[0] !== undefined) {
     return {
       behavior: 'deny',
@@ -1213,7 +2284,7 @@ function checkSandboxAutoAllow(
     }
   }
 
-  // SECURITY: For compound commands, check each subcommand against deny/ask
+  
   
   
   
@@ -1241,7 +2312,7 @@ function checkSandboxAutoAllow(
           },
         }
       }
-      // Stash first ask match; don't return yet (deny across all subs takes priority)
+      
       firstAskRule ??= subResult.matchingAskRules[0]
     }
     if (firstAskRule) {
@@ -1256,7 +2327,7 @@ function checkSandboxAutoAllow(
     }
   }
 
-  // Full-command ask check (after all deny sources have been exhausted)
+  
   if (matchingAskRules[0] !== undefined) {
     return {
       behavior: 'ask',
@@ -1267,7 +2338,7 @@ function checkSandboxAutoAllow(
       },
     }
   }
-  // No explicit rules, so auto-allow with sandbox
+  
 
   return {
     behavior: 'allow',
@@ -1279,12 +2350,6 @@ function checkSandboxAutoAllow(
   }
 }
 
-/**
- * Filter out `cd ${cwd}` prefix subcommands, keeping astCommands aligned.
- * Extracted to keep bashToolHasPermission under Bun's feature() DCE
- * complexity threshold — inlining this breaks pendingClassifierCheck
- * attachment in ~10 classifier tests.
- */
 function filterCdCwdSubcommands(
   rawSubcommands: string[],
   astCommands: SimpleCommand[] | undefined,
@@ -1302,13 +2367,6 @@ function filterCdCwdSubcommands(
   return { subcommands, astCommandsByIdx }
 }
 
-/**
- * Early-exit deny enforcement for the AST too-complex and checkSemantics
- * paths. Returns the exact-match result if non-passthrough (deny/ask/allow),
- * then checks prefix/wildcard deny rules. Returns null if neither matched,
- * meaning the caller should fall through to ask. Extracted to keep
- * bashToolHasPermission under Bun's feature() DCE complexity threshold.
- */
 function checkEarlyExitDeny(
   input: z.infer<typeof BashTool.inputSchema>,
   toolPermissionContext: ToolPermissionContext,
@@ -1335,20 +2393,6 @@ function checkEarlyExitDeny(
   return null
 }
 
-/**
- * checkSemantics-path deny enforcement. Calls checkEarlyExitDeny (exact-match
- * + full-command prefix deny), then checks each individual SimpleCommand .text
- * span against prefix deny rules. The per-subcommand check is needed because
- * filterRulesByContentsMatchingInput has a compound-command guard
- * (splitCommand().length > 1 → prefix rules return false) that defeats
- * `Bash(eval:*)` matching against a full pipeline like `echo foo | eval rm`.
- * Each SimpleCommand span is a single command, so the guard doesn't fire.
- *
- * Separate helper (not folded into checkEarlyExitDeny or inlined at the call
- * site) because bashToolHasPermission is tight against Bun's feature() DCE
- * complexity threshold — adding even ~5 lines there breaks
- * feature('BASH_CLASSIFIER') evaluation and drops pendingClassifierCheck.
- */
 function checkSemanticsDeny(
   input: z.infer<typeof BashTool.inputSchema>,
   toolPermissionContext: ToolPermissionContext,
@@ -1373,10 +2417,6 @@ function checkSemanticsDeny(
   return null
 }
 
-/**
- * Builds the pending classifier check metadata if classifier is enabled and has allow descriptions.
- * Returns undefined if classifier is disabled, in auto mode, or no allow descriptions exist.
- */
 function buildPendingClassifierCheck(
   command: string,
   toolPermissionContext: ToolPermissionContext,
@@ -1384,7 +2424,7 @@ function buildPendingClassifierCheck(
   if (!isClassifierPermissionsEnabled()) {
     return undefined
   }
-  // Skip in auto mode - auto mode classifier handles all permission decisions
+  
   if (feature('TRANSCRIPT_CLASSIFIER') && toolPermissionContext.mode === 'auto')
     return undefined
   if (toolPermissionContext.mode === 'bypassPermissions') return undefined
@@ -1403,12 +2443,6 @@ function buildPendingClassifierCheck(
 
 const speculativeChecks = new Map<string, Promise<ClassifierResult>>()
 
-/**
- * Start a speculative bash allow classifier check early, so it runs in
- * parallel with pre-tool hooks, deny/ask classifiers, and permission dialog setup.
- * The result can be consumed later by executeAsyncClassifierCheck via
- * consumeSpeculativeClassifierCheck.
- */
 export function peekSpeculativeClassifierCheck(
   command: string,
 ): Promise<ClassifierResult> | undefined {
@@ -1421,7 +2455,7 @@ export function startSpeculativeClassifierCheck(
   signal: AbortSignal,
   isNonInteractiveSession: boolean,
 ): boolean {
-  // Same guards as buildPendingClassifierCheck
+  
   if (!isClassifierPermissionsEnabled()) return false
   if (feature('TRANSCRIPT_CLASSIFIER') && toolPermissionContext.mode === 'auto')
     return false
@@ -1440,17 +2474,13 @@ export function startSpeculativeClassifierCheck(
     signal,
     isNonInteractiveSession,
   )
-  // Prevent unhandled rejection if the signal aborts before this promise is consumed.
-  // The original promise (which may reject) is still stored in the Map for consumers to await.
+  
+  
   promise.catch(() => {})
   speculativeChecks.set(command, promise)
   return true
 }
 
-/**
- * Consume a speculative classifier check result for the given command.
- * Returns the promise if one exists (and removes it from the map), or undefined.
- */
 export function consumeSpeculativeClassifierCheck(
   command: string,
 ): Promise<ClassifierResult> | undefined {
@@ -1465,14 +2495,6 @@ export function clearSpeculativeChecks(): void {
   speculativeChecks.clear()
 }
 
-/**
- * Await a pending classifier check and return a PermissionDecisionReason if
- * high-confidence allow, or undefined otherwise.
- *
- * Used by swarm agents (both tmux and in-process) to gate permission
- * forwarding: run the classifier first, and only escalate to the leader
- * if the classifier doesn't auto-approve.
- */
 export async function awaitClassifierAutoApproval(
   pendingCheck: PendingClassifierCheck,
   signal: AbortSignal,
@@ -1513,16 +2535,6 @@ type AsyncClassifierCheckCallbacks = {
   onComplete?: () => void
 }
 
-/**
- * Execute the bash allow classifier check asynchronously.
- * This runs in the background while the permission prompt is shown.
- * If the classifier allows with high confidence and the user hasn't interacted, auto-approves.
- *
- * @param pendingCheck - Classifier check metadata from bashToolHasPermission
- * @param signal - Abort signal
- * @param isNonInteractiveSession - Whether this is a non-interactive session
- * @param callbacks - Callbacks to check if we should continue and handle approval
- */
 export async function executeAsyncClassifierCheck(
   pendingCheck: { command: string; cwd: string; descriptions: string[] },
   signal: AbortSignal,
@@ -1545,7 +2557,7 @@ export async function executeAsyncClassifierCheck(
           isNonInteractiveSession,
         )
   } catch (error: unknown) {
-    // When the coordinator session is cancelled, the abort signal fires and the
+    
     
     
     if (error instanceof APIUserAbortError || error instanceof AbortError) {
@@ -1573,14 +2585,11 @@ export async function executeAsyncClassifierCheck(
       reason: `Allowed by prompt rule: "${classifierResult.matchedDescription}"`,
     })
   } else {
-    // No match — notify so the checking indicator is cleared
+    
     callbacks.onComplete?.()
   }
 }
 
-/**
- * The main implementation to check if we need to ask for user permission to call BashTool with a given input
- */
 export async function bashToolHasPermission(
   input: z.infer<typeof BashTool.inputSchema>,
   context: ToolUseContext,
@@ -1591,13 +2600,13 @@ export async function bashToolHasPermission(
   
   
   
-  // no hidden substitutions) or 'too-complex' — which is exactly the signal
+  
   
   
   
   
   const injectionCheckDisabled = isEnvTruthy(
-    process.env.CLAUDE_CODE_DISABLE_COMMAND_INJECTION_CHECK,
+    process.env.CLAUDE_CODE_NEXT_DISABLE_COMMAND_INJECTION_CHECK,
   )
   
   
@@ -1660,10 +2669,10 @@ export async function bashToolHasPermission(
   }
 
   if (astResult.kind === 'too-complex') {
-    // Parse succeeded but found structure we can't statically analyze
-    // (command substitution, expansion, control flow, parser differential).
-    // Respect exact-match deny/ask/allow, then prefix/wildcard deny. Only
-    // fall through to ask if no deny matched — don't downgrade deny to ask.
+    
+    
+    
+    
     const earlyExit = checkEarlyExitDeny(input, appState.toolPermissionContext)
     if (earlyExit !== null) return earlyExit
     const decisionReason: PermissionDecisionReason = {
@@ -1690,11 +2699,11 @@ export async function bashToolHasPermission(
   }
 
   if (astResult.kind === 'simple') {
-    // Clean parse: check semantic-level concerns (zsh builtins, eval, etc.)
+    
     
     const sem = checkSemantics(astResult.commands)
     if (!sem.ok) {
-      // Same deny-rule enforcement as the too-complex path: a user with
+      
       
       const earlyExit = checkSemanticsDeny(
         input,
@@ -1713,7 +2722,7 @@ export async function bashToolHasPermission(
         suggestions: [],
       }
     }
-    // Stash the tokenized subcommands for use below. Downstream code (rule
+    
     
     
     
@@ -1726,7 +2735,7 @@ export async function bashToolHasPermission(
     astCommands = astResult.commands
   }
 
-  // Legacy shell-quote pre-check. Only reached on 'parse-unavailable'
+  
   
   
   if (astResult.kind === 'parse-unavailable') {
@@ -1747,7 +2756,7 @@ export async function bashToolHasPermission(
     }
   }
 
-  // Check sandbox auto-allow (which respects explicit deny/ask rules)
+  
   
   if (
     SandboxManager.isSandboxingEnabled() &&
@@ -1763,7 +2772,7 @@ export async function bashToolHasPermission(
     }
   }
 
-  // Check exact match first
+  
   const exactMatchResult = bashToolCheckExactMatchPermission(
     input,
     appState.toolPermissionContext,
@@ -1774,7 +2783,7 @@ export async function bashToolHasPermission(
     return exactMatchResult
   }
 
-  // Check Bash prompt deny and ask rules in parallel (both use Haiku).
+  
   
   
   if (
@@ -1838,7 +2847,7 @@ export async function bashToolHasPermission(
         )
       }
 
-      // Deny takes precedence
+      
       if (denyResult?.matches && denyResult.confidence === 'high') {
         return {
           behavior: 'deny',
@@ -1851,7 +2860,7 @@ export async function bashToolHasPermission(
       }
 
       if (askResult?.matches && askResult.confidence === 'high') {
-        // Skip the Haiku call — the UI computes the prefix locally
+        
         
         
         let suggestions: PermissionUpdate[]
@@ -1891,7 +2900,7 @@ export async function bashToolHasPermission(
     }
   }
 
-  // Check for non-subcommand Bash operators like `>`, `|`, etc.
+  
   
   
   const commandOperatorResult = await checkCommandOperatorPermissions(
@@ -1902,16 +2911,16 @@ export async function bashToolHasPermission(
     astRoot,
   )
   if (commandOperatorResult.behavior !== 'passthrough') {
-    // SECURITY FIX: When pipe segment processing returns 'allow', we must still validate
     
     
-    //   echo 'x' | xargs printf '%s' >> /tmp/file
     
     
-    // 1. Path constraints for output redirections
+    
+    
+    
     
     if (commandOperatorResult.behavior === 'allow') {
-      // Check for dangerous patterns (backticks, $(), etc.) in the original command
+      
       
       
       
@@ -1929,7 +2938,7 @@ export async function bashToolHasPermission(
         safetyResult.behavior !== 'passthrough' &&
         safetyResult.behavior !== 'allow'
       ) {
-        // Attach pending classifier check - may auto-approve before user responds
+        
         appState = context.getAppState()
         return {
           behavior: 'ask',
@@ -1959,7 +2968,7 @@ export async function bashToolHasPermission(
       appState = context.getAppState()
       
       
-      // disabling the cd+redirect check at pathValidation.ts:821. Appending
+      
       
       
       
@@ -1976,8 +2985,8 @@ export async function bashToolHasPermission(
       }
     }
 
-    // When pipe segments return 'ask' (individual segments not allowed by rules),
-    // attach pending classifier check - may auto-approve before user responds.
+    
+    
     if (commandOperatorResult.behavior === 'ask') {
       appState = context.getAppState()
       return {
@@ -1996,16 +3005,16 @@ export async function bashToolHasPermission(
     return commandOperatorResult
   }
 
-  // SECURITY: Legacy misparsing gate. Only runs when the tree-sitter module
   
   
-  // astSubcommands is non-null and we've already validated structure; this
-  // block is skipped entirely. The AST's 'too-complex' result subsumes
+  
+  
+  
   
   
   if (
     astSubcommands === null &&
-    !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_COMMAND_INJECTION_CHECK)
+    !isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_COMMAND_INJECTION_CHECK)
   ) {
     const originalCommandSafetyResult = await bashCommandIsSafeAsync(
       input.command,
@@ -2014,7 +3023,7 @@ export async function bashToolHasPermission(
       originalCommandSafetyResult.behavior === 'ask' &&
       originalCommandSafetyResult.isBashSecurityCheckForMisparsing
     ) {
-      // Compound commands with safe heredoc patterns ($(cat <<'EOF'...EOF))
+      
       
       
       
@@ -2026,7 +3035,7 @@ export async function bashToolHasPermission(
         (remainderResult?.behavior === 'ask' &&
           remainderResult.isBashSecurityCheckForMisparsing)
       ) {
-        // Allow if the exact command has an explicit allow permission — the user
+        
         
         appState = context.getAppState()
         const exactMatchResult = bashToolCheckExactMatchPermission(
@@ -2036,7 +3045,7 @@ export async function bashToolHasPermission(
         if (exactMatchResult.behavior === 'allow') {
           return exactMatchResult
         }
-        // Attach pending classifier check - may auto-approve before user responds
+        
         const decisionReason: PermissionDecisionReason = {
           type: 'other' as const,
           reason: originalCommandSafetyResult.message,
@@ -2048,7 +3057,7 @@ export async function bashToolHasPermission(
             decisionReason,
           ),
           decisionReason,
-          suggestions: [], // Don't suggest saving a potentially dangerous command
+          suggestions: [], 
           ...(feature('BASH_CLASSIFIER')
             ? {
                 pendingClassifierCheck: buildPendingClassifierCheck(
@@ -2062,9 +3071,9 @@ export async function bashToolHasPermission(
     }
   }
 
-  // Split into subcommands. Prefer the AST-extracted spans; fall back to
-  // splitCommand only when tree-sitter was unavailable. The cd-cwd filter
-  // strips the `cd ${cwd}` prefix that models like to prepend.
+  
+  
+  
   const cwd = getCwd()
   const cwdMingw =
     getPlatform() === 'windows' ? windowsPathToPosixPath(cwd) : cwd
@@ -2077,9 +3086,9 @@ export async function bashToolHasPermission(
     cwdMingw,
   )
 
-  // CC-643: Cap subcommand fanout. Only the legacy splitCommand path can
-  // explode — the AST path returns a bounded list (astSubcommands !== null)
-  // or short-circuits to 'too-complex' for structures it can't represent.
+  
+  
+  
   if (
     astSubcommands === null &&
     subcommands.length > MAX_SUBCOMMANDS_FOR_SECURITY_CHECK
@@ -2099,7 +3108,7 @@ export async function bashToolHasPermission(
     }
   }
 
-  // Ask if there are multiple `cd` commands
+  
   const cdCommands = subcommands.filter(subCommand =>
     isNormalizedCdCommand(subCommand),
   )
@@ -2116,7 +3125,7 @@ export async function bashToolHasPermission(
     }
   }
 
-  // Track if compound command contains cd for security validation
+  
   
   const compoundCommandHasCd = cdCommands.length > 0
 
@@ -2186,7 +3195,7 @@ export async function bashToolHasPermission(
     }
   }
 
-  // Validate output redirections on the ORIGINAL command (before splitCommand stripped them)
+  
   
   
   
@@ -2227,12 +3236,12 @@ export async function bashToolHasPermission(
   
   
   
-  // pathResult IS the only ask — return it so redirection checks surface.
+  
   if (pathResult.behavior === 'ask' && askSubresult === undefined) {
     return pathResult
   }
 
-  // Ask if any subcommands require approval (e.g., ls/cd outside boundaries).
+  
   
   
   
@@ -2251,12 +3260,12 @@ export async function bashToolHasPermission(
     }
   }
 
-  // Allow if exact command was allowed
+  
   if (exactMatchResult.behavior === 'allow') {
     return exactMatchResult
   }
 
-  // If all subcommands are allowed via exact or prefix match, allow the
+  
   
   
   
@@ -2264,9 +3273,9 @@ export async function bashToolHasPermission(
   let hasPossibleCommandInjection = false
   if (
     astSubcommands === null &&
-    !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_COMMAND_INJECTION_CHECK)
+    !isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_COMMAND_INJECTION_CHECK)
   ) {
-    // CC-643: Batch divergence telemetry into a single logEvent. The per-sub
+    
     
     
     let divergenceCount = 0
@@ -2305,7 +3314,7 @@ export async function bashToolHasPermission(
     }
   }
 
-  // Query Haiku for command prefixes
+  
   
   
   let commandSubcommandPrefix: Awaited<
@@ -2322,7 +3331,7 @@ export async function bashToolHasPermission(
     }
   }
 
-  // If there is only one command, no need to process subcommands
+  
   appState = context.getAppState() 
   if (subcommands.length === 1) {
     const result = await checkCommandAndSuggestRules(
@@ -2352,14 +3361,14 @@ export async function bashToolHasPermission(
     return result
   }
 
-  // Check subcommand permission results
+  
   const subcommandResults: Map<string, PermissionResult> = new Map()
   for (const subcommand of subcommands) {
     subcommandResults.set(
       subcommand,
       await checkCommandAndSuggestRules(
         {
-          // Pass through input params like `sandbox`
+          
           ...input,
           command: subcommand,
         },
@@ -2371,7 +3380,7 @@ export async function bashToolHasPermission(
     )
   }
 
-  // Allow if all subcommands are allowed
+  
   
   if (
     subcommands.every(subcommand => {
@@ -2379,7 +3388,7 @@ export async function bashToolHasPermission(
       return permissionResult?.behavior === 'allow'
     })
   ) {
-    // Keep subcommandResults as PermissionResult for decisionReason
+    
     return {
       behavior: 'allow',
       updatedInput: input,
@@ -2390,7 +3399,7 @@ export async function bashToolHasPermission(
     }
   }
 
-  // Otherwise, ask for permission
+  
   const collectedRules: Map<string, PermissionRuleValue> = new Map()
 
   for (const [subcommand, permissionResult] of subcommandResults) {
@@ -2405,12 +3414,12 @@ export async function bashToolHasPermission(
 
       const rules = extractRules(updates)
       for (const rule of rules) {
-        // Use string representation as key for deduplication
+        
         const ruleKey = permissionRuleValueToString(rule)
         collectedRules.set(ruleKey, rule)
       }
 
-      // GH#28784 follow-up: security-check asks (compound-cd+write, process
+      
       
       
       
@@ -2429,7 +3438,7 @@ export async function bashToolHasPermission(
           collectedRules.set(ruleKey, rule)
         }
       }
-      // Note: We only collect rules, not other update types like mode changes
+      
       
     }
   }
@@ -2439,7 +3448,7 @@ export async function bashToolHasPermission(
     reasons: subcommandResults,
   }
 
-  // GH#11380: Cap at MAX_SUGGESTED_RULES_FOR_COMPOUND. Map preserves insertion
+  
   
   const cappedRules = Array.from(collectedRules.values()).slice(
     0,
@@ -2477,28 +3486,20 @@ export async function bashToolHasPermission(
   }
 }
 
-/**
- * Checks if a subcommand is a git command after normalizing away safe wrappers
- * (env vars, timeout, etc.) and shell quotes.
- *
- * SECURITY: Must normalize before matching to prevent bypasses like:
- *   'git' status    — shell quotes hide the command from a naive regex
- *   NO_COLOR=1 git status — env var prefix hides the command
- */
 export function isNormalizedGitCommand(command: string): boolean {
-  // Fast path: catch the most common case before any parsing
+  
   if (command.startsWith('git ') || command === 'git') {
     return true
   }
   const stripped = stripSafeWrappers(command)
   const parsed = tryParseShellCommand(stripped)
   if (parsed.success && parsed.tokens.length > 0) {
-    // Direct git command
+    
     if (parsed.tokens[0] === 'git') {
       return true
     }
-    // "xargs git ..." — xargs runs git in the current directory,
-    // so it must be treated as a git command for cd+git security checks.
+    
+    
     
     if (parsed.tokens[0] === 'xargs' && parsed.tokens.includes('git')) {
       return true
@@ -2508,19 +3509,6 @@ export function isNormalizedGitCommand(command: string): boolean {
   return /^git(?:\s|$)/.test(stripped)
 }
 
-/**
- * Checks if a subcommand is a cd command after normalizing away safe wrappers
- * (env vars, timeout, etc.) and shell quotes.
- *
- * SECURITY: Must normalize before matching to prevent bypasses like:
- *   FORCE_COLOR=1 cd sub — env var prefix hides the cd from a naive /^cd / regex
- *   This mirrors isNormalizedGitCommand to ensure symmetric normalization.
- *
- * Also matches pushd/popd — they change cwd just like cd, so
- *   pushd /tmp/bare-repo && git status
- * must trigger the same cd+git guard. Mirrors PowerShell's
- * DIRECTORY_CHANGE_ALIASES (src/utils/powershell/parser.ts).
- */
 export function isNormalizedCdCommand(command: string): boolean {
   const stripped = stripSafeWrappers(command)
   const parsed = tryParseShellCommand(stripped)
@@ -2531,10 +3519,6 @@ export function isNormalizedCdCommand(command: string): boolean {
   return /^(?:cd|pushd|popd)(?:\s|$)/.test(stripped)
 }
 
-/**
- * Checks if a compound command contains any cd command,
- * using normalized detection that handles env var prefixes and shell quotes.
- */
 export function commandHasAnyCd(command: string): boolean {
   return splitCommand(command).some(subcmd =>
     isNormalizedCdCommand(subcmd.trim()),

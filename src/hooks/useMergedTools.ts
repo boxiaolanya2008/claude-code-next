@@ -13,7 +13,7 @@ export function useMergedTools(
   let replBridgeEnabled = false
   let replBridgeOutboundOnly = false
   return useMemo(() => {
-    // assembleToolPool is the shared function that both REPL and runAgent use.
+    
     
     const assembled = assembleToolPool(toolPermissionContext, mcpTools)
 

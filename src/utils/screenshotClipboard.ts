@@ -11,7 +11,7 @@ export async function copyAnsiToClipboard(
   options?: AnsiToPngOptions,
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const tempDir = join(tmpdir(), 'claude-code-screenshots')
+    const tempDir = join(tmpdir(), 'claude-code-next-screenshots')
     await mkdir(tempDir, { recursive: true })
 
     const pngPath = join(tempDir, `screenshot-${Date.now()}.png`)
@@ -23,7 +23,7 @@ export async function copyAnsiToClipboard(
     try {
       await unlink(pngPath)
     } catch {
-      // Ignore cleanup errors
+      
     }
 
     return result
@@ -42,7 +42,7 @@ async function copyPngToClipboard(
   const platform = getPlatform()
 
   if (platform === 'macos') {
-    // macOS: Use osascript to copy PNG to clipboard
+    
     
     const escapedPath = pngPath.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
     const script = `set the clipboard to (read (POSIX file "${escapedPath}") as «class PNGf»)`
@@ -60,7 +60,7 @@ async function copyPngToClipboard(
   }
 
   if (platform === 'linux') {
-    // Linux: Try xclip first, then xsel
+    
     const xclipResult = await execFileNoThrowWithCwd(
       'xclip',
       ['-selection', 'clipboard', '-t', 'image/png', '-i', pngPath],
@@ -71,7 +71,7 @@ async function copyPngToClipboard(
       return { success: true, message: 'Screenshot copied to clipboard' }
     }
 
-    // Try xsel as fallback
+    
     const xselResult = await execFileNoThrowWithCwd(
       'xsel',
       ['--clipboard', '--input', '--type', 'image/png'],
@@ -90,7 +90,7 @@ async function copyPngToClipboard(
   }
 
   if (platform === 'windows') {
-    // Windows: Use PowerShell to copy image to clipboard
+    
     const psScript = `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Clipboard]::SetImage([System.Drawing.Image]::FromFile('${pngPath.replace(/'/g, "''")}'))`
     const result = await execFileNoThrowWithCwd(
       'powershell',

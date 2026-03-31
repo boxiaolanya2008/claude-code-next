@@ -118,22 +118,6 @@ function isExcludedModel(model: string): boolean {
   return model.includes('haiku')
 }
 
-/**
- * Returns the tracking key for a querySource, or null if untracked.
- * Compact shares the same server-side cache as repl_main_thread
- * (same cacheSafeParams), so they share tracking state.
- *
- * For subagents with a tracked querySource, uses the unique agentId to
- * isolate tracking state. This prevents false positive cache break
- * notifications when multiple instances of the same agent type run
- * concurrently.
- *
- * Untracked sources (speculation, session_memory, prompt_suggestion, etc.)
- * are short-lived forked agents where cache break detection provides no
- * value — they run 1-3 turns with a fresh agentId each time, so there's
- * nothing meaningful to compare against. Their cache metrics are still
- * logged via tengu_api_success for analytics.
- */
 function getTrackingKey(
   querySource: QuerySource,
   agentId?: AgentId,
@@ -162,12 +146,10 @@ function computeHash(data: unknown): number {
     
     return typeof hash === 'bigint' ? Number(hash & 0xffffffffn) : hash
   }
-  // Fallback for non-Bun runtimes (e.g. Node.js via npm global install)
+  
   return djb2Hash(str)
 }
 
-/** MCP tool names are user-controlled (server config) and may leak filepaths.
- *  Collapse them to 'mcp'; built-in names are a fixed vocabulary. */
 function sanitizeToolName(name: string): string {
   return name.startsWith('mcp__') ? 'mcp' : name
 }
@@ -209,9 +191,6 @@ function buildDiffableContent(
   return `Model: ${model}\n\n=== System Prompt ===\n\n${systemText}\n\n=== Tools (${tools.length}) ===\n\n${toolDetails}\n`
 }
 
-/** Extended tracking snapshot — everything that could affect the server-side
- *  cache key that we can observe from the client. All fields are optional so
- *  the call site can add incrementally; undefined fields compare as stable. */
 export type PromptStateSnapshot = {
   system: TextBlockParam[]
   toolSchemas: BetaToolUnion[]
@@ -228,10 +207,6 @@ export type PromptStateSnapshot = {
   extraBodyParams?: unknown
 }
 
-/**
- * Phase 1 (pre-call): Record the current prompt/tool state and detect what changed.
- * Does NOT fire events — just stores pending changes for phase 2 to use.
- */
 export function recordPromptState(snapshot: PromptStateSnapshot): void {
   try {
     const {
@@ -269,7 +244,7 @@ export function recordPromptState(snapshot: PromptStateSnapshot): void {
     )
     const toolNames = toolSchemas.map(t => ('name' in t ? t.name : 'unknown'))
     
-    // (tools unchanged) skips N extra jsonStringify calls.
+    
     const computeToolHashes = () =>
       computePerToolHashes(strippedTools, toolNames)
     const systemCharCount = getSystemCharCount(system)
@@ -284,7 +259,7 @@ export function recordPromptState(snapshot: PromptStateSnapshot): void {
     const prev = previousStateBySource.get(key)
 
     if (!prev) {
-      // Evict oldest entries if map is at capacity
+      
       while (previousStateBySource.size >= MAX_TRACKED_SOURCES) {
         const oldest = previousStateBySource.keys().next().value
         if (oldest !== undefined) previousStateBySource.delete(oldest)
@@ -417,11 +392,6 @@ export function recordPromptState(snapshot: PromptStateSnapshot): void {
   }
 }
 
-/**
- * Phase 2 (post-call): Check the API response's cache tokens to determine
- * if a cache break actually occurred. If it did, use the pending changes
- * from phase 1 to explain why.
- */
 export async function checkResponseForCacheBreak(
   querySource: QuerySource,
   cacheReadTokens: number,
@@ -437,7 +407,7 @@ export async function checkResponseForCacheBreak(
     const state = previousStateBySource.get(key)
     if (!state) return
 
-    // Skip excluded models (e.g., haiku has different caching behavior)
+    
     if (isExcludedModel(state.model)) return
 
     const prevCacheRead = state.prevCacheReadTokens
@@ -468,7 +438,7 @@ export async function checkResponseForCacheBreak(
       return
     }
 
-    // Detect a cache break: cache read dropped >5% from previous AND
+    
     
     const tokenDrop = prevCacheRead - cacheReadTokens
     if (
@@ -479,7 +449,7 @@ export async function checkResponseForCacheBreak(
       return
     }
 
-    // Build explanation from pending changes (if any)
+    
     const parts: string[] = []
     if (changes) {
       if (changes.modelChanged) {
@@ -517,7 +487,7 @@ export async function checkResponseForCacheBreak(
         !changes.globalCacheStrategyChanged &&
         !changes.systemPromptChanged
       ) {
-        // Only report as standalone cause if nothing else explains it —
+        
         
         parts.push('cache_control changed (scope or TTL)')
       }
@@ -550,7 +520,7 @@ export async function checkResponseForCacheBreak(
       }
     }
 
-    // Check if time gap suggests TTL expiration
+    
     const lastAssistantMsgOver5minAgo =
       timeSinceLastAssistantMsg !== null &&
       timeSinceLastAssistantMsg > CACHE_TTL_5MIN_MS
@@ -559,7 +529,7 @@ export async function checkResponseForCacheBreak(
       timeSinceLastAssistantMsg > CACHE_TTL_1HOUR_MS
 
     
-    // when all client-side flags are false and the gap is under TTL, ~90% of breaks
+    
     
     
     let reason: string
@@ -591,8 +561,8 @@ export async function checkResponseForCacheBreak(
       addedToolCount: changes?.addedToolCount ?? 0,
       removedToolCount: changes?.removedToolCount ?? 0,
       systemCharDelta: changes?.systemCharDelta ?? 0,
-      // Tool names are sanitized: built-in names are a fixed vocabulary,
-      // MCP tools collapse to 'mcp' (user-configured, could leak paths).
+      
+      
       addedTools: (changes?.addedTools ?? [])
         .map(sanitizeToolName)
         .join(
@@ -608,8 +578,8 @@ export async function checkResponseForCacheBreak(
         .join(
           ',',
         ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      // Beta header names and cache strategy are fixed enum-like values,
-      // not code or filepaths. requestId is an opaque server-generated ID.
+      
+      
       addedBetas: (changes?.addedBetas ?? []).join(
         ',',
       ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -632,7 +602,7 @@ export async function checkResponseForCacheBreak(
     })
 
     
-    // the summary log so ants can find it (DevBar UI removed — event data
+    
     
     let diffPath: string | undefined
     if (changes?.buildPrevDiffableContent) {
@@ -653,11 +623,6 @@ export async function checkResponseForCacheBreak(
   }
 }
 
-/**
- * Call when cached microcompact sends cache_edits deletions.
- * The next API response will have lower cache read tokens — that's
- * expected, not a cache break.
- */
 export function notifyCacheDeletion(
   querySource: QuerySource,
   agentId?: AgentId,
@@ -669,11 +634,6 @@ export function notifyCacheDeletion(
   }
 }
 
-/**
- * Call after compaction to reset the cache read baseline.
- * Compaction legitimately reduces message count, so cache read tokens
- * will naturally drop on the next call — that's not a break.
- */
 export function notifyCompaction(
   querySource: QuerySource,
   agentId?: AgentId,

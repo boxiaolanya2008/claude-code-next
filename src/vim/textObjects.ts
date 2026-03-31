@@ -25,9 +25,6 @@ const PAIRS: Record<string, [string, string]> = {
   '`': ['`', '`'],
 }
 
-/**
- * Find a text object at the given position.
- */
 export function findTextObject(
   text: string,
   offset: number,
@@ -56,13 +53,13 @@ function findWordObject(
   isInner: boolean,
   isWordChar: (ch: string) => boolean,
 ): TextObjectRange {
-  // Pre-segment into graphemes for grapheme-safe iteration
+  
   const graphemes: Array<{ segment: string; index: number }> = []
   for (const { segment, index } of getGraphemeSegmenter().segment(text)) {
     graphemes.push({ segment, index })
   }
 
-  // Find which grapheme index the offset falls in
+  
   let graphemeIdx = graphemes.length - 1
   for (let i = 0; i < graphemes.length; i++) {
     const g = graphemes[i]!
@@ -97,7 +94,7 @@ function findWordObject(
   }
 
   if (!isInner) {
-    // Include surrounding whitespace
+    
     if (endIdx < graphemes.length && isWs(endIdx)) {
       while (endIdx < graphemes.length && isWs(endIdx)) endIdx++
     } else if (startIdx > 0 && isWs(startIdx - 1)) {
@@ -125,7 +122,7 @@ function findQuoteObject(
     if (line[i] === quote) positions.push(i)
   }
 
-  // Pair quotes correctly: 0-1, 2-3, 4-5, etc.
+  
   for (let i = 0; i < positions.length - 1; i += 2) {
     const qs = positions[i]!
     const qe = positions[i + 1]!

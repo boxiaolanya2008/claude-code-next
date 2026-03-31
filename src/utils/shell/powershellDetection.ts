@@ -10,21 +10,10 @@ async function probePath(p: string): Promise<string | null> {
   }
 }
 
-/**
- * Attempts to find PowerShell on the system via PATH.
- * Prefers pwsh (PowerShell Core 7+), falls back to powershell (5.1).
- *
- * On Linux, if PATH resolves to a snap launcher (/snap/…) — directly or
- * via a symlink chain like /usr/bin/pwsh → /snap/bin/pwsh — probe known
- * apt/rpm install locations instead: the snap launcher can hang in
- * subprocesses while snapd initializes confinement, but the underlying
- * binary at /opt/microsoft/powershell/7/pwsh is reliable. On
- * Windows/macOS, PATH is sufficient.
- */
 export async function findPowerShell(): Promise<string | null> {
   const pwshPath = await which('pwsh')
   if (pwshPath) {
-    // Snap launcher hangs in subprocesses. Prefer the direct binary.
+    
     
     
     
@@ -71,7 +60,7 @@ export async function getPowerShellEdition(): Promise<PowerShellEdition | null> 
   const p = await getCachedPowerShellPath()
   if (!p) return null
   
-  //   C:\Program Files\PowerShell\7\pwsh.exe
+  
   
   
   const base = p
@@ -82,9 +71,6 @@ export async function getPowerShellEdition(): Promise<PowerShellEdition | null> 
   return base === 'pwsh' ? 'core' : 'desktop'
 }
 
-/**
- * Resets the cached PowerShell path. Only for testing.
- */
 export function resetPowerShellCache(): void {
   cachedPowerShellPath = null
 }

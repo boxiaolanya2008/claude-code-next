@@ -14,11 +14,8 @@ export type TerminalNotification = {
   notifyKitty: (opts: { message: string; title: string; id: number }) => void
   notifyGhostty: (opts: { message: string; title: string }) => void
   notifyBell: () => void
-  /**
-   * Report progress to the terminal via OSC 9;4 sequences.
-   * Supported terminals: ConEmu, Ghostty 1.2.0+, iTerm2 3.6.6+
-   * Pass state=null to clear progress.
-   */
+  
+
   progress: (state: Progress['state'] | null, percentage?: number) => void
 }
 
@@ -63,8 +60,8 @@ export function useTerminalNotification(): TerminalNotification {
   )
 
   const notifyBell = useCallback(() => {
-    // Raw BEL — inside tmux this triggers tmux's bell-action (window flag).
-    // Wrapping would make it opaque DCS payload and lose that fallback.
+    
+    
     writeRaw(BEL)
   }, [writeRaw])
 
@@ -112,7 +109,7 @@ export function useTerminalNotification(): TerminalNotification {
           )
           break
         case null:
-          // Handled by the if guard above
+          
           break
       }
     },

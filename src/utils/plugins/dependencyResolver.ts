@@ -18,13 +18,8 @@ export function qualifyDependency(
   return `${dep}@${mkt}`
 }
 
-/**
- * Minimal shape the resolver needs from a marketplace lookup. Keeping this
- * narrow means the resolver stays testable without constructing full
- * PluginMarketplaceEntry objects.
- */
 export type DependencyLookupResult = {
-  // Entries may be bare names; qualifyDependency normalizes them.
+  
   dependencies?: string[]
 }
 
@@ -39,32 +34,6 @@ export type ResolutionResult =
       requiredBy: PluginId
     }
 
-/**
- * Walk the transitive dependency closure of `rootId` via DFS.
- *
- * The returned `closure` ALWAYS contains `rootId`, plus every transitive
- * dependency that is NOT in `alreadyEnabled`. Already-enabled deps are
- * skipped (not recursed into) — this avoids surprise settings writes when a
- * dep is already installed at a different scope. The root is never skipped,
- * even if already enabled, so re-installing a plugin always re-caches it.
- *
- * Cross-marketplace dependencies are BLOCKED by default: a plugin in
- * marketplace A cannot auto-install a plugin from marketplace B. This is
- * a security boundary — installing from a trusted marketplace shouldn't
- * silently pull from an untrusted one. Two escapes: (1) install the
- * cross-mkt dep yourself first (already-enabled deps are skipped, so the
- * closure won't touch it), or (2) the ROOT marketplace's
- * `allowCrossMarketplaceDependenciesOn` allowlist — only the root's list
- * applies for the whole walk (no transitive trust: if A allows B, B's
- * plugin depending on C is still blocked unless A also allows C).
- *
- * @param rootId Root plugin to resolve from (format: "name@marketplace")
- * @param lookup Async lookup returning `{dependencies}` or `null` if not found
- * @param alreadyEnabled Plugin IDs to skip (deps only, root is never skipped)
- * @param allowedCrossMarketplaces Marketplace names the root trusts for
- *   auto-install (from the root marketplace's manifest)
- * @returns Closure to install, or a cycle/not-found/cross-marketplace error
- */
 export async function resolveDependencyClosure(
   rootId: PluginId,
   lookup: (id: PluginId) => Promise<DependencyLookupResult | null>,
@@ -80,11 +49,11 @@ export async function resolveDependencyClosure(
     id: PluginId,
     requiredBy: PluginId,
   ): Promise<ResolutionResult | null> {
-    // Skip already-enabled DEPENDENCIES (avoids surprise settings writes),
-    // but NEVER skip the root: installing an already-enabled plugin must
     
     
-    // installed_plugins.json stale) would return an empty closure and
+    
+    
+    
     
     
     if (id !== rootId && alreadyEnabled.has(id)) return null
@@ -131,32 +100,16 @@ export async function resolveDependencyClosure(
   return { ok: true, closure }
 }
 
-/**
- * Load-time safety net: for each enabled plugin, verify all manifest
- * dependencies are also in the enabled set. Demote any that fail.
- *
- * Fixed-point loop: demoting plugin A may break plugin B that depends on A,
- * so we iterate until nothing changes.
- *
- * The `reason` field distinguishes:
- *  - `'not-enabled'` — dep exists in the loaded set but is disabled
- *  - `'not-found'` — dep is entirely absent (not in any marketplace)
- *
- * Does NOT mutate input. Returns the set of plugin IDs (sources) to demote.
- *
- * @param plugins All loaded plugins (enabled + disabled)
- * @returns Set of pluginIds to demote, plus errors for `/doctor`
- */
 export function verifyAndDemote(plugins: readonly LoadedPlugin[]): {
   demoted: Set<string>
   errors: PluginError[]
 } {
   const known = new Set(plugins.map(p => p.source))
   const enabled = new Set(plugins.filter(p => p.enabled).map(p => p.source))
-  // Name-only indexes for bare deps from --plugin-dir (@inline) plugins:
-  // the real marketplace is unknown, so match "B" against any enabled "B@*".
-  // enabledByName is a multiset: if B@epic AND B@other are both enabled,
-  // demoting one mustn't make "B" disappear from the index.
+  
+  
+  
+  
   const knownByName = new Set(
     plugins.map(p => parsePluginIdentifier(p.source).name),
   )
@@ -174,7 +127,7 @@ export function verifyAndDemote(plugins: readonly LoadedPlugin[]): {
       if (!enabled.has(p.source)) continue
       for (const rawDep of p.manifest.dependencies ?? []) {
         const dep = qualifyDependency(rawDep, p.source)
-        // Bare dep ← @inline plugin: match by name only (see enabledByName)
+        
         const isBare = !parsePluginIdentifier(dep).marketplace
         const satisfied = isBare
           ? (enabledByName.get(dep) ?? 0) > 0
@@ -206,14 +159,6 @@ export function verifyAndDemote(plugins: readonly LoadedPlugin[]): {
   return { demoted, errors }
 }
 
-/**
- * Find all enabled plugins that declare `pluginId` as a dependency.
- * Used to warn on uninstall/disable ("required by: X, Y").
- *
- * @param pluginId The plugin being removed/disabled
- * @param plugins All loaded plugins (only enabled ones are checked)
- * @returns Names of plugins that will break if `pluginId` goes away
- */
 export function findReverseDependents(
   pluginId: PluginId,
   plugins: readonly LoadedPlugin[],
@@ -226,7 +171,7 @@ export function findReverseDependents(
         p.source !== pluginId &&
         (p.manifest.dependencies ?? []).some(d => {
           const qualified = qualifyDependency(d, p.source)
-          // Bare dep (from @inline plugin): match by name only
+          
           return parsePluginIdentifier(qualified).marketplace
             ? qualified === pluginId
             : qualified === targetName
@@ -235,16 +180,6 @@ export function findReverseDependents(
     .map(p => p.name)
 }
 
-/**
- * Build the set of plugin IDs currently enabled at a given settings scope.
- * Used by install-time resolution to skip already-enabled deps and avoid
- * surprise settings writes.
- *
- * Matches `true` (plain enable) AND array values (version constraints per
- * settings/types.ts:455-463 — a plugin at `"foo@bar": ["^1.0.0"]` IS enabled).
- * Without the array check, a version-pinned dep would be re-added to the
- * closure and the settings write would clobber the constraint with `true`.
- */
 export function getEnabledPluginIdsForScope(
   settingSource: EditableSettingSource,
 ): Set<PluginId> {
@@ -255,21 +190,12 @@ export function getEnabledPluginIdsForScope(
   )
 }
 
-/**
- * Format the "(+ N dependencies)" suffix for install success messages.
- * Returns empty string when `installedDeps` is empty.
- */
 export function formatDependencyCountSuffix(installedDeps: string[]): string {
   if (installedDeps.length === 0) return ''
   const n = installedDeps.length
   return ` (+ ${n} ${n === 1 ? 'dependency' : 'dependencies'})`
 }
 
-/**
- * Format the "warning: required by X, Y" suffix for uninstall/disable
- * results. Em-dash style for CLI result messages (not the middot style
- * used in the notification UI). Returns empty string when no dependents.
- */
 export function formatReverseDependentsSuffix(
   rdeps: string[] | undefined,
 ): string {

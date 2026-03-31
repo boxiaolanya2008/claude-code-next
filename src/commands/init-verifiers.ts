@@ -5,7 +5,7 @@ const command = {
   name: 'init-verifiers',
   description:
     'Create verifier skill(s) for automated verification of code changes',
-  contentLength: 0, // Dynamic content
+  contentLength: 0, 
   progressMessage: 'analyzing your project and creating verifier skills',
   source: 'builtin',
   async getPromptForCommand() {

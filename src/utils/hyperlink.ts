@@ -8,16 +8,6 @@ type HyperlinkOptions = {
   supportsHyperlinks?: boolean
 }
 
-/**
- * Create a clickable hyperlink using OSC 8 escape sequences.
- * Falls back to plain text if the terminal doesn't support hyperlinks.
- *
- * @param url - The URL to link to
- * @param content - Optional content to display as the link text (only when hyperlinks are supported).
- *                  If provided and hyperlinks are supported, this text is shown as a clickable link.
- *                  If hyperlinks are not supported, content is ignored and only the URL is shown.
- * @param options - Optional overrides for testing (supportsHyperlinks)
- */
 export function createHyperlink(
   url: string,
   content?: string,
@@ -28,7 +18,7 @@ export function createHyperlink(
     return url
   }
 
-  // Apply basic ANSI blue color - wrap-ansi preserves this across line breaks
+  
   
   const displayText = content ?? url
   const coloredText = chalk.blue(displayText)

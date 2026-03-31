@@ -22,16 +22,13 @@ function canCycleToAuto(ctx: ToolPermissionContext): boolean {
   return false
 }
 
-/**
- * Determines the next permission mode when cycling through modes with Shift+Tab.
- */
 export function getNextPermissionMode(
   toolPermissionContext: ToolPermissionContext,
   _teamContext?: { leadAgentId: string },
 ): PermissionMode {
   switch (toolPermissionContext.mode) {
     case 'default':
-      // Ants skip acceptEdits and plan — auto mode replaces them
+      
       if (process.env.USER_TYPE === 'ant') {
         if (toolPermissionContext.isBypassPermissionsModeAvailable) {
           return 'bypassPermissions'
@@ -62,22 +59,15 @@ export function getNextPermissionMode(
       return 'default'
 
     case 'dontAsk':
-      // Not exposed in UI cycle yet, but return default if somehow reached
+      
       return 'default'
 
     default:
-      // Covers auto (when TRANSCRIPT_CLASSIFIER is enabled) and any future modes — always fall back to default
+      
       return 'default'
   }
 }
 
-/**
- * Computes the next permission mode and prepares the context for it.
- * Handles any context cleanup needed for the target mode (e.g., stripping
- * dangerous permissions when entering auto mode).
- *
- * @returns The next mode and the context to use (with dangerous permissions stripped if needed)
- */
 export function cyclePermissionMode(
   toolPermissionContext: ToolPermissionContext,
   teamContext?: { leadAgentId: string },

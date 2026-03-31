@@ -3,12 +3,8 @@
 export type CapacitySignal = { signal: AbortSignal; cleanup: () => void }
 
 export type CapacityWake = {
-  /**
-   * Create a signal that aborts when either the outer loop signal or the
-   * capacity-wake controller fires. Returns the merged signal and a cleanup
-   * function that removes listeners when the sleep resolves normally
-   * (without abort).
-   */
+  
+
   signal(): CapacitySignal
   
 

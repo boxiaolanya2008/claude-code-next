@@ -49,7 +49,7 @@ async function loadMcpServersFromMcpb(
 
     
     if ('status' in result && result.status === 'needs-config') {
-      // User config needed - this is normal for unconfigured plugins
+      
       
       logForDebugging(
         `MCPB ${mcpbPath} requires user configuration. ` +
@@ -59,7 +59,7 @@ async function loadMcpServersFromMcpb(
       return null
     }
 
-    // Type guard passed - result is success type
+    
     const successResult = result as McpbLoadResult
 
     
@@ -119,18 +119,13 @@ async function loadMcpServersFromMcpb(
   }
 }
 
-/**
- * Load MCP servers from a plugin's manifest
- * This function loads MCP server configurations from various sources within the plugin
- * including manifest entries, .mcp.json files, and .mcpb files
- */
 export async function loadPluginMcpServers(
   plugin: LoadedPlugin,
   errors: PluginError[] = [],
 ): Promise<Record<string, McpServerConfig> | undefined> {
   let servers: Record<string, McpServerConfig> = {}
 
-  // Check for .mcp.json in plugin directory first (lowest priority)
+  
   const defaultMcpServers = await loadMcpServersFromFile(
     plugin.path,
     '.mcp.json',
@@ -139,13 +134,13 @@ export async function loadPluginMcpServers(
     servers = { ...servers, ...defaultMcpServers }
   }
 
-  // Handle manifest mcpServers if present (higher priority)
+  
   if (plugin.manifest.mcpServers) {
     const mcpServersSpec = plugin.manifest.mcpServers
 
     
     if (typeof mcpServersSpec === 'string') {
-      // Check if it's an MCPB file
+      
       if (isMcpbSource(mcpServersSpec)) {
         const mcpbServers = await loadMcpServersFromMcpb(
           plugin,
@@ -156,7 +151,7 @@ export async function loadPluginMcpServers(
           servers = { ...servers, ...mcpbServers }
         }
       } else {
-        // Path to JSON file
+        
         const mcpServers = await loadMcpServersFromFile(
           plugin.path,
           mcpServersSpec,
@@ -166,25 +161,25 @@ export async function loadPluginMcpServers(
         }
       }
     } else if (Array.isArray(mcpServersSpec)) {
-      // Array of paths or inline configs.
-      // Load all specs in parallel, then merge in original order so
-      // last-wins collision semantics are preserved.
+      
+      
+      
       const results = await Promise.all(
         mcpServersSpec.map(async spec => {
           try {
             if (typeof spec === 'string') {
-              // Check if it's an MCPB file
+              
               if (isMcpbSource(spec)) {
                 return await loadMcpServersFromMcpb(plugin, spec, errors)
               }
-              // Path to JSON file
+              
               return await loadMcpServersFromFile(plugin.path, spec)
             }
-            // Inline MCP server configs (sync)
+            
             return spec
           } catch (e) {
-            // Defensive: if one spec throws, don't lose results from the
-            // others. The previous serial loop implicitly tolerated this.
+            
+            
             logForDebugging(
               `Failed to load MCP servers from spec for plugin ${plugin.name}: ${e}`,
               { level: 'error' },
@@ -199,7 +194,7 @@ export async function loadPluginMcpServers(
         }
       }
     } else {
-      // Direct MCP server configs
+      
       servers = { ...servers, ...mcpServersSpec }
     }
   }
@@ -207,11 +202,6 @@ export async function loadPluginMcpServers(
   return Object.keys(servers).length > 0 ? servers : undefined
 }
 
-/**
- * Load MCP servers from a JSON file within a plugin
- * This is a simplified version that doesn't expand environment variables
- * and is specifically for plugin MCP configs
- */
 async function loadMcpServersFromFile(
   pluginPath: string,
   relativePath: string,
@@ -261,28 +251,12 @@ async function loadMcpServersFromFile(
   }
 }
 
-/**
- * A channel entry from a plugin's manifest whose userConfig has not yet been
- * filled in (required fields are missing from saved settings).
- */
 export type UnconfiguredChannel = {
   server: string
   displayName: string
   configSchema: UserConfigSchema
 }
 
-/**
- * Find channel entries in a plugin's manifest whose required userConfig
- * fields are not yet saved. Pure function — no React, no prompting.
- * ManagePlugins.tsx calls this after a plugin is enabled to decide whether
- * to show the config dialog.
- *
- * Entries without a `userConfig` schema are skipped (nothing to prompt for).
- * Entries whose saved config already satisfies `validateUserConfig` are
- * skipped. The `configSchema` in the return value is structurally a
- * `UserConfigSchema` because the Zod schema in schemas.ts matches
- * `McpbUserConfigurationOption` field-for-field.
- */
 export function getUnconfiguredChannels(
   plugin: LoadedPlugin,
 ): UnconfiguredChannel[] {
@@ -291,7 +265,7 @@ export function getUnconfiguredChannels(
     return []
   }
 
-  // plugin.repository is already in "plugin@marketplace" format — same key
+  
   
   const pluginId = plugin.repository
 
@@ -313,12 +287,6 @@ export function getUnconfiguredChannels(
   return unconfigured
 }
 
-/**
- * Look up saved user config for a server, if this server is declared as a
- * channel in the plugin's manifest. Returns undefined for non-channel servers
- * or channels without a userConfig schema — resolvePluginMcpEnvironment will
- * then skip ${user_config.X} substitution for that server.
- */
 function loadChannelUserConfig(
   plugin: LoadedPlugin,
   serverName: string,
@@ -330,10 +298,6 @@ function loadChannelUserConfig(
   return loadMcpServerUserConfig(plugin.repository, serverName) ?? undefined
 }
 
-/**
- * Add plugin scope to MCP server configs
- * This adds a prefix to server names to avoid conflicts between plugins
- */
 export function addPluginScopeToServers(
   servers: Record<string, McpServerConfig>,
   pluginName: string,
@@ -342,11 +306,11 @@ export function addPluginScopeToServers(
   const scopedServers: Record<string, ScopedMcpServerConfig> = {}
 
   for (const [name, config] of Object.entries(servers)) {
-    // Add plugin prefix to server name to avoid conflicts
+    
     const scopedName = `plugin:${pluginName}:${name}`
     const scoped: ScopedMcpServerConfig = {
       ...config,
-      scope: 'dynamic', // Use dynamic scope for plugin servers
+      scope: 'dynamic', 
       pluginSource,
     }
     scopedServers[scopedName] = scoped
@@ -355,10 +319,6 @@ export function addPluginScopeToServers(
   return scopedServers
 }
 
-/**
- * Extract all MCP servers from loaded plugins
- * NOTE: Resolves environment variables for all servers before returning
- */
 export async function extractMcpServersFromPlugins(
   plugins: LoadedPlugin[],
   errors: PluginError[] = [],
@@ -399,7 +359,7 @@ export async function extractMcpServersFromPlugins(
         }
       }
 
-      // Store the UNRESOLVED servers on the plugin for caching
+      
       
       plugin.mcpServers = servers
 
@@ -424,21 +384,12 @@ export async function extractMcpServersFromPlugins(
   return allServers
 }
 
-/**
- * Build the userConfig map for a single MCP server by merging the plugin's
- * top-level manifest.userConfig values with the channel-specific per-server
- * config (assistant-mode channels). Channel-specific wins on collision so
- * plugins that declare the same key at both levels get the more specific value.
- *
- * Returns undefined when neither source has anything — resolvePluginMcpEnvironment
- * skips substituteUserConfigVariables in that case.
- */
 function buildMcpUserConfig(
   plugin: LoadedPlugin,
   serverName: string,
 ): UserConfigValues | undefined {
-  // Gate on manifest.userConfig. loadPluginOptions always returns at least {}
-  // (it spreads two `?? {}` fallbacks), so without this guard topLevel is never
+  
+  
   
   
   
@@ -453,11 +404,6 @@ function buildMcpUserConfig(
   return { ...topLevel, ...channelSpecific }
 }
 
-/**
- * Resolve environment variables for plugin MCP servers
- * Handles ${CLAUDE_PLUGIN_ROOT}, ${user_config.X}, and general ${VAR} substitution
- * Tracks missing environment variables for error reporting
- */
 export function resolvePluginMcpEnvironment(
   config: McpServerConfig,
   plugin: { path: string; source: string },
@@ -469,7 +415,7 @@ export function resolvePluginMcpEnvironment(
   const allMissingVars: string[] = []
 
   const resolveValue = (value: string): string => {
-    // First substitute plugin-specific variables
+    
     let resolved = substitutePluginVariables(value, plugin)
 
     
@@ -477,7 +423,7 @@ export function resolvePluginMcpEnvironment(
       resolved = substituteUserConfigVariables(resolved, userConfig)
     }
 
-    // Finally expand general environment variables
+    
     
     const { expanded, missingVars } = expandEnvVarsInString(resolved)
     allMissingVars.push(...missingVars)
@@ -493,17 +439,17 @@ export function resolvePluginMcpEnvironment(
     case 'stdio': {
       const stdioConfig = { ...config }
 
-      // Resolve command path
+      
       if (stdioConfig.command) {
         stdioConfig.command = resolveValue(stdioConfig.command)
       }
 
-      // Resolve args
+      
       if (stdioConfig.args) {
         stdioConfig.args = stdioConfig.args.map(arg => resolveValue(arg))
       }
 
-      // Resolve environment variables and add CLAUDE_PLUGIN_ROOT / CLAUDE_PLUGIN_DATA
+      
       const resolvedEnv: Record<string, string> = {
         CLAUDE_PLUGIN_ROOT: plugin.path,
         CLAUDE_PLUGIN_DATA: getPluginDataDir(plugin.source),
@@ -525,12 +471,12 @@ export function resolvePluginMcpEnvironment(
     case 'ws': {
       const remoteConfig = { ...config }
 
-      // Resolve URL
+      
       if (remoteConfig.url) {
         remoteConfig.url = resolveValue(remoteConfig.url)
       }
 
-      // Resolve headers
+      
       if (remoteConfig.headers) {
         const resolvedHeaders: Record<string, string> = {}
         for (const [key, value] of Object.entries(remoteConfig.headers)) {
@@ -543,7 +489,7 @@ export function resolvePluginMcpEnvironment(
       break
     }
 
-    // For other types (sse-ide, ws-ide, sdk, claudeai-proxy), pass through unchanged
+    
     case 'sse-ide':
     case 'ws-ide':
     case 'sdk':
@@ -552,7 +498,7 @@ export function resolvePluginMcpEnvironment(
       break
   }
 
-  // Log and track missing variables if any were found and errors array provided
+  
   if (errors && allMissingVars.length > 0) {
     const uniqueMissingVars = [...new Set(allMissingVars)]
     const varList = uniqueMissingVars.join(', ')
@@ -577,11 +523,6 @@ export function resolvePluginMcpEnvironment(
   return resolved
 }
 
-/**
- * Get MCP servers from a specific plugin with environment variable resolution and scoping
- * This function is called when the MCP servers need to be activated and ensures they have
- * the proper environment variables and scope applied
- */
 export async function getPluginMcpServers(
   plugin: LoadedPlugin,
   errors: PluginError[] = [],
@@ -590,18 +531,18 @@ export async function getPluginMcpServers(
     return undefined
   }
 
-  // Use cached servers if available
+  
   const servers =
     plugin.mcpServers || (await loadPluginMcpServers(plugin, errors))
   if (!servers) {
     return undefined
   }
 
-  // Resolve environment variables. Same per-server try/catch as
   
   
   
-  // and this function runs inside Promise.all at config.ts:911 — one
+  
+  
   
   const resolvedServers: Record<string, McpServerConfig> = {}
   for (const [name, config] of Object.entries(servers)) {
@@ -625,6 +566,6 @@ export async function getPluginMcpServers(
     }
   }
 
-  // Add plugin scope
+  
   return addPluginScopeToServers(resolvedServers, plugin.name, plugin.source)
 }

@@ -67,7 +67,7 @@ export function useVimInput(props: UseVimInputProps): VimInputState {
       }
     }
 
-    // Vim behavior: move cursor left by 1 when exiting insert mode
+    
     
     const offset = textInput.offset
     if (offset > 0 && props.value[offset - 1] !== '\n') {
@@ -175,7 +175,7 @@ export function useVimInput(props: UseVimInputProps): VimInputState {
   function handleVimInput(rawInput: string, key: Key): void {
     const state = vimStateRef.current
     
-    // but only apply the transformed input in INSERT — NORMAL-mode command
+    
     
     const filtered = inputFilter ? inputFilter(rawInput, key) : rawInput
     const input = state.mode === 'INSERT' ? filtered : rawInput
@@ -186,7 +186,7 @@ export function useVimInput(props: UseVimInputProps): VimInputState {
       return
     }
 
-    // NOTE(keybindings): This escape handler is intentionally NOT migrated to the keybindings system.
+    
     
     
     if (key.escape && state.mode === 'INSERT') {
@@ -194,20 +194,20 @@ export function useVimInput(props: UseVimInputProps): VimInputState {
       return
     }
 
-    // Escape in NORMAL mode cancels any pending command (replace, operator, etc.)
+    
     if (key.escape && state.mode === 'NORMAL') {
       vimStateRef.current = { mode: 'NORMAL', command: { type: 'idle' } }
       return
     }
 
-    // Pass Enter to base handler regardless of mode (allows submission from NORMAL)
+    
     if (key.return) {
       textInput.onInput(input, key)
       return
     }
 
     if (state.mode === 'INSERT') {
-      // Track inserted text for dot-repeat
+      
       if (key.backspace || key.delete) {
         if (state.insertedText.length > 0) {
           vimStateRef.current = {
@@ -232,7 +232,7 @@ export function useVimInput(props: UseVimInputProps): VimInputState {
       return
     }
 
-    // In idle state, delegate arrow keys to base handler for cursor movement
+    
     
     if (
       state.command.type === 'idle' &&
@@ -248,7 +248,7 @@ export function useVimInput(props: UseVimInputProps): VimInputState {
       onDotRepeat: replayLastChange,
     }
 
-    // Backspace/Delete are only mapped in motion-expecting states. In
+    
     
     
     
@@ -276,7 +276,7 @@ export function useVimInput(props: UseVimInputProps): VimInputState {
       result.execute()
     }
 
-    // Update command state (only if execute didn't switch to INSERT)
+    
     if (vimStateRef.current.mode === 'NORMAL') {
       if (result.next) {
         vimStateRef.current = { mode: 'NORMAL', command: result.next }

@@ -8,7 +8,7 @@ export function getSecureStorage(): SecureStorage {
     return createFallbackStorage(macOsKeychainStorage, plainTextStorage)
   }
 
-  // TODO: add libsecret support for Linux
+  
 
   return plainTextStorage
 }

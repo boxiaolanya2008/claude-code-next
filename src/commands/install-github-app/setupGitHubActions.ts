@@ -27,7 +27,7 @@ async function createWorkflowFile(
     secretExists?: boolean
   },
 ): Promise<void> {
-  // Check if workflow file already exists
+  
   const checkFileResult = await execFileNoThrow('gh', [
     'api',
     `repos/${repoName}/contents/${workflowPath}`,
@@ -41,14 +41,14 @@ async function createWorkflowFile(
   }
 
   let content = workflowContent
-  if (secretName === 'CLAUDE_CODE_OAUTH_TOKEN') {
-    // For OAuth tokens, use the claude_code_oauth_token parameter
+  if (secretName === 'CLAUDE_CODE_NEXT_OAUTH_TOKEN') {
+    
     content = workflowContent.replace(
       /anthropic_api_key: \$\{\{ secrets\.ANTHROPIC_API_KEY \}\}/g,
-      `claude_code_oauth_token: \${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}`,
+      `claude_code_next_oauth_token: \${{ secrets.CLAUDE_CODE_NEXT_OAUTH_TOKEN }}`,
     )
   } else if (secretName !== 'ANTHROPIC_API_KEY') {
-    // For other custom secret names, keep using anthropic_api_key parameter
+    
     content = workflowContent.replace(
       /anthropic_api_key: \$\{\{ secrets\.ANTHROPIC_API_KEY \}\}/g,
       `anthropic_api_key: \${{ secrets.${secretName} }}`,
@@ -101,7 +101,7 @@ async function createWorkflowFile(
       '\n\nNeed help? Common issues:\n' +
       '· Permission denied → Run: gh auth refresh -h github.com -s repo,workflow\n' +
       '· Not authorized → Ensure you have admin access to the repository\n' +
-      '· For manual setup → Visit: https://github.com/anthropics/claude-code-action'
+      '· For manual setup → Visit: https://github.com/anthropics/claude-code-next-action'
 
     throw new Error(
       `Failed to create workflow file ${workflowPath}: ${createFileResult.stderr}${helpText}`,
@@ -153,7 +153,7 @@ export async function setupGitHubActions(
       )
     }
 
-    // Get default branch
+    
     const defaultBranchResult = await execFileNoThrow('gh', [
       'api',
       `repos/${repoName}`,
@@ -231,9 +231,9 @@ export async function setupGitHubActions(
 
       if (selectedWorkflows.includes('claude-review')) {
         workflows.push({
-          path: '.github/workflows/claude-code-review.yml',
+          path: '.github/workflows/claude-code-next-review.yml',
           content: CODE_REVIEW_PLUGIN_WORKFLOW_CONTENT,
-          message: 'Claude Code Review workflow',
+          message: 'Claude Code Next Review workflow',
         })
       }
 
@@ -274,7 +274,7 @@ export async function setupGitHubActions(
           '\n\nNeed help? Common issues:\n' +
           '· Permission denied → Run: gh auth refresh -h github.com -s repo\n' +
           '· Not authorized → Ensure you have admin access to the repository\n' +
-          '· For manual setup → Visit: https://github.com/anthropics/claude-code-action'
+          '· For manual setup → Visit: https://github.com/anthropics/claude-code-next-action'
 
         throw new Error(
           `Failed to set API key secret: ${setSecretResult.stderr || 'Unknown error'}${helpText}`,
@@ -285,7 +285,7 @@ export async function setupGitHubActions(
     if (!skipWorkflow && branchName) {
       updateProgress()
       
-      const compareUrl = `https://github.com/${repoName}/compare/${defaultBranch}...${branchName}?quick_pull=1&title=${encodeURIComponent(PR_TITLE)}&body=${encodeURIComponent(PR_BODY)}`
+      const compareUrl = `https:}/compare/${defaultBranch}...${branchName}?quick_pull=1&title=${encodeURIComponent(PR_TITLE)}&body=${encodeURIComponent(PR_BODY)}`
 
       await openBrowser(compareUrl)
     }

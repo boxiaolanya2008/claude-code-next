@@ -75,12 +75,12 @@ export const EnterWorktreeTool: Tool<InputSchema, Output> = buildTool({
   renderToolUseMessage,
   renderToolResultMessage,
   async call(input) {
-    // Validate not already in a worktree created by this session
+    
     if (getCurrentWorktreeSession()) {
       throw new Error('Already in a worktree session')
     }
 
-    // Resolve to main repo root so worktree creation works from within a worktree
+    
     const mainRepoRoot = findCanonicalGitRoot(getCwd())
     if (mainRepoRoot && mainRepoRoot !== getCwd()) {
       process.chdir(mainRepoRoot)

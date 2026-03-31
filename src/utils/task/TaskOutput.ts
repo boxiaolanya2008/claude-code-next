@@ -18,17 +18,6 @@ type ProgressCallback = (
   isIncomplete: boolean,
 ) => void
 
-/**
- * Single source of truth for a shell command's output.
- *
- * For bash commands (file mode): both stdout and stderr go directly to
- * a file via stdio fds — neither enters JS. Progress is extracted by
- * polling the file tail. getStderr() returns '' since stderr is
- * interleaved in the output file.
- *
- * For hooks (pipe mode): data flows through writeStdout()/writeStderr()
- * and is buffered in memory, spilling to disk if it exceeds the limit.
- */
 export class TaskOutput {
   readonly taskId: string
   readonly path: string
@@ -74,10 +63,8 @@ export class TaskOutput {
     }
   }
 
-  /**
-   * Begin polling the output file for progress. Called from React
-   * useEffect when the progress component mounts.
-   */
+  
+
   static startPolling(taskId: string): void {
     const instance = TaskOutput.#registry.get(taskId)
     if (!instance || !instance.#onProgress) {
@@ -90,10 +77,8 @@ export class TaskOutput {
     }
   }
 
-  /**
-   * Stop polling the output file. Called from React useEffect cleanup
-   * when the progress component unmounts.
-   */
+  
+
   static stopPolling(taskId: string): void {
     TaskOutput.#activePolling.delete(taskId)
     if (TaskOutput.#activePolling.size === 0 && TaskOutput.#pollInterval) {
@@ -102,10 +87,8 @@ export class TaskOutput {
     }
   }
 
-  /**
-   * Shared tick: reads the file tail for every actively-polled task.
-   * Non-async body (.then) to avoid stacking if I/O is slow.
-   */
+  
+
   static #tick(): void {
     for (const [, entry] of TaskOutput.#activePolling) {
       if (!entry.#onProgress) {
@@ -116,14 +99,14 @@ export class TaskOutput {
           if (!entry.#onProgress) {
             return
           }
-          // Always call onProgress even when content is empty, so the
+          
           
           
           if (!content) {
             entry.#onProgress('', '', entry.#totalLines, bytesTotal, false)
             return
           }
-          // Count all newlines in the tail and capture slice points for the
+          
           
           
           let pos = content.length
@@ -136,7 +119,7 @@ export class TaskOutput {
             if (lineCount === 5) n5 = pos <= 0 ? 0 : pos + 1
             if (lineCount === 100) n100 = pos <= 0 ? 0 : pos + 1
           }
-          // lineCount is exact when the whole file fits in PROGRESS_TAIL_BYTES.
+          
           
           
           const totalLines =
@@ -157,18 +140,18 @@ export class TaskOutput {
           )
         },
         () => {
-          // File may not exist yet
+          
         },
       )
     }
   }
 
-  /** Write stdout data (pipe mode only — used by hooks). */
+  
   writeStdout(data: string): void {
     this.#writeBuffered(data, false)
   }
 
-  /** Write stderr data (always piped). */
+  
   writeStderr(data: string): void {
     this.#writeBuffered(data, true)
   }
@@ -184,7 +167,7 @@ export class TaskOutput {
       return
     }
 
-    // Check if this chunk would exceed the in-memory limit
+    
     const totalMem =
       this.#stdoutBuffer.length + this.#stderrBuffer.length + data.length
     if (totalMem > this.#maxMemory) {
@@ -199,11 +182,8 @@ export class TaskOutput {
     }
   }
 
-  /**
-   * Single backward pass: count all newlines (for totalLines) and extract
-   * the last few lines as flat copies (for the CircularBuffer / progress).
-   * Only used in pipe mode (hooks). File mode uses the shared poller.
-   */
+  
+
   #updateProgress(data: string): void {
     const MAX_PROGRESS_BYTES = 4096
     const MAX_PROGRESS_LINES = 100
@@ -266,7 +246,7 @@ export class TaskOutput {
       this.#stderrBuffer = ''
     }
 
-    // Write the chunk that triggered overflow
+    
     if (stdoutChunk) {
       this.#disk.append(stdoutChunk)
     }
@@ -275,15 +255,13 @@ export class TaskOutput {
     }
   }
 
-  /**
-   * Get stdout. In file mode, reads from the output file.
-   * In pipe mode, returns the in-memory buffer or tail from CircularBuffer.
-   */
+  
+
   async getStdout(): Promise<string> {
     if (this.stdoutToFile) {
       return this.#readStdoutFromFile()
     }
-    // Pipe mode (hooks) — use in-memory data
+    
     if (this.#disk) {
       const recent = this.#recentLines.getRecent(5)
       const tail = safeJoinLines(recent, '\n')
@@ -310,7 +288,7 @@ export class TaskOutput {
       this.#outputFileRedundant = bytesTotal <= bytesRead
       return content
     } catch (err) {
-      // Surface the error instead of silently returning empty. An ENOENT here
+      
       
       
       
@@ -321,11 +299,11 @@ export class TaskOutput {
       logForDebugging(
         `TaskOutput.#readStdoutFromFile: failed to read ${this.path} (${code}): ${err}`,
       )
-      return `<bash output unavailable: output file ${this.path} could not be read (${code}). This usually means another Claude Code process in the same project deleted it during startup cleanup.>`
+      return `<bash output unavailable: output file ${this.path} could not be read (${code}). This usually means another Claude Code Next process in the same project deleted it during startup cleanup.>`
     }
   }
 
-  /** Sync getter for ExecResult.stderr */
+  
   getStderr(): string {
     if (this.#disk) {
       return ''
@@ -345,20 +323,18 @@ export class TaskOutput {
     return this.#totalBytes
   }
 
-  /**
-   * True after getStdout() when the output file was fully read.
-   * The file content is redundant (fully in ExecResult.stdout) and can be deleted.
-   */
+  
+
   get outputFileRedundant(): boolean {
     return this.#outputFileRedundant
   }
 
-  /** Total file size in bytes, set after getStdout() reads the file. */
+  
   get outputFileSize(): number {
     return this.#outputFileSize
   }
 
-  /** Force all buffered content to disk. Call when backgrounding. */
+  
   spillToDisk(): void {
     if (!this.#disk) {
       this.#spillToDisk(null, null)
@@ -369,12 +345,12 @@ export class TaskOutput {
     await this.#disk?.flush()
   }
 
-  /** Delete the output file (fire-and-forget safe). */
+  
   async deleteOutputFile(): Promise<void> {
     try {
       await unlink(this.path)
     } catch {
-      // File may already be deleted or not exist
+      
     }
   }
 

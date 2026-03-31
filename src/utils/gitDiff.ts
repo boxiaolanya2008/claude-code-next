@@ -48,7 +48,7 @@ export async function fetchGitDiff(): Promise<GitDiffResult | null> {
     return null
   }
 
-  // Quick probe: use --shortstat to get totals without loading all content.
+  
   
   
   const { stdout: shortstatOut, code: shortstatCode } = await execFileNoThrow(
@@ -60,7 +60,7 @@ export async function fetchGitDiff(): Promise<GitDiffResult | null> {
   if (shortstatCode === 0) {
     const quickStats = parseShortstat(shortstatOut)
     if (quickStats && quickStats.filesCount > MAX_FILES_FOR_DETAILS) {
-      // Too many files - return accurate totals but skip per-file details
+      
       
       return {
         stats: quickStats,
@@ -70,7 +70,7 @@ export async function fetchGitDiff(): Promise<GitDiffResult | null> {
     }
   }
 
-  // Get stats via --numstat (all uncommitted changes vs HEAD)
+  
   const { stdout: numstatOut, code: numstatCode } = await execFileNoThrow(
     gitExe(),
     ['--no-optional-locks', 'diff', 'HEAD', '--numstat'],
@@ -94,15 +94,11 @@ export async function fetchGitDiff(): Promise<GitDiffResult | null> {
     }
   }
 
-  // Return stats only - hunks are fetched on-demand via fetchGitDiffHunks()
+  
   
   return { stats, perFileStats, hunks: new Map() }
 }
 
-/**
- * Fetch git diff hunks on-demand (for DiffDialog).
- * Separated from fetchGitDiff() to avoid expensive calls during polling.
- */
 export async function fetchGitDiffHunks(): Promise<
   Map<string, StructuredPatchHunk[]>
 > {
@@ -131,12 +127,6 @@ export type NumstatResult = {
   perFileStats: Map<string, PerFileStats>
 }
 
-/**
- * Parse git diff --numstat output into stats.
- * Format: <added>\t<removed>\t<filename>
- * Binary files show '-' for counts.
- * Only stores first MAX_FILES entries in perFileStats.
- */
 export function parseGitNumstat(stdout: string): NumstatResult {
   const lines = stdout.trim().split('\n').filter(Boolean)
   let added = 0
@@ -180,15 +170,6 @@ export function parseGitNumstat(stdout: string): NumstatResult {
   }
 }
 
-/**
- * Parse unified diff output into per-file hunks.
- * Splits by "diff --git" and parses each file's hunks.
- *
- * Applies limits:
- * - MAX_FILES: stop after this many files
- * - Files >1MB: skipped entirely (not in result map)
- * - Files ≤1MB: parsed but limited to MAX_LINES_PER_FILE lines
- */
 export function parseGitDiff(
   stdout: string,
 ): Map<string, StructuredPatchHunk[]> {
@@ -199,7 +180,7 @@ export function parseGitDiff(
   const fileDiffs = stdout.split(/^diff --git /m).filter(Boolean)
 
   for (const fileDiff of fileDiffs) {
-    // Stop after MAX_FILES
+    
     if (result.size >= MAX_FILES) break
 
     
@@ -240,7 +221,7 @@ export function parseGitDiff(
         continue
       }
 
-      // Skip binary file markers and other metadata
+      
       if (
         line.startsWith('index ') ||
         line.startsWith('---') ||
@@ -254,7 +235,7 @@ export function parseGitDiff(
         continue
       }
 
-      // Add diff lines to current hunk (with line limit)
+      
       if (
         currentHunk &&
         (line.startsWith('+') ||
@@ -262,21 +243,21 @@ export function parseGitDiff(
           line.startsWith(' ') ||
           line === '')
       ) {
-        // Stop adding lines once we hit the limit
+        
         if (lineCount >= MAX_LINES_PER_FILE) {
           continue
         }
-        // Force a flat string copy to break V8 sliced string references.
         
         
         
-        // unlike slice(0) which V8 may optimize to return the same reference.
+        
+        
         currentHunk.lines.push('' + line)
         lineCount++
       }
     }
 
-    // Don't forget the last hunk
+    
     if (currentHunk) {
       fileHunks.push(currentHunk)
     }
@@ -289,13 +270,6 @@ export function parseGitDiff(
   return result
 }
 
-/**
- * Check if we're in a transient git state (merge, rebase, cherry-pick, or revert).
- * During these operations, we skip diff calculation since the working
- * tree contains incoming changes that weren't intentionally made.
- *
- * Uses fs.access to check for transient ref files, avoiding process spawns.
- */
 async function isInTransientGitState(): Promise<boolean> {
   const gitDir = await getGitDir(getCwd())
   if (!gitDir) return false
@@ -317,16 +291,10 @@ async function isInTransientGitState(): Promise<boolean> {
   return results.some(Boolean)
 }
 
-/**
- * Fetch untracked file names (no content reading).
- * Returns file paths only - they'll be displayed with a note to stage them.
- *
- * @param maxFiles Maximum number of untracked files to include
- */
 async function fetchUntrackedFiles(
   maxFiles: number,
 ): Promise<Map<string, PerFileStats> | null> {
-  // Get list of untracked files (excludes gitignored)
+  
   const { stdout, code } = await execFileNoThrow(
     gitExe(),
     ['--no-optional-locks', 'ls-files', '--others', '--exclude-standard'],
@@ -353,15 +321,8 @@ async function fetchUntrackedFiles(
   return perFileStats
 }
 
-/**
- * Parse git diff --shortstat output into stats.
- * Format: " 1648 files changed, 52341 insertions(+), 8123 deletions(-)"
- *
- * This is O(1) memory regardless of diff size - git computes totals without
- * loading all content. Used as a quick probe before expensive operations.
- */
 export function parseShortstat(stdout: string): GitDiffStats | null {
-  // Match: "N files changed" with optional ", N insertions(+)" and ", N deletions(-)"
+  
   const match = stdout.match(
     /(\d+)\s+files?\s+changed(?:,\s+(\d+)\s+insertions?\(\+\))?(?:,\s+(\d+)\s+deletions?\(-\))?/,
   )
@@ -386,14 +347,6 @@ export type ToolUseDiff = {
   repository: string | null
 }
 
-/**
- * Fetch a structured diff for a single file against the merge base with the
- * default branch. This produces a PR-like diff showing all changes since
- * the branch diverged. Falls back to diffing against HEAD if the merge base
- * cannot be determined (e.g., on the default branch itself).
- * For untracked files, generates a synthetic diff showing all additions.
- * Returns null if not in a git repo or if git commands fail.
- */
 export async function fetchSingleFileGitDiff(
   absoluteFilePath: string,
 ): Promise<ToolUseDiff | null> {
@@ -411,7 +364,7 @@ export async function fetchSingleFileGitDiff(
   )
 
   if (lsFilesCode === 0) {
-    // File is tracked - diff against merge base for PR-like view
+    
     const diffRef = await getDiffRef(gitRoot)
     const { stdout, code } = await execFileNoThrowWithCwd(
       gitExe(),
@@ -426,17 +379,12 @@ export async function fetchSingleFileGitDiff(
     }
   }
 
-  // File is untracked - generate synthetic diff
+  
   const syntheticDiff = await generateSyntheticDiff(gitPath, absoluteFilePath)
   if (!syntheticDiff) return null
   return { ...syntheticDiff, repository }
 }
 
-/**
- * Parse raw unified diff output into the structured ToolUseDiff format.
- * Extracts only the hunk content (starting from @@) as the patch,
- * and counts additions/deletions.
- */
 function parseRawDiffToToolUseDiff(
   filename: string,
   rawDiff: string,
@@ -472,16 +420,9 @@ function parseRawDiffToToolUseDiff(
   }
 }
 
-/**
- * Determine the best ref to diff against for a PR-like diff.
- * Priority:
- * 1. CLAUDE_CODE_BASE_REF env var (set externally, e.g. by CCR managed containers)
- * 2. Merge base with the default branch (best guess)
- * 3. HEAD (fallback if merge-base fails)
- */
 async function getDiffRef(gitRoot: string): Promise<string> {
   const baseBranch =
-    process.env.CLAUDE_CODE_BASE_REF || (await getDefaultBranch())
+    process.env.CLAUDE_CODE_NEXT_BASE_REF || (await getDefaultBranch())
   const { stdout, code } = await execFileNoThrowWithCwd(
     gitExe(),
     ['--no-optional-locks', 'merge-base', 'HEAD', baseBranch],

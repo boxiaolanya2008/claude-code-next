@@ -24,9 +24,6 @@ function getAvailableUpgrade(): {
   return null
 }
 
-/**
- * Get upgrade message for different contexts
- */
 export function getUpgradeMessage(context: 'warning' | 'tip'): string | null {
   const upgrade = getAvailableUpgrade()
   if (!upgrade) return null

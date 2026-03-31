@@ -47,11 +47,11 @@ export function migrateEnableAllProjectMcpServersToSettings(): void {
         projectConfig.enableAllProjectMcpServers
       fieldsToRemove.push('enableAllProjectMcpServers')
     } else if (hasEnableAll) {
-      // Already migrated, just mark for removal
+      
       fieldsToRemove.push('enableAllProjectMcpServers')
     }
 
-    // Migrate enabledMcpjsonServers if it exists
+    
     if (hasEnabledServers && projectConfig.enabledMcpjsonServers) {
       const existingEnabledServers =
         existingSettings.enabledMcpjsonServers || []
@@ -65,7 +65,7 @@ export function migrateEnableAllProjectMcpServersToSettings(): void {
       fieldsToRemove.push('enabledMcpjsonServers')
     }
 
-    // Migrate disabledMcpjsonServers if it exists
+    
     if (hasDisabledServers && projectConfig.disabledMcpjsonServers) {
       const existingDisabledServers =
         existingSettings.disabledMcpjsonServers || []
@@ -79,12 +79,12 @@ export function migrateEnableAllProjectMcpServersToSettings(): void {
       fieldsToRemove.push('disabledMcpjsonServers')
     }
 
-    // Update settings if there are any updates
+    
     if (Object.keys(updates).length > 0) {
       updateSettingsForSource('localSettings', updates)
     }
 
-    // Remove migrated fields from project config
+    
     if (
       fieldsToRemove.includes('enableAllProjectMcpServers') ||
       fieldsToRemove.includes('enabledMcpjsonServers') ||
@@ -101,12 +101,12 @@ export function migrateEnableAllProjectMcpServersToSettings(): void {
       })
     }
 
-    // Log the migration event
+    
     logEvent('tengu_migrate_mcp_approval_fields_success', {
       migratedCount: fieldsToRemove.length,
     })
   } catch (e: unknown) {
-    // Log migration failure but don't throw to avoid breaking startup
+    
     logError(e)
     logEvent('tengu_migrate_mcp_approval_fields_error', {})
   }

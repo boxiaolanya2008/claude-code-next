@@ -21,7 +21,6 @@ export const SKILL_BUDGET_CONTEXT_PERCENT = 0.01
 export const CHARS_PER_TOKEN = 4
 export const DEFAULT_CHAR_BUDGET = 8_000 
 
-// since the cap is generous enough to preserve the core use case.
 export const MAX_LISTING_DESC_CHARS = 250
 
 export function getCharBudget(contextWindowTokens?: number): number {
@@ -46,7 +45,7 @@ function getCommandDescription(cmd: Command): string {
 }
 
 function formatCommandDescription(cmd: Command): string {
-  // Debug: log if userFacingName differs from cmd.name for plugin skills
+  
   const displayName = getCommandName(cmd)
   if (
     cmd.name !== displayName &&
@@ -85,7 +84,7 @@ export function formatCommandsWithinBudget(
     return fullEntries.map(e => e.full).join('\n')
   }
 
-  // Partition into bundled (never truncated) and rest
+  
   const bundledIndices = new Set<number>()
   const restCommands: Command[] = []
   for (let i = 0; i < commands.length; i++) {
@@ -97,7 +96,7 @@ export function formatCommandsWithinBudget(
     }
   }
 
-  // Compute space used by bundled skills (full descriptions, always preserved)
+  
   const bundledChars = fullEntries.reduce(
     (sum, e, i) =>
       bundledIndices.has(i) ? sum + stringWidth(e.full) + 1 : sum,
@@ -117,7 +116,7 @@ export function formatCommandsWithinBudget(
   const maxDescLen = Math.floor(availableForDescs / restCommands.length)
 
   if (maxDescLen < MIN_DESC_LENGTH) {
-    // Extreme case: non-bundled go names-only, bundled keep descriptions
+    
     if (process.env.USER_TYPE === 'ant') {
       logEvent('tengu_skill_descriptions_truncated', {
         skill_count: commands.length,
@@ -137,7 +136,7 @@ export function formatCommandsWithinBudget(
       .join('\n')
   }
 
-  // Truncate non-bundled descriptions to fit within budget
+  
   const truncatedCount = count(
     restCommands,
     cmd => stringWidth(getCommandDescription(cmd)) > maxDescLen,
@@ -151,14 +150,14 @@ export function formatCommandsWithinBudget(
         'description_trimmed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       max_desc_length: maxDescLen,
       truncated_count: truncatedCount,
-      // Count of bundled skills included in this prompt (excludes skills with disableModelInvocation)
+      
       bundled_count: bundledIndices.size,
       bundled_chars: bundledChars,
     })
   }
   return commands
     .map((cmd, i) => {
-      // Bundled skills always get full descriptions
+      
       if (bundledIndices.has(i)) return fullEntries[i]!.full
       const description = getCommandDescription(cmd)
       return `- ${cmd.name}: ${truncate(description, maxDescLen)}`
@@ -202,8 +201,6 @@ export async function getSkillToolInfo(cwd: string): Promise<{
     includedCommands: agentCommands.length,
   }
 }
-
-// Returns the commands included in the SkillTool prompt.
 
 export function getLimitedSkillToolCommands(cwd: string): Promise<Command[]> {
   return getSkillToolCommands(cwd)

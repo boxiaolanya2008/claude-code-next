@@ -22,24 +22,20 @@ export function isTransientNetworkError(error: unknown): boolean {
     return false
   }
 
-  // Retry on network errors (no response received)
+  
   if (!error.response) {
     return true
   }
 
-  // Retry on server errors (5xx)
+  
   if (error.response.status >= 500) {
     return true
   }
 
-  // Don't retry on client errors (4xx) - they're not transient
+  
   return false
 }
 
-/**
- * Makes an axios GET request with automatic retry for transient network errors
- * Uses exponential backoff: 2s, 4s, 8s, 16s (4 retries = 5 total attempts)
- */
 export async function axiosGetWithRetry<T>(
   url: string,
   config?: AxiosRequestConfig,
@@ -57,7 +53,7 @@ export async function axiosGetWithRetry<T>(
         throw error
       }
 
-      // Don't retry if we've exhausted all retries
+      
       if (attempt >= MAX_TELEPORT_RETRIES) {
         logForDebugging(
           `Teleport request failed after ${attempt + 1} attempts: ${errorMessage(error)}`,
@@ -76,7 +72,6 @@ export async function axiosGetWithRetry<T>(
   throw lastError
 }
 
-// Types matching the actual Sessions API response from api/schemas/sessions/sessions.py
 export type SessionStatus = 'requires_action' | 'running' | 'idle' | 'archived'
 
 export type GitSource = {
@@ -175,7 +170,7 @@ export async function prepareApiRequest(): Promise<{
   const accessToken = getClaudeAIOAuthTokens()?.accessToken
   if (accessToken === undefined) {
     throw new Error(
-      'Claude Code web sessions require authentication with a Claude.ai account. API key authentication is not sufficient. Please run /login to authenticate, or check your authentication status with /status.',
+      'Claude Code Next web sessions require authentication with a Claude.ai account. API key authentication is not sufficient. Please run /login to authenticate, or check your authentication status with /status.',
     )
   }
 
@@ -187,10 +182,6 @@ export async function prepareApiRequest(): Promise<{
   return { accessToken, orgUUID }
 }
 
-/**
- * Fetches code sessions from the new Sessions API (/v1/sessions)
- * @returns Array of code sessions
- */
 export async function fetchCodeSessionsFromSessionsAPI(): Promise<
   CodeSession[]
 > {
@@ -213,16 +204,16 @@ export async function fetchCodeSessionsFromSessionsAPI(): Promise<
       throw new Error(`Failed to fetch code sessions: ${response.statusText}`)
     }
 
-    // Transform SessionResource[] to CodeSession[] format
+    
     const sessions: CodeSession[] = response.data.data.map(session => {
-      // Extract repository info from git sources
+      
       const gitSource = session.session_context.sources.find(
         (source): source is GitSource => source.type === 'git_repository',
       )
 
       let repo: CodeSession['repo'] = null
       if (gitSource?.url) {
-        // Parse GitHub URL using the existing utility function
+        
         const repoPath = parseGitHubRepository(gitSource.url)
         if (repoPath) {
           const [owner, name] = repoPath.split('/')
@@ -241,10 +232,10 @@ export async function fetchCodeSessionsFromSessionsAPI(): Promise<
       return {
         id: session.id,
         title: session.title || 'Untitled',
-        description: '', // SessionResource doesn't have description field
-        status: session.session_status as CodeSession['status'], // Map session_status to status
+        description: '', 
+        status: session.session_status as CodeSession['status'], 
         repo,
-        turns: [], // SessionResource doesn't have turns field
+        turns: [], 
         created_at: session.created_at,
         updated_at: session.updated_at,
       }
@@ -258,11 +249,6 @@ export async function fetchCodeSessionsFromSessionsAPI(): Promise<
   }
 }
 
-/**
- * Creates OAuth headers for API requests
- * @param accessToken The OAuth access token
- * @returns Headers object with Authorization, Content-Type, and anthropic-version
- */
 export function getOAuthHeaders(accessToken: string): Record<string, string> {
   return {
     Authorization: `Bearer ${accessToken}`,
@@ -271,11 +257,6 @@ export function getOAuthHeaders(accessToken: string): Record<string, string> {
   }
 }
 
-/**
- * Fetches a single session by ID from the Sessions API
- * @param sessionId The session ID to fetch
- * @returns The session resource
- */
 export async function fetchSession(
   sessionId: string,
 ): Promise<SessionResource> {
@@ -295,7 +276,7 @@ export async function fetchSession(
   })
 
   if (response.status !== 200) {
-    // Extract error message from response if available
+    
     const errorData = response.data as { error?: { message?: string } }
     const apiMessage = errorData?.error?.message
 
@@ -316,11 +297,6 @@ export async function fetchSession(
   return response.data
 }
 
-/**
- * Extracts the first branch name from a session's git repository outcomes
- * @param session The session resource to extract from
- * @returns The first branch name, or undefined if none found
- */
 export function getBranchFromSession(
   session: SessionResource,
 ): string | undefined {
@@ -331,11 +307,6 @@ export function getBranchFromSession(
   return gitOutcome?.git_info?.branches[0]
 }
 
-/**
- * Content for a remote session message.
- * Accepts a plain string or an array of content blocks (text, image, etc.)
- * following the Anthropic API messages spec.
- */
 export type RemoteMessageContent =
   | string
   | Array<{ type: string; [key: string]: unknown }>
@@ -398,12 +369,6 @@ export async function sendEventToRemoteSession(
   }
 }
 
-/**
- * Updates the title of an existing remote session via the Sessions API
- * @param sessionId The session ID to update
- * @param title The new title for the session
- * @returns Promise<boolean> True if successful, false otherwise
- */
 export async function updateSessionTitle(
   sessionId: string,
   title: string,

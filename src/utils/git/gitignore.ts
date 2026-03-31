@@ -23,20 +23,10 @@ export async function isPathGitignored(
   return code === 0
 }
 
-/**
- * Gets the path to the global gitignore file (.config/git/ignore)
- * @returns The path to the global gitignore file
- */
 export function getGlobalGitignorePath(): string {
   return join(homedir(), '.config', 'git', 'ignore')
 }
 
-/**
- * Adds a file pattern to the global gitignore file (.config/git/ignore)
- * if it's not already ignored by existing patterns in any gitignore file
- * @param filename The filename to add to gitignore
- * @param cwd The current working directory (optional)
- */
 export async function addFileGlobRuleToGitignore(
   filename: string,
   cwd: string = getCwd(),
@@ -46,21 +36,21 @@ export async function addFileGlobRuleToGitignore(
       return
     }
 
-    // First check if the pattern is already ignored by any gitignore file (including global)
+    
     const gitignoreEntry = `**/${filename}`
-    // For directory patterns (ending with /), check with a sample file inside
+    
     const testPath = filename.endsWith('/')
       ? `${filename}sample-file.txt`
       : filename
     if (await isPathGitignored(testPath, cwd)) {
-      // File is already ignored by existing patterns (local or global)
+      
       return
     }
 
-    // Use the global gitignore file in .config/git/ignore
+    
     const globalGitignorePath = getGlobalGitignorePath()
 
-    // Create the directory if it doesn't exist
+    
     const configGitDir = dirname(globalGitignorePath)
     await mkdir(configGitDir, { recursive: true })
 
@@ -68,13 +58,13 @@ export async function addFileGlobRuleToGitignore(
     try {
       const content = await readFile(globalGitignorePath, { encoding: 'utf-8' })
       if (content.includes(gitignoreEntry)) {
-        return // Pattern already exists, don't add again
+        return 
       }
       await appendFile(globalGitignorePath, `\n${gitignoreEntry}\n`)
     } catch (e: unknown) {
       const code = getErrnoCode(e)
       if (code === 'ENOENT') {
-        // Create global gitignore with entry
+        
         await writeFile(globalGitignorePath, `${gitignoreEntry}\n`, 'utf-8')
       } else {
         throw e

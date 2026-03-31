@@ -6,9 +6,6 @@ export type ReservedShortcut = {
   severity: 'error' | 'warning'
 }
 
-/**
- * Shortcuts that cannot be rebound - they are hardcoded in Claude Code.
- */
 export const NON_REBINDABLE: ReservedShortcut[] = [
   {
     key: 'ctrl+c',
@@ -63,12 +60,6 @@ export function getReservedShortcuts(): ReservedShortcut[] {
   return reserved
 }
 
-/**
- * Normalize a key string for comparison (lowercase, sorted modifiers).
- * Chords (space-separated steps like "ctrl+x ctrl+b") are normalized
- * per-step — splitting on '+' first would mangle "x ctrl" into a mainKey
- * overwritten by the next step, collapsing the chord into its last key.
- */
 export function normalizeKeyForComparison(key: string): string {
   return key.trim().split(/\s+/).map(normalizeStep).join(' ')
 }
@@ -93,7 +84,7 @@ function normalizeStep(step: string): string {
         'shift',
       ].includes(lower)
     ) {
-      // Normalize modifier names
+      
       if (lower === 'control') modifiers.push('ctrl')
       else if (lower === 'option' || lower === 'opt') modifiers.push('alt')
       else if (lower === 'command' || lower === 'cmd') modifiers.push('cmd')

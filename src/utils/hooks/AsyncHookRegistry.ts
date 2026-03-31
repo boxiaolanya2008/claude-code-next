@@ -24,7 +24,6 @@ export type PendingAsyncHook = {
   stopProgressInterval: () => void
 }
 
-// Global registry state
 const pendingHooks = new Map<string, PendingAsyncHook>()
 
 export function registerPendingAsyncHook({
@@ -300,7 +299,6 @@ export async function finalizePendingAsyncHooks(): Promise<void> {
   pendingHooks.clear()
 }
 
-// Test utility function to clear all hooks
 export function clearAllAsyncHooks(): void {
   for (const hook of pendingHooks.values()) {
     hook.stopProgressInterval()

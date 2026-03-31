@@ -14,10 +14,6 @@ export function extractToolUseBlock(
   return block
 }
 
-/**
- * Parse and validate classifier response from tool use block.
- * Returns null if parsing fails.
- */
 export function parseClassifierResponse<T extends z.ZodTypeAny>(
   toolUseBlock: Extract<BetaContentBlock, { type: 'tool_use' }>,
   schema: T,

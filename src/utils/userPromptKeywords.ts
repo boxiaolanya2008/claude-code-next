@@ -9,9 +9,6 @@ export function matchesNegativeKeyword(input: string): boolean {
   return negativePattern.test(lowerInput)
 }
 
-/**
- * Checks if input matches keep going/continuation patterns
- */
 export function matchesKeepGoingKeyword(input: string): boolean {
   const lowerInput = input.toLowerCase().trim()
 
@@ -20,7 +17,7 @@ export function matchesKeepGoingKeyword(input: string): boolean {
     return true
   }
 
-  // Match "keep going" or "go on" anywhere in the input
+  
   const keepGoingPattern = /\b(keep going|go on)\b/
   return keepGoingPattern.test(lowerInput)
 }

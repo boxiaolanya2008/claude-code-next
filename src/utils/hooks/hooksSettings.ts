@@ -27,9 +27,6 @@ export interface IndividualHookConfig {
   pluginName?: string
 }
 
-/**
- * Check if two hooks are equal (comparing only command/prompt content, not timeout)
- */
 export function isHookEqual(
   a: HookCommand | { type: 'function'; timeout?: number },
   b: HookCommand | { type: 'function'; timeout?: number },
@@ -44,7 +41,7 @@ export function isHookEqual(
     (x.if ?? '') === (y.if ?? '')
   switch (a.type) {
     case 'command':
-      // shell is part of identity: same command string with different
+      
       
       return (
         b.type === 'command' &&
@@ -59,16 +56,15 @@ export function isHookEqual(
     case 'http':
       return b.type === 'http' && a.url === b.url && sameIf(a, b)
     case 'function':
-      // Function hooks can't be compared (no stable identifier)
+      
       return false
   }
 }
 
-/** Get the display text for a hook */
 export function getHookDisplayText(
   hook: HookCommand | { type: 'callback' | 'function'; statusMessage?: string },
 ): string {
-  // Return custom status message if provided
+  
   if ('statusMessage' in hook && hook.statusMessage) {
     return hook.statusMessage
   }
@@ -92,14 +88,14 @@ export function getHookDisplayText(
 export function getAllHooks(appState: AppState): IndividualHookConfig[] {
   const hooks: IndividualHookConfig[] = []
 
-  // Check if restricted to managed hooks only
+  
   const policySettings = getSettingsForSource('policySettings')
   const restrictedToManagedOnly = policySettings?.allowManagedHooksOnly === true
 
-  // If allowManagedHooksOnly is set, don't show any hooks in the UI
+  
   
   if (!restrictedToManagedOnly) {
-    // Get hooks from all editable sources
+    
     const sources = [
       'userSettings',
       'projectSettings',
@@ -141,7 +137,7 @@ export function getAllHooks(appState: AppState): IndividualHookConfig[] {
     }
   }
 
-  // Get session hooks
+  
   const sessionId = getSessionId()
   const sessionHooks = getSessionHooks(appState, sessionId)
   for (const [event, matchers] of sessionHooks.entries()) {
@@ -176,14 +172,14 @@ export function hookSourceDescriptionDisplayString(source: HookSource): string {
     case 'localSettings':
       return 'Local settings (.claude/settings.local.json)'
     case 'pluginHook':
-      // TODO: Get the actual plugin hook file paths instead of using glob pattern
+      
       
       
       return 'Plugin hooks (~/.claude/plugins/*/hooks/hooks.json)'
     case 'sessionHook':
       return 'Session hooks (in-memory, temporary)'
     case 'builtinHook':
-      return 'Built-in hooks (registered internally by Claude Code)'
+      return 'Built-in hooks (registered internally by Claude Code Next)'
     default:
       return source as string
   }
@@ -235,7 +231,7 @@ export function sortMatchersByPriority(
   >,
   selectedEvent: HookEvent,
 ): string[] {
-  // Create a priority map based on SOURCES order (lower index = higher priority)
+  
   const sourcePriority = SOURCES.reduce(
     (acc, source, index) => {
       acc[source] = index
@@ -265,7 +261,7 @@ export function sortMatchersByPriority(
       return aHighestPriority - bHighestPriority
     }
 
-    // If same priority, sort by matcher name
+    
     return a.localeCompare(b)
   })
 }

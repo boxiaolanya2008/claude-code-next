@@ -22,7 +22,7 @@ export async function call(
   context: ToolUseContext & LocalJSXCommandContext,
   args: string,
 ): Promise<null> {
-  // Teammates cannot set their own color
+  
   if (isTeammate()) {
     onDone(
       'Cannot set color: This session is a swarm teammate. Teammate colors are assigned by the team leader.',

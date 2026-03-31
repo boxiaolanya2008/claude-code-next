@@ -19,7 +19,6 @@ interface SessionIngressError {
   }
 }
 
-// Module-level state
 const lastUuidMap: Map<string, UUID> = new Map()
 
 const MAX_RETRIES = 10
@@ -49,12 +48,6 @@ function getOrCreateSequentialAppend(sessionId: string) {
   return sequentialAppend
 }
 
-/**
- * Internal implementation of appendSessionLog with retry logic
- * Retries on transient errors (network, 5xx, 429). On 409, adopts the server's
- * last UUID and retries (handles stale state from killed process's in-flight
- * requests). Fails immediately on 401.
- */
 async function appendSessionLogImpl(
   sessionId: string,
   entry: TranscriptMessage,
@@ -83,12 +76,12 @@ async function appendSessionLogImpl(
       }
 
       if (response.status === 409) {
-        // Check if our entry was actually stored (server returned 409 but entry exists)
+        
         
         
         const serverLastUuid = response.headers['x-last-uuid']
         if (serverLastUuid === entry.uuid) {
-          // Our entry IS the last entry on server - it was stored successfully previously
+          
           lastUuidMap.set(sessionId, entry.uuid)
           logForDebugging(
             `Session entry ${entry.uuid} already present on server, recovering from stale state`,
@@ -97,7 +90,7 @@ async function appendSessionLogImpl(
           return true
         }
 
-        // Another writer (e.g. in-flight request from a killed process)
+        
         
         
         if (serverLastUuid) {
@@ -106,8 +99,8 @@ async function appendSessionLogImpl(
             `Session 409: adopting server lastUuid=${serverLastUuid} from header, retrying entry ${entry.uuid}`,
           )
         } else {
-          // Server didn't return x-last-uuid (e.g. v1 endpoint). Re-fetch
-          // the session to discover the current head of the append chain.
+          
+          
           const logs = await fetchSessionLogsFromUrl(sessionId, url, headers)
           const adoptedUuid = findLastUuid(logs)
           if (adoptedUuid) {
@@ -116,7 +109,7 @@ async function appendSessionLogImpl(
               `Session 409: re-fetched ${logs!.length} entries, adopting lastUuid=${adoptedUuid}, retrying entry ${entry.uuid}`,
             )
           } else {
-            // Can't determine server state — give up
+            
             const errorData = response.data as SessionIngressError
             const errorMessage =
               errorData.error?.message || 'Concurrent modification detected'
@@ -142,7 +135,7 @@ async function appendSessionLogImpl(
         return false 
       }
 
-      // Other 4xx (429, etc.) - retryable
+      
       logForDebugging(
         `Failed to persist session log: ${response.status} ${response.statusText}`,
       )
@@ -151,7 +144,7 @@ async function appendSessionLogImpl(
         attempt,
       })
     } catch (error) {
-      // Network errors, 5xx - retryable
+      
       const axiosError = error as AxiosError<SessionIngressError>
       logError(new Error(`Error persisting session log: ${axiosError.message}`))
       logForDiagnosticsNoPII('error', 'session_persist_fail_status', {
@@ -180,11 +173,6 @@ async function appendSessionLogImpl(
   return false
 }
 
-/**
- * Append a log entry to the session using JWT token
- * Uses optimistic concurrency control with Last-Uuid header
- * Ensures sequential execution per session to prevent race conditions
- */
 export async function appendSessionLog(
   sessionId: string,
   entry: TranscriptMessage,
@@ -206,9 +194,6 @@ export async function appendSessionLog(
   return sequentialAppend(entry, url, headers)
 }
 
-/**
- * Get all session logs for hydration
- */
 export async function getSessionLogs(
   sessionId: string,
   url: string,
@@ -224,7 +209,7 @@ export async function getSessionLogs(
   const logs = await fetchSessionLogsFromUrl(sessionId, url, headers)
 
   if (logs && logs.length > 0) {
-    // Update our lastUuid to the last entry's UUID
+    
     const lastEntry = logs.at(-1)
     if (lastEntry && 'uuid' in lastEntry && lastEntry.uuid) {
       lastUuidMap.set(sessionId, lastEntry.uuid)
@@ -234,10 +219,6 @@ export async function getSessionLogs(
   return logs
 }
 
-/**
- * Get all session logs for hydration via OAuth
- * Used for teleporting sessions from the Sessions API
- */
 export async function getSessionLogsViaOAuth(
   sessionId: string,
   accessToken: string,
@@ -253,12 +234,6 @@ export async function getSessionLogsViaOAuth(
   return result
 }
 
-/**
- * Response shape from GET /v1/code/sessions/{id}/teleport-events.
- * WorkerEvent.payload IS the Entry (TranscriptMessage struct) — the CLI
- * writes it via AddWorkerEvent, the server stores it opaque, we read it
- * back here.
- */
 type TeleportEventsResponse = {
   data: Array<{
     event_id: string
@@ -267,22 +242,11 @@ type TeleportEventsResponse = {
     payload: Entry | null
     created_at: string
   }>
-  // Unset when there are no more pages — this IS the end-of-stream
-  // signal (no separate has_more field).
+  
+  
   next_cursor?: string
 }
 
-/**
- * Get worker events (transcript) via the CCR v2 Sessions API. Replaces
- * getSessionLogsViaOAuth once session-ingress is retired.
- *
- * The server dispatches per-session: Spanner for v2-native sessions,
- * threadstore for pre-backfill session_* IDs. The cursor is opaque to us —
- * echo it back until next_cursor is unset.
- *
- * Paginated (500/page default, server max 1000). session-ingress's one-shot
- * 50k is gone; we loop.
- */
 export async function getTeleportEvents(
   sessionId: string,
   accessToken: string,
@@ -327,9 +291,9 @@ export async function getTeleportEvents(
     }
 
     if (response.status === 404) {
-      // 404 on page 0 is ambiguous during the migration window:
-      //   (a) Session genuinely not found (not in Spanner AND not in
-      //       threadstore) — nothing to fetch.
+      
+      
+      
       
       
       
@@ -375,7 +339,7 @@ export async function getTeleportEvents(
       return null
     }
 
-    // payload IS the Entry. null payload happens for threadstore non-generic
+    
     
     for (const ev of data) {
       if (ev.payload !== null) {
@@ -395,8 +359,8 @@ export async function getTeleportEvents(
   }
 
   if (pages >= maxPages) {
-    // Don't fail — return what we have. Better to teleport with a
-    // truncated transcript than not at all.
+    
+    
     logError(
       new Error(`Teleport events hit page cap (${maxPages}) for ${sessionId}`),
     )
@@ -409,9 +373,6 @@ export async function getTeleportEvents(
   return all
 }
 
-/**
- * Shared implementation for fetching session logs from a URL
- */
 async function fetchSessionLogsFromUrl(
   sessionId: string,
   url: string,
@@ -430,7 +391,7 @@ async function fetchSessionLogsFromUrl(
     if (response.status === 200) {
       const data = response.data
 
-      // Validate the response structure
+      
       if (!data || typeof data !== 'object' || !Array.isArray(data.loglines)) {
         logError(
           new Error(
@@ -479,10 +440,6 @@ async function fetchSessionLogsFromUrl(
   }
 }
 
-/**
- * Walk backward through entries to find the last one with a uuid.
- * Some entry types (SummaryMessage, TagMessage) don't have one.
- */
 function findLastUuid(logs: Entry[] | null): UUID | undefined {
   if (!logs) {
     return undefined
@@ -491,18 +448,11 @@ function findLastUuid(logs: Entry[] | null): UUID | undefined {
   return entry && 'uuid' in entry ? (entry.uuid as UUID) : undefined
 }
 
-/**
- * Clear cached state for a session
- */
 export function clearSession(sessionId: string): void {
   lastUuidMap.delete(sessionId)
   sequentialAppendBySession.delete(sessionId)
 }
 
-/**
- * Clear all cached session state (all sessions).
- * Use this on /clear to free sub-agent session entries.
- */
 export function clearAllSessions(): void {
   lastUuidMap.clear()
   sequentialAppendBySession.clear()
