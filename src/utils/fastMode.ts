@@ -169,9 +169,8 @@ export function isFastModeSupportedByModel(
   if (!isFastModeEnabled()) {
     return false
   }
-  const model = modelSetting ?? getDefaultMainLoopModelSetting()
-  const parsedModel = parseUserSpecifiedModel(model)
-  return parsedModel.toLowerCase().includes('opus-4-6')
+  // 让所有模型都支持快速模式
+  return true
 }
 
 export type FastModeRuntimeState =
