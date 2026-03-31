@@ -4,9 +4,6 @@ import { useAppState, useSetAppState } from '../../state/AppState.js';
 import { getClaudeAIOAuthTokens, saveOAuthTokensIfNeeded } from '../../utils/auth.js';
 
 export async function call(onDone, context) {
-  // 设置默认用户为内部用户
-  process.env.USER_TYPE = 'ant';
-  
   // 自动订阅到max计划
   const tokens = getClaudeAIOAuthTokens();
   if (tokens) {
