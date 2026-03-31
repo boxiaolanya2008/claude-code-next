@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sed 's/.*\\\\.//')",
+      "Bash(grep -v \":0$\")",
+      "Bash(node:*)",
+      "Bash(grep:*)",
+      "Bash(xxd)",
+      "Bash(find:*)"
+    ]
+  }
+}

@@ -1,0 +1,193 @@
+
+import { CONTEXT_1M_BETA_HEADER } from '../constants/betas.js'
+import { getGlobalConfig } from './config.js'
+import { isEnvTruthy } from './envUtils.js'
+import { getCanonicalName } from './model/model.js'
+import { getModelCapability } from './model/modelCapabilities.js'
+
+export const MODEL_CONTEXT_WINDOW_DEFAULT = 200_000
+
+export const COMPACT_MAX_OUTPUT_TOKENS = 20_000
+
+const MAX_OUTPUT_TOKENS_DEFAULT = 32_000
+const MAX_OUTPUT_TOKENS_UPPER_LIMIT = 64_000
+
+export const CAPPED_DEFAULT_MAX_TOKENS = 8_000
+export const ESCALATED_MAX_TOKENS = 64_000
+
+export function is1mContextDisabled(): boolean {
+  return isEnvTruthy(process.env.CLAUDE_CODE_NEXT_DISABLE_1M_CONTEXT)
+}
+
+export function has1mContext(model: string): boolean {
+  if (is1mContextDisabled()) {
+    return false
+  }
+  return /\[1m\]/i.test(model)
+}
+
+export function modelSupports1M(model: string): boolean {
+  if (is1mContextDisabled()) {
+    return false
+  }
+  const canonical = getCanonicalName(model)
+  return canonical.includes('claude-sonnet-4') || canonical.includes('opus-4-6')
+}
+
+export function getContextWindowForModel(
+  model: string,
+  betas?: string[],
+): number {
+  
+  
+  
+  
+  if (
+    process.env.USER_TYPE === 'ant' &&
+    process.env.CLAUDE_CODE_NEXT_MAX_CONTEXT_TOKENS
+  ) {
+    const override = parseInt(process.env.CLAUDE_CODE_NEXT_MAX_CONTEXT_TOKENS, 10)
+    if (!isNaN(override) && override > 0) {
+      return override
+    }
+  }
+
+  
+  if (has1mContext(model)) {
+    return 1_000_000
+  }
+
+  const cap = getModelCapability(model)
+  if (cap?.max_input_tokens && cap.max_input_tokens >= 100_000) {
+    if (
+      cap.max_input_tokens > MODEL_CONTEXT_WINDOW_DEFAULT &&
+      is1mContextDisabled()
+    ) {
+      return MODEL_CONTEXT_WINDOW_DEFAULT
+    }
+    return cap.max_input_tokens
+  }
+
+  if (betas?.includes(CONTEXT_1M_BETA_HEADER) && modelSupports1M(model)) {
+    return 1_000_000
+  }
+  if (getSonnet1mExpTreatmentEnabled(model)) {
+    return 1_000_000
+  }
+  if (process.env.USER_TYPE === 'ant') {
+    const antModel = resolveAntModel(model)
+    if (antModel?.contextWindow) {
+      return antModel.contextWindow
+    }
+  }
+  return MODEL_CONTEXT_WINDOW_DEFAULT
+}
+
+export function getSonnet1mExpTreatmentEnabled(model: string): boolean {
+  if (is1mContextDisabled()) {
+    return false
+  }
+  
+  if (has1mContext(model)) {
+    return false
+  }
+  if (!getCanonicalName(model).includes('sonnet-4-6')) {
+    return false
+  }
+  return getGlobalConfig().clientDataCache?.['coral_reef_sonnet'] === 'true'
+}
+
+export function calculateContextPercentages(
+  currentUsage: {
+    input_tokens: number
+    cache_creation_input_tokens: number
+    cache_read_input_tokens: number
+  } | null,
+  contextWindowSize: number,
+): { used: number | null; remaining: number | null } {
+  if (!currentUsage) {
+    return { used: null, remaining: null }
+  }
+
+  const totalInputTokens =
+    currentUsage.input_tokens +
+    currentUsage.cache_creation_input_tokens +
+    currentUsage.cache_read_input_tokens
+
+  const usedPercentage = Math.round(
+    (totalInputTokens / contextWindowSize) * 100,
+  )
+  const clampedUsed = Math.min(100, Math.max(0, usedPercentage))
+
+  return {
+    used: clampedUsed,
+    remaining: 100 - clampedUsed,
+  }
+}
+
+export function getModelMaxOutputTokens(model: string): {
+  default: number
+  upperLimit: number
+} {
+  let defaultTokens: number
+  let upperLimit: number
+
+  if (process.env.USER_TYPE === 'ant') {
+    const antModel = resolveAntModel(model.toLowerCase())
+    if (antModel) {
+      defaultTokens = antModel.defaultMaxTokens ?? MAX_OUTPUT_TOKENS_DEFAULT
+      upperLimit = antModel.upperMaxTokensLimit ?? MAX_OUTPUT_TOKENS_UPPER_LIMIT
+      return { default: defaultTokens, upperLimit }
+    }
+  }
+
+  const m = getCanonicalName(model)
+
+  if (m.includes('opus-4-6')) {
+    defaultTokens = 64_000
+    upperLimit = 128_000
+  } else if (m.includes('sonnet-4-6')) {
+    defaultTokens = 32_000
+    upperLimit = 128_000
+  } else if (
+    m.includes('opus-4-5') ||
+    m.includes('sonnet-4') ||
+    m.includes('haiku-4')
+  ) {
+    defaultTokens = 32_000
+    upperLimit = 64_000
+  } else if (m.includes('opus-4-1') || m.includes('opus-4')) {
+    defaultTokens = 32_000
+    upperLimit = 32_000
+  } else if (m.includes('claude-3-opus')) {
+    defaultTokens = 4_096
+    upperLimit = 4_096
+  } else if (m.includes('claude-3-sonnet')) {
+    defaultTokens = 8_192
+    upperLimit = 8_192
+  } else if (m.includes('claude-3-haiku')) {
+    defaultTokens = 4_096
+    upperLimit = 4_096
+  } else if (m.includes('3-5-sonnet') || m.includes('3-5-haiku')) {
+    defaultTokens = 8_192
+    upperLimit = 8_192
+  } else if (m.includes('3-7-sonnet')) {
+    defaultTokens = 32_000
+    upperLimit = 64_000
+  } else {
+    defaultTokens = MAX_OUTPUT_TOKENS_DEFAULT
+    upperLimit = MAX_OUTPUT_TOKENS_UPPER_LIMIT
+  }
+
+  const cap = getModelCapability(model)
+  if (cap?.max_tokens && cap.max_tokens >= 4_096) {
+    upperLimit = cap.max_tokens
+    defaultTokens = Math.min(defaultTokens, upperLimit)
+  }
+
+  return { default: defaultTokens, upperLimit }
+}
+
+export function getMaxThinkingTokensForModel(model: string): number {
+  return getModelMaxOutputTokens(model).upperLimit - 1
+}

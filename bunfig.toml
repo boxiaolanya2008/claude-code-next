@@ -1,0 +1,11 @@
+[build]
+target = "bun"
+minify = false
+
+[install]
+registry = "https://registry.npmjs.org"
+
+[resolve]
+alias = {
+  "bun:bundle" = "./bun-bundle-mock.js"
+}
