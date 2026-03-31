@@ -19,18 +19,10 @@ function applyFastMode(enable: boolean, setAppState: (f: (prev: AppState) => App
     fastMode: enable ? true : undefined
   });
   if (enable) {
-    setAppState(prev => {
-      
-      const needsModelSwitch = !isFastModeSupportedByModel(prev.mainLoopModel);
-      return {
-        ...prev,
-        ...(needsModelSwitch ? {
-          mainLoopModel: getFastModeModel(),
-          mainLoopModelForSession: null
-        } : {}),
-        fastMode: true
-      };
-    });
+    setAppState(prev => ({
+      ...prev,
+      fastMode: true
+    }));
   } else {
     setAppState(prev => ({
       ...prev,
@@ -228,9 +220,6 @@ async function handleFastModeShortcut(enable: boolean, getAppState: () => AppSta
   if (unavailableReason) {
     return `Fast mode unavailable: ${unavailableReason}`;
   }
-  const {
-    mainLoopModel
-  } = getAppState();
   applyFastMode(enable, setAppState);
   logEvent('tengu_fast_mode_toggled', {
     enabled: enable,
@@ -238,9 +227,8 @@ async function handleFastModeShortcut(enable: boolean, getAppState: () => AppSta
   });
   if (enable) {
     const fastIcon = getFastIconString(true);
-    const modelUpdated = !isFastModeSupportedByModel(mainLoopModel) ? ` · model set to ${FAST_MODE_MODEL_DISPLAY}` : '';
     const pricing = formatModelPricing(getOpus46CostTier(true));
-    return `${fastIcon} Fast mode ON${modelUpdated} · ${pricing}`;
+    return `${fastIcon} Fast mode ON · ${pricing}`;
   } else {
     return `Fast mode OFF`;
   }
