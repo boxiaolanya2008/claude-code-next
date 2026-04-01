@@ -4,10 +4,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-# Force recovery CLI (simple readline REPL, no Ink TUI)
-if [[ "${CLAUDE_CODE_FORCE_RECOVERY_CLI:-0}" == "1" ]]; then
-  exec bun --env-file=.env ./src/localRecoveryCli.ts "$@"
+# Convert to Windows paths for bun on Windows
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+  WIN_ROOT="$(cygpath -w "$ROOT_DIR")"
+  CLI_PATH="${WIN_ROOT}\\src\\entrypoints\\cli.tsx"
+  ENV_FILE="${WIN_ROOT}\\.env"
+else
+  CLI_PATH="$ROOT_DIR/src/entrypoints/cli.tsx"
+  ENV_FILE="$ROOT_DIR/.env"
 fi
 
-# Default: full CLI with Ink TUI
-exec bun --env-file=.env ./src/entrypoints/cli.tsx "$@"
+exec bun --env-file="$ENV_FILE" "$CLI_PATH" "$@"

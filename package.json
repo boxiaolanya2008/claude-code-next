@@ -1,7 +1,7 @@
 {
   "name": "claude-code-next",
   "version": "2026.04.01",
-  "private": true,
+  "private": false,
   "type": "module",
   "bin": {
     "claude-code-next": "./bin/claude-code-next"
