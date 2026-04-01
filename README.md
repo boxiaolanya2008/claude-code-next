@@ -1,4 +1,4 @@
-# Claude Code Haha
+# Claude Code Next
 
 <p align="right"><strong>中文</strong> | <a href="./README.en.md">English</a></p>
 
@@ -115,16 +115,16 @@ CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 
 ```bash
 # 交互 TUI 模式（完整界面）
-./bin/claude-haha
+./bin/claude-code-next
 
 # 无头模式（单次问答）
-./bin/claude-haha -p "your prompt here"
+./bin/claude-code-next -p "your prompt here"
 
 # 管道输入
-echo "explain this code" | ./bin/claude-haha -p
+echo "explain this code" | ./bin/claude-code-next -p
 
 # 查看所有选项
-./bin/claude-haha --help
+./bin/claude-code-next --help
 ```
 
 ---
@@ -151,7 +151,7 @@ echo "explain this code" | ./bin/claude-haha -p
 如果完整 TUI 出现问题，可以使用简化版 readline 交互模式：
 
 ```bash
-CLAUDE_CODE_FORCE_RECOVERY_CLI=1 ./bin/claude-haha
+CLAUDE_CODE_FORCE_RECOVERY_CLI=1 ./bin/claude-code-next
 ```
 
 ---
@@ -174,7 +174,7 @@ CLAUDE_CODE_FORCE_RECOVERY_CLI=1 ./bin/claude-haha
 ## 项目结构
 
 ```
-bin/claude-haha          # 入口脚本
+bin/claude-code-next     # 入口脚本
 preload.ts               # Bun preload（设置 MACRO 全局变量）
 .env.example             # 环境变量模板
 src/

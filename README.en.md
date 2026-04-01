@@ -1,4 +1,4 @@
-# Claude Code Haha
+# Claude Code Next
 
 <p align="right"><a href="./README.md">中文</a> | <strong>English</strong></p>
 
@@ -115,16 +115,16 @@ CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 
 ```bash
 # Interactive TUI mode (full interface)
-./bin/claude-haha
+./bin/claude-code-next
 
 # Headless mode (single prompt)
-./bin/claude-haha -p "your prompt here"
+./bin/claude-code-next -p "your prompt here"
 
 # Pipe input
-echo "explain this code" | ./bin/claude-haha -p
+echo "explain this code" | ./bin/claude-code-next -p
 
 # Show all options
-./bin/claude-haha --help
+./bin/claude-code-next --help
 ```
 
 ---
@@ -151,7 +151,7 @@ echo "explain this code" | ./bin/claude-haha -p
 If the full TUI has issues, use the simplified readline-based interaction mode:
 
 ```bash
-CLAUDE_CODE_FORCE_RECOVERY_CLI=1 ./bin/claude-haha
+CLAUDE_CODE_FORCE_RECOVERY_CLI=1 ./bin/claude-code-next
 ```
 
 ---
@@ -174,7 +174,7 @@ The leaked source could not run directly. This repository mainly fixes the follo
 ## Project Structure
 
 ```text
-bin/claude-haha          # Entry script
+bin/claude-code-next     # Entry script
 preload.ts               # Bun preload (sets MACRO globals)
 .env.example             # Environment variable template
 src/

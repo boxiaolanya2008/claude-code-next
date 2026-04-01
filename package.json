@@ -1,14 +1,14 @@
 {
-  "name": "claude-code-local",
-  "version": "999.0.0-local",
+  "name": "claude-code-next",
+  "version": "V2026.04.01",
   "private": true,
   "type": "module",
   "bin": {
-    "claude-haha": "./bin/claude-haha"
+    "claude-code-next": "./bin/claude-code-next"
   },
   "scripts": {
-    "claude-haha": "bun run ./bin/claude-haha",
-    "start": "bun run ./bin/claude-haha"
+    "claude-code-next": "bun run ./bin/claude-code-next",
+    "start": "bun run ./bin/claude-code-next"
   },
   "dependencies": {
     "@anthropic-ai/sandbox-runtime": "^0.0.44",
