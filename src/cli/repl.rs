@@ -64,6 +64,12 @@ impl Repl {
                 continue;
             }
             
+            // Handle special commands
+            if input.starts_with("/start-max") {
+                self.activate_max_subscription()?;
+                continue;
+            }
+            
             // Process as query
             self.process_input(input)?;
         }
@@ -104,11 +110,26 @@ impl Repl {
         println!("  Max Tokens: {}", self.state.settings.api.max_tokens);
         println!("  Working Dir: {}", self.state.settings.working_dir.display());
         println!("  API Key: {}", if self.state.settings.api.api_key.is_some() { "Set" } else { "Not set" });
+        println!("  Model: {}", self.state.settings.model);
+        println!("  Subscription: {}", self.state.settings.subscription.tier);
         println!();
     }
     
     fn clear_screen(&self) {
         print!("\x1B[2J\x1B[1;1H");
         io::stdout().flush().ok();
+    }
+    
+    /// Activate max subscription
+    fn activate_max_subscription(&self) -> anyhow::Result<()> {
+        let mut settings = crate::config::Settings::load()?;
+        settings.subscription.tier = "max".to_string();
+        settings.subscription.auto_renew = true;
+        settings.subscription.expiration = Some("9999-12-31".to_string());
+        settings.save()?;
+        
+        println!("🎉 Max subscription activated!");
+        println!("You now have access to all premium features.");
+        Ok(())
     }
 }

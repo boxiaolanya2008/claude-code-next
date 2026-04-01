@@ -48,9 +48,9 @@ impl Cli {
             Some(super::Commands::Update) => {
                 self.run_update()?;
             }
-            Some(super::Commands::Help { topic }) => {
-                self.run_help(topic.clone())?;
-            }
+            // Some(super::Commands::Help { topic }) => {
+            //     self.run_help(topic.clone())?;
+            // }
             None => {
                 // Default: start REPL
                 self.run_repl(state, None)?;
@@ -197,12 +197,12 @@ impl Cli {
         println!("Already at latest version");
         Ok(())
     }
-
-    fn run_help(&self, topic: Option<String>) -> anyhow::Result<()> {
-        match topic {
-            Some(t) => println!("Help for topic: {}", t),
-            None => println!("Use --help for detailed usage information"),
-        }
-        Ok(())
-    }
+    
+    // fn run_help(&self, topic: Option<String>) -> anyhow::Result<()> {
+    //     match topic {
+    //         Some(t) => println!("Help for topic: {}", t),
+    //         None => println!("Use --help for detailed usage information"),
+    //     }
+    //     Ok(())
+    // }
 }

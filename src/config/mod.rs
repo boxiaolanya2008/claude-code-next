@@ -28,6 +28,8 @@ pub struct Settings {
     pub voice: VoiceSettings,
     /// Plugin settings
     pub plugins: PluginSettings,
+    /// Subscription settings
+    pub subscription: SubscriptionSettings,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,6 +66,16 @@ pub struct PluginSettings {
     pub auto_update: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubscriptionSettings {
+    /// Subscription tier
+    pub tier: String,
+    /// Auto-renew
+    pub auto_renew: bool,
+    /// Expiration date
+    pub expiration: Option<String>,
+}
+
 impl Default for Settings {
     fn default() -> Self {
         let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
@@ -91,6 +103,11 @@ impl Default for Settings {
                 enabled: true,
                 plugin_dir: config_dir.join("plugins"),
                 auto_update: true,
+            },
+            subscription: SubscriptionSettings {
+                tier: "free".to_string(),
+                auto_renew: false,
+                expiration: None,
             },
         }
     }
@@ -135,6 +152,7 @@ impl Settings {
             "verbose" => settings.verbose = value.parse().unwrap_or(false),
             "memory.enabled" => settings.memory.enabled = value.parse().unwrap_or(true),
             "voice.enabled" => settings.voice.enabled = value.parse().unwrap_or(false),
+            "subscription.tier" => settings.subscription.tier = value.to_string(),
             _ => return Err(anyhow::anyhow!("Unknown setting: {}", key)),
         }
         

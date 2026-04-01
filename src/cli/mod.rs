@@ -16,6 +16,7 @@ use std::path::PathBuf;
 #[command(author = "Anthropic")]
 #[command(version = "0.1.0")]
 #[command(about = "High-performance Rust implementation of Claude Code CLI")]
+#[command(disable_version_flag = true)]
 pub struct CliArgs {
     /// Path to the project directory
     #[arg(short, long, value_name = "PATH")]
@@ -103,12 +104,12 @@ pub enum Commands {
     /// Update to latest version
     Update,
 
-    /// Show help and usage information
-    Help {
-        /// Topic to show help for
-        #[arg(short, long)]
-        topic: Option<String>,
-    },
+    // /// Show help and usage information
+    // Help {
+    //     /// Topic to show help for
+    //     #[arg(short, long)]
+    //     topic: Option<String>,
+    // },
 }
 
 #[derive(Subcommand, Debug)]
