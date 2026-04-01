@@ -39,7 +39,14 @@
       "Bash(cmd.exe //c \"C:\\\\\\\\Users\\\\\\\\Administrator\\\\\\\\.bun\\\\\\\\bin\\\\\\\\bun.exe --version\" 2>&1)",
       "Bash(cmd.exe //c \"cd /d C:\\\\Users\\\\Administrator\\\\Desktop\\\\claude-code && C:\\\\Users\\\\Administrator\\\\.bun\\\\bin\\\\bun.exe --env-file=.env src\\\\entrypoints\\\\cli.tsx --version\" 2>&1)",
       "Bash(cmd.exe //c \"cd /d C:\\\\Users\\\\Administrator\\\\Desktop\\\\claude-code && start.bat --version\" 2>&1)",
-      "Bash(cmd.exe //c \"C:\\\\Users\\\\Administrator\\\\Desktop\\\\claude-code\\\\start.bat --version\" 2>&1)"
+      "Bash(cmd.exe //c \"C:\\\\Users\\\\Administrator\\\\Desktop\\\\claude-code\\\\start.bat --version\" 2>&1)",
+      "Bash(cp ~/.claude/skills/coding-architecture/SKILL.md .claude/skills/coding-architecture/SKILL.md)",
+      "Bash(cp ~/.claude/skills/thinking-architecture/SKILL.md .claude/skills/thinking-architecture/SKILL.md)",
+      "Bash(cp ~/.claude/skills/debugging-architecture/SKILL.md .claude/skills/debugging-architecture/SKILL.md)",
+      "Bash(wc -l ~/.claude/skills/*/SKILL.md)",
+      "Bash(wc -l /c/Users/Administrator/Desktop/claude-code/src/*.ts)",
+      "Bash(wc -l /c/Users/Administrator/Desktop/claude-code/src/**/*.ts)",
+      "Bash(find C:/Users/Administrator/Desktop/claude-code -name *.test.* -o -name *.spec.* -o -name __tests__ -type d)"
     ]
   }
 }

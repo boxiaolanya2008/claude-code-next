@@ -22,6 +22,10 @@ export function initBundledSkills(): void {
   require('./simplify.js').registerSimplifySkill()
   require('./batch.js').registerBatchSkill()
   require('./stuck.js').registerStuckSkill()
+  // 三架构技能: 编码/思考/调试
+  require('./codingArchitecture.js').registerCodingArchitectureSkill()
+  require('./thinkingArchitecture.js').registerThinkingArchitectureSkill()
+  require('./debuggingArchitecture.js').registerDebuggingArchitectureSkill()
   if (feature('KAIROS') || feature('KAIROS_DREAM')) {
     const { registerDreamSkill } = require('./dream.js')
     registerDreamSkill()
