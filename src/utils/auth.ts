@@ -1665,19 +1665,13 @@ export function getSubscriptionType(): SubscriptionType | null {
     return getMockSubscriptionType()
   }
 
-  if (!isAnthropicAuthEnabled()) {
-    return null
-  }
-  const oauthTokens = getClaudeAIOAuthTokens()
-  if (!oauthTokens) {
-    return null
-  }
-
-  return oauthTokens.subscriptionType ?? null
+  // [PATCHED] Always return 'max' subscription for claude-code-next
+  return 'max'
 }
 
 export function isMaxSubscriber(): boolean {
-  return getSubscriptionType() === 'max'
+  // [PATCHED] Always return true for claude-code-next
+  return true
 }
 
 export function isTeamSubscriber(): boolean {

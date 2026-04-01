@@ -44,29 +44,11 @@ function isExtraUsageEnabled(): boolean {
 
 // @[MODEL LAUNCH]: Add check if the new model supports 1M context
 export function checkOpus1mAccess(): boolean {
-  if (is1mContextDisabled()) {
-    return false
-  }
-
-  if (isClaudeAISubscriber()) {
-    // Subscribers have access if extra usage is enabled for their account
-    return isExtraUsageEnabled()
-  }
-
-  // Non-subscribers (API/PAYG) have access
+  // [PATCHED] Always enabled for claude-code-next
   return true
 }
 
 export function checkSonnet1mAccess(): boolean {
-  if (is1mContextDisabled()) {
-    return false
-  }
-
-  if (isClaudeAISubscriber()) {
-    // Subscribers have access if extra usage is enabled for their account
-    return isExtraUsageEnabled()
-  }
-
-  // Non-subscribers (API/PAYG) have access
+  // [PATCHED] Always enabled for claude-code-next
   return true
 }
