@@ -639,6 +639,10 @@ export const getSkillDirCommands = memoize(
   async (cwd: string): Promise<Command[]> => {
     const userSkillsDir = join(getClaudeConfigHomeDir(), 'skills')
     const managedSkillsDir = join(getManagedFilePath(), '.claude', 'skills')
+    // [PATCHED] Auto-load skills from %APPDATA%/.claude/skills/ on Windows
+    const appDataSkillsDir = process.platform === 'win32'
+      ? join(process.env.APPDATA || '', '.claude', 'skills')
+      : undefined
     const projectSkillsDirs = getProjectDirsUpToHome('skills', cwd)
 
     logForDebugging(
@@ -679,6 +683,7 @@ export const getSkillDirCommands = memoize(
     const [
       managedSkills,
       userSkills,
+      appDataSkills,
       projectSkillsNested,
       additionalSkillsNested,
       legacyCommands,
@@ -688,6 +693,10 @@ export const getSkillDirCommands = memoize(
         : loadSkillsFromSkillsDir(managedSkillsDir, 'policySettings'),
       isSettingSourceEnabled('userSettings') && !skillsLocked
         ? loadSkillsFromSkillsDir(userSkillsDir, 'userSettings')
+        : Promise.resolve([]),
+      // [PATCHED] Load skills from %APPDATA%/.claude/skills/ on Windows
+      appDataSkillsDir && !skillsLocked
+        ? loadSkillsFromSkillsDir(appDataSkillsDir, 'userSettings')
         : Promise.resolve([]),
       projectSettingsEnabled
         ? Promise.all(
@@ -717,6 +726,7 @@ export const getSkillDirCommands = memoize(
     const allSkillsWithPaths = [
       ...managedSkills,
       ...userSkills,
+      ...appDataSkills,
       ...projectSkillsNested.flat(),
       ...additionalSkillsNested.flat(),
       ...legacyCommands,
