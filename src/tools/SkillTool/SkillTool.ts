@@ -1,4 +1,4 @@
-import { feature } from "../utils/bundle-mock.ts"
+import { feature } from "../../utils/bundle-mock.ts"
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import uniqBy from 'lodash-es/uniqBy.js'
 import { dirname } from 'path'

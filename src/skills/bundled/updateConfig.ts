@@ -27,7 +27,7 @@ Settings load in order: user → project → local (later overrides earlier).
 {
   "permissions": {
     "allow": ["Bash(npm:*)", "Edit(.claude)", "Read"],
-    "deny": ["Bash(rm -rf:*)"],
+    "deny": ["Bash(rm -rf:*)",
     "ask": ["Write(/etc/*)"],
     "defaultMode": "default" | "plan" | "acceptEdits" | "dontAsk",
     "additionalDirectories": ["/extra/dir"]
@@ -212,7 +212,7 @@ Hooks can return JSON to control behavior:
       "matcher": "Write|Edit",
       "hooks": [{
         "type": "command",
-        "command": "jq -r '.tool_response.filePath // .tool_input.file_path' | { read -r f; prettier --write \\"$f\\"; } 2>/dev/null || true"
+        "command": "jq -r '.tool_response.filePath // .tool_input.file_path' | { read -r f; prettier --write \"$f\"; } 2>/dev/null || true"
       }]
     }]
   }
@@ -255,7 +255,7 @@ echo '{"systemMessage": "Session complete!"}'
     }
   ]
 }
-
+\`\`\`
 `
 
 const HOOK_VERIFICATION_FLOW = `## Constructing a Hook (with verification)
@@ -361,7 +361,7 @@ When adding to permission arrays or hook arrays, **merge with existing**, don't 
     "allow": [
       "Bash(git:*)",      // existing
       "Edit(.claude)",    // existing
-      "Bash(npm:*)"       // new
+      "Bash(npm:*)",       // new
     ]
   }
 }
@@ -390,7 +390,7 @@ User: "Format my code after Claude writes it"
       "matcher": "Write|Edit",
       "hooks": [{
         "type": "command",
-        "command": "jq -r '.tool_response.filePath // .tool_input.file_path' | { read -r f; prettier --write \\"$f\\"; } 2>/dev/null || true"
+        "command": "jq -r '.tool_response.filePath // .tool_input.file_path' | { read -r f; prettier --write \"$f\"; } 2>/dev/null || true"
       }]
     }]
   }
@@ -442,7 +442,7 @@ export function registerUpdateConfigSkill(): void {
     allowedTools: ['Read'],
     userInvocable: true,
     async getPromptForCommand(args) {
-      if (args.startsWith('[hooks-only]')) {
+      if (args?.startsWith('[hooks-only]')) {
         const req = args.slice('[hooks-only]'.length).trim()
         let prompt = HOOKS_DOCS + '\n\n' + HOOK_VERIFICATION_FLOW
         if (req) {
@@ -451,7 +451,6 @@ export function registerUpdateConfigSkill(): void {
         return [{ type: 'text', text: prompt }]
       }
 
-      
       const jsonSchema = generateSettingsSchema()
 
       let prompt = UPDATE_CONFIG_PROMPT
@@ -462,49 +461,6 @@ export function registerUpdateConfigSkill(): void {
       }
 
       return [{ type: 'text', text: prompt }]
-    },
-  })
-}
- && npm test || true"
-      }]
-    }]
-  }
-}
-\`\`\`
-`
-
-const HOOK_VERIFICATION_FLOW =  STR45935 
-
-const UPDATE_CONFIG_PROMPT =  STR45936 
-
-export function registerUpdateConfigSkill(): void {
-  registerBundledSkill({
-    name:  STR45937 ,
-    description:
-       STR45938 ,
-    allowedTools: [ STR45939 ],
-    userInvocable: true,
-    async getPromptForCommand(args) {
-      if (args.startsWith( STR45940 )) {
-        const req = args.slice( STR45941 .length).trim()
-        let prompt = HOOKS_DOCS +  STR45942  + HOOK_VERIFICATION_FLOW
-        if (req) {
-          prompt +=  STR45943 
-        }
-        return [{ type:  STR45944 , text: prompt }]
-      }
-
-      
-      const jsonSchema = generateSettingsSchema()
-
-      let prompt = UPDATE_CONFIG_PROMPT
-      prompt +=  STR45945 
-
-      if (args) {
-        prompt +=  STR45946 
-      }
-
-      return [{ type:  STR45947 , text: prompt }]
     },
   })
 }

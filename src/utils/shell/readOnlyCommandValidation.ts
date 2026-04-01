@@ -929,7 +929,7 @@ function ghIsDangerousCallback(_rawCommand: string, args: string[]): boolean {
     }
     
     
-    const slashCount = (value.match(/\
+    const slashCount = (value.match(/\//g) || []).length
     if (slashCount >= 2) {
       return true
     }

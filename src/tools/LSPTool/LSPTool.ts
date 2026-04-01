@@ -520,7 +520,7 @@ function countUniqueFiles(locations: Location[]): number {
 }
 
 function uriToFilePath(uri: string): string {
-  let filePath = uri.replace(/^file:\/\
+  let filePath = uri.replace(/^file:\/\//, '')
   
   if (/^\/[A-Za-z]:/.test(filePath)) {
     filePath = filePath.slice(1)

@@ -1,34 +1,20 @@
-
-
-import type { CheckOptions, LockOptions, UnlockOptions } from 'proper-lockfile'
-
-type Lockfile = typeof import('proper-lockfile')
-
-let _lockfile: Lockfile | undefined
-
-function getLockfile(): Lockfile {
-  if (!_lockfile) {
-    
-    _lockfile = require('proper-lockfile') as Lockfile
-  }
-  return _lockfile
-}
+// Mock lockfile module
 
 export function lock(
   file: string,
-  options?: LockOptions,
+  options?: any,
 ): Promise<() => Promise<void>> {
-  return getLockfile().lock(file, options)
+  return Promise.resolve(() => Promise.resolve())
 }
 
-export function lockSync(file: string, options?: LockOptions): () => void {
-  return getLockfile().lockSync(file, options)
+export function lockSync(file: string, options?: any): () => void {
+  return () => {}
 }
 
-export function unlock(file: string, options?: UnlockOptions): Promise<void> {
-  return getLockfile().unlock(file, options)
+export function unlock(file: string, options?: any): Promise<void> {
+  return Promise.resolve()
 }
 
-export function check(file: string, options?: CheckOptions): Promise<boolean> {
-  return getLockfile().check(file, options)
+export function check(file: string, options?: any): Promise<boolean> {
+  return Promise.resolve(false)
 }

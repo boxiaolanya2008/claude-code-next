@@ -1,4 +1,4 @@
-import { feature } from "../utils/bundle-mock.ts"
+import { feature } from "../../utils/bundle-mock.ts"
 import { z } from 'zod/v4'
 import { getKairosActive, getUserMsgOptIn } from '../../bootstrap/state.js'
 import { getFeatureValue_CACHED_WITH_REFRESH } from '../../services/analytics/growthbook.js'

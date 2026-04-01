@@ -1,4 +1,4 @@
-import { feature } from "../utils/bundle-mock.ts"
+import { feature } from "../../utils/bundle-mock.ts"
 import { z } from 'zod/v4'
 import {
   getAllowedChannels,
