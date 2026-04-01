@@ -1466,11 +1466,10 @@ export function REPL({
     setStreamingText(f);
   }, [showStreamingText]);
 
-  // Hide the in-progress source line so text streams line-by-line, not
-  // char-by-char. lastIndexOf returns -1 when no newline, giving '' → null.
-  // Guard on showStreamingText so toggling reducedMotion mid-stream
-  // immediately hides the streaming preview.
-  const visibleStreamingText = streamingText && showStreamingText ? streamingText.substring(0, streamingText.lastIndexOf('\n') + 1) || null : null;
+  // [PATCHED] Show full streaming text character-by-character instead of
+  // truncating to the last newline. Original code hid the in-progress line
+  // so text appeared line-by-line; now every token is visible immediately.
+  const visibleStreamingText = streamingText && showStreamingText ? streamingText : null;
   const [lastQueryCompletionTime, setLastQueryCompletionTime] = useState(0);
   const [spinnerMessage, setSpinnerMessage] = useState<string | null>(null);
   const [spinnerColor, setSpinnerColor] = useState<keyof Theme | null>(null);
