@@ -70,72 +70,7 @@ function getDisabledReasonMessage(
 }
 
 export function getFastModeUnavailableReason(): string | null {
-  if (!isFastModeEnabled()) {
-    return 'Fast mode is not available'
-  }
-
-  const statigReason = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_penguins_off',
-    null,
-  )
-  // Statsig reason has priority over other reasons.
-  if (statigReason !== null) {
-    logForDebugging(`Fast mode unavailable: ${statigReason}`)
-    return statigReason
-  }
-
-  // Previously, fast mode required the native binary (bun build). This is no
-  // longer necessary, but we keep this option behind a flag just in case.
-  if (
-    !isInBundledMode() &&
-    getFeatureValue_CACHED_MAY_BE_STALE('tengu_marble_sandcastle', false)
-  ) {
-    return 'Fast mode requires the native binary · Install from: https://claude.com/product/claude-code'
-  }
-
-  // Not available in the SDK unless explicitly opted in via --settings.
-  // Assistant daemon mode is exempt — it's first-party orchestration, and
-  // kairosActive is set before this check runs (main.tsx:~1626 vs ~3249).
-  if (
-    getIsNonInteractiveSession() &&
-    preferThirdPartyAuthentication() &&
-    !getKairosActive()
-  ) {
-    const flagFastMode = getSettingsForSource('flagSettings')?.fastMode
-    if (!flagFastMode) {
-      const reason = 'Fast mode is not available in the Agent SDK'
-      logForDebugging(`Fast mode unavailable: ${reason}`)
-      return reason
-    }
-  }
-
-  // Only available for 1P (not Bedrock/Vertex/Foundry)
-  if (getAPIProvider() !== 'firstParty') {
-    const reason = 'Fast mode is not available on Bedrock, Vertex, or Foundry'
-    logForDebugging(`Fast mode unavailable: ${reason}`)
-    return reason
-  }
-
-  if (orgStatus.status === 'disabled') {
-    if (
-      orgStatus.reason === 'network_error' ||
-      orgStatus.reason === 'unknown'
-    ) {
-      // The org check can fail behind corporate proxies that block the
-      // endpoint. We add CLAUDE_CODE_SKIP_FAST_MODE_NETWORK_ERRORS=1 to
-      // bypass this check in the CC binary. This is OK since we have
-      // another check in the API to error out when disabled by org.
-      if (isEnvTruthy(process.env.CLAUDE_CODE_SKIP_FAST_MODE_NETWORK_ERRORS)) {
-        return null
-      }
-    }
-    const authType: AuthType =
-      getClaudeAIOAuthTokens() !== null ? 'oauth' : 'api-key'
-    const reason = getDisabledReasonMessage(orgStatus.reason, authType)
-    logForDebugging(`Fast mode unavailable: ${reason}`)
-    return reason
-  }
-
+  // [PATCHED] Always available for claude-code-next
   return null
 }
 
@@ -167,12 +102,8 @@ export function getInitialFastModeSetting(model: ModelSetting): boolean {
 export function isFastModeSupportedByModel(
   modelSetting: ModelSetting,
 ): boolean {
-  if (!isFastModeEnabled()) {
-    return false
-  }
-  const model = modelSetting ?? getDefaultMainLoopModelSetting()
-  const parsedModel = parseUserSpecifiedModel(model)
-  return parsedModel.toLowerCase().includes('opus-4-6')
+  // [PATCHED] All models support fast mode in claude-code-next
+  return true
 }
 
 // --- Fast mode runtime state ---
