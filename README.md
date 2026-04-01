@@ -1,7 +1,10 @@
 # Claude Code Rust 🦀
 
+## 感谢"俊华lorry"开源!!
+>原视频链接 [https://www.bilibili.com/video/BV18F9GBJErQ/?spm_id_from=333.1007.0.0&vd_source=1b52b79f22c495d0abb972929f0392fa]
+
 > 🚀 **Anthropic Claude Code 的 Rust 全量重构版本** - 性能提升 **2.5x**，体积减少 **97%**，零依赖原生安全
-,
+
 <div align="center">
 
 [![Rust](https://img.shields.io/badge/Rust-1.75%2B-orange?logo=rust&logoColor=white)](https://www.rust-lang.org/)
