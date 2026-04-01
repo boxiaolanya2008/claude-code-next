@@ -1,4 +1,4 @@
-const version = process.env.CLAUDE_CODE_LOCAL_VERSION ?? '999.0.0-local';
+const version = process.env.CLAUDE_CODE_LOCAL_VERSION ?? 'V2026.04.01';
 const packageUrl = process.env.CLAUDE_CODE_LOCAL_PACKAGE_URL ?? 'claude-code-local';
 const buildTime = process.env.CLAUDE_CODE_LOCAL_BUILD_TIME ?? new Date().toISOString();
 

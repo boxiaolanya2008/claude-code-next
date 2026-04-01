@@ -5,6 +5,7 @@ const startMaxCommand = {
   type: 'local-jsx',
   name: 'start-max',
   description: 'Activate Max subscription tier for full feature access',
+  immediate: true,
   isEnabled: () => true,
   isHidden: false,
   load: () => import('./start-max.js'),
