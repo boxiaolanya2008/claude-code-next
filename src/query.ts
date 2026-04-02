@@ -98,6 +98,7 @@ import { queryCheckpoint } from './utils/queryProfiler.js'
 import { runTools } from './services/tools/toolOrchestration.js'
 import { applyToolResultBudget } from './utils/toolResultStorage.js'
 import { recordContentReplacement } from './utils/sessionStorage.js'
+import { trackMessage, trackToolUse, initSessionTracking } from './services/dashboard/collector.js'
 import { handleStopHooks } from './query/stopHooks.js'
 import { buildQueryConfig } from './query/config.js'
 import { productionDeps, type QueryDeps } from './query/deps.js'
@@ -261,6 +262,15 @@ async function* queryLoop(
     skipCacheWrite,
   } = params
   const deps = params.deps ?? productionDeps()
+
+  // Initialize session tracking for dashboard
+  try {
+    const model = getRuntimeMainLoopModel()
+    initSessionTracking(model)
+  } catch (error) {
+    // Don't crash if tracking initialization fails
+    logForDebugging('Dashboard init error:', error)
+  }
 
   // Mutable cross-iteration state. The loop body destructures this at the top
   // of each iteration so reads stay bare-name (`messages`, `toolUseContext`).
@@ -825,6 +835,15 @@ async function* queryLoop(
             }
             if (message.type === 'assistant') {
               assistantMessages.push(message)
+              
+              // Track assistant message for dashboard
+              try {
+                const model = getRuntimeMainLoopModel()
+                trackMessage(message, model)
+              } catch (error) {
+                // Don't crash if tracking fails
+                logForDebugging('Dashboard tracking error:', error)
+              }
 
               const msgToolUseBlocks = message.message.content.filter(
                 content => content.type === 'tool_use',
@@ -1382,6 +1401,15 @@ async function* queryLoop(
       : runTools(toolUseBlocks, assistantMessages, canUseTool, toolUseContext)
 
     for await (const update of toolUpdates) {
+      // Track tool usage for dashboard
+      if (update.message) {
+        try {
+          trackToolUse()
+        } catch (error) {
+          logForDebugging('Dashboard tool tracking error:', error)
+        }
+      }
+      
       if (update.message) {
         yield update.message
 

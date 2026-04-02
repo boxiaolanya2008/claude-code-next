@@ -6,7 +6,7 @@ import type { MeterProvider } from '@opentelemetry/sdk-metrics'
 import type { BasicTracerProvider } from '@opentelemetry/sdk-trace-base'
 import { realpathSync } from 'fs'
 import sumBy from 'lodash-es/sumBy.js'
-import { cwd } from 'process'
+import { cwd, env } from 'process'
 import type { HookEvent, ModelUsage } from 'src/entrypoints/agentSdkTypes.js'
 import type { AgentColorName } from 'src/tools/AgentTool/agentColorManager.js'
 import type { HookCallbackMatcher } from 'src/types/hooks.js'
@@ -266,13 +266,19 @@ function getInitialState(): State {
     typeof process.cwd === 'function' &&
     typeof realpathSync === 'function'
   ) {
-    const rawCwd = cwd()
+    // Check for CLAUDE_CODE_CWD_OVERRIDE environment variable first
+    // Set by preload.ts when CLAUDE_CODE_ORIGINAL_CWD is present
+    const rawCwd = (env.CLAUDE_CODE_CWD_OVERRIDE as string | undefined) ?? cwd()
+    // biome-ignore lint/suspicious/noConsole:: debug output
+    console.error(`[state] rawCwd=${rawCwd}`)
     try {
       resolvedCwd = realpathSync(rawCwd).normalize('NFC')
     } catch {
       // File Provider EPERM on CloudStorage mounts (lstat per path component).
       resolvedCwd = rawCwd.normalize('NFC')
     }
+    // biome-ignore lint/suspicious/noConsole:: debug output
+    console.error(`[state] resolvedCwd=${resolvedCwd}`)
   }
   const state: State = {
     originalCwd: resolvedCwd,

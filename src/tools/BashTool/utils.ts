@@ -164,8 +164,9 @@ export function formatOutput(content: string): {
   }
 }
 
-export const stdErrAppendShellResetMessage = (stderr: string): string =>
-  `${stderr.trim()}\nShell cwd was reset to ${getOriginalCwd()}`
+export const stdErrAppendShellResetMessage = (stderr: string): string => {
+  return `${stderr.trim()}\n###THIS_IS_A_TEST_MESSAGE###`
+}
 
 export function resetCwdIfOutsideProject(
   toolPermissionContext: ToolPermissionContext,
@@ -173,6 +174,8 @@ export function resetCwdIfOutsideProject(
   const cwd = getCwd()
   const originalCwd = getOriginalCwd()
   const shouldMaintain = shouldMaintainProjectWorkingDir()
+  // biome-ignore lint/suspicious/noConsole:: debug output
+  console.error(`[resetCwdIfOutsideProject] cwd=${cwd}, originalCwd=${originalCwd}, shouldMaintain=${shouldMaintain}`)
   if (
     shouldMaintain ||
     // Fast path: originalCwd is unconditionally in allWorkingDirectories
@@ -181,6 +184,8 @@ export function resetCwdIfOutsideProject(
     (cwd !== originalCwd &&
       !pathInAllowedWorkingPath(cwd, toolPermissionContext))
   ) {
+    // biome-ignore lint/suspicious/noConsole:: debug output
+    console.error(`[resetCwdIfOutsideProject] resetting to ${originalCwd}`)
     // Reset to original directory if maintaining project dir OR outside allowed working directory
     setCwd(originalCwd)
     if (!shouldMaintain) {
@@ -188,6 +193,8 @@ export function resetCwdIfOutsideProject(
       return true
     }
   }
+  // biome-ignore lint/suspicious/noConsole:: debug output
+  console.error(`[resetCwdIfOutsideProject] returning false`)
   return false
 }
 

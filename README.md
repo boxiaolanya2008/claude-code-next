@@ -1,213 +1,276 @@
+<div align="center">
+
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="#1a1a2e"/>
+  <path d="M20 24h24M20 32h16M20 40h20" stroke="#64ffda" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="48" cy="40" r="6" fill="#64ffda" opacity="0.3"/>
+  <path d="M46 40l2 2 3-3" stroke="#64ffda" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+
 # Claude Code Next
 
-<p align="right"><strong>中文</strong> | <a href="./README.en.md">English</a></p>
+A locally runnable, repaired version of the Claude Code CLI tool with full interactive TUI support.
 
-基于 Claude Code 泄露源码修复的**本地可运行版本**，支持接入任意 Anthropic 兼容 API（如 MiniMax、OpenRouter 等）。
+<a href="#star-history">
+  <svg xmlns="http://www.w3.org/2000/svg" width="120" height="28" viewBox="0 0 120 28">
+    <rect width="120" height="28" rx="14" fill="#1a1a2e" stroke="#64ffda" stroke-width="1"/>
+    <path d="M22 8l1.5 3.5L27 12l-3.5 1.5L22 17l-1.5-3.5L17 12l3.5-1.5z" fill="#64ffda"/>
+    <text x="32" y="18" fill="#e6f1ff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" font-weight="600">Star</text>
+  </svg>
+</a>
 
-> 原始泄露源码无法直接运行。本仓库修复了启动链路中的多个阻塞问题，使完整的 Ink TUI 交互界面可以在本地工作。
+[Quick Start](#quick-start) -- [Features](#features) -- [Architecture](#architecture) -- [Dashboard](#dashboard)
 
-<p align="center">
-  <img src="docs/00runtime.png" alt="运行截图" width="800">
-</p>
-
-## 功能
-
-- 完整的 Ink TUI 交互界面（与官方 Claude Code 一致）
-- `--print` 无头模式（脚本/CI 场景）
-- 支持 MCP 服务器、插件、Skills
-- 支持自定义 API 端点和模型
-- 降级 Recovery CLI 模式
+</div>
 
 ---
 
-## 架构概览
+## Overview
 
-<table>
-  <tr>
-    <td align="center" width="25%"><img src="docs/01-overall-architecture.png" alt="整体架构"><br><b>整体架构</b></td>
-    <td align="center" width="25%"><img src="docs/02-request-lifecycle.png" alt="请求生命周期"><br><b>请求生命周期</b></td>
-    <td align="center" width="25%"><img src="docs/03-tool-system.png" alt="工具系统"><br><b>工具系统</b></td>
-    <td align="center" width="25%"><img src="docs/04-multi-agent.png" alt="多 Agent 架构"><br><b>多 Agent 架构</b></td>
-  </tr>
-  <tr>
-    <td align="center" width="25%"><img src="docs/05-terminal-ui.png" alt="终端 UI"><br><b>终端 UI</b></td>
-    <td align="center" width="25%"><img src="docs/06-permission-security.png" alt="权限与安全"><br><b>权限与安全</b></td>
-    <td align="center" width="25%"><img src="docs/07-services-layer.png" alt="服务层"><br><b>服务层</b></td>
-    <td align="center" width="25%"><img src="docs/08-state-data-flow.png" alt="状态与数据流"><br><b>状态与数据流</b></td>
-  </tr>
-</table>
+This is a **locally runnable, repaired version** of the Claude Code CLI tool, based on source code from the Anthropic npm registry. The original leaked source could not run directly -- this repository fixes multiple blocking issues in the startup pipeline so that the full interactive TUI works locally. It supports connecting to any Anthropic-compatible API endpoint, not just Anthropic's official API.
 
----
+## Features
 
-## 快速开始
+- **Full Interactive TUI** -- React 19 + Ink 6 terminal UI with rich text rendering
+- **Multi-API Support** -- Works with Anthropic, MiniMax, OpenRouter, AWS Bedrock, and any compatible endpoint
+- **45+ Agent Tools** -- Bash, file I/O, search, web fetch, MCP, LSP, and more
+- **103 Slash Commands** -- Built-in commands for common workflows
+- **Built-in Dashboard** -- Web UI on port 3456 for session and token monitoring
+- **Skill System** -- Extensible skills for thinking, coding, and debugging architecture
+- **MCP Protocol** -- Model Context Protocol SDK integration
+- **SQLite Persistence** -- Session history and token usage tracking
 
-### 1. 安装 Bun
+## Tech Stack
 
-本项目运行依赖 [Bun](https://bun.sh)。如果你的电脑还没有安装 Bun，可以先执行下面任一方式：
+| Category | Technology |
+|----------|------------|
+| Runtime | Bun |
+| Language | TypeScript (ESNext) |
+| TUI | React 19 + Ink v6 |
+| API Client | @anthropic-ai/sdk v0.80.0 |
+| Protocols | MCP SDK, LSP |
+| Validation | Zod v4, AJV |
+| Telemetry | OpenTelemetry, Datadog, GrowthBook |
 
-```bash
-# macOS / Linux（官方安装脚本）
-curl -fsSL https://bun.sh/install | bash
-```
+## Quick Start
 
-如果在精简版 Linux 环境里提示 `unzip is required to install bun`，先安装 `unzip`：
+### Prerequisites
 
-```bash
-# Ubuntu / Debian
-apt update && apt install -y unzip
-```
+- [Bun](https://bun.sh) runtime installed
+- [Node.js](https://nodejs.org) (for npm global install)
+- An API key for an Anthropic-compatible API
 
-```bash
-# macOS（Homebrew）
-brew install bun
-```
+### Installation
 
-```powershell
-# Windows（PowerShell）
-powershell -c "irm bun.sh/install.ps1 | iex"
-```
-
-安装完成后，重新打开终端并确认：
+**Option 1: Local development (quick start)**
 
 ```bash
-bun --version
-```
+# Clone the repository
+git clone <repository-url>
+cd claude-code-next
 
-### 2. 安装项目依赖
-
-```bash
+# Install dependencies
 bun install
+
+# Run interactive TUI
+start.bat
 ```
 
-### 3. 配置环境变量
-
-复制示例文件并填入你的 API Key：
+Or directly with Bun:
 
 ```bash
-cp .env.example .env
+bun src/entrypoints/cli.tsx
 ```
 
-编辑 `.env`：
+**Option 2: Global installation (local only)**
 
-```env
-# API 认证（二选一）
-ANTHROPIC_API_KEY=sk-xxx          # 标准 API Key（x-api-key 头）
-ANTHROPIC_AUTH_TOKEN=sk-xxx       # Bearer Token（Authorization 头）
-
-# API 端点（可选，默认 Anthropic 官方）
-ANTHROPIC_BASE_URL=https://api.minimaxi.com/anthropic
-
-# 模型配置
-ANTHROPIC_MODEL=MiniMax-M2.7-highspeed
-ANTHROPIC_DEFAULT_SONNET_MODEL=MiniMax-M2.7-highspeed
-ANTHROPIC_DEFAULT_HAIKU_MODEL=MiniMax-M2.7-highspeed
-ANTHROPIC_DEFAULT_OPUS_MODEL=MiniMax-M2.7-highspeed
-
-# 超时（毫秒）
-API_TIMEOUT_MS=3000000
-
-# 禁用遥测和非必要网络请求
-DISABLE_TELEMETRY=1
-CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
-```
-
-### 4. 启动
+⚠️ **Note**: `npm install -g .` creates a symlink to the current directory. This only works on the current computer.
 
 ```bash
-# 交互 TUI 模式（完整界面）
-./bin/claude-code-next
-
-# 无头模式（单次问答）
-./bin/claude-code-next -p "your prompt here"
-
-# 管道输入
-echo "explain this code" | ./bin/claude-code-next -p
-
-# 查看所有选项
-./bin/claude-code-next --help
+npm install -g .
 ```
 
----
+This registers commands for use on this computer:
+- `ccn` - short command  
+- `claude-code-next` - full command
 
-## 环境变量说明
-
-| 变量 | 必填 | 说明 |
-|------|------|------|
-| `ANTHROPIC_API_KEY` | 二选一 | API Key，通过 `x-api-key` 头发送 |
-| `ANTHROPIC_AUTH_TOKEN` | 二选一 | Auth Token，通过 `Authorization: Bearer` 头发送 |
-| `ANTHROPIC_BASE_URL` | 否 | 自定义 API 端点，默认 Anthropic 官方 |
-| `ANTHROPIC_MODEL` | 否 | 默认模型 |
-| `ANTHROPIC_DEFAULT_SONNET_MODEL` | 否 | Sonnet 级别模型映射 |
-| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | 否 | Haiku 级别模型映射 |
-| `ANTHROPIC_DEFAULT_OPUS_MODEL` | 否 | Opus 级别模型映射 |
-| `API_TIMEOUT_MS` | 否 | API 请求超时，默认 600000 (10min) |
-| `DISABLE_TELEMETRY` | 否 | 设为 `1` 禁用遥测 |
-| `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` | 否 | 设为 `1` 禁用非必要网络请求 |
-
----
-
-## 降级模式
-
-如果完整 TUI 出现问题，可以使用简化版 readline 交互模式：
+Run from any directory:
 
 ```bash
-CLAUDE_CODE_FORCE_RECOVERY_CLI=1 ./bin/claude-code-next
+cd /path/to/your/project
+ccn
 ```
 
----
+**To uninstall:**
 
-## 相对于原始泄露源码的修复
+```bash
+npm uninstall -g claude-code-next
+```
 
-泄露的源码无法直接运行，主要修复了以下问题：
+**Option 3: Distributable package (for multiple computers)**
 
-| 问题 | 根因 | 修复 |
-|------|------|------|
-| TUI 不启动 | 入口脚本把无参数启动路由到了 recovery CLI | 恢复走 `cli.tsx` 完整入口 |
-| 启动卡死 | `verify` skill 导入缺失的 `.md` 文件，Bun text loader 无限挂起 | 创建 stub `.md` 文件 |
-| `--print` 卡死 | `filePersistence/types.ts` 缺失 | 创建类型桩文件 |
-| `--print` 卡死 | `ultraplan/prompt.txt` 缺失 | 创建资源桩文件 |
-| **Enter 键无响应** | `modifiers-napi` native 包缺失，`isModifierPressed()` 抛异常导致 `handleEnter` 中断，`onSubmit` 永远不执行 | 加 try-catch 容错 |
-| setup 被跳过 | `preload.ts` 自动设置 `LOCAL_RECOVERY=1` 跳过全部初始化 | 移除默认设置 |
+To install on different computers:
 
----
+1. **Build package** (on development machine):
 
-## 项目结构
+```bash
+build.bat
+```
+
+This creates `claude-code-next-2026.04.01.tgz`
+
+2. **Install on any computer**:
+
+```bash
+npm install -g claude-code-next-2026.04.01.tgz
+```
+
+This creates a true copy that works on any machine with Bun + Node.js installed.
+
+```bash
+bun src/entrypoints/cli.tsx
+```
+
+### Running
+
+**Interactive TUI (full interface):**
+
+```bash
+ccn
+# or if using local development
+start.bat
+```
+
+**Headless mode (single prompt):**
+
+```bash
+ccn -p "explain this codebase"
+# or
+bun src/entrypoints/cli.tsx -p "explain this codebase"
+```
+
+**Pipe input:**
+
+```bash
+echo "explain this code" | ccn -p
+```
+
+**View all CLI options:**
+
+```bash
+ccn --help
+```
+
+## Dashboard
+
+After starting the CLI in interactive mode, open a browser to:
 
 ```
-bin/claude-code-next     # 入口脚本
-preload.ts               # Bun preload（设置 MACRO 全局变量）
-.env.example             # 环境变量模板
+http://127.0.0.1:3456
+```
+
+The dashboard displays:
+
+- Current model name and API endpoint
+- Session statistics (total sessions, tokens, cache efficiency)
+- Daily token usage charts (last 30 days)
+- Token distribution breakdown
+- Recent sessions table with model, duration, and token counts
+
+## Environment Variables
+
+| Variable | Purpose |
+|----------|---------|
+| `ANTHROPIC_API_KEY` | API key (x-api-key header) |
+| `ANTHROPIC_AUTH_TOKEN` | Auth token (Bearer header) |
+| `ANTHROPIC_BASE_URL` | Custom API endpoint |
+| `ANTHROPIC_MODEL` | Default model name |
+| `API_TIMEOUT_MS` | Request timeout (default 600000ms) |
+| `DISABLE_TELEMETRY=1` | Disable telemetry |
+| `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` | Disable non-essential network calls |
+
+### Configuration Files
+
+Global configuration is automatically loaded from:
+
+- **Windows**: `%APPDATA%\.claude\settings.json`
+- **Linux/Mac**: `~/.claude/settings.json`
+
+To set your API key, create or edit `settings.json`:
+
+```json
+{
+  "apiKeyHelper": "your-api-key-here"
+}
+```
+
+Or create a `.env` file in the project directory:
+
+```bash
+ANTHROPIC_API_KEY=your_key_here
+# or for custom endpoints
+OPENAI_API_KEY=your_key_here
+```
+
+## Architecture
+
+```
 src/
-├── entrypoints/cli.tsx  # CLI 主入口
-├── main.tsx             # TUI 主逻辑（Commander.js + React/Ink）
-├── localRecoveryCli.ts  # 降级 Recovery CLI
-├── setup.ts             # 启动初始化
-├── screens/REPL.tsx     # 交互 REPL 界面
-├── ink/                 # Ink 终端渲染引擎
-├── components/          # UI 组件
-├── tools/               # Agent 工具（Bash, Edit, Grep 等）
-├── commands/            # 斜杠命令（/commit, /review 等）
-├── skills/              # Skill 系统
-├── services/            # 服务层（API, MCP, OAuth 等）
-├── hooks/               # React hooks
-└── utils/               # 工具函数
+  entrypoints/     # Entry points (CLI, MCP, SDK)
+  main.tsx         # TUI main logic (~4697 lines)
+  ink/             # Ink terminal rendering engine (48 files)
+  components/      # React UI components (144 files)
+  tools/           # Agent tools (45+ implementations)
+  commands/        # Slash commands (103 implementations)
+  skills/          # Skill system
+  services/        # Service layer (API, MCP, OAuth, Dashboard)
+  bootstrap/       # State management and initialization
+  constants/       # System prompts and configuration
+  utils/           # Utility functions (80+ files)
 ```
 
----
+## Directory Structure
 
-## 技术栈
+```
+claude-code-next/
+  bin/              # Launcher scripts (bash + bat)
+  src/              # All source code
+  stubs/            # Stub files for missing native modules
+  docs/             # Architecture documentation
+  .claude/          # Local configuration and skills
+  start.bat         # Windows quick-start script
+  bunfig.toml       # Bun configuration
+  tsconfig.json     # TypeScript configuration
+  package.json      # Dependencies
+```
 
-| 类别 | 技术 |
+## Key Files
+
+| File | Role |
 |------|------|
-| 运行时 | [Bun](https://bun.sh) |
-| 语言 | TypeScript |
-| 终端 UI | React + [Ink](https://github.com/vadimdemedes/ink) |
-| CLI 解析 | Commander.js |
-| API | Anthropic SDK |
-| 协议 | MCP, LSP |
+| `bin/claude-code-next.bat` | Windows batch entry script |
+| `start.bat` | Quick-start Windows batch file |
+| `preload.ts` | Bun preload script (sets MACRO globals) |
+| `src/entrypoints/cli.tsx` | Main CLI entry point |
+| `src/main.tsx` | TUI main logic |
+| `src/setup.ts` | Startup initialization |
+| `src/query.ts` | API query engine and message loop |
+| `src/services/dashboard/` | Built-in web dashboard |
+
+## License
+
+This repository is for local development and testing purposes.
 
 ---
 
-## Disclaimer
+## Star History
 
-本仓库基于 2026-03-31 从 Anthropic npm registry 泄露的 Claude Code 源码。所有原始源码版权归 [Anthropic](https://www.anthropic.com) 所有。仅供学习和研究用途。
+<a href="#star-history">
+  <svg xmlns="http://www.w3.org/2000/svg" width="120" height="28" viewBox="0 0 120 28">
+    <rect width="120" height="28" rx="14" fill="#1a1a2e" stroke="#64ffda" stroke-width="1"/>
+    <path d="M22 8l1.5 3.5L27 12l-3.5 1.5L22 17l-1.5-3.5L17 12l3.5-1.5z" fill="#64ffda"/>
+    <text x="32" y="18" fill="#e6f1ff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" font-weight="600">Star</text>
+  </svg>
+</a>
+
+[![Star History Chart](https://api.star-history.com/svg?repos=boxiaolanya2008/claude-code-next&type=Date)](https://star-history.com/#boxiaolanya2008/claude-code-next&Date)

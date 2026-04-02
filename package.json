@@ -4,7 +4,8 @@
   "private": false,
   "type": "module",
   "bin": {
-    "claude-code-next": "./bin/claude-code-next"
+    "claude-code-next": "./bin/claude-code-next.js",
+    "ccn": "./bin/claude-code-next.js"
   },
   "scripts": {
     "claude-code-next": "bun run ./bin/claude-code-next",
@@ -50,6 +51,7 @@
     "lodash-es": "^4.17.23",
     "lru-cache": "^11.2.7",
     "marked": "^17.0.5",
+    "openai": "^4.77.0",
     "p-map": "^7.0.4",
     "picomatch": "^4.0.4",
     "proper-lockfile": "^4.1.2",

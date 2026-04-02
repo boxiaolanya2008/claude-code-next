@@ -451,14 +451,20 @@ export function setCwd(path: string, relativeTo?: string): void {
   // Resolve symlinks to match the behavior of pwd -P.
   // realpathSync throws ENOENT if the path doesn't exist - convert to a
   // friendlier error message instead of a separate existsSync pre-check (TOCTOU).
+  // On Windows, realpathSync can hang indefinitely due to OneDrive, network drives,
+  // or junction points. Use resolved path directly on Windows.
   let physicalPath: string
-  try {
-    physicalPath = getFsImplementation().realpathSync(resolved)
-  } catch (e) {
-    if (isENOENT(e)) {
-      throw new Error(`Path "${resolved}" does not exist`)
+  if (process.platform === 'win32') {
+    physicalPath = resolved
+  } else {
+    try {
+      physicalPath = getFsImplementation().realpathSync(resolved)
+    } catch (e) {
+      if (isENOENT(e)) {
+        throw new Error(`Path "${resolved}" does not exist`)
+      }
+      throw e
     }
-    throw e
   }
 
   setCwdState(physicalPath)

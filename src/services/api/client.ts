@@ -353,6 +353,31 @@ function getCustomHeaders(): Record<string, string> {
   return customHeaders
 }
 
+// Re-export OpenAI client creation
+export {
+  getOpenAIClient,
+  isOpenAIConfigured,
+  type OpenAIClientOptions,
+} from './openai-client.js'
+
+// Export unified client factory
+export async function getLLMClient(provider: 'anthropic' | 'openai', options?: { model?: string }) {
+  const { getAPIProvider } = await import('../../utils/model/providers.js')
+  const providerType = getAPIProvider()
+  
+  if (providerType === 'openai' || provider === 'openai') {
+    const { createOpenAIClient } = await import('./openai.js')
+    return createOpenAIClient()
+  }
+  
+  // Default to Anthropic
+  const client = await getAnthropicClient({
+    maxRetries: 2,
+    model: options?.model,
+  })
+  return client
+}
+
 export const CLIENT_REQUEST_ID_HEADER = 'x-client-request-id'
 
 function buildFetch(

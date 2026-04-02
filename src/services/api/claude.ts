@@ -1025,6 +1025,42 @@ async function* queryModel(
   StreamEvent | AssistantMessage | SystemAPIErrorMessage,
   void
 > {
+  // Simple provider selection: OpenAI if key exists, otherwise Anthropic
+  if (process.env.OPENAI_API_KEY) {
+    yield* queryModelOpenAI(
+      messages,
+      systemPrompt,
+      thinkingConfig,
+      tools,
+      signal,
+      options,
+    )
+  } else {
+    yield* queryModelAnthropic(
+      messages,
+      systemPrompt,
+      thinkingConfig,
+      tools,
+      signal,
+      options,
+    )
+  }
+}
+
+/**
+ * Core Anthropic query logic (extracted for clarity)
+ */
+async function* queryModelAnthropic(
+  messages: Message[],
+  systemPrompt: SystemPrompt,
+  thinkingConfig: ThinkingConfig,
+  tools: Tools,
+  signal: AbortSignal,
+  options: Options,
+): AsyncGenerator<
+  StreamEvent | AssistantMessage | SystemAPIErrorMessage,
+  void
+> {
   // Check cheap conditions first — the off-switch await blocks on GrowthBook
   // init (~10ms). For non-Opus models (haiku, sonnet) this skips the await
   // entirely. Subscribers don't hit this path at all.
@@ -3416,4 +3452,65 @@ export function getMaxOutputTokensForModel(model: string): number {
     maxOutputTokens.upperLimit,
   )
   return result.effective
+}
+
+// =============================================================================
+// OpenAI Provider Support (Simple Mode)
+// =============================================================================
+
+import { OpenAIClient } from './openai.js'
+
+
+
+/**
+ * Query OpenAI model - routes to OpenAI client
+ */
+async function* queryModelOpenAI(
+  messages: Message[],
+  systemPrompt: SystemPrompt,
+  _thinkingConfig: ThinkingConfig,
+  tools: Tools,
+  signal: AbortSignal,
+  options: Options,
+): AsyncGenerator<
+  StreamEvent | AssistantMessage | SystemAPIErrorMessage,
+  void
+> {
+  const client = new OpenAIClient()
+  
+  // Convert tools to API schema
+  const toolSchemas = await Promise.all(
+    tools.map(tool =>
+      toolToAPISchema(tool, {
+        getToolPermissionContext: options.getToolPermissionContext,
+        tools,
+        agents: options.agents,
+        allowedAgentTypes: options.allowedAgentTypes,
+        model: options.model,
+      }),
+    ),
+  )
+  
+  // Normalize messages for API
+  const normalizedMessages = normalizeMessagesForAPI(messages)
+  
+  // Stream from OpenAI
+  const stream = client.streamMessages({
+    model: options.model,
+    messages: normalizedMessages,
+    system: systemPrompt.join('\n'),
+    tools: toolSchemas,
+    maxTokens: options.maxOutputTokens,
+    signal,
+  })
+  
+  // Yield all events from the stream
+  for await (const event of stream) {
+    // Convert OpenAI result to expected format
+    if (event.type === 'finish') {
+      // Return final result
+      return
+    }
+    yield event as StreamEvent
+  }
 }

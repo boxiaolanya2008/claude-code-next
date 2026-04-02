@@ -387,6 +387,18 @@ export async function setup(
   // "process started" signal for release health monitoring.
   logEvent('tengu_started', {})
 
+  // Start Dashboard server for session and token tracking
+  if (!isBareMode() && !getIsNonInteractiveSession()) {
+    void import('./services/dashboard/server.js').then(async m => {
+      try {
+        await m.startDashboardServer()
+      } catch (error) {
+        // Don't crash if dashboard fails to start
+        logError(error)
+      }
+    })
+  }
+
   void prefetchApiKeyFromApiKeyHelperIfSafe(getIsNonInteractiveSession()) // Prefetch safely - only executes if trust already confirmed
   profileCheckpoint('setup_after_prefetch')
 

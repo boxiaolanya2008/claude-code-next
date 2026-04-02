@@ -594,6 +594,13 @@ export async function main() {
   initializeWarningHandler();
   process.on('exit', () => {
     resetCursor();
+    // End session tracking for dashboard
+    try {
+      const { endSession } = require('./services/dashboard/collector.js');
+      endSession();
+    } catch (error) {
+      // Ignore errors during cleanup
+    }
   });
   process.on('SIGINT', () => {
     // In print mode, print.ts registers its own SIGINT handler that aborts

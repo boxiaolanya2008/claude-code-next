@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f5f7fa;
+      color: #2c3e50;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #1a202c;
+    }
+
+    .subtitle {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .model-card {
+      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+      color: #2c3e50;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px 24px;
+      min-width: 260px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .model-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+
+    .model-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #2563eb;
+      margin-bottom: 4px;
+      word-break: break-all;
+    }
+
+    .model-url {
+      font-size: 11px;
+      color: #64748b;
+      word-break: break-all;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding: 10px 16px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    .status-dot.disconnected {
+      background: #ef4444;
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 18px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 26px;
+      font-weight: 600;
+      color: #1a202c;
+    }
+
+    .stat-subvalue {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    .chart-container {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .chart-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #1a202c;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 320px;
+    }
+
+    .sessions-table {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 20px;
+      overflow-x: auto;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 13px;
+      color: #2c3e50;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover {
+      background: #f8fafc;
+    }
+
+    .model-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      background: #eff6ff;
+      border: 1px solid #dbeafe;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #2563eb;
+    }
+
+    .duration {
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #64748b;
+    }
+
+    .error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .refresh-btn {
+      background: #ffffff;
+      color: #2c3e50;
+      border: 1px solid #cbd5e1;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .refresh-btn:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+
+    .last-update {
+      color: #64748b;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-row">
+      <div>
+        <h1>Claude Code Dashboard</h1>
+        <p class="subtitle">Session and Token Usage Analytics</p>
+      </div>
+      <div class="model-card" id="model-card">
+        <div class="model-label">Current Model</div>
+        <div class="model-name" id="model-name">Loading...</div>
+        <div class="model-url" id="model-url"></div>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-dot" id="status-dot"></div>
+      <span id="status-text">Connecting...</span>
+      <span class="last-update" id="last-update"></span>
+      <button class="refresh-btn" onclick="loadData()">Refresh Now</button>
+    </div>
+
+    <div id="error-container"></div>
+
+    <div id="config-info" style="background: #ffffff; border: 1px solid #e2e8f0; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 12px; color: #64748b; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      <div><strong style="color: #2c3e50;">API Status:</strong> <span id="api-status">Loading...</span></div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Sessions</div>
+        <div class="stat-value" id="total-sessions">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Input Tokens</div>
+        <div class="stat-value" id="total-input">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Output Tokens</div>
+        <div class="stat-value" id="total-output">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Cache Efficiency</div>
+        <div class="stat-value" id="cache-efficiency">-</div>
+        <div class="stat-subvalue" id="cache-details">-</div>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <div class="chart-title">Daily Token Usage Trend (Beijing Time, Last 30 Days)</div>
+      <div class="chart-wrapper">
+        <canvas id="daily-chart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <div class="chart-title">Token Distribution</div>
+      <div class="chart-wrapper">
+        <canvas id="distribution-chart"></canvas>
+      </div>
+    </div>
+
+    <div class="sessions-table">
+      <div class="chart-title">Recent Sessions</div>
+      <div id="loading" class="loading">Loading...</div>
+      <table id="sessions-table" style="display: none;">
+        <thead>
+          <tr>
+            <th>Session ID</th>
+            <th>Model</th>
+            <th>Start Time</th>
+            <th>Duration</th>
+            <th>Messages</th>
+            <th>Tools</th>
+            <th>Input Tokens</th>
+            <th>Output Tokens</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="sessions-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let dailyChart = null;
+    let distributionChart = null;
+    let isConnected = false;
+
+    // Beijing time zone helper (UTC+8)
+    function getBeijingDate(timestamp) {
+      const date = new Date(timestamp);
+      const beijingOffset = 8 * 60;
+      const utcOffset = date.getTimezoneOffset();
+      const beijingTime = new Date(date.getTime() + (beijingOffset + utcOffset) * 60000);
+      return beijingTime;
+    }
+
+    function formatBeijingDate(timestamp) {
+      const bj = getBeijingDate(timestamp);
+      const year = bj.getFullYear();
+      const month = String(bj.getMonth() + 1).padStart(2, '0');
+      const day = String(bj.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function formatBeijingDateTime(timestamp) {
+      const bj = getBeijingDate(timestamp);
+      const date = formatBeijingDate(timestamp);
+      const hours = String(bj.getHours()).padStart(2, '0');
+      const minutes = String(bj.getMinutes()).padStart(2, '0');
+      const seconds = String(bj.getSeconds()).padStart(2, '0');
+      return `${date} ${hours}:${minutes}:${seconds}`;
+    }
+
+    function formatNumber(num) {
+      return num.toLocaleString();
+    }
+
+    function formatDuration(start, end) {
+      if (!end) return 'Active';
+      const duration = end - start;
+      const minutes = Math.floor(duration / 60000);
+      const seconds = Math.floor((duration % 60000) / 1000);
+      return `${minutes}m ${seconds}s`;
+    }
+
+    function showError(message) {
+      const container = document.getElementById('error-container');
+      container.innerHTML = `<div class="error">${message}</div>`;
+    }
+
+    function clearError() {
+      document.getElementById('error-container').innerHTML = '';
+    }
+
+    function updateStatus(connected) {
+      isConnected = connected;
+      const dot = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      if (connected) {
+        dot.classList.remove('disconnected');
+        text.textContent = 'Live';
+      } else {
+        dot.classList.add('disconnected');
+        text.textContent = 'Disconnected';
+      }
+    }
+
+    function updateLastUpdateTime() {
+      const now = new Date();
+      const bjTime = formatBeijingDateTime(now.getTime());
+      document.getElementById('last-update').textContent = `Last update: ${bjTime}`;
+    }
+
+    async function loadData() {
+      clearError();
+
+      try {
+        const response = await fetch('/api/data');
+        const data = await response.json();
+
+        if (data.error) {
+          showError(data.error);
+          updateStatus(false);
+          return;
+        }
+
+        updateConfig(data.config);
+        updateStatsFromData(data.stats);
+        updateDailyChart(data.dailyStats);
+        updateDistributionChart(data.sessions);
+        updateSessionsTable(data.sessions);
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('sessions-table').style.display = 'table';
+
+        updateStatus(true);
+        updateLastUpdateTime();
+      } catch (error) {
+        showError('Failed to load data: ' + error.message);
+        console.error('Error loading data:', error);
+        updateStatus(false);
+      }
+    }
+
+    function updateStatsFromData(stats) {
+      document.getElementById('total-sessions').textContent = formatNumber(stats.totalSessions);
+      document.getElementById('total-input').textContent = formatNumber(stats.totalInput);
+      document.getElementById('total-output').textContent = formatNumber(stats.totalOutput);
+      document.getElementById('cache-efficiency').textContent = stats.cacheEfficiency + '%';
+      document.getElementById('cache-details').textContent =
+        `Read: ${formatNumber(stats.totalCacheRead)} | Created: ${formatNumber(stats.totalCacheCreation)}`;
+    }
+
+    function connectSSE() {
+      const evtSource = new EventSource('/api/sse');
+
+      evtSource.addEventListener('update', (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.error) return;
+
+          updateConfig(data.config);
+          updateStatsFromData(data.stats);
+          updateDailyChart(data.dailyStats);
+          updateDistributionChart(data.sessions);
+          updateSessionsTable(data.sessions);
+
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('sessions-table').style.display = 'table';
+
+          updateStatus(true);
+          updateLastUpdateTime();
+        } catch (err) {
+          console.error('SSE parse error:', err);
+        }
+      });
+
+      evtSource.onerror = () => {
+        updateStatus(false);
+        // SSE will auto-reconnect
+      };
+    }
+
+    function updateConfig(config) {
+      document.getElementById('api-status').textContent = config.hasApiKey ? 'Configured' : 'Not Configured';
+      document.getElementById('api-status').style.color = config.hasApiKey ? '#10b981' : '#ef4444';
+      document.getElementById('model-name').textContent = config.model;
+      document.getElementById('model-url').textContent = config.baseUrl;
+    }
+
+    function updateStatsFromData(stats) {
+      document.getElementById('total-sessions').textContent = formatNumber(stats.totalSessions);
+      document.getElementById('total-input').textContent = formatNumber(stats.totalInput);
+      document.getElementById('total-output').textContent = formatNumber(stats.totalOutput);
+      document.getElementById('cache-efficiency').textContent = stats.cacheEfficiency + '%';
+      document.getElementById('cache-details').textContent =
+        `Read: ${formatNumber(stats.totalCacheRead)} | Created: ${formatNumber(stats.totalCacheCreation)}`;
+    }
+
+    function updateDailyChart(dailyStats) {
+      const ctx = document.getElementById('daily-chart');
+
+      if (dailyChart) {
+        dailyChart.destroy();
+      }
+
+      // Build labels and data from daily stats
+      const labels = dailyStats.map(d => d.date);
+      const inputData = dailyStats.map(d => d.totalInput || 0);
+      const outputData = dailyStats.map(d => d.totalOutput || 0);
+      const cacheReadData = dailyStats.map(d => d.totalCacheRead || 0);
+
+      dailyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Input Tokens',
+              data: inputData,
+              borderColor: '#2563eb',
+              backgroundColor: 'rgba(37, 99, 235, 0.1)',
+              tension: 0.4,
+              fill: true,
+              pointRadius: 3,
+              pointHoverRadius: 6,
+              borderWidth: 2
+            },
+            {
+              label: 'Output Tokens',
+              data: outputData,
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              tension: 0.4,
+              fill: true,
+              pointRadius: 3,
+              pointHoverRadius: 6,
+              borderWidth: 2
+            },
+            {
+              label: 'Cache Read',
+              data: cacheReadData,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.05)',
+              tension: 0.4,
+              fill: true,
+              pointRadius: 2,
+              pointHoverRadius: 5,
+              borderWidth: 1,
+              borderDash: [5, 5]
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                color: '#64748b',
+                usePointStyle: true,
+                pointStyle: 'circle'
+              }
+            },
+            tooltip: {
+              backgroundColor: '#ffffff',
+              titleColor: '#1a202c',
+              bodyColor: '#2c3e50',
+              borderColor: '#e2e8f0',
+              borderWidth: 1,
+              callbacks: {
+                label: function(context) {
+                  return context.dataset.label + ': ' + context.parsed.y.toLocaleString();
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                color: '#64748b',
+                maxRotation: 45,
+                font: { size: 10 }
+              },
+              grid: {
+                color: '#f1f5f9'
+              }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                color: '#64748b',
+                callback: function(value) {
+                  return value.toLocaleString();
+                },
+                font: { size: 10 }
+              },
+              grid: {
+                color: '#f1f5f9'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function updateDistributionChart(sessions) {
+      const ctx = document.getElementById('distribution-chart');
+
+      if (distributionChart) {
+        distributionChart.destroy();
+      }
+
+      let totalInput = 0;
+      let totalOutput = 0;
+      let totalCacheRead = 0;
+      let totalCacheCreation = 0;
+
+      sessions.forEach(session => {
+        totalInput += session.totalInputTokens || 0;
+        totalOutput += session.totalOutputTokens || 0;
+        totalCacheRead += session.totalCacheReadTokens || 0;
+        totalCacheCreation += session.totalCacheCreationTokens || 0;
+      });
+
+      distributionChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Input Tokens', 'Output Tokens', 'Cache Read', 'Cache Creation'],
+          datasets: [{
+            data: [totalInput, totalOutput, totalCacheRead, totalCacheCreation],
+            backgroundColor: [
+              '#2563eb',
+              '#ef4444',
+              '#10b981',
+              '#f59e0b'
+            ],
+            borderColor: '#ffffff',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'right',
+              labels: {
+                color: '#64748b',
+                usePointStyle: true,
+                pointStyle: 'circle'
+              }
+            },
+            tooltip: {
+              backgroundColor: '#ffffff',
+              titleColor: '#1a202c',
+              bodyColor: '#2c3e50',
+              borderColor: '#e2e8f0',
+              borderWidth: 1,
+              callbacks: {
+                label: function(context) {
+                  return context.label + ': ' + context.parsed.toLocaleString();
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function updateSessionsTable(sessions) {
+      const tbody = document.getElementById('sessions-tbody');
+      tbody.innerHTML = '';
+
+      sessions.slice(0, 20).forEach(session => {
+        const row = document.createElement('tr');
+        const totalTokens = (session.totalInputTokens || 0) + (session.totalOutputTokens || 0);
+
+        row.innerHTML = `
+          <td><code style="color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">${session.id.substring(0, 8)}...</code></td>
+          <td><span class="model-badge">${session.model}</span></td>
+          <td>${formatBeijingDateTime(session.startTime)}</td>
+          <td class="duration">${formatDuration(session.startTime, session.endTime)}</td>
+          <td>${session.messageCount || 0}</td>
+          <td>${session.toolUseCount || 0}</td>
+          <td>${formatNumber(session.totalInputTokens || 0)}</td>
+          <td>${formatNumber(session.totalOutputTokens || 0)}</td>
+          <td><strong style="color: #2563eb;">${formatNumber(totalTokens)}</strong></td>
+        `;
+
+        tbody.appendChild(row);
+      });
+    }
+
+    // Initial load
+    loadData();
+
+    // Connect SSE for real-time updates
+    connectSSE();
+
+    // Fallback polling every 5 seconds in case SSE fails
+    setInterval(loadData, 5000);
+  </script>
+</body>
+</html>

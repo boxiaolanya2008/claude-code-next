@@ -23,7 +23,11 @@ import { getModelStrings, resolveOverriddenModel } from './modelStrings.js'
 import { formatModelPricing, getOpus46CostTier } from '../modelCost.js'
 import { getSettings_DEPRECATED } from '../settings/settings.js'
 import type { PermissionMode } from '../permissions/PermissionMode.js'
-import { getAPIProvider } from './providers.js'
+import { getAPIProvider, getCurrentProvider, isUsingOpenAI } from './providers.js'
+import {
+  getOpenAIModel,
+  getOpenAISmallFastModel,
+} from './openaiModels.js'
 import { LIGHTNING_BOLT } from '../../constants/figures.js'
 import { isModelAllowed } from './modelAllowlist.js'
 import { type ModelAlias, isModelAlias } from './aliases.js'
@@ -34,7 +38,18 @@ export type ModelName = string
 export type ModelSetting = ModelName | ModelAlias | null
 
 export function getSmallFastModel(): ModelName {
-  return process.env.ANTHROPIC_SMALL_FAST_MODEL || getDefaultHaikuModel()
+  // Check environment variables first (both Anthropic and OpenAI)
+  const envModel = process.env.ANTHROPIC_SMALL_FAST_MODEL || process.env.OPENAI_SMALL_FAST_MODEL
+  if (envModel) {
+    return envModel
+  }
+  
+  // Default based on current provider
+  if (isUsingOpenAI()) {
+    return getOpenAISmallFastModel()
+  }
+  
+  return getDefaultHaikuModel()
 }
 
 export function isNonCustomOpusModel(model: ModelName): boolean {
@@ -55,7 +70,7 @@ export function isNonCustomOpusModel(model: ModelName): boolean {
  * Priority order within this function:
  * 1. Model override during session (from /model command) - highest priority
  * 2. Model override at startup (from --model flag)
- * 3. ANTHROPIC_MODEL environment variable
+ * 3. ANTHROPIC_MODEL or OPENAI_MODEL environment variable
  * 4. Settings (from user's saved settings)
  */
 export function getUserSpecifiedModelSetting(): ModelSetting | undefined {
@@ -66,7 +81,11 @@ export function getUserSpecifiedModelSetting(): ModelSetting | undefined {
     specifiedModel = modelOverride
   } else {
     const settings = getSettings_DEPRECATED() || {}
-    specifiedModel = process.env.ANTHROPIC_MODEL || settings.model || undefined
+    // Check both ANTHROPIC_MODEL and OPENAI_MODEL
+    specifiedModel = process.env.ANTHROPIC_MODEL || 
+                     process.env.OPENAI_MODEL || 
+                     settings.model || 
+                     undefined
   }
 
   // Ignore the user-specified model if it's not in the availableModels allowlist.
@@ -83,9 +102,9 @@ export function getUserSpecifiedModelSetting(): ModelSetting | undefined {
  * Model Selection Priority Order:
  * 1. Model override during session (from /model command) - highest priority
  * 2. Model override at startup (from --model flag)
- * 3. ANTHROPIC_MODEL environment variable
+ * 3. ANTHROPIC_MODEL / OPENAI_MODEL environment variable
  * 4. Settings (from user's saved settings)
- * 5. Built-in default
+ * 5. Built-in default (based on available API keys)
  *
  * @returns The resolved model name to use
  */
@@ -95,6 +114,14 @@ export function getMainLoopModel(): ModelName {
     return parseUserSpecifiedModel(model)
   }
   return getDefaultMainLoopModel()
+}
+
+/**
+ * Get the current LLM provider.
+ * Simple check: OpenAI if OPENAI_API_KEY is set, otherwise Anthropic.
+ */
+export function getMainLoopProvider(): 'anthropic' | 'openai' {
+  return getCurrentProvider()
 }
 
 export function getBestModel(): ModelName {
@@ -169,13 +196,18 @@ export function getRuntimeMainLoopModel(params: {
 /**
  * Get the default main loop model setting.
  *
- * This handles the built-in default:
- * - Opus for Max and Team Premium users
- * - Sonnet 4.6 for all other users (including Team Standard, Pro, Enterprise)
- *
- * @returns The default model setting to use
+ * Simple logic:
+ * - If using OpenAI (OPENAI_API_KEY set), use OpenAI default model
+ * - Otherwise use Anthropic defaults based on subscription
  */
 export function getDefaultMainLoopModelSetting(): ModelName | ModelAlias {
+  // If using OpenAI, return OpenAI default model
+  if (isUsingOpenAI()) {
+    return getOpenAIModel()
+  }
+  
+  // Anthropic defaults below
+  
   // Ants default to defaultModel from flag config, or Opus 1M if not configured
   if (process.env.USER_TYPE === 'ant') {
     return (
@@ -195,7 +227,6 @@ export function getDefaultMainLoopModelSetting(): ModelName | ModelAlias {
   }
 
   // PAYG (1P and 3P), Enterprise, Team Standard, and Pro get Sonnet as default
-  // Note that PAYG (3P) may default to an older Sonnet model
   return getDefaultSonnetModel()
 }
 

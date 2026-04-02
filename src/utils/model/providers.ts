@@ -1,9 +1,13 @@
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../../services/analytics/index.js'
 import { isEnvTruthy } from '../envUtils.js'
 
-export type APIProvider = 'firstParty' | 'bedrock' | 'vertex' | 'foundry'
+export type APIProvider = 'firstParty' | 'bedrock' | 'vertex' | 'foundry' | 'openai'
 
-export function getAPIProvider(): APIProvider {
+/**
+ * Determine the API provider based on environment variables.
+ * Priority: Bedrock > Vertex > Foundry > firstParty (Anthropic)
+ */
+export function getAPIProvider(): Exclude<APIProvider, 'openai'> {
   return isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK)
     ? 'bedrock'
     : isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX)
@@ -11,6 +15,26 @@ export function getAPIProvider(): APIProvider {
       : isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)
         ? 'foundry'
         : 'firstParty'
+}
+
+/**
+ * Get the current LLM provider.
+ * Simple logic: if OPENAI_API_KEY is set, use OpenAI; otherwise use Anthropic.
+ */
+export function getCurrentProvider(): 'anthropic' | 'openai' {
+  // If OpenAI key is configured, use OpenAI
+  if (process.env.OPENAI_API_KEY) {
+    return 'openai'
+  }
+  // Otherwise use Anthropic (default)
+  return 'anthropic'
+}
+
+/**
+ * Check if currently using OpenAI provider.
+ */
+export function isUsingOpenAI(): boolean {
+  return getCurrentProvider() === 'openai'
 }
 
 export function getAPIProviderForStatsig(): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS {

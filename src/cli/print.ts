@@ -352,6 +352,14 @@ import { initializeGrowthBook } from '../services/analytics/growthbook.js'
 import { errorMessage, toError } from '../utils/errors.js'
 import { sleep } from '../utils/sleep.js'
 import { isExtractModeActive } from '../memdir/paths.js'
+import {
+  trackMessage,
+  trackToolUse,
+  initSessionTracking,
+  insertTokenUsage,
+  updateSession,
+  getSessionById,
+} from '../services/dashboard/collector.js'
 
 // Dead code elimination: conditional imports
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -1872,10 +1880,19 @@ function runHeadlessStreaming(
     notifySessionStateChanged('running')
     idleTimeout.stop()
 
+    // Initialize dashboard session tracking
+    try {
+      const model = getMainLoopModel()
+      initSessionTracking(model)
+    } catch (error) {
+      logForDebugging('Dashboard session init error in print.ts:', error)
+    }
+
     headlessProfilerCheckpoint('run_entry')
     // TODO(custom-tool-refactor): Should move to the init message, like browser
 
     await updateSdkMcp()
+    headlessProfilerCheckpoint('after_updateSdkMcp')
     headlessProfilerCheckpoint('after_updateSdkMcp')
 
     // Resolve deferred plugin installation (CLAUDE_CODE_SYNC_PLUGIN_INSTALL).
@@ -2208,12 +2225,66 @@ function runHeadlessStreaming(
                 })
               },
             })) {
+              // Track assistant messages and tool use for dashboard
+              if (message.type === 'assistant') {
+                try {
+                  const model = getMainLoopModel()
+                  trackMessage(message, model)
+                } catch (error) {
+                  logForDebugging('Dashboard tracking error in print.ts:', error)
+                }
+              }
+
               // Forward messages to bridge incrementally (mid-turn) so
               // claude.ai sees progress and the connection stays alive
               // while blocked on permission requests.
               forwardMessagesToBridge()
 
               if (message.type === 'result') {
+                // Track token usage from the result message (contains totalUsage from QueryEngine)
+                if (message.usage) {
+                  try {
+                    const sessionId = getSessionId()
+                    if (sessionId) {
+                      const usage = message.usage as {
+                        input_tokens?: number
+                        output_tokens?: number
+                        cache_creation_input_tokens?: number
+                        cache_read_input_tokens?: number
+                      }
+                      const inputTokens = usage.input_tokens || 0
+                      const outputTokens = usage.output_tokens || 0
+                      const cacheReadTokens = usage.cache_read_input_tokens || 0
+                      const cacheCreationTokens = usage.cache_creation_input_tokens || 0
+
+                      if (inputTokens > 0 || outputTokens > 0) {
+                        insertTokenUsage({
+                          sessionId,
+                          timestamp: Date.now(),
+                          model: getMainLoopModel(),
+                          inputTokens,
+                          outputTokens,
+                          cacheReadTokens,
+                          cacheCreationTokens,
+                          messageType: 'assistant',
+                        })
+
+                        const session = getSessionById(sessionId)
+                        if (session) {
+                          updateSession(sessionId, {
+                            totalInputTokens: session.totalInputTokens + inputTokens,
+                            totalOutputTokens: session.totalOutputTokens + outputTokens,
+                            totalCacheReadTokens: session.totalCacheReadTokens + cacheReadTokens,
+                            totalCacheCreationTokens: session.totalCacheCreationTokens + cacheCreationTokens,
+                          })
+                        }
+                      }
+                    }
+                  } catch (error) {
+                    logForDebugging('Dashboard result tracking error:', error)
+                  }
+                }
+
                 // Flush pending SDK events so they appear before result on the stream.
                 for (const event of drainSdkEvents()) {
                   output.enqueue(event)
